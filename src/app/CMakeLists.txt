@@ -1,0 +1,5 @@
+add_library(uburu_app STATIC services/search-service.cpp)
+add_library(Uburu::App ALIAS uburu_app)
+target_include_directories(uburu_app PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(uburu_app PUBLIC Uburu::Core)
+target_compile_features(uburu_app PUBLIC cxx_std_23)

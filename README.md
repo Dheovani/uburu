@@ -12,7 +12,18 @@ Uburu é uma aplicação desktop de busca avançada em arquivos e repositórios 
 
 O manifesto `vcpkg.json` fornece as dependências não Qt. O Qt pode ser instalado pelo gerenciador preferido do sistema ou por uma feature de overlay do vcpkg.
 
-## Build
+## Build no Windows com PowerShell
+
+```powershell
+cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+Confirme a configuração do vcpkg com `Write-Output $env:VCPKG_ROOT`. No PowerShell, use sempre
+`$env:VCPKG_ROOT`; a forma `$VCPKG_ROOT` pertence a shells POSIX.
+
+## Build no Linux ou macOS
 
 ```sh
 cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -22,7 +33,7 @@ ctest --test-dir build -C Release --output-on-failure
 
 Para trabalhar apenas no core sem uma instalação do Qt:
 
-```sh
+```powershell
 cmake -S . -B build-core -DUBURU_BUILD_DESKTOP=OFF
 ```
 

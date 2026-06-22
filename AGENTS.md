@@ -578,6 +578,36 @@ Sempre que uma decisão arquitetural importante for tomada, registre em document
 
 ## Estilo de desenvolvimento
 
+### Formatação de C++
+
+Todo código C++ novo ou alterado em `apps/`, `src/` e `tests/` deve respeitar integralmente o
+`.clang-format` da raiz, configurado para C++23. Antes de concluir uma alteração:
+
+* Use indentação de 2 espaços, nunca tabs.
+* Mantenha o limite de 100 colunas.
+* Use `Type* name` e `Type& name` para ponteiros e referências.
+* Preserve a ordenação case-sensitive de includes.
+* Formate com `cmake --build <diretório-de-build> --target format` ou execute `clang-format -i`
+  apenas nos arquivos C++ próprios alterados.
+* Não formate dependências vendorizadas nem arquivos gerados automaticamente.
+
+O target `format` é auxiliar e nunca deve ser requisito para compilar o projeto.
+
+### Nomes de arquivos
+
+Todo arquivo próprio novo ou renomeado deve usar `kebab-case`, somente com letras minúsculas,
+números e hífens entre palavras. Exemplos válidos: `search-engine.hpp`,
+`direct-search-engine-tests.cpp` e `git-awareness.md`.
+
+As únicas exceções são nomes canônicos exigidos ou amplamente convencionados pelas ferramentas:
+`CMakeLists.txt`, `README.md`, `AGENTS.md`, `.clang-format`, `.gitignore` e manifestos como
+`vcpkg.json`. Arquivos gerados automaticamente e dependências vendorizadas também preservam seus
+nomes originais.
+
+Ao renomear um arquivo, atualize no mesmo trabalho todos os includes, targets CMake, recursos,
+documentação e testes que o referenciem. Não introduza novos nomes em `snake_case`, `PascalCase` ou
+`camelCase` no sistema de arquivos.
+
 Ao implementar algo:
 
 1. Entenda a arquitetura existente.

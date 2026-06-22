@@ -1,6 +1,7 @@
 BasedOnStyle: LLVM
 Language: Cpp
-Standard: c++23
+# clang-format does not expose a c++23 enum; Latest enables its newest C++ syntax rules.
+Standard: Latest
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never

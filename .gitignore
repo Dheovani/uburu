@@ -1,0 +1,10 @@
+/build/
+/build-*/
+/out/
+/.cache/
+/CMakeUserPresets.json
+/compile_commands.json
+*.user
+*.db
+*.db-shm
+*.db-wal

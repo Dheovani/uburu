@@ -1,0 +1,107 @@
+#pragma once
+
+#include <chrono>
+#include <cstdint>
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace uburu
+{
+
+  using RepositoryId = std::string;
+  using WorktreeId = std::string;
+
+  enum class SearchMode
+  {
+    literal,
+    regex
+  };
+  enum class GitFileStatus
+  {
+    clean,
+    modified,
+    added,
+    deleted,
+    untracked,
+    ignored,
+    conflicted
+  };
+
+  struct SearchOptions
+  {
+    SearchMode mode{SearchMode::literal};
+    bool case_sensitive{false};
+    bool whole_word{false};
+    bool respect_gitignore{true};
+    bool include_hidden{false};
+    bool include_binary{false};
+    bool follow_symlinks{false};
+    std::uintmax_t maximum_file_size{16U * 1024U * 1024U};
+    std::size_t result_limit{10'000};
+    std::vector<std::string> extensions;
+    std::vector<std::filesystem::path> included_directories;
+    std::vector<std::filesystem::path> excluded_directories;
+  };
+
+  struct SearchQuery
+  {
+    std::filesystem::path root;
+    std::string expression;
+    SearchOptions options;
+  };
+
+  struct SearchResult
+  {
+    std::filesystem::path path;
+    std::size_t line{0};
+    std::size_t column{0};
+    std::size_t match_length{0};
+    std::string line_text;
+  };
+
+  struct FileEntry
+  {
+    std::filesystem::path absolute_path;
+    std::filesystem::path relative_path;
+    std::uintmax_t size{0};
+    std::filesystem::file_time_type modified_at{};
+    bool hidden{false};
+    bool binary{false};
+    bool symlink{false};
+  };
+
+  struct RepositoryInfo
+  {
+    RepositoryId id;
+    std::filesystem::path common_git_directory;
+    std::optional<std::string> current_branch;
+    std::string head_oid;
+    bool detached_head{false};
+  };
+
+  struct WorktreeInfo
+  {
+    WorktreeId id;
+    RepositoryId repository_id;
+    std::filesystem::path root;
+    std::filesystem::path git_directory;
+    std::optional<std::string> branch;
+    std::string head_oid;
+  };
+
+  struct IndexDocument
+  {
+    RepositoryId repository_id;
+    WorktreeId worktree_id;
+    std::filesystem::path relative_path;
+    std::string content_hash;
+    std::optional<std::string> git_blob_hash;
+    GitFileStatus status{GitFileStatus::clean};
+    std::uintmax_t size{0};
+    std::chrono::system_clock::time_point indexed_at{};
+    bool deleted{false};
+  };
+
+} // namespace uburu

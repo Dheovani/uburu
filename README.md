@@ -2,6 +2,8 @@
 
 Uburu é uma aplicação desktop de busca avançada em arquivos e repositórios de software. A base atual oferece uma busca literal direta e progressiva, uma UI Qt Quick não bloqueante e contratos para a futura indexação persistente e consciente de Git.
 
+O planejamento completo de evolução e os critérios para a versão 1.0 estão em [TODO.md](TODO.md).
+
 ## Dependências
 
 - CMake 3.25+

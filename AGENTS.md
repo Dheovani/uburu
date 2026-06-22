@@ -600,9 +600,9 @@ números e hífens entre palavras. Exemplos válidos: `search-engine.hpp`,
 `direct-search-engine-tests.cpp` e `git-awareness.md`.
 
 As únicas exceções são nomes canônicos exigidos ou amplamente convencionados pelas ferramentas:
-`CMakeLists.txt`, `README.md`, `AGENTS.md`, `.clang-format`, `.gitignore` e manifestos como
-`vcpkg.json`. Arquivos gerados automaticamente e dependências vendorizadas também preservam seus
-nomes originais.
+`CMakeLists.txt`, `README.md`, `AGENTS.md`, `TODO.md`, `.clang-format`, `.gitignore` e manifestos
+como `vcpkg.json`. Arquivos gerados automaticamente e dependências vendorizadas também preservam
+seus nomes originais.
 
 Ao renomear um arquivo, atualize no mesmo trabalho todos os includes, targets CMake, recursos,
 documentação e testes que o referenciem. Não introduza novos nomes em `snake_case`, `PascalCase` ou

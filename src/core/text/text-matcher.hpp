@@ -4,6 +4,7 @@
 
 #include <optional>
 #include <string_view>
+#include <vector>
 
 namespace uburu::text
 {
@@ -16,6 +17,9 @@ namespace uburu::text
 
   [[nodiscard]] std::optional<MatchPosition>
   find_literal(std::string_view text, std::string_view expression, const SearchOptions& options);
+  [[nodiscard]] std::vector<MatchPosition> find_all_literals(std::string_view text,
+                                                             std::string_view expression,
+                                                             const SearchOptions& options);
   [[nodiscard]] bool looks_binary(std::string_view sample);
 
 } // namespace uburu::text

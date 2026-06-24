@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 using uburu::SearchOptions;
+using uburu::text::find_all_literals;
 using uburu::text::find_literal;
 
 TEST_CASE("literal matching is case insensitive by default")
@@ -11,6 +12,27 @@ TEST_CASE("literal matching is case insensitive by default")
   REQUIRE(match.has_value());
   CHECK(match->offset == 4);
   CHECK(match->length == 5);
+}
+
+TEST_CASE("literal matching returns every occurrence on a line")
+{
+  const auto matches = find_all_literals("needle here, needle there", "needle", SearchOptions{});
+
+  REQUIRE(matches.size() == 2);
+  CHECK(matches[0].offset == 0);
+  CHECK(matches[0].length == 6);
+  CHECK(matches[1].offset == 13);
+  CHECK(matches[1].length == 6);
+}
+
+TEST_CASE("literal matching keeps overlapping occurrences")
+{
+  const auto matches = find_all_literals("aaaa", "aa", SearchOptions{});
+
+  REQUIRE(matches.size() == 3);
+  CHECK(matches[0].offset == 0);
+  CHECK(matches[1].offset == 1);
+  CHECK(matches[2].offset == 2);
 }
 
 TEST_CASE("literal matching can be case sensitive")

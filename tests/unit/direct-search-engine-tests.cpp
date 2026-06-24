@@ -3,8 +3,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
+#include <vector>
 
 namespace
 {
@@ -88,4 +90,57 @@ TEST_CASE("direct search streams a match with one-based line and column")
   CHECK(results.front().line == 2);
   CHECK(results.front().column == 10);
   CHECK(summary.matches == 1);
+}
+
+TEST_CASE("direct search streams every match on the same line")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-multi-match-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "needle needle\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = "fixture", .expression = "needle"};
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 2);
+  CHECK(results[0].column == 1);
+  CHECK(results[1].column == 8);
+  CHECK(summary.matches == 2);
+}
+
+TEST_CASE("direct search applies the global result limit before publishing")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-limit-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "needle needle\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = "fixture", .expression = "needle"};
+  query.options.result_limit = 1;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().column == 1);
+  CHECK(summary.matches == 1);
+  CHECK(summary.limit_reached);
 }

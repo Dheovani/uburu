@@ -55,11 +55,11 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 1 — Semântica correta da busca direta (P0)
 
-- [ ] Especificar formalmente a semântica em `docs/search-semantics.md`.
+- [x] Especificar formalmente a semântica em `docs/search-semantics.md`.
 - [ ] Validar `SearchQuery` e retornar erros tipados para raiz inválida, expressão vazia e opções
   incompatíveis.
-- [ ] Encontrar todas as ocorrências de uma linha, não apenas a primeira.
-- [ ] Definir e testar comportamento para ocorrências sobrepostas.
+- [x] Encontrar todas as ocorrências de uma linha, não apenas a primeira.
+- [x] Definir e testar comportamento para ocorrências sobrepostas.
 - [ ] Implementar busca case-sensitive e case-insensitive Unicode de forma consistente.
 - [ ] Implementar palavra inteira com regras Unicode e opção específica para identificadores de código.
 - [ ] Implementar busca regex com PCRE2.
@@ -80,7 +80,7 @@ e UI para avançarem mais rapidamente.
 
 ### Testes obrigatórios
 
-- [ ] Literal com múltiplas ocorrências na mesma linha.
+- [x] Literal com múltiplas ocorrências na mesma linha.
 - [ ] Case-sensitive e case-insensitive com ASCII e Unicode.
 - [ ] Palavra inteira, identificadores, pontuação e limites Unicode.
 - [ ] Regex válida, inválida, JIT/fallback e cancelamento.

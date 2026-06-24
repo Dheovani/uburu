@@ -18,6 +18,7 @@ namespace uburu
     literal,
     regex
   };
+
   enum class GitFileStatus
   {
     clean,

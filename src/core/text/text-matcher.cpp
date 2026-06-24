@@ -20,11 +20,13 @@ namespace uburu::text
 
   } // namespace
 
-  std::optional<MatchPosition> find_literal(std::string_view text, std::string_view expression,
-                                            const SearchOptions& options)
+  std::vector<MatchPosition> find_all_literals(std::string_view text, std::string_view expression,
+                                               const SearchOptions& options)
   {
+    std::vector<MatchPosition> matches;
     if (expression.empty())
-      return std::nullopt;
+      return matches;
+
     const auto matches_at = [&](std::size_t offset) {
       for (std::size_t index = 0; index < expression.size(); ++index) {
         const char left = text[offset + index];
@@ -44,9 +46,18 @@ namespace uburu::text
 
     for (std::size_t offset = 0; offset + expression.size() <= text.size(); ++offset) {
       if (matches_at(offset))
-        return MatchPosition{offset, expression.size()};
+        matches.push_back(MatchPosition{offset, expression.size()});
     }
-    return std::nullopt;
+    return matches;
+  }
+
+  std::optional<MatchPosition> find_literal(std::string_view text, std::string_view expression,
+                                            const SearchOptions& options)
+  {
+    const auto matches = find_all_literals(text, expression, options);
+    if (matches.empty())
+      return std::nullopt;
+    return matches.front();
   }
 
   bool looks_binary(std::string_view sample)

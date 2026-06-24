@@ -38,16 +38,18 @@ namespace uburu::search
             ++line_number;
             if (!query.options.include_binary && text::looks_binary(line))
               return true;
-            const auto match = text::find_literal(line, query.expression, query.options);
-            if (!match)
+            const auto matches = text::find_all_literals(line, query.expression, query.options);
+            if (matches.empty())
               continue;
-            ++summary.matches;
-            if (!sink(SearchResult{entry.relative_path, line_number, match->offset + 1,
-                                   match->length, line}))
-              return false;
-            if (summary.matches >= query.options.result_limit) {
-              summary.limit_reached = true;
-              return false;
+            for (const auto& match : matches) {
+              if (summary.matches >= query.options.result_limit) {
+                summary.limit_reached = true;
+                return false;
+              }
+              ++summary.matches;
+              if (!sink(SearchResult{entry.relative_path, line_number, match.offset + 1,
+                                     match.length, line}))
+                return false;
             }
           }
           return true;

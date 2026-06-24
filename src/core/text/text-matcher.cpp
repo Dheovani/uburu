@@ -170,9 +170,7 @@ namespace uburu::text
         return std::nullopt;
 
       std::size_t scalar_offset = offset - 1;
-      while (scalar_offset > 0 &&
-             is_continuation_byte(static_cast<unsigned char>(text[scalar_offset])))
-      {
+      while (scalar_offset > 0 && is_continuation_byte(static_cast<unsigned char>(text[scalar_offset]))) {
         --scalar_offset;
       }
 
@@ -258,11 +256,7 @@ namespace uburu::text
       const auto match_length = literal_match_length_at(text, expression, offset, options);
       if (!match_length)
         return std::nullopt;
-      if (options.whole_word &&
-          !has_boundaries(text, offset, *match_length, is_natural_word_scalar))
-        return std::nullopt;
-      if (options.whole_identifier &&
-          !has_boundaries(text, offset, *match_length, is_code_identifier_scalar))
+      if (!matches_requested_boundaries(text, MatchPosition{offset, *match_length}, options))
         return std::nullopt;
       return match_length;
     };
@@ -286,6 +280,15 @@ namespace uburu::text
     if (matches.empty())
       return std::nullopt;
     return matches.front();
+  }
+
+  bool matches_requested_boundaries(std::string_view text, MatchPosition match,
+                                    const SearchOptions& options)
+  {
+    return (!options.whole_word ||
+            has_boundaries(text, match.offset, match.length, is_natural_word_scalar)) &&
+           (!options.whole_identifier ||
+            has_boundaries(text, match.offset, match.length, is_code_identifier_scalar));
   }
 
   bool looks_binary(std::string_view sample)

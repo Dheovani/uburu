@@ -79,7 +79,11 @@ TEST_CASE("search query validation reports incompatible options")
 
   const auto errors = uburu::search::validate_search_query(query);
 
+#ifdef UBURU_HAS_PCRE2
+  CHECK_FALSE(has_error(errors, uburu::search::SearchErrorCode::unsupported_search_mode));
+#else
   CHECK(has_error(errors, uburu::search::SearchErrorCode::unsupported_search_mode));
+#endif
   CHECK(has_error(errors, uburu::search::SearchErrorCode::invalid_result_limit));
   CHECK(has_error(errors, uburu::search::SearchErrorCode::invalid_maximum_file_size));
 }

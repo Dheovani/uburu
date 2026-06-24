@@ -62,8 +62,8 @@ e UI para avançarem mais rapidamente.
 - [x] Definir e testar comportamento para ocorrências sobrepostas.
 - [x] Implementar busca case-sensitive e case-insensitive Unicode de forma consistente.
 - [x] Implementar palavra inteira com regras Unicode e opção específica para identificadores de código.
-- [ ] Implementar busca regex com PCRE2.
-- [ ] Habilitar PCRE2 JIT quando suportado e fornecer fallback explícito.
+- [x] Implementar busca regex com PCRE2.
+- [x] Habilitar PCRE2 JIT quando suportado e fornecer fallback explícito.
 - [ ] Limitar tempo, profundidade e recursos de regex para evitar padrões patológicos.
 - [ ] Retornar erro de compilação de regex com posição e mensagem traduzível.
 - [ ] Implementar busca por nome de arquivo separada da busca por conteúdo.

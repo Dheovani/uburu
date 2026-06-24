@@ -1,9 +1,11 @@
 #include "core/search/direct-search-engine.hpp"
 
 #include "core/search/search-query-validation.hpp"
+#include "core/text/regex-matcher.hpp"
 #include "core/text/text-matcher.hpp"
 
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 
 namespace uburu::search
@@ -24,6 +26,24 @@ namespace uburu::search
     if (!summary.errors.empty())
       return summary;
 
+    std::optional<text::RegexMatcher> regex_matcher;
+    if (query.options.mode == SearchMode::regex) {
+      auto compiled = text::compile_regex(query.expression, query.options);
+      if (!compiled.matcher) {
+        const auto& error = compiled.error;
+        summary.errors.push_back(
+          SearchError{SearchErrorCode::regex_compile_failed,
+                      error ? error->message : std::string{},
+                      error ? error->offset : 0}
+        );
+        return summary;
+      }
+      summary.regex_execution_mode = compiled.matcher->jit_enabled()
+                                         ? RegexExecutionMode::jit
+                                         : RegexExecutionMode::interpreted_fallback;
+      regex_matcher = std::move(compiled.matcher);
+    }
+
     scanner_->scan(
         query.root, query.options,
         [&](FileEntry entry) {
@@ -40,7 +60,9 @@ namespace uburu::search
             ++line_number;
             if (!query.options.include_binary && text::looks_binary(line))
               return true;
-            const auto matches = text::find_all_literals(line, query.expression, query.options);
+            const auto matches =
+                regex_matcher ? regex_matcher->find_all(line)
+                              : text::find_all_literals(line, query.expression, query.options);
             if (matches.empty())
               continue;
             for (const auto& match : matches) {

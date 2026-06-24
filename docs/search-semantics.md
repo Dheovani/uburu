@@ -34,10 +34,13 @@ Erros iniciais suportados:
 - `root_not_directory`;
 - `empty_expression`;
 - `unsupported_search_mode`;
+- `regex_compile_failed`;
 - `invalid_result_limit`;
 - `invalid_maximum_file_size`.
 
-O modo regex é reportado como `unsupported_search_mode` até a implementação PCRE2 ficar disponível.
+O modo regex é reportado como `unsupported_search_mode` quando o build não possui PCRE2. Quando
+PCRE2 está disponível, erros de compilação retornam `regex_compile_failed` com mensagem e offset
+fornecidos pelo backend.
 
 ## Busca literal
 
@@ -100,16 +103,26 @@ as duas regras de boundary.
 
 ## Regex
 
-Quando `SearchOptions::mode` estiver em `SearchMode::regex`, a expressão deve ser compilada como
-regex PCRE2. O suporte ainda é pendente.
+Quando `SearchOptions::mode` estiver em `SearchMode::regex`, a expressão é compilada uma vez por
+busca com PCRE2 em modo UTF/UCP. A busca reutiliza a regex compilada em todas as linhas processadas,
+evitando recompilar o padrão dentro do loop de arquivos.
 
-A implementação final deve:
+Por padrão, regex também respeita `case_sensitive`: quando desabilitado, o padrão é compilado com
+`PCRE2_CASELESS`.
+
+O matcher tenta habilitar PCRE2 JIT com `PCRE2_JIT_COMPLETE`. Quando JIT é aceito, o resumo da busca
+registra `RegexExecutionMode::jit`. Quando PCRE2 está disponível mas JIT não é aceito para o padrão
+ou build corrente, a busca continua com fallback interpretado e registra
+`RegexExecutionMode::interpreted_fallback`.
+
+Regex preserva a mesma unidade de resultado da busca literal: cada ocorrência vira um resultado
+individual, com offset e tamanho em bytes UTF-8. `whole_word` e `whole_identifier` também são
+aplicados sobre matches regex.
+
+A implementação final ainda deve:
 
 - retornar erro de compilação com posição e mensagem traduzível;
-- usar PCRE2 JIT quando disponível;
-- declarar fallback quando JIT não estiver disponível;
-- aplicar limites de recurso para evitar padrões patológicos;
-- preservar a mesma unidade de resultado usada pela busca literal.
+- aplicar limites de recurso para evitar padrões patológicos.
 
 ## Limites de resultados
 
@@ -140,7 +153,6 @@ O Marco 1 ainda deve distinguir explicitamente:
 Esta primeira versão do documento registra o contrato inicial e as lacunas conhecidas. Ainda faltam:
 
 - erros traduzíveis para query inválida;
-- regex com PCRE2;
 - filtros por nome, glob, extensão, diretório e tamanho;
 - ordenação determinística formal;
 - estratégia inicial de relevância.

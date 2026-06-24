@@ -513,6 +513,8 @@ Evitar:
 * Misturar lógica de busca com renderização.
 * Números mágicos em lógica de domínio, parsing, protocolos, formatos binários, limites ou
   algoritmos.
+* Trechos redundantes, branches desnecessários ou código cerimonial que pode ser expresso de forma
+  mais direta sem perder clareza.
 
 Quando um valor numérico possuir significado semântico, declare uma constante nomeada antes de
 usá-lo. Em C++, prefira `constexpr` ou `inline constexpr` com o menor escopo adequado, geralmente no
@@ -528,6 +530,18 @@ constexpr std::size_t default_preview_context_lines = 3;
 ```
 
 O nome da constante deve explicar o significado do valor, não apenas repetir sua representação.
+
+Prefira expressões diretas quando elas preservarem a semântica e forem mais legíveis do que uma
+sequência de branches. Ao simplificar booleanos, confira a equivalência lógica, especialmente quando
+duas ou mais condições podem estar ativas ao mesmo tempo. Não troque `&&` por `||`, nem aplique De
+Morgan mecanicamente, sem validar o comportamento com testes existentes ou novos.
+
+Exemplo preferido:
+
+```cpp
+return (!options.whole_word || has_word_boundary(match)) &&
+       (!options.whole_identifier || has_identifier_boundary(match));
+```
 
 ## Testes
 

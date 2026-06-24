@@ -49,7 +49,11 @@ namespace uburu::app
 
   QHash<int, QByteArray> SearchResultModel::roleNames() const
   {
-    return {{PathRole, "filePath"}, {LocationRole, "location"}, {PreviewRole, "preview"}};
+    return {
+      {PathRole, "filePath"},
+      {LocationRole, "location"},
+      {PreviewRole, "preview"}
+    };
   }
 
   void SearchResultModel::clear()
@@ -80,18 +84,22 @@ namespace uburu::app
     if (active_watcher_ != nullptr)
       active_watcher_->waitForFinished();
   }
+
   QString SearchController::directory() const
   {
     return directory_;
   }
+
   QString SearchController::status() const
   {
     return status_;
   }
+
   bool SearchController::running() const
   {
     return running_;
   }
+
   QAbstractItemModel* SearchController::results()
   {
     return &results_;
@@ -108,10 +116,6 @@ namespace uburu::app
   {
     if (running_ || directory_.isEmpty() || expression.isEmpty())
       return;
-    if (regex) {
-      set_status(tr("A busca regex será habilitada pelo backend PCRE2."));
-      return;
-    }
 
     results_.clear();
     stop_source_ = std::stop_source{};
@@ -119,6 +123,7 @@ namespace uburu::app
     set_status(tr("Buscando…"));
     SearchQuery query{.root = native_path(directory_),
                       .expression = expression.toUtf8().toStdString()};
+    query.options.mode = regex ? SearchMode::regex : SearchMode::literal;
     query.options.case_sensitive = case_sensitive;
     query.options.whole_word = whole_word;
     query.options.respect_gitignore = respect_gitignore;
@@ -154,11 +159,13 @@ namespace uburu::app
   {
     stop_source_.request_stop();
   }
+
   void SearchController::set_status(QString status)
   {
     status_ = std::move(status);
     emit statusChanged();
   }
+
   void SearchController::set_running(bool running)
   {
     running_ = running;

@@ -20,6 +20,8 @@ namespace uburu::text
   [[nodiscard]] std::vector<MatchPosition> find_all_literals(std::string_view text,
                                                              std::string_view expression,
                                                              const SearchOptions& options);
+  [[nodiscard]] bool matches_requested_boundaries(std::string_view text, MatchPosition match,
+                                                  const SearchOptions& options);
   [[nodiscard]] bool looks_binary(std::string_view sample);
 
 } // namespace uburu::text

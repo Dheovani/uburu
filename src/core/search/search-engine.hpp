@@ -3,6 +3,7 @@
 #include "shared/types/domain-types.hpp"
 
 #include <functional>
+#include <optional>
 #include <stop_token>
 #include <string>
 #include <vector>
@@ -19,6 +20,7 @@ namespace uburu::search
     root_not_directory,
     empty_expression,
     unsupported_search_mode,
+    regex_compile_failed,
     invalid_result_limit,
     invalid_maximum_file_size
   };
@@ -27,6 +29,14 @@ namespace uburu::search
   {
     SearchErrorCode code{SearchErrorCode::empty_expression};
     std::string context;
+    std::optional<std::size_t> offset;
+  };
+
+  enum class RegexExecutionMode
+  {
+    not_used,
+    jit,
+    interpreted_fallback
   };
 
   struct SearchSummary
@@ -36,6 +46,7 @@ namespace uburu::search
     bool cancelled{false};
     bool limit_reached{false};
     std::vector<SearchError> errors;
+    RegexExecutionMode regex_execution_mode{RegexExecutionMode::not_used};
   };
 
   class SearchEngine

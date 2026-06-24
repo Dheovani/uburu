@@ -166,3 +166,61 @@ TEST_CASE("direct search applies the global result limit before publishing")
   CHECK(summary.matches == 1);
   CHECK(summary.limit_reached);
 }
+
+TEST_CASE("direct search supports regex queries")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-regex-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "todo(1) skip todo(42)\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(),
+                           .expression = R"(todo\(\d+\))"};
+  query.options.mode = uburu::SearchMode::regex;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+  cleanup();
+
+#ifdef UBURU_HAS_PCRE2
+  REQUIRE(results.size() == 2);
+  CHECK(results[0].column == 1);
+  CHECK(results[0].match_length == 7);
+  CHECK(results[1].column == 14);
+  CHECK(results[1].match_length == 8);
+  CHECK(summary.matches == 2);
+  CHECK(summary.regex_execution_mode != uburu::search::RegexExecutionMode::not_used);
+#else
+  CHECK(results.empty());
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupported_search_mode);
+#endif
+}
+
+TEST_CASE("direct search reports regex compilation errors")
+{
+  auto scanner = std::make_shared<EmptyScanner>();
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "("};
+  query.options.mode = uburu::SearchMode::regex;
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+
+#ifdef UBURU_HAS_PCRE2
+  CHECK(scanner->calls == 0);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::regex_compile_failed);
+  REQUIRE(summary.errors.front().offset.has_value());
+#else
+  CHECK(scanner->calls == 0);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupported_search_mode);
+#endif
+}

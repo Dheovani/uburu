@@ -35,6 +35,7 @@ namespace uburu
     SearchMode mode{SearchMode::literal};
     bool case_sensitive{false};
     bool whole_word{false};
+    bool whole_identifier{false};
     bool respect_gitignore{true};
     bool include_hidden{false};
     bool include_binary{false};

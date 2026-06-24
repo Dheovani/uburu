@@ -69,12 +69,27 @@ TEST_CASE("literal matching keeps UTF-8 byte offsets and byte lengths")
   CHECK(match->length == 6);
 }
 
-TEST_CASE("whole word does not match an identifier fragment")
+TEST_CASE("whole word uses natural language boundaries")
 {
   SearchOptions options;
   options.whole_word = true;
-  CHECK_FALSE(find_literal("search_engine", "search", options).has_value());
+
+  CHECK(find_literal("search_engine", "search", options).has_value());
   CHECK(find_literal("search engine", "search", options).has_value());
+  CHECK(find_literal("pré-ação", "ação", options).has_value());
+  CHECK_FALSE(find_literal("préação", "ação", options).has_value());
+}
+
+TEST_CASE("whole identifier does not match code identifier fragments")
+{
+  SearchOptions options;
+  options.whole_identifier = true;
+
+  CHECK_FALSE(find_literal("search_engine", "search", options).has_value());
+  CHECK_FALSE(find_literal("searchEngine", "search", options).has_value());
+  CHECK_FALSE(find_literal("search2", "search", options).has_value());
+  CHECK(find_literal("search engine", "search", options).has_value());
+  CHECK(find_literal("call(search)", "search", options).has_value());
 }
 
 TEST_CASE("a null byte identifies a binary sample")

@@ -75,13 +75,28 @@ estratégias de highlight, ranking e índice.
 
 ## Palavra inteira
 
-No estágio atual, `whole_word` usa uma regra ASCII-oriented: letras, dígitos e `_` são considerados
-caracteres de palavra. Isso trata identificadores como `search_engine` como uma única palavra.
+`whole_word` usa limites de palavra para texto natural. Letras ASCII, dígitos ASCII e letras latinas
+pré-compostas são considerados parte de uma palavra. Pontuação e `_` são limites de palavra nesse
+modo.
 
-O Marco 1 ainda deve separar explicitamente:
+Exemplos:
 
-- palavra inteira para texto natural com limites Unicode;
-- identificador inteiro para código-fonte.
+- `ação` casa em `pré-ação`;
+- `ação` não casa em `préação`;
+- `search` casa em `search_engine`, porque `_` é pontuação para texto natural.
+
+Para código-fonte, `whole_identifier` usa limites de identificador. Letras ASCII, dígitos ASCII e `_`
+são considerados parte do identificador.
+
+Exemplos:
+
+- `search` não casa em `search_engine`;
+- `search` não casa em `searchEngine`;
+- `search` não casa em `search2`;
+- `search` casa em `call(search)`.
+
+Se `whole_word` e `whole_identifier` forem habilitados ao mesmo tempo, a ocorrência precisa satisfazer
+as duas regras de boundary.
 
 ## Regex
 

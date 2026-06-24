@@ -1,7 +1,6 @@
 #include "core/text/text-matcher.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <cstdint>
 
 namespace uburu::text
@@ -45,10 +44,20 @@ namespace uburu::text
 
     constexpr char32_t ascii_uppercase_min = U'A';
     constexpr char32_t ascii_uppercase_max = U'Z';
+    constexpr char32_t ascii_lowercase_min = U'a';
+    constexpr char32_t ascii_lowercase_max = U'z';
+    constexpr char32_t ascii_digit_min = U'0';
+    constexpr char32_t ascii_digit_max = U'9';
+    constexpr char32_t ascii_identifier_connector = U'_';
+
     constexpr char32_t latin_uppercase_min = 0x00C0U;
     constexpr char32_t latin_uppercase_before_multiplication_sign_max = 0x00D6U;
     constexpr char32_t latin_uppercase_after_multiplication_sign_min = 0x00D8U;
     constexpr char32_t latin_uppercase_max = 0x00DEU;
+    constexpr char32_t latin_lowercase_min = 0x00E0U;
+    constexpr char32_t latin_lowercase_before_division_sign_max = 0x00F6U;
+    constexpr char32_t latin_lowercase_after_division_sign_min = 0x00F8U;
+    constexpr char32_t latin_lowercase_max = 0x00FFU;
     constexpr char32_t lowercase_codepoint_delta = 32U;
 
     struct DecodedScalar
@@ -57,9 +66,37 @@ namespace uburu::text
       std::size_t byte_length{single_byte_length};
     };
 
-    bool is_word_character(unsigned char character)
+    bool is_ascii_letter(char32_t scalar)
     {
-      return std::isalnum(character) != 0 || character == '_';
+      return (scalar >= ascii_uppercase_min && scalar <= ascii_uppercase_max) ||
+             (scalar >= ascii_lowercase_min && scalar <= ascii_lowercase_max);
+    }
+
+    bool is_ascii_digit(char32_t scalar)
+    {
+      return scalar >= ascii_digit_min && scalar <= ascii_digit_max;
+    }
+
+    bool is_latin_letter(char32_t scalar)
+    {
+      return (scalar >= latin_uppercase_min &&
+              scalar <= latin_uppercase_before_multiplication_sign_max) ||
+             (scalar >= latin_uppercase_after_multiplication_sign_min &&
+              scalar <= latin_uppercase_max) ||
+             (scalar >= latin_lowercase_min &&
+              scalar <= latin_lowercase_before_division_sign_max) ||
+             (scalar >= latin_lowercase_after_division_sign_min && scalar <= latin_lowercase_max);
+    }
+
+    bool is_natural_word_scalar(char32_t scalar)
+    {
+      return is_ascii_letter(scalar) || is_ascii_digit(scalar) || is_latin_letter(scalar);
+    }
+
+    bool is_code_identifier_scalar(char32_t scalar)
+    {
+      return is_ascii_letter(scalar) || is_ascii_digit(scalar) ||
+             scalar == ascii_identifier_connector;
     }
 
     bool is_continuation_byte(unsigned char byte)
@@ -127,6 +164,42 @@ namespace uburu::text
       return DecodedScalar{first, single_byte_length};
     }
 
+    std::optional<DecodedScalar> scalar_before(std::string_view text, std::size_t offset)
+    {
+      if (offset == 0 || offset > text.size())
+        return std::nullopt;
+
+      std::size_t scalar_offset = offset - 1;
+      while (scalar_offset > 0 &&
+             is_continuation_byte(static_cast<unsigned char>(text[scalar_offset])))
+      {
+        --scalar_offset;
+      }
+
+      return decode_utf8_at(text, scalar_offset);
+    }
+
+    std::optional<DecodedScalar> scalar_at(std::string_view text, std::size_t offset)
+    {
+      if (offset >= text.size())
+        return std::nullopt;
+      return decode_utf8_at(text, offset);
+    }
+
+    bool has_boundaries(std::string_view text, std::size_t offset, std::size_t length,
+                        bool (*is_inside_boundary)(char32_t))
+    {
+      const auto left = scalar_before(text, offset);
+      if (left && is_inside_boundary(left->value))
+        return false;
+
+      const auto right = scalar_at(text, offset + length);
+      if (right && is_inside_boundary(right->value))
+        return false;
+
+      return true;
+    }
+
     char32_t simple_case_fold(char32_t scalar)
     {
       if (scalar >= ascii_uppercase_min && scalar <= ascii_uppercase_max)
@@ -185,14 +258,11 @@ namespace uburu::text
       const auto match_length = literal_match_length_at(text, expression, offset, options);
       if (!match_length)
         return std::nullopt;
-      if (!options.whole_word)
-        return match_length;
-      const bool left_boundary =
-          offset == 0 || !is_word_character(static_cast<unsigned char>(text[offset - 1]));
-      const auto end = offset + *match_length;
-      const bool right_boundary =
-          end == text.size() || !is_word_character(static_cast<unsigned char>(text[end]));
-      if (!left_boundary || !right_boundary)
+      if (options.whole_word &&
+          !has_boundaries(text, offset, *match_length, is_natural_word_scalar))
+        return std::nullopt;
+      if (options.whole_identifier &&
+          !has_boundaries(text, offset, *match_length, is_code_identifier_scalar))
         return std::nullopt;
       return match_length;
     };
@@ -205,7 +275,7 @@ namespace uburu::text
       const auto scalar = decode_utf8_at(text, offset);
       offset += scalar.byte_length;
     }
-    
+
     return matches;
   }
 

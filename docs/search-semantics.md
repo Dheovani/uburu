@@ -19,6 +19,26 @@ Cada ocorrência deve conter:
 Se uma linha contém mais de uma ocorrência, cada ocorrência é publicada como um `SearchResult`
 separado.
 
+## Validação da consulta
+
+A busca valida `SearchQuery` antes de iniciar a varredura do filesystem. Consultas inválidas não
+devem chamar o scanner nem publicar resultados.
+
+Erros de validação são retornados como códigos tipados em `SearchSummary::errors`, para que UI e
+serviços possam traduzir mensagens sem acoplar texto visível ao core.
+
+Erros iniciais suportados:
+
+- `empty_root`;
+- `root_not_found`;
+- `root_not_directory`;
+- `empty_expression`;
+- `unsupported_search_mode`;
+- `invalid_result_limit`;
+- `invalid_maximum_file_size`.
+
+O modo regex é reportado como `unsupported_search_mode` até a implementação PCRE2 ficar disponível.
+
 ## Busca literal
 
 A busca literal interpreta a expressão como texto comum. Caracteres com significado especial em
@@ -96,7 +116,6 @@ O Marco 1 ainda deve distinguir explicitamente:
 
 Esta primeira versão do documento registra o contrato inicial e as lacunas conhecidas. Ainda faltam:
 
-- validação tipada de `SearchQuery`;
 - erros traduzíveis para query inválida;
 - case-insensitive Unicode consistente;
 - regex com PCRE2;

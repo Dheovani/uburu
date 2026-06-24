@@ -1,6 +1,7 @@
 add_library(uburu_core STATIC
   filesystem/recursive-file-scanner.cpp
   search/direct-search-engine.cpp
+  search/search-query-validation.cpp
   text/text-matcher.cpp
 )
 

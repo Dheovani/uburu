@@ -4,11 +4,30 @@
 
 #include <functional>
 #include <stop_token>
+#include <string>
+#include <vector>
 
 namespace uburu::search
 {
 
   using ResultSink = std::function<bool(SearchResult)>;
+
+  enum class SearchErrorCode
+  {
+    empty_root,
+    root_not_found,
+    root_not_directory,
+    empty_expression,
+    unsupported_search_mode,
+    invalid_result_limit,
+    invalid_maximum_file_size
+  };
+
+  struct SearchError
+  {
+    SearchErrorCode code{SearchErrorCode::empty_expression};
+    std::string context;
+  };
 
   struct SearchSummary
   {
@@ -16,6 +35,7 @@ namespace uburu::search
     std::size_t matches{0};
     bool cancelled{false};
     bool limit_reached{false};
+    std::vector<SearchError> errors;
   };
 
   class SearchEngine

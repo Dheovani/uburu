@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <system_error>
 #include <vector>
 
 namespace
@@ -42,13 +43,34 @@ TEST_CASE("an empty expression does not start filesystem traversal")
 {
   auto scanner = std::make_shared<EmptyScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query{.root = "fixture", .expression = ""};
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = ""};
 
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
 
   CHECK(scanner->calls == 0);
   CHECK(summary.files_scanned == 0);
   CHECK(summary.matches == 0);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::empty_expression);
+}
+
+TEST_CASE("an invalid root does not start filesystem traversal")
+{
+  auto scanner = std::make_shared<EmptyScanner>();
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path() /
+                                   "uburu-direct-search-missing-root",
+                           .expression = "needle"};
+  std::error_code error;
+  std::filesystem::remove_all(query.root, error);
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+
+  CHECK(scanner->calls == 0);
+  CHECK(summary.files_scanned == 0);
+  CHECK(summary.matches == 0);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::root_not_found);
 }
 
 TEST_CASE("a pre-cancelled search reports cancellation")
@@ -57,7 +79,7 @@ TEST_CASE("a pre-cancelled search reports cancellation")
   uburu::search::DirectSearchEngine engine(scanner);
   std::stop_source cancellation;
   cancellation.request_stop();
-  uburu::SearchQuery query{.root = "fixture", .expression = "needle"};
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
 
   const auto summary =
       engine.search(query, [](uburu::SearchResult) { return true; }, cancellation.get_token());
@@ -76,7 +98,7 @@ TEST_CASE("direct search streams a match with one-based line and column")
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query{.root = "fixture", .expression = "needle"};
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
@@ -103,7 +125,7 @@ TEST_CASE("direct search streams every match on the same line")
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query{.root = "fixture", .expression = "needle"};
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
@@ -129,7 +151,7 @@ TEST_CASE("direct search applies the global result limit before publishing")
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query{.root = "fixture", .expression = "needle"};
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
   query.options.result_limit = 1;
   std::vector<uburu::SearchResult> results;
 

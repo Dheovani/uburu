@@ -56,7 +56,7 @@ e UI para avançarem mais rapidamente.
 ## Marco 1 — Semântica correta da busca direta (P0)
 
 - [x] Especificar formalmente a semântica em `docs/search-semantics.md`.
-- [ ] Validar `SearchQuery` e retornar erros tipados para raiz inválida, expressão vazia e opções
+- [x] Validar `SearchQuery` e retornar erros tipados para raiz inválida, expressão vazia e opções
   incompatíveis.
 - [x] Encontrar todas as ocorrências de uma linha, não apenas a primeira.
 - [x] Definir e testar comportamento para ocorrências sobrepostas.

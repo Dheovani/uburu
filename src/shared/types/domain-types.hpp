@@ -19,6 +19,19 @@ namespace uburu
     regex
   };
 
+  enum class SearchTarget
+  {
+    content,
+    file_name,
+    content_and_file_name
+  };
+
+  enum class SearchResultKind
+  {
+    content,
+    file_name
+  };
+
   enum class GitFileStatus
   {
     clean,
@@ -33,6 +46,7 @@ namespace uburu
   struct SearchOptions
   {
     SearchMode mode{SearchMode::literal};
+    SearchTarget target{SearchTarget::content};
     bool case_sensitive{false};
     bool whole_word{false};
     bool whole_identifier{false};
@@ -49,6 +63,8 @@ namespace uburu
     std::vector<std::string> extensions;
     std::vector<std::filesystem::path> included_directories;
     std::vector<std::filesystem::path> excluded_directories;
+    std::vector<std::string> included_globs;
+    std::vector<std::string> excluded_globs;
   };
 
   struct SearchQuery
@@ -60,6 +76,7 @@ namespace uburu
 
   struct SearchResult
   {
+    SearchResultKind kind{SearchResultKind::content};
     std::filesystem::path path;
     std::size_t line{0};
     std::size_t column{0};

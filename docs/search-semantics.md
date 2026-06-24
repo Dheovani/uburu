@@ -133,7 +133,48 @@ Regex preserva a mesma unidade de resultado da busca literal: cada ocorrência v
 individual, com offset e tamanho em bytes UTF-8. `whole_word` e `whole_identifier` também são
 aplicados sobre matches regex.
 
-A implementação final ainda deve retornar erro de compilação com posição e mensagem traduzível.
+Erros de compilação retornam `regex_compile_failed` com:
+
+- `translation_key`, para a UI traduzir a mensagem visível;
+- `context`, com a mensagem técnica fornecida pelo backend;
+- `offset`, quando o PCRE2 informa a posição do erro no padrão.
+
+## Alvo da busca
+
+`SearchOptions::target` define onde a expressão será aplicada:
+
+- `content`: busca apenas no conteúdo dos arquivos;
+- `file_name`: busca apenas no caminho relativo do arquivo;
+- `content_and_file_name`: publica ocorrências tanto no caminho relativo quanto no conteúdo.
+
+Resultados de nome de arquivo usam `SearchResultKind::file_name`, linha `0` e coluna em base 1 dentro
+do caminho relativo. Resultados de conteúdo usam `SearchResultKind::content` e linha em base 1.
+
+A busca por nome de arquivo não abre o arquivo, permitindo encontrar caminhos mesmo quando o conteúdo
+não está acessível naquele momento. Regex, case sensitivity e regras de palavra inteira também se
+aplicam ao caminho relativo.
+
+## Filtros de arquivos
+
+O scanner aplica filtros antes de entregar `FileEntry` ao motor de busca:
+
+- tamanho máximo;
+- extensões permitidas;
+- diretórios incluídos;
+- diretórios excluídos;
+- globs incluídos;
+- globs excluídos;
+- arquivos ocultos, conforme `include_hidden`.
+
+Exclusões têm precedência sobre inclusões. Portanto, um arquivo dentro de um diretório incluído ainda
+será ignorado se também cair em um diretório excluído ou glob excluído.
+
+Extensões são comparadas sem o ponto inicial. No Windows, a comparação de extensões e globs é
+case-insensitive; nas demais plataformas, a comparação preserva a sensibilidade a maiúsculas e
+minúsculas do sistema.
+
+Os globs iniciais suportam `*` e `?` sobre o caminho relativo normalizado com `/`. Eles são uma
+semântica simples de filtro do Marco 1, não uma implementação completa de `.gitignore`.
 
 ## Limites de resultados
 

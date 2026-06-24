@@ -31,6 +31,7 @@ namespace uburu::search
   struct SearchError
   {
     SearchErrorCode code{SearchErrorCode::empty_expression};
+    std::string translation_key;
     std::string context;
     std::optional<std::size_t> offset;
   };

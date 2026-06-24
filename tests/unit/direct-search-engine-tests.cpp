@@ -8,6 +8,7 @@
 #include <fstream>
 #include <memory>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 namespace
@@ -205,6 +206,61 @@ TEST_CASE("direct search supports regex queries")
 #endif
 }
 
+TEST_CASE("direct search can target file names without opening file content")
+{
+  const auto missing_path =
+      std::filesystem::temp_directory_path() / "uburu-search-file-name-target-missing-file.cpp";
+
+  auto scanner = std::make_shared<SingleFileScanner>(missing_path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "source"};
+  query.options.target = uburu::SearchTarget::file_name;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().kind == uburu::SearchResultKind::file_name);
+  CHECK(results.front().path == std::filesystem::path("source.cpp"));
+  CHECK(results.front().line == 0);
+  CHECK(results.front().column == 1);
+  CHECK(results.front().line_text == "source.cpp");
+  CHECK(summary.matches == 1);
+  CHECK(summary.errors.empty());
+}
+
+TEST_CASE("direct search can target file names and content in the same query")
+{
+  const auto path =
+      std::filesystem::temp_directory_path() / "uburu-search-file-name-and-content-target-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "source appears in content\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "source"};
+  query.options.target = uburu::SearchTarget::content_and_file_name;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 2);
+  CHECK(results[0].kind == uburu::SearchResultKind::file_name);
+  CHECK(results[1].kind == uburu::SearchResultKind::content);
+  CHECK(results[1].line == 1);
+  CHECK(summary.matches == 2);
+}
+
 TEST_CASE("direct search reports regex compilation errors")
 {
   auto scanner = std::make_shared<EmptyScanner>();
@@ -218,6 +274,8 @@ TEST_CASE("direct search reports regex compilation errors")
   CHECK(scanner->calls == 0);
   REQUIRE(summary.errors.size() == 1);
   CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::regex_compile_failed);
+  CHECK(summary.errors.front().translation_key == "search.error.regexCompileFailed");
+  CHECK(!summary.errors.front().context.empty());
   REQUIRE(summary.errors.front().offset.has_value());
 #else
   CHECK(scanner->calls == 0);

@@ -1,5 +1,6 @@
 #include "core/search/direct-search-engine.hpp"
 
+#include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
 #include "core/text/regex-matcher.hpp"
 #include "core/text/text-matcher.hpp"
@@ -8,6 +9,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace uburu::search
@@ -21,6 +23,70 @@ namespace uburu::search
         return SearchErrorCode::regex_timeout;
 
       return SearchErrorCode::regex_resource_limit_exceeded;
+    }
+
+    bool searches_content(SearchTarget target)
+    {
+      return target == SearchTarget::content || target == SearchTarget::content_and_file_name;
+    }
+
+    bool searches_file_name(SearchTarget target)
+    {
+      return target == SearchTarget::file_name || target == SearchTarget::content_and_file_name;
+    }
+
+    std::vector<text::MatchPosition> find_literal_matches(std::string_view text,
+                                                          const SearchQuery& query)
+    {
+      return text::find_all_literals(text, query.expression, query.options);
+    }
+
+    std::optional<std::vector<text::MatchPosition>>
+    find_regex_matches(std::string_view text, const text::RegexMatcher& regex_matcher,
+                       SearchSummary& summary)
+    {
+      const auto regex_result = regex_matcher.find_all(text);
+
+      if (regex_result.status != text::RegexMatchStatus::completed) {
+        summary.errors.push_back(
+            make_search_error(error_code_from_regex_status(regex_result.status),
+                              std::to_string(regex_result.backend_error_code)));
+
+        return std::nullopt;
+      }
+
+      return regex_result.matches;
+    }
+
+    std::optional<std::vector<text::MatchPosition>>
+    find_matches(std::string_view text, const SearchQuery& query,
+                 const std::optional<text::RegexMatcher>& regex_matcher, SearchSummary& summary)
+    {
+      if (regex_matcher)
+        return find_regex_matches(text, *regex_matcher, summary);
+
+      return find_literal_matches(text, query);
+    }
+
+    bool publish_matches(const FileEntry& entry, SearchResultKind kind, std::size_t line_number,
+                         std::string line_text, const std::vector<text::MatchPosition>& matches,
+                         const SearchQuery& query, SearchSummary& summary, const ResultSink& sink)
+    {
+      for (const auto& match : matches) {
+        if (summary.matches >= query.options.result_limit) {
+          summary.limit_reached = true;
+
+          return false;
+        }
+
+        ++summary.matches;
+
+        if (!sink(SearchResult{kind, entry.relative_path, line_number, match.offset + 1,
+                               match.length, line_text}))
+          return false;
+      }
+
+      return true;
     }
 
   } // namespace
@@ -45,11 +111,10 @@ namespace uburu::search
       auto compiled = text::compile_regex(query.expression, query.options);
       if (!compiled.matcher) {
         const auto& error = compiled.error;
-        summary.errors.push_back(
-          SearchError{SearchErrorCode::regex_compile_failed,
-                      error ? error->message : std::string{},
-                      error ? error->offset : 0}
-        );
+        summary.errors.push_back(make_search_error(
+            SearchErrorCode::regex_compile_failed, error ? error->message : std::string{},
+            error ? error->offset : std::optional<std::size_t>{}));
+
         return summary;
       }
       summary.regex_execution_mode = compiled.matcher->jit_enabled()
@@ -63,7 +128,24 @@ namespace uburu::search
         [&](FileEntry entry) {
           if (stop_token.stop_requested())
             return false;
+
           ++summary.files_scanned;
+
+          if (searches_file_name(query.options.target)) {
+            const auto path_text = entry.relative_path.generic_string();
+            const auto path_matches = find_matches(path_text, query, regex_matcher, summary);
+
+            if (!path_matches)
+              return false;
+
+            if (!publish_matches(entry, SearchResultKind::file_name, 0, path_text, *path_matches,
+                                 query, summary, sink))
+              return false;
+          }
+
+          if (!searches_content(query.options.target))
+            return true;
+
           std::ifstream stream(entry.absolute_path, std::ios::binary);
           if (!stream)
             return true;
@@ -75,40 +157,17 @@ namespace uburu::search
             if (!query.options.include_binary && text::looks_binary(line))
               return true;
 
-            std::vector<text::MatchPosition> matches;
+            const auto matches = find_matches(line, query, regex_matcher, summary);
 
-            if (regex_matcher) {
-              const auto regex_result = regex_matcher->find_all(line);
+            if (!matches)
+              return false;
 
-              if (regex_result.status != text::RegexMatchStatus::completed) {
-                summary.errors.push_back(
-                    SearchError{error_code_from_regex_status(regex_result.status),
-                                std::to_string(regex_result.backend_error_code), std::nullopt});
-
-                return false;
-              }
-
-              matches = std::move(regex_result.matches);
-            } else {
-              matches = text::find_all_literals(line, query.expression, query.options);
-            }
-
-            if (matches.empty())
+            if (matches->empty())
               continue;
 
-            for (const auto& match : matches) {
-              if (summary.matches >= query.options.result_limit) {
-                summary.limit_reached = true;
-
-                return false;
-              }
-
-              ++summary.matches;
-
-              if (!sink(SearchResult{entry.relative_path, line_number, match.offset + 1,
-                                     match.length, line}))
-                return false;
-            }
+            if (!publish_matches(entry, SearchResultKind::content, line_number, line, *matches,
+                                 query, summary, sink))
+              return false;
           }
 
           return true;

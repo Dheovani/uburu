@@ -65,11 +65,11 @@ e UI para avançarem mais rapidamente.
 - [x] Implementar busca regex com PCRE2.
 - [x] Habilitar PCRE2 JIT quando suportado e fornecer fallback explícito.
 - [x] Limitar tempo, profundidade e recursos de regex para evitar padrões patológicos.
-- [ ] Retornar erro de compilação de regex com posição e mensagem traduzível.
-- [ ] Implementar busca por nome de arquivo separada da busca por conteúdo.
-- [ ] Implementar filtros por glob, extensão, diretório e tamanho.
-- [ ] Normalizar extensões e definir sensibilidade a maiúsculas por plataforma.
-- [ ] Implementar include/exclude com precedência documentada.
+- [x] Retornar erro de compilação de regex com posição e mensagem traduzível.
+- [x] Implementar busca por nome de arquivo separada da busca por conteúdo.
+- [x] Implementar filtros por glob, extensão, diretório e tamanho.
+- [x] Normalizar extensões e definir sensibilidade a maiúsculas por plataforma.
+- [x] Implementar include/exclude com precedência documentada.
 - [ ] Aplicar limite de resultados global e por arquivo.
 - [ ] Implementar ordenação determinística e estratégia de relevância inicial.
 - [ ] Preservar resultados progressivos sem esperar a conclusão da varredura.

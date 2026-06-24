@@ -60,7 +60,7 @@ e UI para avançarem mais rapidamente.
   incompatíveis.
 - [x] Encontrar todas as ocorrências de uma linha, não apenas a primeira.
 - [x] Definir e testar comportamento para ocorrências sobrepostas.
-- [ ] Implementar busca case-sensitive e case-insensitive Unicode de forma consistente.
+- [x] Implementar busca case-sensitive e case-insensitive Unicode de forma consistente.
 - [ ] Implementar palavra inteira com regras Unicode e opção específica para identificadores de código.
 - [ ] Implementar busca regex com PCRE2.
 - [ ] Habilitar PCRE2 JIT quando suportado e fornecer fallback explícito.
@@ -81,7 +81,7 @@ e UI para avançarem mais rapidamente.
 ### Testes obrigatórios
 
 - [x] Literal com múltiplas ocorrências na mesma linha.
-- [ ] Case-sensitive e case-insensitive com ASCII e Unicode.
+- [x] Case-sensitive e case-insensitive com ASCII e Unicode.
 - [ ] Palavra inteira, identificadores, pontuação e limites Unicode.
 - [ ] Regex válida, inválida, JIT/fallback e cancelamento.
 - [ ] CRLF, LF, arquivo sem newline final e linhas vazias.

@@ -42,6 +42,33 @@ TEST_CASE("literal matching can be case sensitive")
   CHECK_FALSE(find_literal("Uburu", "uburu", options).has_value());
 }
 
+TEST_CASE("literal matching is case insensitive for precomposed latin Unicode")
+{
+  const auto match = find_literal("A busca encontrou AÇÃO no arquivo", "ação", SearchOptions{});
+
+  REQUIRE(match.has_value());
+  CHECK(match->offset == 18);
+  CHECK(match->length == 6);
+}
+
+TEST_CASE("case sensitive literal matching keeps Unicode casing strict")
+{
+  SearchOptions options;
+  options.case_sensitive = true;
+
+  CHECK_FALSE(find_literal("CAFÉ", "café", options).has_value());
+  CHECK(find_literal("CAFÉ", "CAFÉ", options).has_value());
+}
+
+TEST_CASE("literal matching keeps UTF-8 byte offsets and byte lengths")
+{
+  const auto match = find_literal("pré-ação", "ação", SearchOptions{});
+
+  REQUIRE(match.has_value());
+  CHECK(match->offset == 5);
+  CHECK(match->length == 6);
+}
+
 TEST_CASE("whole word does not match an identifier fragment")
 {
   SearchOptions options;

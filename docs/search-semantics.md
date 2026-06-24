@@ -44,11 +44,19 @@ O modo regex é reportado como `unsupported_search_mode` até a implementação 
 A busca literal interpreta a expressão como texto comum. Caracteres com significado especial em
 regex não possuem significado especial nesse modo.
 
-Por padrão, a busca literal é case-insensitive. Quando `case_sensitive` está habilitado, os bytes da
-linha e da expressão devem corresponder exatamente.
+Por padrão, a busca literal é case-insensitive. Quando `case_sensitive` está habilitado, os code
+points UTF-8 da linha e da expressão devem corresponder exatamente.
 
-No estágio atual, a comparação case-insensitive é ASCII-oriented. O Marco 1 ainda deve evoluir essa
-regra para Unicode consistente antes de considerar o item de case-insensitive concluído.
+A comparação case-insensitive usa case folding Unicode simples, limitado a transformações de um code
+point para um code point. Isso cobre ASCII e letras latinas pré-compostas comuns, como `AÇÃO` contra
+`ação` e `CAFÉ` contra `café`.
+
+Ainda não há normalização canônica. Portanto, `é` pré-composto e `e` + acento combinante podem ser
+tratados como sequências diferentes até o Marco 2 introduzir normalização Unicode opcional e política
+formal de encoding.
+
+Offsets e tamanhos de match ainda são expressos em bytes UTF-8. A separação entre byte offset, code
+point, coluna visual e spans de highlight será formalizada no Marco 2.
 
 ## Ocorrências sobrepostas
 
@@ -117,7 +125,6 @@ O Marco 1 ainda deve distinguir explicitamente:
 Esta primeira versão do documento registra o contrato inicial e as lacunas conhecidas. Ainda faltam:
 
 - erros traduzíveis para query inválida;
-- case-insensitive Unicode consistente;
 - regex com PCRE2;
 - filtros por nome, glob, extensão, diretório e tamanho;
 - ordenação determinística formal;

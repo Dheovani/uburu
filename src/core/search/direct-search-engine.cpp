@@ -25,41 +25,39 @@ namespace uburu::search
       return summary;
 
     scanner_->scan(
-      query.root,
-      query.options,
-      [&](FileEntry entry) {
-        if (stop_token.stop_requested())
-          return false;
-        ++summary.files_scanned;
-        std::ifstream stream(entry.absolute_path, std::ios::binary);
-        if (!stream)
-          return true;
-
-        std::string line;
-        std::size_t line_number = 0;
-        while (std::getline(stream, line)) {
-          ++line_number;
-          if (!query.options.include_binary && text::looks_binary(line))
+        query.root, query.options,
+        [&](FileEntry entry) {
+          if (stop_token.stop_requested())
+            return false;
+          ++summary.files_scanned;
+          std::ifstream stream(entry.absolute_path, std::ios::binary);
+          if (!stream)
             return true;
-          const auto matches = text::find_all_literals(line, query.expression, query.options);
-          if (matches.empty())
-            continue;
-          for (const auto& match : matches) {
-            if (summary.matches >= query.options.result_limit) {
-              summary.limit_reached = true;
-              return false;
+
+          std::string line;
+          std::size_t line_number = 0;
+          while (std::getline(stream, line)) {
+            ++line_number;
+            if (!query.options.include_binary && text::looks_binary(line))
+              return true;
+            const auto matches = text::find_all_literals(line, query.expression, query.options);
+            if (matches.empty())
+              continue;
+            for (const auto& match : matches) {
+              if (summary.matches >= query.options.result_limit) {
+                summary.limit_reached = true;
+                return false;
+              }
+              ++summary.matches;
+              if (!sink(SearchResult{entry.relative_path, line_number, match.offset + 1,
+                                     match.length, line}))
+                return false;
             }
-            ++summary.matches;
-            if (!sink(SearchResult{entry.relative_path, line_number, match.offset + 1,
-                                    match.length, line}))
-              return false;
           }
-        }
-        return true;
-      },
-      stop_token
-    );
-    
+          return true;
+        },
+        stop_token);
+
     summary.cancelled = stop_token.stop_requested();
     return summary;
   }

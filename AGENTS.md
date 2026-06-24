@@ -511,6 +511,23 @@ Evitar:
 * Otimizações obscuras sem benchmark.
 * Silenciar erros importantes.
 * Misturar lógica de busca com renderização.
+* Números mágicos em lógica de domínio, parsing, protocolos, formatos binários, limites ou
+  algoritmos.
+
+Quando um valor numérico possuir significado semântico, declare uma constante nomeada antes de
+usá-lo. Em C++, prefira `constexpr` ou `inline constexpr` com o menor escopo adequado, geralmente no
+namespace anônimo do `.cpp` quando o valor for detalhe interno da unidade de tradução. Use macros
+apenas quando forem exigidas por integração com pré-processador, plataforma ou biblioteca externa.
+
+Exemplos preferidos:
+
+```cpp
+constexpr unsigned char utf8_continuation_tag_mask = 0b1100'0000U;
+constexpr char32_t maximum_unicode_scalar = 0x10FFFFU;
+constexpr std::size_t default_preview_context_lines = 3;
+```
+
+O nome da constante deve explicar o significado do valor, não apenas repetir sua representação.
 
 ## Testes
 

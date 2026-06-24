@@ -17,6 +17,21 @@ namespace uburu::text
     std::string message;
   };
 
+  enum class RegexMatchStatus
+  {
+    completed,
+    resource_limit_exceeded,
+    timed_out,
+    internal_error
+  };
+
+  struct RegexMatchResult
+  {
+    std::vector<MatchPosition> matches;
+    RegexMatchStatus status{RegexMatchStatus::completed};
+    int backend_error_code{0};
+  };
+
   struct RegexCompileResult;
 
   [[nodiscard]] RegexCompileResult compile_regex(std::string_view expression,
@@ -32,7 +47,7 @@ namespace uburu::text
     RegexMatcher& operator=(RegexMatcher&& other) noexcept;
     ~RegexMatcher();
 
-    [[nodiscard]] std::vector<MatchPosition> find_all(std::string_view text) const;
+    [[nodiscard]] RegexMatchResult find_all(std::string_view text) const;
     [[nodiscard]] bool jit_enabled() const noexcept;
 
   private:

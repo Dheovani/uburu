@@ -543,6 +543,27 @@ return (!options.whole_word || has_word_boundary(match)) &&
        (!options.whole_identifier || has_identifier_boundary(match));
 ```
 
+Para legibilidade humana, separe visualmente declarações e blocos de controle:
+
+* Após uma declaração de variável sem atribuição, insira uma linha em branco antes da próxima
+  instrução, exceto quando a próxima linha também for outra declaração de variável relacionada.
+* Após blocos de controle como `if`, `else`, `for`, `while`, `switch` e blocos escopados auxiliares,
+  insira uma linha em branco antes da próxima instrução lógica.
+* Após um `return`, insira uma linha em branco apenas quando houver código seguinte no mesmo escopo.
+  Não adicione linha vazia artificial entre um `return` final e o `}` da função ou bloco.
+
+Exemplo:
+
+```cpp
+std::string message;
+
+if (enabled) {
+  message = "ready";
+}
+
+return message;
+```
+
 ## Testes
 
 Criar testes para:

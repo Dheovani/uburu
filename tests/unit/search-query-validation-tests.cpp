@@ -87,3 +87,14 @@ TEST_CASE("search query validation reports incompatible options")
   CHECK(has_error(errors, uburu::search::SearchErrorCode::invalid_result_limit));
   CHECK(has_error(errors, uburu::search::SearchErrorCode::invalid_maximum_file_size));
 }
+
+TEST_CASE("search query validation reports invalid regex limits")
+{
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
+  query.options.mode = uburu::SearchMode::regex;
+  query.options.regex_match_limit = 0;
+
+  const auto errors = uburu::search::validate_search_query(query);
+
+  CHECK(has_error(errors, uburu::search::SearchErrorCode::invalid_regex_limit));
+}

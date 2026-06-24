@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -220,6 +221,33 @@ TEST_CASE("direct search reports regex compilation errors")
   REQUIRE(summary.errors.front().offset.has_value());
 #else
   CHECK(scanner->calls == 0);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupported_search_mode);
+#endif
+}
+
+TEST_CASE("direct search stops when regex times out")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-regex-timeout-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "needle\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
+  query.options.mode = uburu::SearchMode::regex;
+  query.options.regex_timeout = std::chrono::milliseconds{0};
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+  cleanup();
+
+#ifdef UBURU_HAS_PCRE2
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::regex_timeout);
+#else
   REQUIRE(summary.errors.size() == 1);
   CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupported_search_mode);
 #endif

@@ -7,9 +7,23 @@
 #include <fstream>
 #include <optional>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace uburu::search
 {
+  namespace
+  {
+
+    SearchErrorCode error_code_from_regex_status(text::RegexMatchStatus status)
+    {
+      if (status == text::RegexMatchStatus::timed_out)
+        return SearchErrorCode::regex_timeout;
+
+      return SearchErrorCode::regex_resource_limit_exceeded;
+    }
+
+  } // namespace
 
   DirectSearchEngine::DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner)
       : scanner_(std::move(scanner))
@@ -60,22 +74,43 @@ namespace uburu::search
             ++line_number;
             if (!query.options.include_binary && text::looks_binary(line))
               return true;
-            const auto matches =
-                regex_matcher ? regex_matcher->find_all(line)
-                              : text::find_all_literals(line, query.expression, query.options);
+
+            std::vector<text::MatchPosition> matches;
+
+            if (regex_matcher) {
+              const auto regex_result = regex_matcher->find_all(line);
+
+              if (regex_result.status != text::RegexMatchStatus::completed) {
+                summary.errors.push_back(
+                    SearchError{error_code_from_regex_status(regex_result.status),
+                                std::to_string(regex_result.backend_error_code), std::nullopt});
+
+                return false;
+              }
+
+              matches = std::move(regex_result.matches);
+            } else {
+              matches = text::find_all_literals(line, query.expression, query.options);
+            }
+
             if (matches.empty())
               continue;
+
             for (const auto& match : matches) {
               if (summary.matches >= query.options.result_limit) {
                 summary.limit_reached = true;
+
                 return false;
               }
+
               ++summary.matches;
+
               if (!sink(SearchResult{entry.relative_path, line_number, match.offset + 1,
                                      match.length, line}))
                 return false;
             }
           }
+
           return true;
         },
         stop_token);

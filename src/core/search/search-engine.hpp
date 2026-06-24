@@ -21,6 +21,9 @@ namespace uburu::search
     empty_expression,
     unsupported_search_mode,
     regex_compile_failed,
+    regex_resource_limit_exceeded,
+    regex_timeout,
+    invalid_regex_limit,
     invalid_result_limit,
     invalid_maximum_file_size
   };

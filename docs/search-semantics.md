@@ -35,6 +35,9 @@ Erros iniciais suportados:
 - `empty_expression`;
 - `unsupported_search_mode`;
 - `regex_compile_failed`;
+- `regex_resource_limit_exceeded`;
+- `regex_timeout`;
+- `invalid_regex_limit`;
 - `invalid_result_limit`;
 - `invalid_maximum_file_size`.
 
@@ -115,14 +118,22 @@ registra `RegexExecutionMode::jit`. Quando PCRE2 está disponível mas JIT não 
 ou build corrente, a busca continua com fallback interpretado e registra
 `RegexExecutionMode::interpreted_fallback`.
 
+Regex possui limites configuráveis em `SearchOptions`:
+
+- `regex_match_limit`;
+- `regex_depth_limit`;
+- `regex_heap_limit_kib`;
+- `regex_timeout`.
+
+Os três primeiros são aplicados no `pcre2_match_context`. O timeout usa callouts automáticos do PCRE2
+e interrompe a tentativa de match quando o orçamento de tempo expira. Quando um limite é atingido, a
+busca para e retorna erro tipado, distinguindo `regex_resource_limit_exceeded` de `regex_timeout`.
+
 Regex preserva a mesma unidade de resultado da busca literal: cada ocorrência vira um resultado
 individual, com offset e tamanho em bytes UTF-8. `whole_word` e `whole_identifier` também são
 aplicados sobre matches regex.
 
-A implementação final ainda deve:
-
-- retornar erro de compilação com posição e mensagem traduzível;
-- aplicar limites de recurso para evitar padrões patológicos.
+A implementação final ainda deve retornar erro de compilação com posição e mensagem traduzível.
 
 ## Limites de resultados
 

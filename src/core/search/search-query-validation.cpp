@@ -43,6 +43,9 @@ namespace uburu::search
 #endif
     append_if(query.options.result_limit == 0, errors, SearchErrorCode::invalid_result_limit);
     append_if(query.options.maximum_file_size == 0, errors, SearchErrorCode::invalid_maximum_file_size);
+    append_if(query.options.regex_match_limit == 0 ||
+              query.options.regex_depth_limit == 0 ||
+              query.options.regex_heap_limit_kib == 0, errors, SearchErrorCode::invalid_regex_limit);
 
     return errors;
   }

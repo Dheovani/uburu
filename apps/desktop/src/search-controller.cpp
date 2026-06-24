@@ -49,11 +49,7 @@ namespace uburu::app
 
   QHash<int, QByteArray> SearchResultModel::roleNames() const
   {
-    return {
-      {PathRole, "filePath"},
-      {LocationRole, "location"},
-      {PreviewRole, "preview"}
-    };
+    return {{PathRole, "filePath"}, {LocationRole, "location"}, {PreviewRole, "preview"}};
   }
 
   void SearchResultModel::clear()

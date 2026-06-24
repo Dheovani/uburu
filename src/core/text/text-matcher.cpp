@@ -170,7 +170,8 @@ namespace uburu::text
         return std::nullopt;
 
       std::size_t scalar_offset = offset - 1;
-      while (scalar_offset > 0 && is_continuation_byte(static_cast<unsigned char>(text[scalar_offset]))) {
+      while (scalar_offset > 0 &&
+             is_continuation_byte(static_cast<unsigned char>(text[scalar_offset]))) {
         --scalar_offset;
       }
 

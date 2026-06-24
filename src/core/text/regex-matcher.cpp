@@ -1,5 +1,6 @@
 #include "core/text/regex-matcher.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <utility>
 
@@ -17,6 +18,13 @@ namespace uburu::text
     constexpr unsigned char utf8_continuation_tag_mask = 0b1100'0000U;
     constexpr unsigned char utf8_continuation_tag = 0b1000'0000U;
     constexpr std::size_t pcre_error_message_buffer_size = 256;
+
+#ifdef UBURU_HAS_PCRE2
+    struct RegexDeadline
+    {
+      std::chrono::steady_clock::time_point expires_at;
+    };
+#endif
 
     bool is_continuation_byte(unsigned char byte)
     {
@@ -37,6 +45,29 @@ namespace uburu::text
     pcre2_code* as_pcre_code(void* code)
     {
       return static_cast<pcre2_code*>(code);
+    }
+
+    int timeout_callout(pcre2_callout_block*, void* data)
+    {
+      const auto* deadline = static_cast<const RegexDeadline*>(data);
+
+      if (std::chrono::steady_clock::now() >= deadline->expires_at)
+        return PCRE2_ERROR_CALLOUT;
+
+      return 0;
+    }
+
+    RegexMatchStatus status_from_pcre_error(int code)
+    {
+      if (code == PCRE2_ERROR_MATCHLIMIT ||
+          code == PCRE2_ERROR_DEPTHLIMIT ||
+          code == PCRE2_ERROR_HEAPLIMIT)
+        return RegexMatchStatus::resource_limit_exceeded;
+
+      if (code == PCRE2_ERROR_CALLOUT)
+        return RegexMatchStatus::timed_out;
+
+      return RegexMatchStatus::internal_error;
     }
 
     std::string pcre_error_message(int code)
@@ -77,34 +108,57 @@ namespace uburu::text
     reset();
   }
 
-  std::vector<MatchPosition> RegexMatcher::find_all(std::string_view text) const
+  RegexMatchResult RegexMatcher::find_all(std::string_view text) const
   {
-    std::vector<MatchPosition> matches;
+    RegexMatchResult result;
 
 #ifdef UBURU_HAS_PCRE2
     if (code_ == nullptr)
-      return matches;
+      return result;
 
     auto* match_data = pcre2_match_data_create_from_pattern(as_pcre_code(code_), nullptr);
-    if (match_data == nullptr)
-      return matches;
+    if (match_data == nullptr) {
+      result.status = RegexMatchStatus::internal_error;
+
+      return result;
+    }
+
+    auto* match_context = pcre2_match_context_create(nullptr);
+    if (match_context == nullptr) {
+      pcre2_match_data_free(match_data);
+      result.status = RegexMatchStatus::internal_error;
+
+      return result;
+    }
+
+    pcre2_set_match_limit(match_context, options_.regex_match_limit);
+    pcre2_set_depth_limit(match_context, options_.regex_depth_limit);
+    pcre2_set_heap_limit(match_context, options_.regex_heap_limit_kib);
+
+    RegexDeadline deadline{std::chrono::steady_clock::now() + options_.regex_timeout};
+    pcre2_set_callout(match_context, timeout_callout, &deadline);
 
     std::size_t start_offset = 0;
     while (start_offset <= text.size()) {
-      const auto result =
+      const auto match_result =
           pcre2_match(as_pcre_code(code_), reinterpret_cast<PCRE2_SPTR>(text.data()), text.size(),
-                      start_offset, 0, match_data, nullptr);
-      if (result == PCRE2_ERROR_NOMATCH)
+                      start_offset, 0, match_data, match_context);
+      if (match_result == PCRE2_ERROR_NOMATCH)
         break;
-      if (result < 0)
+      if (match_result < 0) {
+        result.status = status_from_pcre_error(match_result);
+        result.backend_error_code = match_result;
+
         break;
+      }
 
       const auto* ovector = pcre2_get_ovector_pointer(match_data);
       const auto start = static_cast<std::size_t>(ovector[0]);
       const auto end = static_cast<std::size_t>(ovector[1]);
       const MatchPosition match{start, end - start};
+
       if (matches_requested_boundaries(text, match, options_))
-        matches.push_back(match);
+        result.matches.push_back(match);
 
       if (end > start) {
         start_offset = next_utf8_offset(text, start);
@@ -115,12 +169,13 @@ namespace uburu::text
       }
     }
 
+    pcre2_match_context_free(match_context);
     pcre2_match_data_free(match_data);
 #else
     (void)text;
 #endif
 
-    return matches;
+    return result;
   }
 
   bool RegexMatcher::jit_enabled() const noexcept
@@ -143,7 +198,7 @@ namespace uburu::text
 #ifdef UBURU_HAS_PCRE2
     int error_code = 0;
     PCRE2_SIZE error_offset = 0;
-    std::uint32_t compile_options = PCRE2_UTF | PCRE2_UCP;
+    std::uint32_t compile_options = PCRE2_UTF | PCRE2_UCP | PCRE2_AUTO_CALLOUT;
     if (!options.case_sensitive)
       compile_options |= PCRE2_CASELESS;
 

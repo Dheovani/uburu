@@ -10,6 +10,14 @@
 #include <utility>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <winioctl.h>
+#endif
+
 namespace
 {
 
@@ -46,6 +54,43 @@ namespace
     std::filesystem::create_directories(path.parent_path());
     std::ofstream file(path, std::ios::binary);
     file << content;
+  }
+
+#ifdef _WIN32
+  bool create_sparse_file(const std::filesystem::path& path)
+  {
+    constexpr auto sparse_file_size = 1024LL * 1024LL;
+
+    std::filesystem::create_directories(path.parent_path());
+
+    HANDLE file = CreateFileW(path.wstring().c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                              FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    if (file == INVALID_HANDLE_VALUE)
+      return false;
+
+    DWORD bytes_returned = 0;
+    const auto sparse_enabled =
+      DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &bytes_returned, nullptr);
+
+    LARGE_INTEGER distance;
+    distance.QuadPart = sparse_file_size;
+    const auto moved = SetFilePointerEx(file, distance, nullptr, FILE_BEGIN);
+    const auto resized = SetEndOfFile(file);
+
+    CloseHandle(file);
+
+    return sparse_enabled != 0 && moved != 0 && resized != 0;
+  }
+#endif
+
+  bool create_directory_symlink_or_skip(const std::filesystem::path& target,
+                                        const std::filesystem::path& link)
+  {
+    std::error_code error;
+    std::filesystem::create_directory_symlink(target, link, error);
+
+    return !error;
   }
 
   std::vector<uburu::FileEntry> scan_entries(const std::filesystem::path& root,
@@ -259,4 +304,59 @@ TEST_CASE("recursive scanner records hidden and ignored file metrics")
   CHECK(entries[0].relative_path == std::filesystem::path("visible.txt"));
   CHECK(metrics.hidden_files == 2);
   CHECK(metrics.ignored_files == 1);
+}
+
+#ifdef _WIN32
+TEST_CASE("recursive scanner marks sparse files on Windows")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-sparse-file-test");
+  const auto sparse_path = directory.path() / "sparse.bin";
+
+  if (!create_sparse_file(sparse_path))
+    SKIP("The current filesystem did not allow creating a sparse test file.");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries.front().relative_path == std::filesystem::path("sparse.bin"));
+  CHECK(entries.front().sparse);
+}
+#endif
+
+TEST_CASE("recursive scanner does not follow directory symlinks by default")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-symlink-skip-test");
+  write_file(directory.path() / "target" / "inside.txt", "target\n");
+
+  const auto link = directory.path() / "link";
+  if (!create_directory_symlink_or_skip(directory.path() / "target", link))
+    SKIP("The current environment did not allow creating a directory symlink.");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries.front().relative_path == std::filesystem::path("target") / "inside.txt");
+}
+
+TEST_CASE("recursive scanner avoids cycles when following directory symlinks")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-symlink-cycle-test");
+  write_file(directory.path() / "root.txt", "root\n");
+  std::filesystem::create_directories(directory.path() / "nested");
+
+  const auto link = directory.path() / "nested" / "loop";
+  if (!create_directory_symlink_or_skip(directory.path(), link))
+    SKIP("The current environment did not allow creating a directory symlink.");
+
+  uburu::SearchOptions options;
+  options.follow_symlinks = true;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries.front().relative_path == std::filesystem::path("root.txt"));
 }

@@ -1,10 +1,10 @@
 #include "core/filesystem/git-ignore-rules.hpp"
+#include "core/filesystem/path-normalization.hpp"
 
 #include <algorithm>
 #include <fstream>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 
 namespace uburu::filesystem
@@ -51,23 +51,6 @@ namespace uburu::filesystem
       return text;
     }
 
-    std::string normalize_pattern_path(std::string text)
-    {
-      std::ranges::replace(text, '\\', path_separator);
-
-      return text;
-    }
-
-    std::string normalize_relative_path(const std::filesystem::path& path)
-    {
-      std::filesystem::path normalized = path.lexically_normal();
-
-      if (normalized.is_absolute())
-        throw std::invalid_argument("Expected a relative path, got an absolute path.");
-
-      return normalize_pattern_path(normalized.generic_string());
-    }
-
     bool glob_matches(std::string_view pattern, std::string_view text)
     {
       std::size_t pattern_index = 0;
@@ -108,17 +91,6 @@ namespace uburu::filesystem
       return pattern_index == pattern.size();
     }
 
-    bool path_is_same_or_inside(std::string_view path, std::string_view base)
-    {
-      if (base.empty())
-        return true;
-
-      if (path == base)
-        return true;
-
-      return path.size() > base.size() && path.starts_with(base) && path[base.size()] == '/';
-    }
-
     std::string path_relative_to_base(std::string_view path, std::string_view base)
     {
       if (base.empty())
@@ -127,7 +99,7 @@ namespace uburu::filesystem
       if (path == base)
         return {};
 
-      if (!path_is_same_or_inside(path, base))
+      if (!normalized_path_is_same_or_inside(path, base))
         return {};
 
       return std::string{path.substr(base.size() + 1)};
@@ -185,10 +157,10 @@ namespace uburu::filesystem
 
     bool rule_matches(const GitIgnoreRule& rule, const std::filesystem::path& relative_path, bool is_directory)
     {
-      const auto path = normalize_relative_path(relative_path);
-      const auto base = normalize_relative_path(rule.base_directory);
+      const auto path = normalized_relative_path(relative_path);
+      const auto base = normalized_relative_path(rule.base_directory);
 
-      if (!path_is_same_or_inside(path, base))
+      if (!normalized_path_is_same_or_inside(path, base))
         return false;
 
       const auto relative_to_base = path_relative_to_base(path, base);
@@ -222,7 +194,7 @@ namespace uburu::filesystem
         line.erase(0, 1);
       }
 
-      line = normalize_pattern_path(std::move(line));
+      line = normalize_path_separators(std::move(line));
 
       bool directory_only = false;
       while (!line.empty() && line.back() == path_separator) {

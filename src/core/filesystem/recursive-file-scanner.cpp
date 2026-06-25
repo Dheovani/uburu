@@ -1,37 +1,30 @@
 #include "core/filesystem/recursive-file-scanner.hpp"
 
 #include "core/filesystem/git-ignore-rules.hpp"
+#include "core/filesystem/path-normalization.hpp"
 
 #include <algorithm>
 #include <functional>
 #include <optional>
 #include <string>
 #include <system_error>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#elif defined(__unix__) || defined(__APPLE__)
+#include <sys/stat.h>
+#endif
 
 namespace uburu::filesystem
 {
   namespace
   {
-
-    char normalized_ascii(char value)
-    {
-#ifdef _WIN32
-      if (value >= 'A' && value <= 'Z')
-        return static_cast<char>(value + ('a' - 'A'));
-#endif
-
-      return value;
-    }
-
-    std::string normalized_string(std::string value)
-    {
-      for (auto& character : value)
-        character = normalized_ascii(character);
-
-      return value;
-    }
 
     std::string normalized_extension(std::filesystem::path path)
     {
@@ -40,7 +33,7 @@ namespace uburu::filesystem
       if (extension.starts_with('.'))
         extension.erase(0, 1);
 
-      return normalized_string(std::move(extension));
+      return normalized_path_key(std::move(extension));
     }
 
     bool is_hidden(const std::filesystem::path& path)
@@ -50,8 +43,74 @@ namespace uburu::filesystem
       return !name.empty() && name.front() == '.';
     }
 
-    bool has_allowed_extension(const std::filesystem::path& path,
-                               const std::vector<std::string>& extensions)
+    bool is_sparse_file(const std::filesystem::path& path)
+    {
+#ifdef _WIN32
+      const auto attributes = GetFileAttributesW(path.wstring().c_str());
+
+      if (attributes == INVALID_FILE_ATTRIBUTES)
+        return false;
+
+      return (attributes & FILE_ATTRIBUTE_SPARSE_FILE) != 0;
+#elif defined(__unix__) || defined(__APPLE__)
+      struct stat status;
+
+      if (stat(path.c_str(), &status) != 0)
+        return false;
+
+      if (!S_ISREG(status.st_mode))
+        return false;
+
+      constexpr auto posix_stat_block_size = 512ULL;
+
+      return status.st_size > 0 && status.st_blocks >= 0 &&
+             static_cast<unsigned long long>(status.st_blocks) * posix_stat_block_size
+              < static_cast<unsigned long long>(status.st_size);
+#else
+      static_cast<void>(path);
+
+      return false;
+#endif
+    }
+
+    bool is_windows_reparse_point(const std::filesystem::path& path)
+    {
+#ifdef _WIN32
+      const auto attributes = GetFileAttributesW(path.wstring().c_str());
+
+      if (attributes == INVALID_FILE_ATTRIBUTES)
+        return false;
+
+      return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+#else
+      static_cast<void>(path);
+
+      return false;
+#endif
+    }
+
+    bool is_link_like_directory(const std::filesystem::directory_entry& entry)
+    {
+      std::error_code error;
+
+      return entry.is_symlink(error) || is_windows_reparse_point(entry.path());
+    }
+
+    std::string directory_identity(const std::filesystem::path& directory)
+    {
+      std::error_code error;
+      auto canonical = std::filesystem::weakly_canonical(directory, error);
+
+      if (error)
+        canonical = std::filesystem::absolute(directory, error).lexically_normal();
+
+      if (error)
+        return normalized_path_key(directory);
+
+      return normalized_path_key(canonical);
+    }
+
+    bool has_allowed_extension(const std::filesystem::path& path, const std::vector<std::string>& extensions)
     {
       if (extensions.empty())
         return true;
@@ -59,7 +118,7 @@ namespace uburu::filesystem
       const auto extension = normalized_extension(path);
 
       return std::ranges::any_of(extensions, [&](const std::string& allowed) {
-        auto normalized_allowed = normalized_string(allowed);
+        auto normalized_allowed = normalized_path_key(allowed);
 
         if (normalized_allowed.starts_with('.'))
           normalized_allowed.erase(0, 1);
@@ -68,35 +127,26 @@ namespace uburu::filesystem
       });
     }
 
-    bool is_same_or_inside(const std::filesystem::path& path, const std::filesystem::path& base)
-    {
-      auto path_iterator = path.begin();
-      auto base_iterator = base.begin();
-
-      for (; base_iterator != base.end(); ++base_iterator, ++path_iterator) {
-        if (path_iterator == path.end() || *path_iterator != *base_iterator)
-          return false;
-      }
-
-      return true;
-    }
-
     bool is_included_directory(const std::filesystem::path& relative_path,
                                const std::vector<std::filesystem::path>& included_directories)
     {
       if (included_directories.empty())
         return true;
 
+      const auto relative_key = normalized_path_key(relative_path);
+
       return std::ranges::any_of(included_directories, [&](const std::filesystem::path& included) {
-        return is_same_or_inside(relative_path, included);
+        return normalized_path_is_same_or_inside(relative_key, normalized_path_key(included));
       });
     }
 
     bool is_excluded_directory(const std::filesystem::path& relative_path,
                                const std::vector<std::filesystem::path>& excluded_directories)
     {
+      const auto relative_key = normalized_path_key(relative_path);
+
       return std::ranges::any_of(excluded_directories, [&](const std::filesystem::path& excluded) {
-        return is_same_or_inside(relative_path, excluded);
+        return normalized_path_is_same_or_inside(relative_key, normalized_path_key(excluded));
       });
     }
 
@@ -141,16 +191,16 @@ namespace uburu::filesystem
 
     bool passes_globs(const std::filesystem::path& relative_path, const SearchOptions& options)
     {
-      const auto text = normalized_string(relative_path.generic_string());
+      const auto text = normalized_path_key(relative_path);
+      const auto matches = std::ranges::any_of(options.included_globs, [&](const std::string& glob) {
+        return glob_matches(normalized_path_key(glob), text);
+      });
 
-      if (!options.included_globs.empty() &&
-          !std::ranges::any_of(options.included_globs, [&](const std::string& glob) {
-            return glob_matches(normalized_string(glob), text);
-          }))
+      if (!options.included_globs.empty() && !matches)
         return false;
 
       return !std::ranges::any_of(options.excluded_globs, [&](const std::string& glob) {
-        return glob_matches(normalized_string(glob), text);
+        return glob_matches(normalized_path_key(glob), text);
       });
     }
 
@@ -169,8 +219,7 @@ namespace uburu::filesystem
       }
 
       std::ranges::sort(entries, [](const auto& left, const auto& right) {
-        return normalized_string(left.path().generic_string()) <
-               normalized_string(right.path().generic_string());
+        return normalized_path_key(left.path()) < normalized_path_key(right.path());
       });
 
       return entries;
@@ -214,8 +263,14 @@ namespace uburu::filesystem
     if (options.follow_symlinks)
       flags |= std::filesystem::directory_options::follow_directory_symlink;
 
+    std::unordered_set<std::string> visited_directories;
     std::function<bool(const std::filesystem::path&, GitIgnoreRules)> scan_directory;
     scan_directory = [&](const std::filesystem::path& directory, GitIgnoreRules ignore_rules) {
+      const auto identity = directory_identity(directory);
+
+      if (!visited_directories.insert(identity).second)
+        return true;
+
       if (options.respect_gitignore)
         ignore_rules.append_file(directory / ".gitignore", relative_directory(directory, root));
 
@@ -232,6 +287,11 @@ namespace uburu::filesystem
           continue;
 
         if (item.is_directory(error)) {
+          const auto link_like_directory = is_link_like_directory(item);
+
+          if (link_like_directory && !options.follow_symlinks)
+            continue;
+
           if (options.respect_gitignore && ignore_rules.ignores(relative_path, true))
             continue;
 
@@ -279,7 +339,8 @@ namespace uburu::filesystem
                         .modified_at = item.last_write_time(error),
                         .hidden = hidden,
                         .binary = false,
-                        .symlink = item.is_symlink(error)};
+                        .symlink = item.is_symlink(error),
+                        .sparse = is_sparse_file(path)};
 
         if (!error && !sink(std::move(entry)))
           return false;

@@ -1,5 +1,7 @@
 add_library(uburu_core STATIC
   filesystem/git-ignore-rules.cpp
+  filesystem/path-normalization.cpp
+  filesystem/polling-file-watcher.cpp
   filesystem/recursive-file-scanner.cpp
   search/direct-search-engine.cpp
   search/search-errors.cpp

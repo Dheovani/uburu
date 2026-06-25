@@ -110,22 +110,22 @@ e UI para avançarem mais rapidamente.
 - [x] Suportar arquivos globais de ignore do Git e `.git/info/exclude` quando configurado.
 - [x] Separar arquivos ocultos, ignorados e binários nas métricas.
 - [x] Aplicar corretamente diretórios incluídos e excluídos no scanner.
-- [ ] Normalizar caminhos absolutos e relativos por plataforma.
-- [ ] Tratar caminhos longos, UNC e diferenças de caixa no Windows.
-- [ ] Detectar arquivos esparsos e definir política de leitura por plataforma.
-- [ ] Definir política para junctions, symlinks e mount points.
-- [ ] Detectar ciclos ao seguir symlinks.
+- [x] Normalizar caminhos absolutos e relativos por plataforma.
+- [x] Tratar caminhos longos, UNC e diferenças de caixa no Windows.
+- [x] Detectar arquivos esparsos e definir política de leitura por plataforma.
+- [x] Definir política para junctions, symlinks e mount points.
+- [x] Detectar ciclos ao seguir symlinks.
 - [ ] Implementar pool de workers com tamanho configurável.
 - [ ] Priorizar arquivos pequenos e candidatos mais prováveis sem quebrar determinismo final.
 - [ ] Adicionar fila limitada e backpressure entre scan, leitura, matching e publicação.
 - [ ] Garantir cancelamento cooperativo em scan, fila, leitura e matching.
 - [ ] Evitar mutex global e medir contenção.
-- [ ] Implementar watchers por interface comum.
+- [x] Implementar watchers por interface comum.
 - [ ] Implementar backend Windows com `ReadDirectoryChangesW`.
 - [ ] Implementar backend Linux com `inotify`.
 - [ ] Implementar backend macOS com `FSEvents`.
 - [ ] Tratar overflow/perda de eventos com rescan de reconciliação.
-- [ ] Adicionar fallback inicial documentado quando backend nativo não estiver disponível.
+- [x] Adicionar fallback inicial documentado quando backend nativo não estiver disponível.
 
 ## Marco 4 — Integração Git completa (P1)
 

@@ -126,6 +126,7 @@ namespace uburu
     bool hidden{false};
     bool binary{false};
     bool symlink{false};
+    bool sparse{false};
   };
 
   struct RepositoryInfo

@@ -43,8 +43,14 @@ if(UBURU_ENABLE_FORMAT_TARGET)
       COMMENT "Formatting project C++ sources"
       VERBATIM
     )
+
+    add_custom_target(format-check
+      COMMAND "${UBURU_CLANG_FORMAT_EXECUTABLE}" --dry-run --Werror ${UBURU_FORMAT_SOURCES}
+      COMMENT "Checking project C++ source formatting"
+      VERBATIM
+    )
   else()
-    message(STATUS "clang-format not found; the optional format target is unavailable")
+    message(STATUS "clang-format not found; the optional format targets are unavailable")
   endif()
 endif()
 

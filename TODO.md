@@ -30,20 +30,20 @@ e UI para avançarem mais rapidamente.
 ## Marco 0 — Engenharia reproduzível e higiene do repositório (P0)
 
 - [ ] Inicializar e documentar o repositório Git, branch principal e política de commits.
-- [ ] Adicionar `CMakePresets.json` para Windows/MinGW, Windows/MSVC, Linux e desenvolvimento apenas
+- [x] Adicionar `CMakePresets.json` para Windows/MinGW, Windows/MSVC, Linux e desenvolvimento apenas
   do core.
-- [ ] Eliminar comandos dependentes de caminhos locais fixos como `C:\Qt\6.11.1`.
-- [ ] Corrigir `README.md` e `docs/build.md` com o fluxo MinGW atualmente validado.
-- [ ] Adicionar scripts ou presets para configurar, compilar, testar, formatar e executar a aplicação.
+- [x] Eliminar comandos dependentes de caminhos locais fixos como `C:\Qt\6.11.1`.
+- [x] Corrigir `README.md` e `docs/build.md` com o fluxo MinGW atualmente validado.
+- [x] Adicionar scripts ou presets para configurar, compilar, testar, formatar e executar a aplicação.
 - [ ] Criar target ou script de implantação local com `windeployqt` e DLLs do vcpkg.
-- [ ] Adicionar `.editorconfig` coerente com `.clang-format` e arquivos Markdown/QML.
+- [x] Adicionar `.editorconfig` coerente com `.clang-format` e arquivos Markdown/QML.
 - [ ] Adicionar análise estática com clang-tidy e configurar conjunto inicial de regras.
 - [ ] Adicionar verificação de warnings como erros em CI, com exceções justificadas por compilador.
 - [ ] Adicionar sanitizers em plataformas compatíveis: AddressSanitizer e UndefinedBehaviorSanitizer.
-- [ ] Adicionar verificação automática de formatação sem modificar arquivos (`format-check`).
+- [x] Adicionar verificação automática de formatação sem modificar arquivos (`format-check`).
 - [ ] Criar CI para Windows, Linux e, quando viável, macOS.
 - [ ] Executar em CI: configure, build, testes, format-check e análise estática.
-- [ ] Definir política de versões mínimas de CMake, Qt, compiladores e vcpkg.
+- [x] Definir política de versões mínimas de CMake, Qt, compiladores e vcpkg.
 - [ ] Fixar baseline do vcpkg para builds reproduzíveis.
 - [ ] Adicionar `LICENSE`, `CONTRIBUTING.md`, código de conduta e política de segurança.
 - [ ] Documentar licenças das dependências e obrigações de redistribuição do Qt.

@@ -76,8 +76,7 @@ namespace uburu::search
       return find_literal_matches(text, query);
     }
 
-    void report_partial_failure(SearchSummary& summary,
-                                SearchErrorCode code,
+    void report_partial_failure(SearchSummary& summary, SearchErrorCode code,
                                 const FileEntry& entry)
     {
       ++summary.files_with_read_errors;

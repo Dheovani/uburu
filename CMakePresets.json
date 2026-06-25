@@ -1,0 +1,158 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "UBURU_BUILD_TESTS": "ON",
+        "UBURU_ENABLE_FORMAT_TARGET": "ON",
+        "UBURU_ENABLE_LIBGIT2": "ON",
+        "UBURU_ENABLE_PCRE2": "ON"
+      }
+    },
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Windows MinGW Debug",
+      "description": "Qt desktop build using MinGW, Ninja, vcpkg and QT_ROOT/MINGW_ROOT.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-mingw-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "$env{MINGW_ROOT}/bin/g++.exe",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC Debug",
+      "description": "Qt desktop build using MSVC from a configured developer environment.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "description": "Qt desktop build using Ninja, vcpkg and QT_ROOT when Qt is outside the system prefix.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
+    },
+    {
+      "name": "core-windows-mingw-debug",
+      "displayName": "Core-only Windows MinGW Debug",
+      "description": "Build only the UI-independent core and tests using MinGW; does not require Qt.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/core-windows-mingw-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "$env{MINGW_ROOT}/bin/g++.exe",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
+        "UBURU_BUILD_DESKTOP": "OFF"
+      }
+    },
+    {
+      "name": "core-linux-debug",
+      "displayName": "Core-only Linux Debug",
+      "description": "Build only the UI-independent core and tests on Linux; does not require Qt.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/core-linux-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "UBURU_BUILD_DESKTOP": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-mingw-debug",
+      "configurePreset": "windows-mingw-debug"
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug"
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "core-windows-mingw-debug",
+      "configurePreset": "core-windows-mingw-debug"
+    },
+    {
+      "name": "core-linux-debug",
+      "configurePreset": "core-linux-debug"
+    },
+    {
+      "name": "format",
+      "configurePreset": "core-windows-mingw-debug",
+      "targets": ["format"]
+    },
+    {
+      "name": "format-check",
+      "configurePreset": "core-windows-mingw-debug",
+      "targets": ["format-check"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-mingw-debug",
+      "configurePreset": "windows-mingw-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-windows-mingw-debug",
+      "configurePreset": "core-windows-mingw-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-linux-debug",
+      "configurePreset": "core-linux-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

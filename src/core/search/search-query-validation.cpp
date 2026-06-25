@@ -40,14 +40,17 @@ namespace uburu::search
 
     append_if(query.expression.empty(), errors, SearchErrorCode::empty_expression);
 #ifndef UBURU_HAS_PCRE2
-    append_if(query.options.mode == SearchMode::regex, errors, SearchErrorCode::unsupported_search_mode, "regex");
+    append_if(query.options.mode == SearchMode::regex, errors,
+              SearchErrorCode::unsupported_search_mode, "regex");
 #endif
     append_if(query.options.result_limit == 0, errors, SearchErrorCode::invalid_result_limit);
-    append_if(query.options.per_file_result_limit == 0, errors, SearchErrorCode::invalid_per_file_result_limit);
-    append_if(query.options.maximum_file_size == 0, errors, SearchErrorCode::invalid_maximum_file_size);
-    append_if(query.options.regex_match_limit == 0 ||
-              query.options.regex_depth_limit == 0 ||
-              query.options.regex_heap_limit_kib == 0, errors, SearchErrorCode::invalid_regex_limit);
+    append_if(query.options.per_file_result_limit == 0, errors,
+              SearchErrorCode::invalid_per_file_result_limit);
+    append_if(query.options.maximum_file_size == 0, errors,
+              SearchErrorCode::invalid_maximum_file_size);
+    append_if(query.options.regex_match_limit == 0 || query.options.regex_depth_limit == 0 ||
+                  query.options.regex_heap_limit_kib == 0,
+              errors, SearchErrorCode::invalid_regex_limit);
 
     return errors;
   }

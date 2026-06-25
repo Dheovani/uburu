@@ -4,6 +4,7 @@ add_executable(uburu_core_tests
   unit/bounded-queue-tests.cpp
   unit/direct-search-engine-tests.cpp
   unit/git-ignore-rules-tests.cpp
+  unit/libgit2-git-service-tests.cpp
   unit/path-normalization-tests.cpp
   unit/polling-file-watcher-tests.cpp
   unit/recursive-file-scanner-tests.cpp

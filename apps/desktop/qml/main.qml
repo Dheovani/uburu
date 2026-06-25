@@ -28,10 +28,14 @@ ApplicationWindow {
             Layout.fillWidth: true
             spacing: 8
 
+            property int controlHeight: 40
+
             TextField {
                 id: searchField
                 Layout.fillWidth: true
+                Layout.preferredHeight: parent.controlHeight
                 placeholderText: qsTr("Texto a pesquisar")
+                verticalAlignment: TextInput.AlignVCenter
                 onAccepted: searchButton.clicked()
 
                 color: Theme.text

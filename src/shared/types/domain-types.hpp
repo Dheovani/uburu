@@ -133,6 +133,7 @@ namespace uburu
   {
     RepositoryId id;
     std::filesystem::path common_git_directory;
+    std::optional<std::filesystem::path> worktree_root;
     std::optional<std::string> current_branch;
     std::string head_oid;
     bool detached_head{false};

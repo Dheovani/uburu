@@ -129,13 +129,13 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 4 — Integração Git completa (P1)
 
-- [ ] Implementar `GitService` com libgit2 e erros tipados.
-- [ ] Descobrir repositório comum, `.git` arquivo/diretório e raiz da worktree.
-- [ ] Gerar identificadores estáveis para repositório e worktree.
-- [ ] Detectar branch atual, HEAD e detached HEAD.
+- [x] Implementar `GitService` com libgit2 e erros tipados.
+- [x] Descobrir repositório comum, `.git` arquivo/diretório e raiz da worktree.
+- [x] Gerar identificadores estáveis para repositório e worktree.
+- [x] Detectar branch atual, HEAD e detached HEAD.
 - [ ] Enumerar múltiplas worktrees.
 - [ ] Ler arquivos rastreados, não rastreados, ignorados, modificados, deletados e conflitantes.
-- [ ] Obter blob OID de arquivos rastreados.
+- [x] Obter blob OID de arquivos rastreados.
 - [ ] Detectar alterações em HEAD, index e refs relevantes.
 - [ ] Tratar troca de branch como reconciliação estrutural incremental.
 - [ ] Modelar overlay local sobre conteúdo versionado.

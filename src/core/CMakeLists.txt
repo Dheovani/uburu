@@ -3,6 +3,7 @@ add_library(uburu_core STATIC
   filesystem/path-normalization.cpp
   filesystem/polling-file-watcher.cpp
   filesystem/recursive-file-scanner.cpp
+  git/libgit2-git-service.cpp
   search/direct-search-engine.cpp
   search/search-errors.cpp
   search/search-query-validation.cpp

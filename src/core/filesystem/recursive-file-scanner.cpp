@@ -176,8 +176,7 @@ namespace uburu::filesystem
       return entries;
     }
 
-    std::filesystem::path relative_directory(const std::filesystem::path& directory,
-                                             const std::filesystem::path& root)
+    std::filesystem::path relative_directory(const std::filesystem::path& directory, const std::filesystem::path& root)
     {
       std::error_code error;
       auto relative = std::filesystem::relative(directory, root, error);
@@ -187,8 +186,7 @@ namespace uburu::filesystem
       return relative;
     }
 
-    GitIgnoreRules initial_ignore_rules(const std::filesystem::path& root,
-                                        const SearchOptions& options)
+    GitIgnoreRules initial_ignore_rules(const std::filesystem::path& root, const SearchOptions& options)
     {
       GitIgnoreRules ignore_rules;
 
@@ -205,8 +203,11 @@ namespace uburu::filesystem
 
   } // namespace
 
-  void RecursiveFileScanner::scan(const std::filesystem::path& root, const SearchOptions& options,
-                                  FileSink sink, std::stop_token stop_token) const
+  void RecursiveFileScanner::scan(const std::filesystem::path& root,
+                                  const SearchOptions& options,
+                                  FileSink sink,
+                                  std::stop_token stop_token,
+                                  diagnostics::SearchMetrics* metrics) const
   {
     auto flags = std::filesystem::directory_options::skip_permission_denied;
 
@@ -244,12 +245,25 @@ namespace uburu::filesystem
           continue;
         }
 
-        if (options.respect_gitignore && ignore_rules.ignores(relative_path, false))
+        if (options.respect_gitignore && ignore_rules.ignores(relative_path, false)) {
+          if (metrics != nullptr)
+            ++metrics->ignored_files;
+
+          continue;
+        }
+
+        if (!item.is_regular_file(error))
           continue;
 
-        if (!item.is_regular_file(error) || (hidden && !options.include_hidden) ||
+        if (hidden && !options.include_hidden) {
+          if (metrics != nullptr)
+            ++metrics->hidden_files;
+
+          continue;
+        }
+
+        if (is_excluded_directory(relative_path, options.excluded_directories) ||
             !is_included_directory(relative_path, options.included_directories) ||
-            is_excluded_directory(relative_path, options.excluded_directories) ||
             !has_allowed_extension(path, options.extensions) ||
             !passes_globs(relative_path, options))
           continue;

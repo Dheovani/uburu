@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/diagnostics/metrics.hpp"
 #include "shared/types/domain-types.hpp"
 
 #include <functional>
@@ -57,6 +58,7 @@ namespace uburu::search
     bool partial_failure{false};
     std::vector<SearchError> errors;
     RegexExecutionMode regex_execution_mode{RegexExecutionMode::not_used};
+    diagnostics::SearchMetrics metrics;
   };
 
   class SearchEngine

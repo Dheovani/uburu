@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -19,8 +20,8 @@ namespace
   class EmptyScanner final : public uburu::filesystem::FileScanner
   {
   public:
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&,
-              uburu::filesystem::FileSink, std::stop_token) const override
+    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink,
+              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
       ++calls;
     }
@@ -31,13 +32,21 @@ namespace
   {
   public:
     explicit SingleFileScanner(std::filesystem::path path) : path_(std::move(path)) {}
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&,
-              uburu::filesystem::FileSink sink, std::stop_token) const override
+    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
+              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
-      sink(uburu::FileEntry{.absolute_path = path_, .relative_path = "source.cpp"});
+      sink(uburu::FileEntry{.absolute_path = path_, .relative_path = "source.cpp", .size = file_size(path_)});
     }
 
   private:
+    static std::uintmax_t file_size(const std::filesystem::path& path)
+    {
+      std::error_code error;
+      const auto size = std::filesystem::file_size(path, error);
+
+      return error ? 0 : size;
+    }
+
     std::filesystem::path path_;
   };
 
@@ -50,8 +59,8 @@ namespace
           after_first_entry_(std::move(after_first_entry))
     {}
 
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&,
-              uburu::filesystem::FileSink sink, std::stop_token) const override
+    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
+              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
       sink(uburu::FileEntry{.absolute_path = first_path_, .relative_path = "first.txt"});
       after_first_entry_();
@@ -69,8 +78,8 @@ namespace
   public:
     explicit DeletingScanner(std::filesystem::path path) : path_(std::move(path)) {}
 
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&,
-              uburu::filesystem::FileSink sink, std::stop_token) const override
+    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
+              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
       std::filesystem::remove(path_);
       sink(uburu::FileEntry{.absolute_path = path_, .relative_path = "removed.txt"});
@@ -324,6 +333,32 @@ TEST_CASE("direct search skips sampled binary files without reporting read error
   CHECK(summary.matches == 0);
   CHECK_FALSE(summary.partial_failure);
   CHECK(summary.files_with_read_errors == 0);
+  CHECK(summary.metrics.files_processed == 1);
+  CHECK(summary.metrics.binary_files == 1);
+  CHECK(summary.metrics.binary_files_skipped == 1);
+  CHECK(summary.metrics.results_emitted == 0);
+}
+
+TEST_CASE("direct search records processed file and result metrics")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-metrics-content.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "needle\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = make_query(std::filesystem::temp_directory_path(), "needle");
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+  cleanup();
+
+  CHECK(summary.matches == 1);
+  CHECK(summary.metrics.files_processed == 1);
+  CHECK(summary.metrics.bytes_processed == 7);
+  CHECK(summary.metrics.results_emitted == 1);
 }
 
 TEST_CASE("direct search returns context lines and highlight spans")

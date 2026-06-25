@@ -643,7 +643,7 @@ Todo código C++ novo ou alterado em `apps/`, `src/` e `tests/` deve respeitar i
 `.clang-format` da raiz, configurado para C++23. Antes de concluir uma alteração:
 
 * Use indentação de 2 espaços, nunca tabs.
-* Mantenha o limite de 115 colunas.
+* Mantenha o limite de 120 colunas.
 * Use `Type* name` e `Type& name` para ponteiros e referências.
 * Preserve a ordenação case-sensitive de includes.
 * Formate com `cmake --build <diretório-de-build> --target format` ou execute `clang-format -i`
@@ -652,7 +652,7 @@ Todo código C++ novo ou alterado em `apps/`, `src/` e `tests/` deve respeitar i
 
 Para assinaturas de funções, chamadas e declarações com parâmetros:
 
-* Não quebre linhas se todos os parâmetros ainda couberem confortavelmente dentro do limite de 115
+* Não quebre linhas se todos os parâmetros ainda couberem confortavelmente dentro do limite de 120
   colunas.
 * Quando a quebra for necessária, prefira colocar cada parâmetro em uma linha separada, alinhado em
   bloco, em vez de deixar apenas o último parâmetro sozinho na linha seguinte.

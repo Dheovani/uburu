@@ -13,6 +13,9 @@ namespace uburu::diagnostics
     std::uint64_t files_processed{0};
     std::uint64_t bytes_processed{0};
     std::uint64_t results_emitted{0};
+    std::uint64_t ignored_files{0};
+    std::uint64_t hidden_files{0};
+    std::uint64_t binary_files{0};
     std::uint64_t binary_files_skipped{0};
   };
 

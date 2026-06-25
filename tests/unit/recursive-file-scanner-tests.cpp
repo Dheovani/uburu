@@ -62,6 +62,17 @@ namespace
     return entries;
   }
 
+  uburu::diagnostics::SearchMetrics scan_metrics(const std::filesystem::path& root,
+                                                 const uburu::SearchOptions& options)
+  {
+    uburu::filesystem::RecursiveFileScanner scanner;
+    uburu::diagnostics::SearchMetrics metrics;
+
+    scanner.scan(root, options, [](uburu::FileEntry) { return true; }, {}, &metrics);
+
+    return metrics;
+  }
+
 } // namespace
 
 TEST_CASE("recursive scanner filters by extension using platform case rules")
@@ -229,4 +240,23 @@ TEST_CASE("recursive scanner respects configured global git ignore files")
 
   REQUIRE(entries.size() == 1);
   CHECK(entries[0].relative_path == std::filesystem::path("app.config"));
+}
+
+TEST_CASE("recursive scanner records hidden and ignored file metrics")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-skip-metrics-test");
+  write_file(directory.path() / ".gitignore", "*.log\n");
+  write_file(directory.path() / ".hidden", "hidden\n");
+  write_file(directory.path() / "debug.log", "ignored\n");
+  write_file(directory.path() / "visible.txt", "kept\n");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+  const auto metrics = scan_metrics(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries[0].relative_path == std::filesystem::path("visible.txt"));
+  CHECK(metrics.hidden_files == 2);
+  CHECK(metrics.ignored_files == 1);
 }

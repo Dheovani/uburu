@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/diagnostics/metrics.hpp"
 #include "shared/types/domain-types.hpp"
 
 #include <functional>
@@ -14,8 +15,11 @@ namespace uburu::filesystem
   {
   public:
     virtual ~FileScanner() = default;
-    virtual void scan(const std::filesystem::path& root, const SearchOptions& options,
-                      FileSink sink, std::stop_token stop_token = {}) const = 0;
+    virtual void scan(const std::filesystem::path& root,
+                      const SearchOptions& options,
+                      FileSink sink,
+                      std::stop_token stop_token = {},
+                      diagnostics::SearchMetrics* metrics = nullptr) const = 0;
   };
 
 } // namespace uburu::filesystem

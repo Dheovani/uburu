@@ -4,6 +4,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace uburu::filesystem
@@ -59,7 +60,12 @@ namespace uburu::filesystem
 
     std::string normalize_relative_path(const std::filesystem::path& path)
     {
-      return normalize_pattern_path(path.generic_string());
+      std::filesystem::path normalized = path.lexically_normal();
+
+      if (normalized.is_absolute())
+        throw std::invalid_argument("Expected a relative path, got an absolute path.");
+
+      return normalize_pattern_path(normalized.generic_string());
     }
 
     bool glob_matches(std::string_view pattern, std::string_view text)
@@ -134,9 +140,10 @@ namespace uburu::filesystem
         while (search_start < relative_to_base.size()) {
           const auto separator = relative_to_base.find(path_separator, search_start);
           const auto component =
-              separator == std::string_view::npos
-                  ? relative_to_base.substr(search_start)
-                  : relative_to_base.substr(search_start, separator - search_start);
+            separator == std::string_view::npos
+              ? relative_to_base.substr(search_start)
+              : relative_to_base.substr(search_start, separator - search_start);
+
           if (glob_matches(rule.pattern, component))
             return true;
 

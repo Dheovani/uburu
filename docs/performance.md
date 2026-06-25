@@ -8,9 +8,18 @@ Tempo até o primeiro resultado é a métrica principal. A busca direta transmit
 - tempo até o primeiro resultado;
 - arquivos e bytes por segundo;
 - tempo de matching;
-- arquivos binários e ignorados;
+- arquivos ocultos filtrados pelo scanner;
+- arquivos ignorados por `.gitignore`, `.git/info/exclude` ou ignores globais configurados;
+- arquivos binários detectados pelo leitor de texto e arquivos binários efetivamente pulados;
 - pico aproximado de memória;
 - documentos indexados e reutilizados por hash.
+
+No estado atual, `SearchSummary::metrics` agrega contadores básicos da busca direta. O scanner
+incrementa arquivos ocultos e ignorados quando descarta entradas antes de publicá-las ao engine. O
+leitor de texto identifica binários por amostragem, e o engine registra esses arquivos como binários
+pulados quando `SearchOptions::include_binary` não permite leitura textual. Diretórios ignorados
+podem impedir a enumeração de descendentes; por isso os contadores representam arquivos observados
+diretamente durante a varredura, não uma estimativa recursiva de tudo que havia sob o diretório.
 
 O scanner futuro usará pool limitado, priorização de arquivos pequenos e backpressure. Otimizações deverão vir acompanhadas de benchmarks reproduzíveis para muitos arquivos pequenos, poucos arquivos grandes, literal, regex, indexação inicial e reconciliação incremental.
 

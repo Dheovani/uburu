@@ -83,22 +83,24 @@ namespace uburu::search
       return find_literal_matches(text, query);
     }
 
-    void report_partial_failure(SearchSummary& summary, SearchErrorCode code,
-                                const FileEntry& entry)
+    void report_partial_failure(SearchSummary& summary, SearchErrorCode code, const FileEntry& entry)
     {
       ++summary.files_with_read_errors;
       summary.partial_failure = true;
       summary.errors.push_back(make_search_error(code, entry.relative_path.generic_string()));
     }
 
-    bool report_text_read_summary(SearchSummary& summary, const FileEntry& entry,
-                                  text::TextReadSummary read_summary)
+    bool report_text_read_summary(SearchSummary& summary, const FileEntry& entry, text::TextReadSummary read_summary)
     {
       if (read_summary.status == text::TextReadStatus::completed)
         return true;
 
-      if (read_summary.status == text::TextReadStatus::binary_skipped)
+      if (read_summary.status == text::TextReadStatus::binary_skipped) {
+        ++summary.metrics.binary_files;
+        ++summary.metrics.binary_files_skipped;
+
         return true;
+      }
 
       if (read_summary.status == text::TextReadStatus::cancelled)
         return false;
@@ -111,8 +113,7 @@ namespace uburu::search
       return true;
     }
 
-    std::vector<MatchSpan> make_highlights(std::string_view line_text,
-                                           const std::vector<text::MatchPosition>& matches)
+    std::vector<MatchSpan> make_highlights(std::string_view line_text, const std::vector<text::MatchPosition>& matches)
     {
       std::vector<MatchSpan> highlights;
       highlights.reserve(matches.size());
@@ -223,14 +224,13 @@ namespace uburu::search
   } // namespace
 
   DirectSearchEngine::DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner)
-      : scanner_(std::move(scanner))
+    : scanner_(std::move(scanner))
   {
     if (!scanner_)
       throw std::invalid_argument("DirectSearchEngine requires a file scanner");
   }
 
-  SearchSummary DirectSearchEngine::search(const SearchQuery& query, ResultSink sink,
-                                           std::stop_token stop_token) const
+  SearchSummary DirectSearchEngine::search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token) const
   {
     SearchSummary summary;
     summary.errors = validate_search_query(query);
@@ -261,6 +261,9 @@ namespace uburu::search
             return false;
 
           ++summary.files_scanned;
+          ++summary.metrics.files_processed;
+          summary.metrics.bytes_processed += entry.size;
+
           std::size_t file_matches = 0;
           std::deque<std::string> previous_context;
           std::vector<PendingResult> pending_results;
@@ -348,9 +351,11 @@ namespace uburu::search
 
           return report_text_read_summary(summary, entry, read_summary);
         },
-        stop_token);
+        stop_token, &summary.metrics);
 
     summary.cancelled = stop_token.stop_requested();
+    summary.metrics.results_emitted = summary.matches;
+
     return summary;
   }
 

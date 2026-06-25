@@ -108,7 +108,7 @@ e UI para avançarem mais rapidamente.
 
 - [x] Implementar `.gitignore` real com regras aninhadas, negação e precedência.
 - [x] Suportar arquivos globais de ignore do Git e `.git/info/exclude` quando configurado.
-- [ ] Separar arquivos ocultos, ignorados e binários nas métricas.
+- [x] Separar arquivos ocultos, ignorados e binários nas métricas.
 - [x] Aplicar corretamente diretórios incluídos e excluídos no scanner.
 - [ ] Normalizar caminhos absolutos e relativos por plataforma.
 - [ ] Tratar caminhos longos, UNC e diferenças de caixa no Windows.

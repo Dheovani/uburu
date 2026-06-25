@@ -2,6 +2,7 @@
 
 #include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
+#include "core/search/search-scope.hpp"
 #include "core/text/regex-matcher.hpp"
 #include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
@@ -204,7 +205,8 @@ namespace uburu::search
                             .line_text = std::string{line_text},
                             .highlights = make_highlights(line_text, matches),
                             .context_before = copy_context(context_before),
-                            .context_after = {}};
+                            .context_after = {},
+                            .search_root = entry.search_root};
 
         if (query.options.context_after_lines == 0) {
           if (!sink(std::move(result)))
@@ -254,8 +256,16 @@ namespace uburu::search
       regex_matcher = std::move(compiled.matcher);
     }
 
-    scanner_->scan(
-        query.root, query.options,
+    const auto roots = effective_search_roots(query);
+
+    for (const auto& root : roots) {
+      if (stop_token.stop_requested() || summary.limit_reached)
+        break;
+
+      auto root_options = options_for_root(query.options, root);
+
+      scanner_->scan(
+        root.path, root_options,
         [&](FileEntry entry) {
           if (stop_token.stop_requested())
             return false;
@@ -352,6 +362,7 @@ namespace uburu::search
           return report_text_read_summary(summary, entry, read_summary);
         },
         stop_token, &summary.metrics);
+    }
 
     summary.cancelled = stop_token.stop_requested();
     summary.metrics.results_emitted = summary.matches;

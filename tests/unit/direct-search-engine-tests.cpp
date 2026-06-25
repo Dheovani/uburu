@@ -28,6 +28,42 @@ namespace
     mutable int calls{0};
   };
 
+  class CapturingScanner final : public uburu::filesystem::FileScanner
+  {
+  public:
+    struct Call
+    {
+      std::filesystem::path root;
+      std::vector<std::filesystem::path> excluded_directories;
+    };
+
+    void scan(const std::filesystem::path& root, const uburu::SearchOptions& options,
+              uburu::filesystem::FileSink sink, std::stop_token,
+              uburu::diagnostics::SearchMetrics*) const override
+    {
+      calls.push_back(Call{.root = root, .excluded_directories = options.excluded_directories});
+
+      const auto file_name = "source-" + std::to_string(calls.size()) + ".txt";
+      const auto absolute_path = root / file_name;
+      {
+        std::ofstream file(absolute_path, std::ios::binary);
+        file << "needle\n";
+      }
+
+      sink(uburu::FileEntry{.absolute_path = absolute_path,
+                            .relative_path = file_name,
+                            .size = 7,
+                            .modified_at = {},
+                            .hidden = false,
+                            .binary = false,
+                            .symlink = false,
+                            .sparse = false,
+                            .search_root = root});
+    }
+
+    mutable std::vector<Call> calls;
+  };
+
   class SingleFileScanner final : public uburu::filesystem::FileScanner
   {
   public:
@@ -35,7 +71,15 @@ namespace
     void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
               std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
-      sink(uburu::FileEntry{.absolute_path = path_, .relative_path = "source.cpp", .size = file_size(path_)});
+      sink(uburu::FileEntry{.absolute_path = path_,
+                            .relative_path = "source.cpp",
+                            .size = file_size(path_),
+                            .modified_at = {},
+                            .hidden = false,
+                            .binary = false,
+                            .symlink = false,
+                            .sparse = false,
+                            .search_root = {}});
     }
 
   private:
@@ -62,9 +106,25 @@ namespace
     void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
               std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
-      sink(uburu::FileEntry{.absolute_path = first_path_, .relative_path = "first.txt"});
+      sink(uburu::FileEntry{.absolute_path = first_path_,
+                            .relative_path = "first.txt",
+                            .size = 0,
+                            .modified_at = {},
+                            .hidden = false,
+                            .binary = false,
+                            .symlink = false,
+                            .sparse = false,
+                            .search_root = {}});
       after_first_entry_();
-      sink(uburu::FileEntry{.absolute_path = second_path_, .relative_path = "second.txt"});
+      sink(uburu::FileEntry{.absolute_path = second_path_,
+                            .relative_path = "second.txt",
+                            .size = 0,
+                            .modified_at = {},
+                            .hidden = false,
+                            .binary = false,
+                            .symlink = false,
+                            .sparse = false,
+                            .search_root = {}});
     }
 
   private:
@@ -82,7 +142,15 @@ namespace
               std::stop_token, uburu::diagnostics::SearchMetrics*) const override
     {
       std::filesystem::remove(path_);
-      sink(uburu::FileEntry{.absolute_path = path_, .relative_path = "removed.txt"});
+      sink(uburu::FileEntry{.absolute_path = path_,
+                            .relative_path = "removed.txt",
+                            .size = 0,
+                            .modified_at = {},
+                            .hidden = false,
+                            .binary = false,
+                            .symlink = false,
+                            .sparse = false,
+                            .search_root = {}});
     }
 
   private:
@@ -91,7 +159,7 @@ namespace
 
   uburu::SearchQuery make_query(std::filesystem::path root, std::string expression)
   {
-    return {.root = std::move(root), .expression = std::move(expression), .options = {}};
+    return {.root = std::move(root), .scope = {}, .expression = std::move(expression), .options = {}};
   }
 
   void write_bytes(const std::filesystem::path& path, const std::vector<unsigned char>& bytes)
@@ -134,6 +202,49 @@ TEST_CASE("an invalid root does not start filesystem traversal")
   CHECK(summary.matches == 0);
   REQUIRE(summary.errors.size() == 1);
   CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::root_not_found);
+}
+
+TEST_CASE("direct search scans every root in the search scope")
+{
+  auto scanner = std::make_shared<CapturingScanner>();
+  uburu::search::DirectSearchEngine engine(scanner);
+  const auto first_root = std::filesystem::temp_directory_path() / "uburu-direct-search-scope-first";
+  const auto second_root = std::filesystem::temp_directory_path() / "uburu-direct-search-scope-second";
+  std::filesystem::create_directories(first_root);
+  std::filesystem::create_directories(second_root);
+
+  uburu::SearchQuery query{
+    .root = {},
+    .scope = uburu::SearchScope{
+      .roots = {uburu::SearchRoot{.path = first_root,
+                                  .included_directories = {},
+                                  .excluded_directories = {"node_modules"}},
+                uburu::SearchRoot{.path = second_root,
+                                  .included_directories = {},
+                                  .excluded_directories = {"node_modules"}}}},
+    .expression = "needle",
+    .options = {}};
+
+  std::vector<uburu::SearchResult> results;
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+
+  std::error_code error;
+  std::filesystem::remove_all(first_root, error);
+  std::filesystem::remove_all(second_root, error);
+
+  REQUIRE(scanner->calls.size() == 2);
+  CHECK(scanner->calls.front().root == first_root);
+  CHECK(scanner->calls.back().root == second_root);
+  REQUIRE(scanner->calls.front().excluded_directories.size() == 1);
+  CHECK(scanner->calls.front().excluded_directories.front() == "node_modules");
+  CHECK(summary.matches == 2);
+  REQUIRE(results.size() == 2);
+  CHECK(results.front().search_root == first_root);
+  CHECK(results.back().search_root == second_root);
 }
 
 TEST_CASE("a pre-cancelled search reports cancellation")

@@ -21,6 +21,23 @@ Cada ocorrência deve conter:
 Se uma linha contém mais de uma ocorrência, cada ocorrência é publicada como um `SearchResult`
 separado.
 
+## Escopo de busca
+
+`SearchQuery` possui um `SearchScope` com zero ou mais `SearchRoot`. Cada root representa uma raiz
+física pesquisável e pode ter diretórios incluídos/excluídos próprios. Isso permite pesquisar
+simultaneamente em múltiplos repositórios ou diretórios avulsos e ignorar subárvores específicas, como
+`node_modules`, por raiz.
+
+`SearchQuery::root` permanece como compatibilidade temporária para chamadas antigas com raiz única. A
+busca direta resolve roots efetivos assim:
+
+1. se `SearchScope::roots` não está vazio, usa esses roots;
+2. caso contrário, usa `SearchQuery::root` com os filtros globais de `SearchOptions`.
+
+`SearchResult::path` continua relativo ao root que produziu o resultado. Para desambiguar resultados
+com o mesmo caminho relativo em roots diferentes, `SearchResult::search_root` carrega a raiz física de
+origem.
+
 ## Validação da consulta
 
 A busca valida `SearchQuery` antes de iniciar a varredura do filesystem. Consultas inválidas não

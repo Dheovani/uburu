@@ -1,6 +1,7 @@
 #include "core/search/search-query-validation.hpp"
 
 #include "core/search/search-errors.hpp"
+#include "core/search/search-scope.hpp"
 
 #include <filesystem>
 #include <optional>
@@ -19,23 +20,35 @@ namespace uburu::search
         errors.push_back(make_search_error(code, std::move(context)));
     }
 
+    void validate_root(const std::filesystem::path& root, std::vector<SearchError>& errors)
+    {
+      std::error_code error;
+      const auto exists = std::filesystem::exists(root, error);
+
+      if (error || !exists) {
+        errors.push_back(make_search_error(SearchErrorCode::root_not_found, root.string()));
+      } else if (!std::filesystem::is_directory(root, error) || error) {
+        errors.push_back(make_search_error(SearchErrorCode::root_not_directory, root.string()));
+      }
+    }
+
   } // namespace
 
   std::vector<SearchError> validate_search_query(const SearchQuery& query)
   {
     std::vector<SearchError> errors;
+    const auto roots = effective_search_roots(query);
 
-    append_if(query.root.empty(), errors, SearchErrorCode::empty_root);
+    append_if(roots.empty(), errors, SearchErrorCode::empty_root);
 
-    if (!query.root.empty()) {
-      std::error_code error;
-      const auto exists = std::filesystem::exists(query.root, error);
-      if (error || !exists) {
-        errors.push_back(make_search_error(SearchErrorCode::root_not_found, query.root.string()));
-      } else if (!std::filesystem::is_directory(query.root, error) || error) {
-        errors.push_back(
-            make_search_error(SearchErrorCode::root_not_directory, query.root.string()));
+    for (const auto& root : roots) {
+      if (root.path.empty()) {
+        errors.push_back(make_search_error(SearchErrorCode::empty_root));
+
+        continue;
       }
+
+      validate_root(root.path, errors);
     }
 
     append_if(query.expression.empty(), errors, SearchErrorCode::empty_expression);

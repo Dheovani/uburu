@@ -23,7 +23,20 @@ namespace
 TEST_CASE("search query validation accepts a literal query with an existing directory")
 {
   const uburu::SearchQuery query{
-      .root = std::filesystem::temp_directory_path(), .expression = "needle", .options = {}};
+    .root = std::filesystem::temp_directory_path(), .scope = {}, .expression = "needle", .options = {}};
+
+  CHECK(uburu::search::validate_search_query(query).empty());
+}
+
+TEST_CASE("search query validation accepts multiple scoped roots without legacy root")
+{
+  const uburu::SearchQuery query{
+    .root = {},
+    .scope = uburu::SearchScope{.roots = {uburu::SearchRoot{.path = std::filesystem::temp_directory_path(),
+                                                            .included_directories = {},
+                                                            .excluded_directories = {}}}},
+    .expression = "needle",
+    .options = {}};
 
   CHECK(uburu::search::validate_search_query(query).empty());
 }
@@ -44,7 +57,8 @@ TEST_CASE("search query validation reports a missing root")
       std::filesystem::temp_directory_path() / "uburu-validation-missing-root";
   std::error_code error;
   std::filesystem::remove_all(missing_root, error);
-  const uburu::SearchQuery query{.root = missing_root, .expression = "needle", .options = {}};
+  const uburu::SearchQuery query{
+    .root = missing_root, .scope = {}, .expression = "needle", .options = {}};
 
   const auto errors = uburu::search::validate_search_query(query);
 
@@ -61,7 +75,7 @@ TEST_CASE("search query validation reports a root that is not a directory")
   }
   const auto cleanup = [&] { std::filesystem::remove(path); };
 
-  const uburu::SearchQuery query{.root = path, .expression = "needle", .options = {}};
+  const uburu::SearchQuery query{.root = path, .scope = {}, .expression = "needle", .options = {}};
 
   const auto errors = uburu::search::validate_search_query(query);
   cleanup();
@@ -73,7 +87,7 @@ TEST_CASE("search query validation reports a root that is not a directory")
 TEST_CASE("search query validation reports incompatible options")
 {
   uburu::SearchQuery query{
-      .root = std::filesystem::temp_directory_path(), .expression = "needle", .options = {}};
+    .root = std::filesystem::temp_directory_path(), .scope = {}, .expression = "needle", .options = {}};
   query.options.mode = uburu::SearchMode::regex;
   query.options.result_limit = 0;
   query.options.per_file_result_limit = 0;
@@ -94,7 +108,7 @@ TEST_CASE("search query validation reports incompatible options")
 TEST_CASE("search query validation reports invalid regex limits")
 {
   uburu::SearchQuery query{
-      .root = std::filesystem::temp_directory_path(), .expression = "needle", .options = {}};
+    .root = std::filesystem::temp_directory_path(), .scope = {}, .expression = "needle", .options = {}};
   query.options.mode = uburu::SearchMode::regex;
   query.options.regex_match_limit = 0;
 

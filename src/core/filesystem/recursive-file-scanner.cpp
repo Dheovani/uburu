@@ -356,7 +356,8 @@ namespace uburu::filesystem
                         .hidden = hidden,
                         .binary = false,
                         .symlink = item.is_symlink(error),
-                        .sparse = is_sparse_file(path)};
+                        .sparse = is_sparse_file(path),
+                        .search_root = root};
 
         if (!error && !sink(std::move(entry)))
           return false;

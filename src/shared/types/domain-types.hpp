@@ -90,9 +90,22 @@ namespace uburu
     std::vector<std::filesystem::path> global_git_ignore_files;
   };
 
+  struct SearchRoot
+  {
+    std::filesystem::path path;
+    std::vector<std::filesystem::path> included_directories;
+    std::vector<std::filesystem::path> excluded_directories;
+  };
+
+  struct SearchScope
+  {
+    std::vector<SearchRoot> roots;
+  };
+
   struct SearchQuery
   {
     std::filesystem::path root;
+    SearchScope scope;
     std::string expression;
     SearchOptions options;
   };
@@ -115,6 +128,7 @@ namespace uburu
     std::vector<MatchSpan> highlights;
     std::vector<std::string> context_before;
     std::vector<std::string> context_after;
+    std::filesystem::path search_root;
   };
 
   struct FileEntry
@@ -127,6 +141,7 @@ namespace uburu
     bool binary{false};
     bool symlink{false};
     bool sparse{false};
+    std::filesystem::path search_root;
   };
 
   struct RepositoryInfo

@@ -20,6 +20,7 @@ e UI para avançarem mais rapidamente.
 - [x] Scanner recursivo inicial e busca literal linha a linha.
 - [x] Tipos centrais para repositório, worktree, documentos e resultados.
 - [x] Interfaces iniciais de busca, filesystem, índice, Git e storage.
+- [x] Escopo de busca com múltiplas raízes e exclusões por raiz no core.
 - [x] Build C++23 com CMake, Qt 6.11.1/MinGW e vcpkg.
 - [x] Testes unitários iniciais com Catch2.
 - [x] Formatação automática e convenção kebab-case.

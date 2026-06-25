@@ -149,6 +149,13 @@ namespace uburu::text
       return byte >= utf8_continuation_min && byte <= utf8_continuation_max;
     }
 
+    bool is_supported_fallback_encoding(TextEncoding encoding)
+    {
+      return encoding == TextEncoding::utf16_le ||
+             encoding == TextEncoding::utf16_be ||
+             encoding == TextEncoding::latin1;
+    }
+
     EncodingDetection detect_encoding(std::string_view sample, TextEncoding fallback_encoding)
     {
       if (sample.size() >= utf8_bom_size &&
@@ -167,12 +174,11 @@ namespace uburu::text
           static_cast<unsigned char>(sample[1]) == utf16_be_bom_second)
         return {TextEncoding::utf16_be, utf16_bom_size, true};
 
-      return {fallback_encoding == TextEncoding::utf16_le ||
-              fallback_encoding == TextEncoding::utf16_be ||
-              fallback_encoding == TextEncoding::latin1
-                ? fallback_encoding
-                : TextEncoding::utf8,
-              0, false};
+      auto encoding = TextEncoding::utf8;
+      if (is_supported_fallback_encoding(fallback_encoding))
+        encoding = fallback_encoding;
+
+      return {encoding, 0, false};
     }
 
     bool is_binary_control_byte(unsigned char byte)
@@ -204,9 +210,9 @@ namespace uburu::text
 
       if (scalar <= utf8_two_byte_scalar_max) {
         output.push_back(
-          static_cast<char>(utf8_two_byte_prefix | (scalar >> utf8_continuation_payload_bits)));
-        output.push_back(
-          static_cast<char>(utf8_continuation_prefix | (scalar & utf8_continuation_payload_mask)));
+            static_cast<char>(utf8_two_byte_prefix | (scalar >> utf8_continuation_payload_bits)));
+        output.push_back(static_cast<char>(utf8_continuation_prefix |
+                                          (scalar & utf8_continuation_payload_mask)));
 
         return;
       }
@@ -224,13 +230,15 @@ namespace uburu::text
       }
 
       output.push_back(
-        static_cast<char>(utf8_four_byte_prefix | (scalar >> utf8_four_byte_lead_shift)));
+          static_cast<char>(utf8_four_byte_prefix | (scalar >> utf8_four_byte_lead_shift)));
       output.push_back(static_cast<char>(
-          utf8_continuation_prefix | ((scalar >> utf8_four_byte_second_shift) & utf8_continuation_payload_mask)));
+          utf8_continuation_prefix |
+          ((scalar >> utf8_four_byte_second_shift) & utf8_continuation_payload_mask)));
       output.push_back(static_cast<char>(
-          utf8_continuation_prefix | ((scalar >> utf8_continuation_payload_bits) & utf8_continuation_payload_mask)));
+          utf8_continuation_prefix |
+          ((scalar >> utf8_continuation_payload_bits) & utf8_continuation_payload_mask)));
       output.push_back(
-        static_cast<char>(utf8_continuation_prefix | (scalar & utf8_continuation_payload_mask)));
+          static_cast<char>(utf8_continuation_prefix | (scalar & utf8_continuation_payload_mask)));
     }
 
     std::string utf8_from_scalar(char32_t scalar)

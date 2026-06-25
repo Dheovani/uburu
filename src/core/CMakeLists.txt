@@ -1,4 +1,5 @@
 add_library(uburu_core STATIC
+  filesystem/git-ignore-rules.cpp
   filesystem/recursive-file-scanner.cpp
   search/direct-search-engine.cpp
   search/search-errors.cpp

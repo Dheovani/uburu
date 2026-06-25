@@ -551,6 +551,12 @@ Para legibilidade humana, separe visualmente declarações e blocos de controle:
   insira uma linha em branco antes da próxima instrução lógica.
 * Após um `return`, insira uma linha em branco apenas quando houver código seguinte no mesmo escopo.
   Não adicione linha vazia artificial entre um `return` final e o `}` da função ou bloco.
+* Evite ternários multilinha com condições compostas dentro de inicializadores ou `return` agregados
+  quando o alinhamento ficar confuso. Prefira extrair a condição para uma função/variável semântica.
+  Quando o ternário multilinha for mantido, não alinhe `?` e `:` com muitos espaços até a condição;
+  avance apenas um nível visual em relação à expressão principal.
+* Ao comparar repetidamente a mesma variável, enum, status, ponteiro ou valor conceitual similar,
+  coloque cada comparação em uma linha separada para facilitar leitura, revisão e diffs futuros.
 
 Exemplo:
 
@@ -637,12 +643,21 @@ Todo código C++ novo ou alterado em `apps/`, `src/` e `tests/` deve respeitar i
 `.clang-format` da raiz, configurado para C++23. Antes de concluir uma alteração:
 
 * Use indentação de 2 espaços, nunca tabs.
-* Mantenha o limite de 100 colunas.
+* Mantenha o limite de 115 colunas.
 * Use `Type* name` e `Type& name` para ponteiros e referências.
 * Preserve a ordenação case-sensitive de includes.
 * Formate com `cmake --build <diretório-de-build> --target format` ou execute `clang-format -i`
   apenas nos arquivos C++ próprios alterados.
 * Não formate dependências vendorizadas nem arquivos gerados automaticamente.
+
+Para assinaturas de funções, chamadas e declarações com parâmetros:
+
+* Não quebre linhas se todos os parâmetros ainda couberem confortavelmente dentro do limite de 115
+  colunas.
+* Quando a quebra for necessária, prefira colocar cada parâmetro em uma linha separada, alinhado em
+  bloco, em vez de deixar apenas o último parâmetro sozinho na linha seguinte.
+* Evite quebras causadas apenas por alinhamento automático excessivo quando a linha ainda estiver
+  legível.
 
 O target `format` é auxiliar e nunca deve ser requisito para compilar o projeto.
 

@@ -1,5 +1,7 @@
 #include "core/filesystem/recursive-file-scanner.hpp"
 
+#include "core/filesystem/git-ignore-rules.hpp"
+
 #include <algorithm>
 #include <functional>
 #include <optional>
@@ -174,6 +176,17 @@ namespace uburu::filesystem
       return entries;
     }
 
+    std::filesystem::path relative_directory(const std::filesystem::path& directory,
+                                             const std::filesystem::path& root)
+    {
+      std::error_code error;
+      auto relative = std::filesystem::relative(directory, root, error);
+      if (error || relative == ".")
+        return {};
+
+      return relative;
+    }
+
   } // namespace
 
   void RecursiveFileScanner::scan(const std::filesystem::path& root, const SearchOptions& options,
@@ -184,8 +197,11 @@ namespace uburu::filesystem
     if (options.follow_symlinks)
       flags |= std::filesystem::directory_options::follow_directory_symlink;
 
-    std::function<bool(const std::filesystem::path&)> scan_directory;
-    scan_directory = [&](const std::filesystem::path& directory) {
+    std::function<bool(const std::filesystem::path&, GitIgnoreRules)> scan_directory;
+    scan_directory = [&](const std::filesystem::path& directory, GitIgnoreRules ignore_rules) {
+      if (options.respect_gitignore)
+        ignore_rules.append_file(directory / ".gitignore", relative_directory(directory, root));
+
       for (const auto& item : sorted_directory_entries(directory, flags)) {
         if (stop_token.stop_requested())
           return false;
@@ -199,15 +215,21 @@ namespace uburu::filesystem
           continue;
 
         if (item.is_directory(error)) {
+          if (options.respect_gitignore && ignore_rules.ignores(relative_path, true))
+            continue;
+
           if ((hidden && !options.include_hidden) ||
               is_excluded_directory(relative_path, options.excluded_directories))
             continue;
 
-          if (!scan_directory(path))
+          if (!scan_directory(path, ignore_rules))
             return false;
 
           continue;
         }
+
+        if (options.respect_gitignore && ignore_rules.ignores(relative_path, false))
+          continue;
 
         if (!item.is_regular_file(error) || (hidden && !options.include_hidden) ||
             !is_included_directory(relative_path, options.included_directories) ||
@@ -236,7 +258,7 @@ namespace uburu::filesystem
       return true;
     };
 
-    scan_directory(root);
+    scan_directory(root, GitIgnoreRules{});
   }
 
 } // namespace uburu::filesystem

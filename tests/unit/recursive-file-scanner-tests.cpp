@@ -148,3 +148,53 @@ TEST_CASE("recursive scanner publishes entries in deterministic path order")
   CHECK(entries[1].relative_path == std::filesystem::path("alpha") / "zeta.txt");
   CHECK(entries[2].relative_path == std::filesystem::path("zeta.txt"));
 }
+
+TEST_CASE("recursive scanner respects root gitignore rules")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-root-gitignore-test");
+  write_file(directory.path() / ".gitignore", "*.log\n!important.log\nbuild/\n");
+  write_file(directory.path() / "debug.log", "ignored\n");
+  write_file(directory.path() / "important.log", "kept\n");
+  write_file(directory.path() / "build" / "output.txt", "ignored\n");
+  write_file(directory.path() / "src" / "main.cpp", "kept\n");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 2);
+  CHECK(entries[0].relative_path == std::filesystem::path("important.log"));
+  CHECK(entries[1].relative_path == std::filesystem::path("src") / "main.cpp");
+}
+
+TEST_CASE("recursive scanner respects nested gitignore rules")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-nested-gitignore-test");
+  write_file(directory.path() / "src" / ".gitignore", "*.generated.cpp\n");
+  write_file(directory.path() / "src" / "main.cpp", "kept\n");
+  write_file(directory.path() / "src" / "main.generated.cpp", "ignored\n");
+  write_file(directory.path() / "tests" / "main.generated.cpp", "kept\n");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 2);
+  CHECK(entries[0].relative_path == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries[1].relative_path == std::filesystem::path("tests") / "main.generated.cpp");
+}
+
+TEST_CASE("recursive scanner can disable gitignore handling")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-disable-gitignore-test");
+  write_file(directory.path() / ".gitignore", "*.log\n");
+  write_file(directory.path() / "debug.log", "kept\n");
+
+  uburu::SearchOptions options;
+  options.respect_gitignore = false;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries[0].relative_path == std::filesystem::path("debug.log"));
+}

@@ -5,7 +5,7 @@ Standard: Latest
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
-ColumnLimit: 100
+ColumnLimit: 115
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true

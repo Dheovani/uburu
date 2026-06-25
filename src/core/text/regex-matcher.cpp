@@ -59,7 +59,8 @@ namespace uburu::text
 
     RegexMatchStatus status_from_pcre_error(int code)
     {
-      if (code == PCRE2_ERROR_MATCHLIMIT || code == PCRE2_ERROR_DEPTHLIMIT ||
+      if (code == PCRE2_ERROR_MATCHLIMIT ||
+          code == PCRE2_ERROR_DEPTHLIMIT ||
           code == PCRE2_ERROR_HEAPLIMIT)
         return RegexMatchStatus::resource_limit_exceeded;
 

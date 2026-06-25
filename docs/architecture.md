@@ -30,3 +30,17 @@ ele consome `TextLine` e delega matching para `text-matcher` ou `regex-matcher`.
 Essa separação mantém encoding, política de binários, limites de linha e contexto de preview fora da
 lógica de busca, preservando a possibilidade de evoluir para leitores mais especializados sem mudar
 o contrato público do engine.
+
+## Filesystem e ignore
+
+`core/filesystem` contém o scanner recursivo e as regras de ignore. O scanner aplica filtros antes de
+entregar `FileEntry` ao motor de busca, mantendo o `SearchEngine` livre de detalhes de diretório,
+arquivos ocultos, globs e `.gitignore`.
+
+As regras de `.gitignore` são carregadas por diretório. Arquivos `.gitignore` em subdiretórios
+acrescentam regras com maior precedência para aquela subárvore. A implementação inicial cobre
+comentários, padrões por basename, padrões com caminho, regras ancoradas, diretórios, negação e
+desativação por `SearchOptions::respect_gitignore`.
+
+Ignores globais do Git e `.git/info/exclude` ainda devem entrar por adaptadores explícitos para não
+misturar descoberta Git com varredura genérica de filesystem.

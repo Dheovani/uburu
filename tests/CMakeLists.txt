@@ -3,6 +3,7 @@ find_package(Catch2 3 CONFIG REQUIRED)
 add_executable(uburu_core_tests
   unit/bounded-queue-tests.cpp
   unit/direct-search-engine-tests.cpp
+  unit/git-reconciliation-tests.cpp
   unit/git-ignore-rules-tests.cpp
   unit/libgit2-git-service-tests.cpp
   unit/path-normalization-tests.cpp

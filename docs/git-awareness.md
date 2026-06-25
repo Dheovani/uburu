@@ -17,6 +17,12 @@ branch atual, `HEAD`, detached HEAD e assinaturas de `HEAD`, `index`, ref da bra
 Esse snapshot não substitui watchers de filesystem; ele define o estado que os watchers devem comparar
 para decidir quando invalidar deltas e iniciar reconciliação incremental.
 
+`plan_reconciliation()` compara dois snapshots de `GitChangeState` e transforma diferenças em um plano
+explícito. Mudança de branch, mudança de `HEAD`, entrada ou saída de detached HEAD e alteração de refs
+relevantes exigem reconciliação estrutural, mas ainda permitem reutilizar documentos por blob hash. Uma
+mudança apenas no index exige reconciliação do overlay local, sem tratar a geração versionada como
+estruturalmente obsoleta.
+
 A visão pesquisável é sempre:
 
 ```text

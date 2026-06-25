@@ -138,7 +138,7 @@ e UI para avançarem mais rapidamente.
 - [x] Ler arquivos rastreados, não rastreados, ignorados, modificados, deletados e conflitantes.
 - [x] Obter blob OID de arquivos rastreados.
 - [x] Detectar alterações em HEAD, index e refs relevantes.
-- [ ] Tratar troca de branch como reconciliação estrutural incremental.
+- [x] Tratar troca de branch como reconciliação estrutural incremental.
 - [ ] Modelar overlay local sobre conteúdo versionado.
 - [ ] Tratar renames e movimentos com reutilização de conteúdo.
 - [ ] Definir comportamento para submodules e repositórios aninhados.
@@ -214,6 +214,8 @@ e UI para avançarem mais rapidamente.
 
 - [ ] Redesenhar a tela principal com layout responsivo e estados vazios claros.
 - [ ] Implementar seletor de diretório/repositório com recentes e favoritos.
+- [ ] Permitir selecionar múltiplos diretórios/repositórios no seletor visual, com inclusão e
+  exclusão de subdiretórios por raiz.
 - [ ] Expor todos os filtros previstos sem hardcode de textos.
 - [ ] Adicionar debounce configurável e busca ao digitar.
 - [ ] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.

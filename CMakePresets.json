@@ -15,7 +15,8 @@
         "UBURU_BUILD_TESTS": "ON",
         "UBURU_ENABLE_FORMAT_TARGET": "ON",
         "UBURU_ENABLE_LIBGIT2": "ON",
-        "UBURU_ENABLE_PCRE2": "ON"
+        "UBURU_ENABLE_PCRE2": "ON",
+        "UBURU_ENABLE_TIDY_TARGET": "ON"
       }
     },
     {
@@ -116,6 +117,11 @@
       "name": "format-check",
       "configurePreset": "core-windows-mingw-debug",
       "targets": ["format-check"]
+    },
+    {
+      "name": "tidy",
+      "configurePreset": "core-windows-mingw-debug",
+      "targets": ["tidy"]
     }
   ],
   "testPresets": [

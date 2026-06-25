@@ -34,6 +34,10 @@ Configure estas variáveis de ambiente:
 - `QT_ROOT`: prefixo do Qt usado pelo CMake, por exemplo `C:\Qt\6.11.1\mingw_64`.
 - `MINGW_ROOT`: raiz do toolchain MinGW, por exemplo `C:\Qt\Tools\mingw1310_64`.
 
+Use `.env.example` como referência para criar um `.env` local. O arquivo `.env` é ignorado pelo Git.
+Os scripts PowerShell em `scripts/` carregam `.env` automaticamente; os presets do CMake ainda leem
+variáveis do ambiente do processo, então defina-as no terminal antes de executar `cmake --preset ...`.
+
 No Windows com Qt/MinGW:
 
 ```powershell
@@ -41,6 +45,7 @@ cmake --preset windows-mingw-debug
 cmake --build --preset windows-mingw-debug
 ctest --preset windows-mingw-debug
 .\scripts\run-windows-mingw-desktop.ps1
+.\scripts\deploy-windows-mingw-desktop.ps1
 ```
 
 Para trabalhar apenas no core sem uma instalação do Qt:
@@ -79,6 +84,7 @@ com `QT_ROOT` apontando para uma instalação de Qt compatível com MSVC.
 cmake --preset core-windows-mingw-debug
 cmake --build --preset format
 cmake --build --preset format-check
+cmake --build --preset tidy
 ```
 
 ## Estado atual

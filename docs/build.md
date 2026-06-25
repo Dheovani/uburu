@@ -11,6 +11,17 @@ máquina informar seus próprios diretórios por variáveis de ambiente.
 - `MINGW_ROOT`: raiz do toolchain MinGW. Exemplo: `C:\Qt\Tools\mingw1310_64`.
 
 `CMakeUserPresets.json` é ignorado pelo Git e pode ser usado para aliases ou caminhos pessoais.
+`.env.example` lista as variáveis esperadas. Copie para `.env` se quiser registrar seus caminhos
+locais. Os scripts PowerShell carregam `.env` automaticamente; os presets do CMake ainda exigem que
+as variáveis estejam no ambiente do terminal.
+
+Exemplo PowerShell:
+
+```powershell
+$env:VCPKG_ROOT = "C:\Users\dheov\vcpkg"
+$env:QT_ROOT = "C:\Qt\6.11.1\mingw_64"
+$env:MINGW_ROOT = "C:\Qt\Tools\mingw1310_64"
+```
 
 ## Windows com Qt/MinGW
 
@@ -27,6 +38,14 @@ Para executar a aplicação sem instalar DLLs no sistema:
 ```powershell
 .\scripts\run-windows-mingw-desktop.ps1
 ```
+
+Para criar uma pasta local redistribuível de desenvolvimento com `windeployqt` e as DLLs do vcpkg:
+
+```powershell
+.\scripts\deploy-windows-mingw-desktop.ps1
+```
+
+O script escreve por padrão em `dist/windows-mingw-debug`.
 
 ## Windows com MSVC
 
@@ -101,6 +120,7 @@ reconhecidas pela versão instalada.
 cmake --preset core-windows-mingw-debug
 cmake --build --preset format
 cmake --build --preset format-check
+cmake --build --preset tidy
 ```
 
 Também é possível formatar um arquivo isolado diretamente:
@@ -111,3 +131,21 @@ clang-format -i src/core/search/direct-search-engine.cpp
 
 O target não participa do build normal. Dependências vendorizadas, arquivos gerados e diretórios de
 build não são formatados.
+
+## Análise estática
+
+O arquivo `.clang-tidy` define o conjunto inicial de checks. Quando `clang-tidy` está disponível, o
+CMake cria o target opcional `tidy`:
+
+```powershell
+cmake --preset core-windows-mingw-debug
+cmake --build --preset tidy
+```
+
+Esse target é diagnóstico e não participa do build normal. A CI futura deve decidir quando transformar
+diagnósticos em bloqueios.
+
+Observação: no ambiente Windows/MinGW validado em desenvolvimento, o `clang-tidy` distribuído com
+Visual Studio 18 foi encontrado, mas crashou ao analisar o compile database MinGW. Por isso, o alvo
+está versionado como preparação, mas ainda não é critério concluído do Marco 0 até validarmos uma
+versão estável da ferramenta ou outro backend de análise.

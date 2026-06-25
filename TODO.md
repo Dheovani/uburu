@@ -35,7 +35,7 @@ e UI para avançarem mais rapidamente.
 - [x] Eliminar comandos dependentes de caminhos locais fixos como `C:\Qt\6.11.1`.
 - [x] Corrigir `README.md` e `docs/build.md` com o fluxo MinGW atualmente validado.
 - [x] Adicionar scripts ou presets para configurar, compilar, testar, formatar e executar a aplicação.
-- [ ] Criar target ou script de implantação local com `windeployqt` e DLLs do vcpkg.
+- [x] Criar target ou script de implantação local com `windeployqt` e DLLs do vcpkg.
 - [x] Adicionar `.editorconfig` coerente com `.clang-format` e arquivos Markdown/QML.
 - [ ] Adicionar análise estática com clang-tidy e configurar conjunto inicial de regras.
 - [ ] Adicionar verificação de warnings como erros em CI, com exceções justificadas por compilador.

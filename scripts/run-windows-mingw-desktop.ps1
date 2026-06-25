@@ -4,6 +4,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
+. (Join-Path $PSScriptRoot "load-local-env.ps1")
+
 if (-not $env:QT_ROOT) {
   throw "QT_ROOT is required, for example C:\Qt\6.11.1\mingw_64."
 }
@@ -12,7 +15,6 @@ if (-not $env:MINGW_ROOT) {
   throw "MINGW_ROOT is required, for example C:\Qt\Tools\mingw1310_64."
 }
 
-$root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
 $buildPath = Join-Path $root $BuildDirectory
 $executable = Join-Path $buildPath "apps/desktop/uburu_desktop.exe"
 $vcpkgBin = Join-Path $buildPath "vcpkg_installed/x64-mingw-dynamic/debug/bin"

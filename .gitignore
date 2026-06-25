@@ -1,7 +1,9 @@
 /build/
 /build-*/
+/dist/
 /out/
 /.cache/
+/.env
 /.vscode/
 /.vs/
 /CMakeUserPresets.json

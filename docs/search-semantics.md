@@ -236,6 +236,10 @@ Falhas ao abrir ou ler um arquivo não interrompem silenciosamente toda a busca.
 `partial_failure`, incrementa `files_with_read_errors` e adiciona um erro tipado com o caminho relativo
 no contexto. Resultados já publicados continuam válidos.
 
+Falhas de permissão, arquivos removidos entre scan e leitura, e falhas de stream são normalizadas como
+falhas parciais tipadas. O erro concreto pode variar por plataforma, mas a busca não deve descartá-lo
+silenciosamente.
+
 ## Arquivos alterados durante a busca
 
 A busca direta representa o estado observado no momento em que cada arquivo é aberto. Se um arquivo
@@ -245,6 +249,12 @@ aquela ocorrência.
 Se o arquivo for removido, ficar inacessível ou falhar durante a leitura, a busca registra falha
 parcial tipada e continua nos demais arquivos. O Marco 1 não tenta criar snapshots consistentes da
 árvore inteira; essa garantia pertence ao desenho futuro de índice, overlay e integração com Git.
+
+## Ownership e cópias
+
+`SearchResult` possui o texto publicado para garantir segurança quando o consumidor processar
+resultados de forma assíncrona. O engine evita cópias intermediárias no caminho quente sempre que não
+precisa transferir ownership, mas materializa a linha/caminho ao construir o resultado publicado.
 
 ## Comportamentos ainda pendentes no Marco 1
 

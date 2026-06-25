@@ -63,6 +63,22 @@ namespace
     std::function<void()> after_first_entry_;
   };
 
+  class DeletingScanner final : public uburu::filesystem::FileScanner
+  {
+  public:
+    explicit DeletingScanner(std::filesystem::path path) : path_(std::move(path)) {}
+
+    void scan(const std::filesystem::path&, const uburu::SearchOptions&,
+              uburu::filesystem::FileSink sink, std::stop_token) const override
+    {
+      std::filesystem::remove(path_);
+      sink(uburu::FileEntry{.absolute_path = path_, .relative_path = "removed.txt"});
+    }
+
+  private:
+    std::filesystem::path path_;
+  };
+
 } // namespace
 
 TEST_CASE("an empty expression does not start filesystem traversal")
@@ -111,6 +127,27 @@ TEST_CASE("a pre-cancelled search reports cancellation")
       engine.search(query, [](uburu::SearchResult) { return true; }, cancellation.get_token());
 
   CHECK(summary.cancelled);
+}
+
+TEST_CASE("a pre-cancelled regex search reports cancellation")
+{
+  auto scanner = std::make_shared<EmptyScanner>();
+  uburu::search::DirectSearchEngine engine(scanner);
+  std::stop_source cancellation;
+  cancellation.request_stop();
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
+  query.options.mode = uburu::SearchMode::regex;
+
+  const auto summary =
+      engine.search(query, [](uburu::SearchResult) { return true; }, cancellation.get_token());
+
+#ifdef UBURU_HAS_PCRE2
+  CHECK(summary.cancelled);
+#else
+  CHECK_FALSE(summary.cancelled);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupported_search_mode);
+#endif
 }
 
 TEST_CASE("direct search streams a match with one-based line and column")
@@ -390,6 +427,27 @@ TEST_CASE("direct search reports file open failures as partial failures")
   REQUIRE(summary.errors.size() == 1);
   CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::file_open_failed);
   CHECK(summary.errors.front().translation_key == "search.error.fileOpenFailed");
+}
+
+TEST_CASE("direct search reports files removed between scan and read as partial failures")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-removed-after-scan.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "needle\n";
+  }
+
+  auto scanner = std::make_shared<DeletingScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query{.root = std::filesystem::temp_directory_path(), .expression = "needle"};
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+
+  CHECK(summary.partial_failure);
+  CHECK(summary.files_with_read_errors == 1);
+  REQUIRE(summary.errors.size() == 1);
+  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::file_open_failed);
+  CHECK(summary.errors.front().context == "removed.txt");
 }
 
 TEST_CASE("direct search reports regex compilation errors")

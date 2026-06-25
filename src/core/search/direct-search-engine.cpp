@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace uburu::search
@@ -62,7 +63,7 @@ namespace uburu::search
         return std::nullopt;
       }
 
-      return regex_result.matches;
+      return std::move(regex_result.matches);
     }
 
     std::optional<std::vector<text::MatchPosition>>
@@ -85,7 +86,7 @@ namespace uburu::search
     }
 
     PublishDecision publish_matches(const FileEntry& entry, SearchResultKind kind,
-                                    std::size_t line_number, std::string line_text,
+                                    std::size_t line_number, std::string_view line_text,
                                     const std::vector<text::MatchPosition>& matches,
                                     const SearchQuery& query, SearchSummary& summary,
                                     std::size_t& file_matches, const ResultSink& sink)
@@ -107,7 +108,7 @@ namespace uburu::search
         ++file_matches;
 
         if (!sink(SearchResult{kind, entry.relative_path, line_number, match.offset + 1,
-                               match.length, line_text}))
+                               match.length, std::string{line_text}}))
           return PublishDecision::stop_search;
       }
 

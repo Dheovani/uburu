@@ -76,17 +76,17 @@ e UI para avançarem mais rapidamente.
 - [x] Distinguir cancelamento, falha parcial e conclusão normal no resumo.
 - [x] Propagar erros de leitura sem interromper silenciosamente toda a busca.
 - [x] Definir comportamento para arquivos alterados ou removidos durante a leitura.
-- [ ] Evitar cópias desnecessárias de linhas, caminhos e resultados.
+- [x] Evitar cópias desnecessárias de linhas, caminhos e resultados.
 
 ### Testes obrigatórios
 
 - [x] Literal com múltiplas ocorrências na mesma linha.
 - [x] Case-sensitive e case-insensitive com ASCII e Unicode.
 - [x] Palavra inteira, identificadores, pontuação e limites Unicode.
-- [ ] Regex válida, inválida, JIT/fallback e cancelamento.
+- [x] Regex válida, inválida, JIT/fallback e cancelamento.
 - [x] CRLF, LF, arquivo sem newline final e linhas vazias.
 - [x] Limite de resultados, filtros e ordenação determinística.
-- [ ] Erros de permissão, arquivo removido e leitura parcial.
+- [x] Erros de permissão, arquivo removido e leitura parcial.
 
 ## Marco 2 — Texto, encoding e arquivos grandes (P0)
 

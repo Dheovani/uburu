@@ -14,7 +14,7 @@ namespace uburu::filesystem
   public:
     explicit PollingFileWatcher(std::filesystem::path root);
 
-    [[nodiscard]] std::vector<FileChangeEvent> poll(std::stop_token stop_token = {}) override;
+    [[nodiscard]] FileChangeBatch poll(std::stop_token stop_token = {}) override;
 
   private:
     struct WatchedEntry
@@ -25,8 +25,13 @@ namespace uburu::filesystem
       bool directory{false};
     };
 
-    [[nodiscard]] std::unordered_map<std::string, WatchedEntry>
-    snapshot(std::stop_token stop_token) const;
+    struct Snapshot
+    {
+      std::unordered_map<std::string, WatchedEntry> entries;
+      bool incomplete{false};
+    };
+
+    [[nodiscard]] Snapshot snapshot(std::stop_token stop_token) const;
 
     [[nodiscard]] static bool changed(const WatchedEntry& previous, const WatchedEntry& current);
 

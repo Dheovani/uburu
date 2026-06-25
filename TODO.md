@@ -115,16 +115,16 @@ e UI para avançarem mais rapidamente.
 - [x] Detectar arquivos esparsos e definir política de leitura por plataforma.
 - [x] Definir política para junctions, symlinks e mount points.
 - [x] Detectar ciclos ao seguir symlinks.
-- [ ] Implementar pool de workers com tamanho configurável.
-- [ ] Priorizar arquivos pequenos e candidatos mais prováveis sem quebrar determinismo final.
-- [ ] Adicionar fila limitada e backpressure entre scan, leitura, matching e publicação.
-- [ ] Garantir cancelamento cooperativo em scan, fila, leitura e matching.
-- [ ] Evitar mutex global e medir contenção.
+- [x] Implementar pool de workers com tamanho configurável.
+- [x] Priorizar arquivos pequenos e candidatos mais prováveis sem quebrar determinismo final.
+- [x] Adicionar fila limitada e backpressure entre scan, leitura, matching e publicação.
+- [x] Garantir cancelamento cooperativo em scan, fila, leitura e matching.
+- [x] Evitar mutex global e medir contenção.
 - [x] Implementar watchers por interface comum.
 - [ ] Implementar backend Windows com `ReadDirectoryChangesW`.
 - [ ] Implementar backend Linux com `inotify`.
 - [ ] Implementar backend macOS com `FSEvents`.
-- [ ] Tratar overflow/perda de eventos com rescan de reconciliação.
+- [x] Tratar overflow/perda de eventos com rescan de reconciliação.
 - [x] Adicionar fallback inicial documentado quando backend nativo não estiver disponível.
 
 ## Marco 4 — Integração Git completa (P1)

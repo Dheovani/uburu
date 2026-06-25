@@ -219,6 +219,22 @@ namespace uburu::filesystem
       }
 
       std::ranges::sort(entries, [](const auto& left, const auto& right) {
+        std::error_code left_error;
+        std::error_code right_error;
+        const auto left_is_directory = left.is_directory(left_error);
+        const auto right_is_directory = right.is_directory(right_error);
+
+        if (!left_error && !right_error && left_is_directory != right_is_directory)
+          return left_is_directory;
+
+        if (!left_is_directory && !right_is_directory) {
+          const auto left_size = left.file_size(left_error);
+          const auto right_size = right.file_size(right_error);
+
+          if (!left_error && !right_error && left_size != right_size)
+            return left_size < right_size;
+        }
+
         return normalized_path_key(left.path()) < normalized_path_key(right.path());
       });
 

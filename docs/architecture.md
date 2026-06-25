@@ -56,6 +56,12 @@ apenas sinaliza o atributo e a busca direta ainda aplica os mesmos limites de ta
 demais arquivos. Otimizações ou restrições específicas para sparse files devem ser adicionadas
 somente com benchmarks e sem perder resultados por padrão.
 
+Dentro de cada diretório, o scanner usa prioridade determinística: diretórios são visitados antes de
+arquivos, arquivos menores são publicados antes de arquivos maiores e o caminho normalizado desempata
+entradas equivalentes. Isso melhora tempo até primeiro resultado em árvores comuns sem introduzir
+aleatoriedade. Priorização global entre subárvores e ranking por probabilidade de match devem ser
+tratados por uma etapa futura de filas/workers.
+
 Diretórios symlink, junctions e reparse points são tratados como fronteiras explícitas de
 travessia. Por padrão, o scanner não entra nesses diretórios. Quando `SearchOptions::follow_symlinks`
 está ativo, o scanner pode atravessá-los, mas registra identidades canônicas dos diretórios visitados
@@ -63,12 +69,31 @@ para evitar ciclos. Mount points são tratados como diretórios normais nesta fa
 para bloquear cruzamento de volumes deve ser adicionada como opção explícita, não como efeito
 colateral da varredura.
 
-Watchers de filesystem usam a interface `FileWatcher`, que emite eventos relativos de criação,
+Watchers de filesystem usam a interface `FileWatcher`, que emite lotes de eventos relativos de criação,
 modificação e remoção. O backend inicial é `PollingFileWatcher`: ele mantém snapshots normalizados e
-compara tamanho, timestamp e tipo da entrada a cada `poll()`. Esse fallback é portátil e simples,
-mas não substitui backends nativos eficientes. Implementações futuras com `ReadDirectoryChangesW`,
-`inotify` e `FSEvents` devem preservar o mesmo contrato e sinalizar perda/overflow de eventos para
-permitir rescan de reconciliação.
+compara tamanho, timestamp e tipo da entrada a cada `poll()`. Esse fallback é portátil e simples, mas
+não substitui backends nativos eficientes. Implementações futuras com `ReadDirectoryChangesW`,
+`inotify` e `FSEvents` devem preservar o mesmo contrato. O retorno é um `FileChangeBatch`; quando um
+backend detectar overflow, perda de eventos ou snapshot incompleto, ele deve marcar
+`events_may_be_incomplete` e `requires_rescan`. Chamadores devem tratar esse sinal como invalidação da
+sequência incremental e executar um rescan de reconciliação antes de confiar em novos deltas.
+
+Pipelines concorrentes devem usar `concurrency::BoundedQueue` para comunicar etapas de scan, leitura,
+matching e publicação. A fila tem capacidade fixa, bloqueia produtores quando cheia, acorda
+consumidores sob demanda, suporta fechamento explícito e respeita `std::stop_token` em operações
+bloqueantes. Isso fornece o mecanismo comum de backpressure antes de ligar pools de workers no motor
+de busca direta ou no indexador. Cada fila possui seu próprio mutex interno; não há mutex global no
+pipeline. A fila também mantém métricas simples de espera de produtores e consumidores para expor
+contenção real quando o pipeline paralelo começar a publicar diagnósticos.
+
+`concurrency::WorkerPool` fornece o pool configurável inicial. Ele normaliza zero workers para um,
+executa tarefas submetidas em `std::jthread`, fecha a fila de trabalho de forma explícita e propaga
+`std::stop_token` para cada tarefa. `close()` é drenagem ordenada: não aceita novas tarefas, mas
+permite finalizar o que já foi enfileirado e aguarda os workers terminarem. `request_stop()` é
+cancelamento cooperativo: sinaliza os workers, fecha a fila e aguarda a parada. O scanner, a fila, o
+leitor de texto, regex e matching já aceitam cancelamento
+cooperativo; a etapa seguinte é conectar essas peças em um pipeline paralelo de busca direta sem perder
+ordenação determinística ou resultados progressivos.
 
 As regras de `.gitignore` são carregadas por diretório. Arquivos `.gitignore` em subdiretórios
 acrescentam regras com maior precedência para aquela subárvore. A implementação inicial cobre

@@ -205,6 +205,23 @@ TEST_CASE("recursive scanner publishes entries in deterministic path order")
   CHECK(entries[2].relative_path == std::filesystem::path("zeta.txt"));
 }
 
+TEST_CASE("recursive scanner prioritizes smaller files deterministically")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-small-file-priority-test");
+  write_file(directory.path() / "a-large.txt", "larger content\n");
+  write_file(directory.path() / "z-small.txt", "x\n");
+  write_file(directory.path() / "m-small.txt", "y\n");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 3);
+  CHECK(entries[0].relative_path == std::filesystem::path("m-small.txt"));
+  CHECK(entries[1].relative_path == std::filesystem::path("z-small.txt"));
+  CHECK(entries[2].relative_path == std::filesystem::path("a-large.txt"));
+}
+
 TEST_CASE("recursive scanner respects root gitignore rules")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-root-gitignore-test");
@@ -219,8 +236,8 @@ TEST_CASE("recursive scanner respects root gitignore rules")
   const auto entries = scan_entries(directory.path(), options);
 
   REQUIRE(entries.size() == 2);
-  CHECK(entries[0].relative_path == std::filesystem::path("important.log"));
-  CHECK(entries[1].relative_path == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries[0].relative_path == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries[1].relative_path == std::filesystem::path("important.log"));
 }
 
 TEST_CASE("recursive scanner respects nested gitignore rules")

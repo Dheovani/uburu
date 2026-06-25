@@ -21,12 +21,19 @@ namespace uburu::filesystem
     bool directory{false};
   };
 
+  struct FileChangeBatch
+  {
+    std::vector<FileChangeEvent> events;
+    bool events_may_be_incomplete{false};
+    bool requires_rescan{false};
+  };
+
   class FileWatcher
   {
   public:
     virtual ~FileWatcher() = default;
 
-    [[nodiscard]] virtual std::vector<FileChangeEvent> poll(std::stop_token stop_token = {}) = 0;
+    [[nodiscard]] virtual FileChangeBatch poll(std::stop_token stop_token = {}) = 0;
   };
 
 } // namespace uburu::filesystem

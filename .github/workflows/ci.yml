@@ -43,7 +43,7 @@ jobs:
         shell: pwsh
         env:
           VCPKG_ROOT: C:\vcpkg
-          MINGW_ROOT: C:\msys64\mingw64
+          MINGW_ROOT: C:\mingw64
         run: cmake --preset core-windows-mingw-werror-debug
 
       - name: Build

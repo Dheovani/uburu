@@ -14,66 +14,66 @@ namespace uburu::text
   namespace
   {
 
-    constexpr int regex_backend_unavailable_code = -1;
-    constexpr unsigned char utf8_continuation_tag_mask = 0b1100'0000U;
-    constexpr unsigned char utf8_continuation_tag = 0b1000'0000U;
-    constexpr std::size_t pcre_error_message_buffer_size = 256;
+    constexpr int regexBackendUnavailableCode = -1;
+    constexpr unsigned char utf8ContinuationTagMask = 0b1100'0000U;
+    constexpr unsigned char utf8ContinuationTag = 0b1000'0000U;
+    constexpr std::size_t pcreErrorMessageBufferSize = 256;
 
 #ifdef UBURU_HAS_PCRE2
     struct RegexDeadline
     {
-      std::chrono::steady_clock::time_point expires_at;
+      std::chrono::steady_clock::time_point expiresAt;
     };
 #endif
 
-    bool is_continuation_byte(unsigned char byte)
+    bool isContinuationByte(unsigned char byte)
     {
-      return (byte & utf8_continuation_tag_mask) == utf8_continuation_tag;
+      return (byte & utf8ContinuationTagMask) == utf8ContinuationTag;
     }
 
-    std::size_t next_utf8_offset(std::string_view text, std::size_t offset)
+    std::size_t nextUtf8Offset(std::string_view text, std::size_t offset)
     {
       if (offset >= text.size())
         return text.size();
       ++offset;
-      while (offset < text.size() && is_continuation_byte(static_cast<unsigned char>(text[offset])))
+      while (offset < text.size() && isContinuationByte(static_cast<unsigned char>(text[offset])))
         ++offset;
       return offset;
     }
 
 #ifdef UBURU_HAS_PCRE2
-    pcre2_code* as_pcre_code(void* code)
+    pcre2_code* asPcreCode(void* code)
     {
       return static_cast<pcre2_code*>(code);
     }
 
-    int timeout_callout(pcre2_callout_block*, void* data)
+    int timeoutCallout(pcre2_callout_block*, void* data)
     {
       const auto* deadline = static_cast<const RegexDeadline*>(data);
 
-      if (std::chrono::steady_clock::now() >= deadline->expires_at)
+      if (std::chrono::steady_clock::now() >= deadline->expiresAt)
         return PCRE2_ERROR_CALLOUT;
 
       return 0;
     }
 
-    RegexMatchStatus status_from_pcre_error(int code)
+    RegexMatchStatus statusFromPcreError(int code)
     {
       if (code == PCRE2_ERROR_MATCHLIMIT ||
           code == PCRE2_ERROR_DEPTHLIMIT ||
           code == PCRE2_ERROR_HEAPLIMIT)
-        return RegexMatchStatus::resource_limit_exceeded;
+        return RegexMatchStatus::resourceLimitExceeded;
 
       if (code == PCRE2_ERROR_CALLOUT)
-        return RegexMatchStatus::timed_out;
+        return RegexMatchStatus::timedOut;
 
-      return RegexMatchStatus::internal_error;
+      return RegexMatchStatus::internalError;
     }
 
-    std::string pcre_error_message(int code)
+    std::string pcreErrorMessage(int code)
     {
-      PCRE2_UCHAR buffer[pcre_error_message_buffer_size]{};
-      const auto length = pcre2_get_error_message(code, buffer, pcre_error_message_buffer_size);
+      PCRE2_UCHAR buffer[pcreErrorMessageBufferSize]{};
+      const auto length = pcre2_get_error_message(code, buffer, pcreErrorMessageBufferSize);
       if (length <= 0)
         return {};
       return std::string{reinterpret_cast<const char*>(buffer), static_cast<std::size_t>(length)};
@@ -82,13 +82,13 @@ namespace uburu::text
 
   } // namespace
 
-  RegexMatcher::RegexMatcher(void* code, SearchOptions options, bool jit_enabled)
-      : code_(code), options_(std::move(options)), jit_enabled_(jit_enabled)
+  RegexMatcher::RegexMatcher(void* code, SearchOptions options, bool jitWasEnabled)
+      : code(code), options(std::move(options)), jitWasEnabled(jitWasEnabled)
   {}
 
   RegexMatcher::RegexMatcher(RegexMatcher&& other) noexcept
-      : code_(std::exchange(other.code_, nullptr)), options_(std::move(other.options_)),
-        jit_enabled_(std::exchange(other.jit_enabled_, false))
+      : code(std::exchange(other.code, nullptr)), options(std::move(other.options)),
+        jitWasEnabled(std::exchange(other.jitWasEnabled, false))
   {}
 
   RegexMatcher& RegexMatcher::operator=(RegexMatcher&& other) noexcept
@@ -96,9 +96,9 @@ namespace uburu::text
     if (this == &other)
       return *this;
     reset();
-    code_ = std::exchange(other.code_, nullptr);
-    options_ = std::move(other.options_);
-    jit_enabled_ = std::exchange(other.jit_enabled_, false);
+    code = std::exchange(other.code, nullptr);
+    options = std::move(other.options);
+    jitWasEnabled = std::exchange(other.jitWasEnabled, false);
     return *this;
   }
 
@@ -107,69 +107,69 @@ namespace uburu::text
     reset();
   }
 
-  RegexMatchResult RegexMatcher::find_all(std::string_view text) const
+  RegexMatchResult RegexMatcher::findAll(std::string_view text) const
   {
     RegexMatchResult result;
 
 #ifdef UBURU_HAS_PCRE2
-    if (code_ == nullptr)
+    if (code == nullptr)
       return result;
 
-    auto* match_data = pcre2_match_data_create_from_pattern(as_pcre_code(code_), nullptr);
-    if (match_data == nullptr) {
-      result.status = RegexMatchStatus::internal_error;
-
-      return result;
-    }
-
-    auto* match_context = pcre2_match_context_create(nullptr);
-    if (match_context == nullptr) {
-      pcre2_match_data_free(match_data);
-      result.status = RegexMatchStatus::internal_error;
+    auto* matchData = pcre2_match_data_create_from_pattern(asPcreCode(code), nullptr);
+    if (matchData == nullptr) {
+      result.status = RegexMatchStatus::internalError;
 
       return result;
     }
 
-    pcre2_set_match_limit(match_context, options_.regex_match_limit);
-    pcre2_set_depth_limit(match_context, options_.regex_depth_limit);
-    pcre2_set_heap_limit(match_context, options_.regex_heap_limit_kib);
+    auto* matchContext = pcre2_match_context_create(nullptr);
+    if (matchContext == nullptr) {
+      pcre2_match_data_free(matchData);
+      result.status = RegexMatchStatus::internalError;
 
-    RegexDeadline deadline{std::chrono::steady_clock::now() + options_.regex_timeout};
-    pcre2_set_callout(match_context, timeout_callout, &deadline);
+      return result;
+    }
 
-    std::size_t start_offset = 0;
-    while (start_offset <= text.size()) {
-      const auto match_result =
-          pcre2_match(as_pcre_code(code_), reinterpret_cast<PCRE2_SPTR>(text.data()), text.size(),
-                      start_offset, 0, match_data, match_context);
-      if (match_result == PCRE2_ERROR_NOMATCH)
+    pcre2_set_match_limit(matchContext, options.regexMatchLimit);
+    pcre2_set_depth_limit(matchContext, options.regexDepthLimit);
+    pcre2_set_heap_limit(matchContext, options.regexHeapLimitKib);
+
+    RegexDeadline deadline{std::chrono::steady_clock::now() + options.regexTimeout};
+    pcre2_set_callout(matchContext, timeoutCallout, &deadline);
+
+    std::size_t startOffset = 0;
+    while (startOffset <= text.size()) {
+      const auto matchResult =
+          pcre2_match(asPcreCode(code), reinterpret_cast<PCRE2_SPTR>(text.data()), text.size(),
+                      startOffset, 0, matchData, matchContext);
+      if (matchResult == PCRE2_ERROR_NOMATCH)
         break;
-      if (match_result < 0) {
-        result.status = status_from_pcre_error(match_result);
-        result.backend_error_code = match_result;
+      if (matchResult < 0) {
+        result.status = statusFromPcreError(matchResult);
+        result.backendErrorCode = matchResult;
 
         break;
       }
 
-      const auto* ovector = pcre2_get_ovector_pointer(match_data);
+      const auto* ovector = pcre2_get_ovector_pointer(matchData);
       const auto start = static_cast<std::size_t>(ovector[0]);
       const auto end = static_cast<std::size_t>(ovector[1]);
       const MatchPosition match{start, end - start};
 
-      if (matches_requested_boundaries(text, match, options_))
+      if (matchesRequestedBoundaries(text, match, options))
         result.matches.push_back(match);
 
       if (end > start) {
-        start_offset = next_utf8_offset(text, start);
+        startOffset = nextUtf8Offset(text, start);
       } else {
-        start_offset = next_utf8_offset(text, start);
-        if (start_offset == start)
+        startOffset = nextUtf8Offset(text, start);
+        if (startOffset == start)
           break;
       }
     }
 
-    pcre2_match_context_free(match_context);
-    pcre2_match_data_free(match_data);
+    pcre2_match_context_free(matchContext);
+    pcre2_match_data_free(matchData);
 #else
     (void)text;
 #endif
@@ -177,41 +177,41 @@ namespace uburu::text
     return result;
   }
 
-  bool RegexMatcher::jit_enabled() const noexcept
+  bool RegexMatcher::jitEnabled() const noexcept
   {
-    return jit_enabled_;
+    return jitWasEnabled;
   }
 
   void RegexMatcher::reset() noexcept
   {
 #ifdef UBURU_HAS_PCRE2
-    if (code_ != nullptr)
-      pcre2_code_free(as_pcre_code(code_));
+    if (code != nullptr)
+      pcre2_code_free(asPcreCode(code));
 #endif
-    code_ = nullptr;
-    jit_enabled_ = false;
+    code = nullptr;
+    jitWasEnabled = false;
   }
 
-  RegexCompileResult compile_regex(std::string_view expression, const SearchOptions& options)
+  RegexCompileResult compileRegex(std::string_view expression, const SearchOptions& options)
   {
 #ifdef UBURU_HAS_PCRE2
-    int error_code = 0;
-    PCRE2_SIZE error_offset = 0;
-    std::uint32_t compile_options = PCRE2_UTF | PCRE2_UCP | PCRE2_AUTO_CALLOUT;
-    if (!options.case_sensitive)
-      compile_options |= PCRE2_CASELESS;
+    int errorCode = 0;
+    PCRE2_SIZE errorOffset = 0;
+    std::uint32_t compileOptions = PCRE2_UTF | PCRE2_UCP | PCRE2_AUTO_CALLOUT;
+    if (!options.caseSensitive)
+      compileOptions |= PCRE2_CASELESS;
 
     auto* code = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(expression.data()), expression.size(),
-                               compile_options, &error_code, &error_offset, nullptr);
+                               compileOptions, &errorCode, &errorOffset, nullptr);
     if (code == nullptr) {
       return RegexCompileResult{
           .matcher = std::nullopt,
-          .error = RegexCompileError{error_code, error_offset, pcre_error_message(error_code)}};
+          .error = RegexCompileError{errorCode, errorOffset, pcreErrorMessage(errorCode)}};
     }
 
-    const bool jit_enabled = pcre2_jit_compile(code, PCRE2_JIT_COMPLETE) == 0;
+    const bool jitWasEnabled = pcre2_jit_compile(code, PCRE2_JIT_COMPLETE) == 0;
     return RegexCompileResult{
-        .matcher = RegexMatcher{code, options, jit_enabled},
+        .matcher = RegexMatcher{code, options, jitWasEnabled},
         .error = std::nullopt,
     };
 #else
@@ -219,7 +219,7 @@ namespace uburu::text
     (void)options;
     return RegexCompileResult{
         .matcher = std::nullopt,
-        .error = RegexCompileError{regex_backend_unavailable_code, 0, "PCRE2 unavailable"}};
+        .error = RegexCompileError{regexBackendUnavailableCode, 0, "PCRE2 unavailable"}};
 #endif
   }
 

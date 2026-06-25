@@ -13,9 +13,9 @@ namespace uburu::filesystem
   namespace
   {
 
-    constexpr CFTimeInterval fsevents_latency_seconds = 0.25;
+    constexpr CFTimeInterval fseventsLatencySeconds = 0.25;
 
-    [[nodiscard]] bool requires_rescan(FSEventStreamEventFlags flags)
+    [[nodiscard]] bool requiresRescan(FSEventStreamEventFlags flags)
     {
       return (flags & kFSEventStreamEventFlagMustScanSubDirs) != 0U ||
              (flags & kFSEventStreamEventFlagUserDropped) != 0U ||
@@ -29,7 +29,7 @@ namespace uburu::filesystem
       return (flags & kFSEventStreamEventFlagItemIsDir) != 0U;
     }
 
-    [[nodiscard]] FileChangeKind map_flags(FSEventStreamEventFlags flags)
+    [[nodiscard]] FileChangeKind mapFlags(FSEventStreamEventFlags flags)
     {
       if ((flags & kFSEventStreamEventFlagItemCreated) != 0U)
         return FileChangeKind::created;
@@ -43,30 +43,30 @@ namespace uburu::filesystem
 
     void callback(ConstFSEventStreamRef,
                   void* context,
-                  std::size_t event_count,
-                  void* event_paths,
-                  const FSEventStreamEventFlags event_flags[],
+                  std::size_t eventCount,
+                  void* eventPaths,
+                  const FSEventStreamEventFlags eventFlags[],
                   const FSEventStreamEventId[])
     {
       auto* watcher = static_cast<MacosFileWatcher*>(context);
-      auto** paths = static_cast<char**>(event_paths);
+      auto** paths = static_cast<char**>(eventPaths);
       FileChangeBatch batch;
 
-      for (std::size_t index = 0; index < event_count; ++index) {
+      for (std::size_t index = 0; index < eventCount; ++index) {
         const std::filesystem::path path(paths[index]);
 
-        if (requires_rescan(event_flags[index])) {
-          batch.events_may_be_incomplete = true;
-          batch.requires_rescan = true;
+        if (requiresRescan(eventFlags[index])) {
+          batch.eventsMayBeIncomplete = true;
+          batch.requiresRescan = true;
         }
 
         batch.events.push_back(FileChangeEvent{
-          .relative_path = path,
-          .kind = map_flags(event_flags[index]),
-          .directory = is_directory(event_flags[index])});
+          .relativePath = path,
+          .kind = mapFlags(eventFlags[index]),
+          .directory = is_directory(eventFlags[index])});
       }
 
-      append_macos_events(*watcher, std::move(batch));
+      appendMacosEvents(*watcher, std::move(batch));
     }
 
   } // namespace
@@ -77,87 +77,87 @@ namespace uburu::filesystem
     dispatch_queue_t queue{nullptr};
   };
 
-  MacosFileWatcher::MacosFileWatcher(std::filesystem::path root) : root_(std::move(root))
+  MacosFileWatcher::MacosFileWatcher(std::filesystem::path root) : root(std::move(root))
   {
-    stream_ = new NativeStream;
-    stream_->queue = dispatch_queue_create("uburu.macos-file-watcher", DISPATCH_QUEUE_SERIAL);
+    stream = new NativeStream;
+    stream->queue = dispatch_queue_create("uburu.macos-file-watcher", DISPATCH_QUEUE_SERIAL);
 
-    const auto root_string = CFStringCreateWithCString(nullptr, root_.string().c_str(), kCFStringEncodingUTF8);
-    const void* values[] = {root_string};
+    const auto rootString = CFStringCreateWithCString(nullptr, root.string().c_str(), kCFStringEncodingUTF8);
+    const void* values[] = {rootString};
     const auto paths = CFArrayCreate(nullptr, values, 1, &kCFTypeArrayCallBacks);
 
     FSEventStreamContext context{};
     context.info = this;
 
-    stream_->stream = FSEventStreamCreate(nullptr, callback, &context, paths, kFSEventStreamEventIdSinceNow,
-                                          fsevents_latency_seconds,
+    stream->stream = FSEventStreamCreate(nullptr, callback, &context, paths, kFSEventStreamEventIdSinceNow,
+                                          fseventsLatencySeconds,
                                           kFSEventStreamCreateFlagFileEvents);
 
-    if (stream_->stream != nullptr) {
-      FSEventStreamSetDispatchQueue(stream_->stream, stream_->queue);
-      FSEventStreamStart(stream_->stream);
+    if (stream->stream != nullptr) {
+      FSEventStreamSetDispatchQueue(stream->stream, stream->queue);
+      FSEventStreamStart(stream->stream);
     }
 
     CFRelease(paths);
-    CFRelease(root_string);
+    CFRelease(rootString);
   }
 
   MacosFileWatcher::~MacosFileWatcher()
   {
-    if (stream_ == nullptr)
+    if (stream == nullptr)
       return;
 
-    if (stream_->stream != nullptr) {
-      FSEventStreamStop(stream_->stream);
-      FSEventStreamInvalidate(stream_->stream);
-      FSEventStreamRelease(stream_->stream);
+    if (stream->stream != nullptr) {
+      FSEventStreamStop(stream->stream);
+      FSEventStreamInvalidate(stream->stream);
+      FSEventStreamRelease(stream->stream);
     }
 
-    if (stream_->queue != nullptr)
-      dispatch_release(stream_->queue);
+    if (stream->queue != nullptr)
+      dispatch_release(stream->queue);
 
-    delete stream_;
+    delete stream;
   }
 
   FileChangeBatch MacosFileWatcher::poll(std::stop_token stop_token)
   {
     if (stop_token.stop_requested())
-      return FileChangeBatch{.events = {}, .events_may_be_incomplete = true, .requires_rescan = true};
+      return FileChangeBatch{.events = {}, .eventsMayBeIncomplete = true, .requiresRescan = true};
 
-    std::lock_guard lock(mutex_);
-    auto batch = std::move(pending_);
-    pending_ = {};
+    std::lock_guard lock(mutex);
+    auto batch = std::move(pending);
+    pending = {};
 
     return batch;
   }
 
-  void append_macos_events(MacosFileWatcher& watcher, FileChangeBatch batch)
+  void appendMacosEvents(MacosFileWatcher& watcher, FileChangeBatch batch)
   {
     watcher.append(std::move(batch));
   }
 
   void MacosFileWatcher::append(FileChangeBatch batch)
   {
-    std::lock_guard lock(mutex_);
+    std::lock_guard lock(mutex);
 
     for (auto& event : batch.events) {
-      event.relative_path = relative_from_root(event.relative_path);
-      pending_.events.push_back(std::move(event));
+      event.relativePath = relativeFromRoot(event.relativePath);
+      pending.events.push_back(std::move(event));
     }
 
-    pending_.events_may_be_incomplete = pending_.events_may_be_incomplete || batch.events_may_be_incomplete;
-    pending_.requires_rescan = pending_.requires_rescan || batch.requires_rescan;
+    pending.eventsMayBeIncomplete = pending.eventsMayBeIncomplete || batch.eventsMayBeIncomplete;
+    pending.requiresRescan = pending.requiresRescan || batch.requiresRescan;
   }
 
-  std::filesystem::path MacosFileWatcher::relative_from_root(const std::filesystem::path& path) const
+  std::filesystem::path MacosFileWatcher::relativeFromRoot(const std::filesystem::path& path) const
   {
     std::error_code error;
-    auto relative_path = std::filesystem::relative(path, root_, error);
+    auto relativePath = std::filesystem::relative(path, root, error);
 
     if (error)
       return path.filename();
 
-    return relative_path;
+    return relativePath;
   }
 
 } // namespace uburu::filesystem

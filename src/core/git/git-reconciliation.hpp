@@ -9,23 +9,23 @@ namespace uburu::git
 
   enum class GitReconciliationReason
   {
-    branch_changed,
-    head_changed,
-    detached_head_changed,
-    index_changed,
-    refs_changed
+    branchChanged,
+    headChanged,
+    detachedHeadChanged,
+    indexChanged,
+    refsChanged
   };
 
   struct GitReconciliationPlan
   {
     std::vector<GitReconciliationReason> reasons;
-    bool structural_reconciliation_required{false};
-    bool overlay_reconciliation_required{false};
-    bool can_reuse_content_by_blob{false};
+    bool structuralReconciliationRequired{false};
+    bool overlayReconciliationRequired{false};
+    bool canReuseContentByBlob{false};
   };
 
-  [[nodiscard]] GitReconciliationPlan plan_reconciliation(const GitChangeState& before, const GitChangeState& after);
+  [[nodiscard]] GitReconciliationPlan planReconciliation(const GitChangeState& before, const GitChangeState& after);
 
-  [[nodiscard]] bool has_reason(const GitReconciliationPlan& plan, GitReconciliationReason reason);
+  [[nodiscard]] bool hasReason(const GitReconciliationPlan& plan, GitReconciliationReason reason);
 
 } // namespace uburu::git

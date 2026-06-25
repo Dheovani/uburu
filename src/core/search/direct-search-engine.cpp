@@ -22,121 +22,121 @@ namespace uburu::search
 
     enum class PublishDecision
     {
-      continue_search,
-      stop_current_file,
-      stop_search
+      continueSearch,
+      stopCurrentFile,
+      stopSearch
     };
 
     struct PendingResult
     {
       SearchResult result;
-      std::size_t remaining_context_lines{0};
+      std::size_t remainingContextLines{0};
     };
 
-    SearchErrorCode error_code_from_regex_status(text::RegexMatchStatus status)
+    SearchErrorCode errorCodeFromRegexStatus(text::RegexMatchStatus status)
     {
-      if (status == text::RegexMatchStatus::timed_out)
-        return SearchErrorCode::regex_timeout;
+      if (status == text::RegexMatchStatus::timedOut)
+        return SearchErrorCode::regexTimeout;
 
-      return SearchErrorCode::regex_resource_limit_exceeded;
+      return SearchErrorCode::regexResourceLimitExceeded;
     }
 
-    bool searches_content(SearchTarget target)
+    bool searchesContent(SearchTarget target)
     {
-      return target == SearchTarget::content || target == SearchTarget::content_and_file_name;
+      return target == SearchTarget::content || target == SearchTarget::contentAndFileName;
     }
 
-    bool searches_file_name(SearchTarget target)
+    bool searchesFileName(SearchTarget target)
     {
-      return target == SearchTarget::file_name || target == SearchTarget::content_and_file_name;
+      return target == SearchTarget::fileName || target == SearchTarget::contentAndFileName;
     }
 
-    std::vector<text::MatchPosition> find_literal_matches(std::string_view text,
+    std::vector<text::MatchPosition> findLiteralMatches(std::string_view text,
                                                           const SearchQuery& query)
     {
-      return text::find_all_literals(text, query.expression, query.options);
+      return text::findAllLiterals(text, query.expression, query.options);
     }
 
     std::optional<std::vector<text::MatchPosition>>
-    find_regex_matches(std::string_view text, const text::RegexMatcher& regex_matcher,
+    findRegexMatches(std::string_view text, const text::RegexMatcher& regexMatcher,
                        SearchSummary& summary)
     {
-      const auto regex_result = regex_matcher.find_all(text);
+      const auto regexResult = regexMatcher.findAll(text);
 
-      if (regex_result.status != text::RegexMatchStatus::completed) {
+      if (regexResult.status != text::RegexMatchStatus::completed) {
         summary.errors.push_back(
-            make_search_error(error_code_from_regex_status(regex_result.status),
-                              std::to_string(regex_result.backend_error_code)));
+            makeSearchError(errorCodeFromRegexStatus(regexResult.status),
+                              std::to_string(regexResult.backendErrorCode)));
 
         return std::nullopt;
       }
 
-      return std::move(regex_result.matches);
+      return std::move(regexResult.matches);
     }
 
     std::optional<std::vector<text::MatchPosition>>
-    find_matches(std::string_view text, const SearchQuery& query,
-                 const std::optional<text::RegexMatcher>& regex_matcher, SearchSummary& summary)
+    findMatches(std::string_view text, const SearchQuery& query,
+                 const std::optional<text::RegexMatcher>& regexMatcher, SearchSummary& summary)
     {
-      if (regex_matcher)
-        return find_regex_matches(text, *regex_matcher, summary);
+      if (regexMatcher)
+        return findRegexMatches(text, *regexMatcher, summary);
 
-      return find_literal_matches(text, query);
+      return findLiteralMatches(text, query);
     }
 
-    void report_partial_failure(SearchSummary& summary, SearchErrorCode code, const FileEntry& entry)
+    void reportPartialFailure(SearchSummary& summary, SearchErrorCode code, const FileEntry& entry)
     {
-      ++summary.files_with_read_errors;
-      summary.partial_failure = true;
-      summary.errors.push_back(make_search_error(code, entry.relative_path.generic_string()));
+      ++summary.filesWithReadErrors;
+      summary.partialFailure = true;
+      summary.errors.push_back(makeSearchError(code, entry.relativePath.generic_string()));
     }
 
-    bool report_text_read_summary(SearchSummary& summary, const FileEntry& entry, text::TextReadSummary read_summary)
+    bool reportTextReadSummary(SearchSummary& summary, const FileEntry& entry, text::TextReadSummary readSummary)
     {
-      if (read_summary.status == text::TextReadStatus::completed)
+      if (readSummary.status == text::TextReadStatus::completed)
         return true;
 
-      if (read_summary.status == text::TextReadStatus::binary_skipped) {
-        ++summary.metrics.binary_files;
-        ++summary.metrics.binary_files_skipped;
+      if (readSummary.status == text::TextReadStatus::binarySkipped) {
+        ++summary.metrics.binaryFiles;
+        ++summary.metrics.binaryFilesSkipped;
 
         return true;
       }
 
-      if (read_summary.status == text::TextReadStatus::cancelled)
+      if (readSummary.status == text::TextReadStatus::cancelled)
         return false;
 
-      const auto code = read_summary.status == text::TextReadStatus::open_failed
-        ? SearchErrorCode::file_open_failed
-        : SearchErrorCode::file_read_failed;
-      report_partial_failure(summary, code, entry);
+      const auto code = readSummary.status == text::TextReadStatus::openFailed
+        ? SearchErrorCode::fileOpenFailed
+        : SearchErrorCode::fileReadFailed;
+      reportPartialFailure(summary, code, entry);
 
       return true;
     }
 
-    std::vector<MatchSpan> make_highlights(std::string_view line_text, const std::vector<text::MatchPosition>& matches)
+    std::vector<MatchSpan> makeHighlights(std::string_view lineText, const std::vector<text::MatchPosition>& matches)
     {
       std::vector<MatchSpan> highlights;
       highlights.reserve(matches.size());
-      for (const auto& highlight_match : matches) {
+      for (const auto& highlightMatch : matches) {
         highlights.push_back(MatchSpan{
-            .column = text::visual_column_for_byte_offset(line_text, highlight_match.offset),
-            .byte_offset = highlight_match.offset,
-            .byte_length = highlight_match.length});
+            .column = text::visualColumnForByteOffset(lineText, highlightMatch.offset),
+            .byteOffset = highlightMatch.offset,
+            .byteLength = highlightMatch.length});
       }
 
       return highlights;
     }
 
-    std::vector<std::string> copy_context(const std::deque<std::string>& context)
+    std::vector<std::string> copyContext(const std::deque<std::string>& context)
     {
       return {context.begin(), context.end()};
     }
 
-    bool publish_ready_pending(std::vector<PendingResult>& pending, const ResultSink& sink)
+    bool publishReadyPending(std::vector<PendingResult>& pending, const ResultSink& sink)
     {
       for (auto iterator = pending.begin(); iterator != pending.end();) {
-        if (iterator->remaining_context_lines > 0) {
+        if (iterator->remainingContextLines > 0) {
           ++iterator;
 
           continue;
@@ -151,197 +151,197 @@ namespace uburu::search
       return true;
     }
 
-    bool add_context_after(std::vector<PendingResult>& pending, std::string_view line_text,
+    bool addContextAfter(std::vector<PendingResult>& pending, std::string_view lineText,
                            const ResultSink& sink)
     {
-      for (auto& pending_result : pending) {
-        if (pending_result.remaining_context_lines == 0)
+      for (auto& pendingResult : pending) {
+        if (pendingResult.remainingContextLines == 0)
           continue;
 
-        pending_result.result.context_after.push_back(std::string{line_text});
-        --pending_result.remaining_context_lines;
+        pendingResult.result.contextAfter.push_back(std::string{lineText});
+        --pendingResult.remainingContextLines;
       }
 
-      return publish_ready_pending(pending, sink);
+      return publishReadyPending(pending, sink);
     }
 
-    bool flush_pending(std::vector<PendingResult>& pending, const ResultSink& sink)
+    bool flushPending(std::vector<PendingResult>& pending, const ResultSink& sink)
     {
-      for (auto& pending_result : pending)
-        pending_result.remaining_context_lines = 0;
+      for (auto& pendingResult : pending)
+        pendingResult.remainingContextLines = 0;
 
-      return publish_ready_pending(pending, sink);
+      return publishReadyPending(pending, sink);
     }
 
-    PublishDecision publish_matches(const FileEntry& entry, SearchResultKind kind,
-                                    std::size_t line_number, std::string_view line_text,
+    PublishDecision publishMatches(const FileEntry& entry, SearchResultKind kind,
+                                    std::size_t lineNumber, std::string_view lineText,
                                     const std::vector<text::MatchPosition>& matches,
                                     const SearchQuery& query, SearchSummary& summary,
-                                    std::size_t& file_matches,
-                                    const std::deque<std::string>& context_before,
+                                    std::size_t& fileMatches,
+                                    const std::deque<std::string>& contextBefore,
                                     std::vector<PendingResult>& pending, const ResultSink& sink)
     {
       for (const auto& match : matches) {
-        if (summary.matches >= query.options.result_limit) {
-          summary.limit_reached = true;
+        if (summary.matches >= query.options.resultLimit) {
+          summary.limitReached = true;
 
-          return PublishDecision::stop_search;
+          return PublishDecision::stopSearch;
         }
 
-        if (file_matches >= query.options.per_file_result_limit) {
-          ++summary.files_with_match_limit_reached;
+        if (fileMatches >= query.options.perFileResultLimit) {
+          ++summary.filesWithMatchLimitReached;
 
-          return PublishDecision::stop_current_file;
+          return PublishDecision::stopCurrentFile;
         }
 
         ++summary.matches;
-        ++file_matches;
+        ++fileMatches;
 
         SearchResult result{.kind = kind,
-                            .path = entry.relative_path,
-                            .line = line_number,
-                            .column = text::visual_column_for_byte_offset(line_text, match.offset),
-                            .match_length = match.length,
-                            .line_text = std::string{line_text},
-                            .highlights = make_highlights(line_text, matches),
-                            .context_before = copy_context(context_before),
-                            .context_after = {},
-                            .search_root = entry.search_root};
+                            .path = entry.relativePath,
+                            .line = lineNumber,
+                            .column = text::visualColumnForByteOffset(lineText, match.offset),
+                            .matchLength = match.length,
+                            .lineText = std::string{lineText},
+                            .highlights = makeHighlights(lineText, matches),
+                            .contextBefore = copyContext(contextBefore),
+                            .contextAfter = {},
+                            .searchRoot = entry.searchRoot};
 
-        if (query.options.context_after_lines == 0) {
+        if (query.options.contextAfterLines == 0) {
           if (!sink(std::move(result)))
-            return PublishDecision::stop_search;
+            return PublishDecision::stopSearch;
 
           continue;
         }
 
         pending.push_back(
             PendingResult{.result = std::move(result),
-                          .remaining_context_lines = query.options.context_after_lines});
+                          .remainingContextLines = query.options.contextAfterLines});
       }
 
-      return PublishDecision::continue_search;
+      return PublishDecision::continueSearch;
     }
 
   } // namespace
 
   DirectSearchEngine::DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner)
-    : scanner_(std::move(scanner))
+    : scanner(std::move(scanner))
   {
-    if (!scanner_)
+    if (!scanner)
       throw std::invalid_argument("DirectSearchEngine requires a file scanner");
   }
 
   SearchSummary DirectSearchEngine::search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token) const
   {
     SearchSummary summary;
-    summary.errors = validate_search_query(query);
+    summary.errors = validateSearchQuery(query);
     if (!summary.errors.empty())
       return summary;
 
-    std::optional<text::RegexMatcher> regex_matcher;
+    std::optional<text::RegexMatcher> regexMatcher;
     if (query.options.mode == SearchMode::regex) {
-      auto compiled = text::compile_regex(query.expression, query.options);
+      auto compiled = text::compileRegex(query.expression, query.options);
       if (!compiled.matcher) {
         const auto& error = compiled.error;
-        summary.errors.push_back(make_search_error(
-            SearchErrorCode::regex_compile_failed, error ? error->message : std::string{},
+        summary.errors.push_back(makeSearchError(
+            SearchErrorCode::regexCompileFailed, error ? error->message : std::string{},
             error ? error->offset : std::optional<std::size_t>{}));
 
         return summary;
       }
-      summary.regex_execution_mode = compiled.matcher->jit_enabled()
+      summary.regexExecutionMode = compiled.matcher->jitEnabled()
                                          ? RegexExecutionMode::jit
-                                         : RegexExecutionMode::interpreted_fallback;
-      regex_matcher = std::move(compiled.matcher);
+                                         : RegexExecutionMode::interpretedFallback;
+      regexMatcher = std::move(compiled.matcher);
     }
 
-    const auto roots = effective_search_roots(query);
+    const auto roots = effectiveSearchRoots(query);
 
     for (const auto& root : roots) {
-      if (stop_token.stop_requested() || summary.limit_reached)
+      if (stop_token.stop_requested() || summary.limitReached)
         break;
 
-      auto root_options = options_for_root(query.options, root);
+      auto rootOptions = optionsForRoot(query.options, root);
 
-      scanner_->scan(
-        root.path, root_options,
+      scanner->scan(
+        root.path, rootOptions,
         [&](FileEntry entry) {
           if (stop_token.stop_requested())
             return false;
 
-          ++summary.files_scanned;
-          ++summary.metrics.files_processed;
-          summary.metrics.bytes_processed += entry.size;
+          ++summary.filesScanned;
+          ++summary.metrics.filesProcessed;
+          summary.metrics.bytesProcessed += entry.size;
 
-          std::size_t file_matches = 0;
-          std::deque<std::string> previous_context;
-          std::vector<PendingResult> pending_results;
+          std::size_t fileMatches = 0;
+          std::deque<std::string> previousContext;
+          std::vector<PendingResult> pendingResults;
 
-          if (searches_file_name(query.options.target)) {
-            const auto path_text = entry.relative_path.generic_string();
-            const auto path_matches = find_matches(path_text, query, regex_matcher, summary);
+          if (searchesFileName(query.options.target)) {
+            const auto pathText = entry.relativePath.generic_string();
+            const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
 
-            if (!path_matches)
+            if (!pathMatches)
               return false;
 
-            const auto decision = publish_matches(entry, SearchResultKind::file_name, 0, path_text,
-                                                  *path_matches, query, summary, file_matches,
-                                                  previous_context, pending_results, sink);
+            const auto decision = publishMatches(entry, SearchResultKind::fileName, 0, pathText,
+                                                  *pathMatches, query, summary, fileMatches,
+                                                  previousContext, pendingResults, sink);
 
-            if (!flush_pending(pending_results, sink))
+            if (!flushPending(pendingResults, sink))
               return false;
 
-            if (decision == PublishDecision::stop_search)
+            if (decision == PublishDecision::stopSearch)
               return false;
 
-            if (decision == PublishDecision::stop_current_file)
+            if (decision == PublishDecision::stopCurrentFile)
               return true;
           }
 
-          if (!searches_content(query.options.target))
+          if (!searchesContent(query.options.target))
             return true;
 
-          bool stop_current_file = false;
-          bool stop_search = false;
-          const auto read_summary = text::read_text_file_lines(
-              entry.absolute_path, query.options,
+          bool stopCurrentFile = false;
+          bool stopSearch = false;
+          const auto readSummary = text::readTextFileLines(
+              entry.absolutePath, query.options,
               [&](const text::TextLine& line) {
-                if (!add_context_after(pending_results, line.text, sink)) {
-                  stop_search = true;
+                if (!addContextAfter(pendingResults, line.text, sink)) {
+                  stopSearch = true;
 
                   return false;
                 }
 
-                const auto matches = find_matches(line.text, query, regex_matcher, summary);
+                const auto matches = findMatches(line.text, query, regexMatcher, summary);
 
                 if (!matches)
                   return false;
 
                 if (matches->empty()) {
-                  previous_context.push_back(line.text);
-                  while (previous_context.size() > query.options.context_before_lines)
-                    previous_context.pop_front();
+                  previousContext.push_back(line.text);
+                  while (previousContext.size() > query.options.contextBeforeLines)
+                    previousContext.pop_front();
 
                   return true;
                 }
 
-                const auto decision = publish_matches(
-                    entry, SearchResultKind::content, line.line_number, line.text, *matches, query,
-                    summary, file_matches, previous_context, pending_results, sink);
+                const auto decision = publishMatches(
+                    entry, SearchResultKind::content, line.lineNumber, line.text, *matches, query,
+                    summary, fileMatches, previousContext, pendingResults, sink);
 
-                previous_context.push_back(line.text);
-                while (previous_context.size() > query.options.context_before_lines)
-                  previous_context.pop_front();
+                previousContext.push_back(line.text);
+                while (previousContext.size() > query.options.contextBeforeLines)
+                  previousContext.pop_front();
 
-                if (decision == PublishDecision::stop_search) {
-                  stop_search = true;
+                if (decision == PublishDecision::stopSearch) {
+                  stopSearch = true;
 
                   return false;
                 }
 
-                if (decision == PublishDecision::stop_current_file) {
-                  stop_current_file = true;
+                if (decision == PublishDecision::stopCurrentFile) {
+                  stopCurrentFile = true;
 
                   return false;
                 }
@@ -350,22 +350,22 @@ namespace uburu::search
               },
               stop_token);
 
-          if (!flush_pending(pending_results, sink))
+          if (!flushPending(pendingResults, sink))
             return false;
 
-          if (stop_search)
+          if (stopSearch)
             return false;
 
-          if (stop_current_file)
+          if (stopCurrentFile)
             return true;
 
-          return report_text_read_summary(summary, entry, read_summary);
+          return reportTextReadSummary(summary, entry, readSummary);
         },
         stop_token, &summary.metrics);
     }
 
     summary.cancelled = stop_token.stop_requested();
-    summary.metrics.results_emitted = summary.matches;
+    summary.metrics.resultsEmitted = summary.matches;
 
     return summary;
   }

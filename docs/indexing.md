@@ -2,7 +2,7 @@
 
 O catálogo persistente será dividido entre metadados mutáveis da worktree e documentos endereçados por conteúdo.
 
-Uma entrada lógica contém `repository_id`, `worktree_id`, caminho relativo, tamanho, mtime, hash de conteúdo, blob Git opcional e status local. O documento de conteúdo pode ser reutilizado quando o mesmo hash reaparece em outra branch ou worktree.
+Uma entrada lógica contém `repositoryId`, `worktreeId`, caminho relativo, tamanho, mtime, hash de conteúdo, blob Git opcional e status local. O documento de conteúdo pode ser reutilizado quando o mesmo hash reaparece em outra branch ou worktree.
 
 ## Atualização incremental
 

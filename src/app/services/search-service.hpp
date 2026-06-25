@@ -19,12 +19,12 @@ namespace uburu::app
   class DefaultSearchService final : public SearchService
   {
   public:
-    explicit DefaultSearchService(std::shared_ptr<const search::SearchEngine> direct_engine);
+    explicit DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine);
     [[nodiscard]] search::SearchSummary search(const SearchQuery& query, search::ResultSink sink,
                                                std::stop_token stop_token = {}) const override;
 
   private:
-    std::shared_ptr<const search::SearchEngine> direct_engine_;
+    std::shared_ptr<const search::SearchEngine> directEngine;
   };
 
 } // namespace uburu::app

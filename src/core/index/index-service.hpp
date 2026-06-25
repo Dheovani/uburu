@@ -11,7 +11,7 @@ namespace uburu::index
   struct IndexUpdateSummary
   {
     std::size_t indexed{0};
-    std::size_t reused_by_hash{0};
+    std::size_t reusedByHash{0};
     std::size_t removed{0};
     bool cancelled{false};
   };

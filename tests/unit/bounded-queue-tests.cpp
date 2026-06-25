@@ -10,19 +10,19 @@
 namespace
 {
 
-  constexpr auto async_poll_interval = std::chrono::milliseconds{1};
-  constexpr auto async_timeout = std::chrono::milliseconds{200};
+  constexpr auto asyncPollInterval = std::chrono::milliseconds{1};
+  constexpr auto asyncTimeout = std::chrono::milliseconds{200};
 
   template <typename Predicate>
   bool eventually(Predicate predicate)
   {
-    const auto deadline = std::chrono::steady_clock::now() + async_timeout;
+    const auto deadline = std::chrono::steady_clock::now() + asyncTimeout;
 
     while (std::chrono::steady_clock::now() < deadline) {
       if (predicate())
         return true;
 
-      std::this_thread::sleep_for(async_poll_interval);
+      std::this_thread::sleep_for(asyncPollInterval);
     }
 
     return predicate();
@@ -88,36 +88,36 @@ TEST_CASE("bounded queue tracks producer and consumer waits")
   uburu::concurrency::BoundedQueue<int> queue(1);
   REQUIRE(queue.push(1));
 
-  std::atomic_bool producer_result{false};
+  std::atomic_bool producerResult{false};
 
   std::jthread producer([&] {
-    producer_result = queue.push(2);
+    producerResult = queue.push(2);
   });
 
   REQUIRE(eventually([&] {
-    return queue.metrics().producer_waits == 1;
+    return queue.metrics().producerWaits == 1;
   }));
 
-  CHECK(queue.metrics().producer_waits == 1);
+  CHECK(queue.metrics().producerWaits == 1);
   CHECK(queue.pop() == std::optional<int>{1});
 
   producer.join();
-  CHECK(producer_result.load());
+  CHECK(producerResult.load());
   CHECK(queue.pop() == std::optional<int>{2});
 
-  std::atomic_bool consumer_result{false};
+  std::atomic_bool consumerResult{false};
 
   std::jthread consumer([&] {
-    consumer_result = queue.pop() == std::optional<int>{3};
+    consumerResult = queue.pop() == std::optional<int>{3};
   });
 
   REQUIRE(eventually([&] {
-    return queue.metrics().consumer_waits == 1;
+    return queue.metrics().consumerWaits == 1;
   }));
 
-  CHECK(queue.metrics().consumer_waits == 1);
+  CHECK(queue.metrics().consumerWaits == 1);
   REQUIRE(queue.push(3));
 
   consumer.join();
-  CHECK(consumer_result.load());
+  CHECK(consumerResult.load());
 }

@@ -12,12 +12,12 @@ retornam `GitResult<T>` com `GitErrorCode` tipado, para diferenciar ausência de
 leitura e backend indisponível. Git CLI será apenas fallback isolado em adapter explícito. Mudanças em
 `HEAD`, no index e nas refs relevantes disparam reconciliação incremental.
 
-`GitService::change_state()` expõe um snapshot comparável do estado Git visível para uma worktree:
+`GitService::changeState()` expõe um snapshot comparável do estado Git visível para uma worktree:
 branch atual, `HEAD`, detached HEAD e assinaturas de `HEAD`, `index`, ref da branch e `packed-refs`.
 Esse snapshot não substitui watchers de filesystem; ele define o estado que os watchers devem comparar
 para decidir quando invalidar deltas e iniciar reconciliação incremental.
 
-`plan_reconciliation()` compara dois snapshots de `GitChangeState` e transforma diferenças em um plano
+`planReconciliation()` compara dois snapshots de `GitChangeState` e transforma diferenças em um plano
 explícito. Mudança de branch, mudança de `HEAD`, entrada ou saída de detached HEAD e alteração de refs
 relevantes exigem reconciliação estrutural, mas ainda permitem reutilizar documentos por blob hash. Uma
 mudança apenas no index exige reconciliação do overlay local, sem tratar a geração versionada como

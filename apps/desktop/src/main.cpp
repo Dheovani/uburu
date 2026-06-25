@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
     application.installTranslator(&translator);
   }
 
-  uburu::app::SearchController search_controller;
+  uburu::app::SearchController searchController;
   QQmlApplicationEngine engine;
-  engine.rootContext()->setContextProperty(QStringLiteral("searchController"), &search_controller);
+  engine.rootContext()->setContextProperty(QStringLiteral("searchController"), &searchController);
   engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
   if (engine.rootObjects().isEmpty())
     return -1;

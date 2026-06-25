@@ -13,29 +13,29 @@ namespace uburu::git
 
   enum class GitErrorCode
   {
-    not_repository,
-    repository_open_failed,
-    head_read_failed,
-    worktree_read_failed,
-    status_read_failed,
-    blob_read_failed,
-    backend_unavailable
+    notRepository,
+    repositoryOpenFailed,
+    headReadFailed,
+    worktreeReadFailed,
+    statusReadFailed,
+    blobReadFailed,
+    backendUnavailable
   };
 
   struct GitError
   {
-    GitErrorCode code{GitErrorCode::backend_unavailable};
+    GitErrorCode code{GitErrorCode::backendUnavailable};
     std::string message;
   };
 
   struct GitChangeState
   {
     std::optional<std::string> branch;
-    std::string head_oid;
-    bool detached_head{false};
-    std::string head_signature;
-    std::string index_signature;
-    std::string relevant_refs_signature;
+    std::string headOid;
+    bool detachedHead{false};
+    std::string headSignature;
+    std::string indexSignature;
+    std::string relevantRefsSignature;
   };
 
   template <typename T>
@@ -52,15 +52,15 @@ namespace uburu::git
   public:
     virtual ~GitService() = default;
     [[nodiscard]] virtual GitResult<RepositoryInfo>
-    discover_repository(const std::filesystem::path& path) const = 0;
+    discoverRepository(const std::filesystem::path& path) const = 0;
     [[nodiscard]] virtual GitResult<std::vector<WorktreeInfo>>
-    list_worktrees(const RepositoryInfo& repository) const = 0;
+    listWorktrees(const RepositoryInfo& repository) const = 0;
     [[nodiscard]] virtual GitResult<GitFileStatus>
-    file_status(const WorktreeInfo& worktree, const std::filesystem::path& relative_path) const = 0;
+    fileStatus(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
     [[nodiscard]] virtual GitResult<std::optional<std::string>>
-    blob_hash(const WorktreeInfo& worktree, const std::filesystem::path& relative_path) const = 0;
+    blobHash(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
     [[nodiscard]] virtual GitResult<GitChangeState>
-    change_state(const WorktreeInfo& worktree) const = 0;
+    changeState(const WorktreeInfo& worktree) const = 0;
   };
 
 } // namespace uburu::git

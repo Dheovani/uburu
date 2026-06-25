@@ -5,46 +5,46 @@
 namespace uburu::search
 {
 
-  std::string translation_key_for(SearchErrorCode code)
+  std::string translationKeyFor(SearchErrorCode code)
   {
     switch (code) {
-    case SearchErrorCode::empty_root:
+    case SearchErrorCode::emptyRoot:
       return "search.error.emptyRoot";
-    case SearchErrorCode::root_not_found:
+    case SearchErrorCode::rootNotFound:
       return "search.error.rootNotFound";
-    case SearchErrorCode::root_not_directory:
+    case SearchErrorCode::rootNotDirectory:
       return "search.error.rootNotDirectory";
-    case SearchErrorCode::empty_expression:
+    case SearchErrorCode::emptyExpression:
       return "search.error.emptyExpression";
-    case SearchErrorCode::unsupported_search_mode:
+    case SearchErrorCode::unsupportedSearchMode:
       return "search.error.unsupportedSearchMode";
-    case SearchErrorCode::regex_compile_failed:
+    case SearchErrorCode::regexCompileFailed:
       return "search.error.regexCompileFailed";
-    case SearchErrorCode::regex_resource_limit_exceeded:
+    case SearchErrorCode::regexResourceLimitExceeded:
       return "search.error.regexResourceLimitExceeded";
-    case SearchErrorCode::regex_timeout:
+    case SearchErrorCode::regexTimeout:
       return "search.error.regexTimeout";
-    case SearchErrorCode::invalid_regex_limit:
+    case SearchErrorCode::invalidRegexLimit:
       return "search.error.invalidRegexLimit";
-    case SearchErrorCode::invalid_result_limit:
+    case SearchErrorCode::invalidResultLimit:
       return "search.error.invalidResultLimit";
-    case SearchErrorCode::invalid_per_file_result_limit:
+    case SearchErrorCode::invalidPerFileResultLimit:
       return "search.error.invalidPerFileResultLimit";
-    case SearchErrorCode::invalid_maximum_file_size:
+    case SearchErrorCode::invalidMaximumFileSize:
       return "search.error.invalidMaximumFileSize";
-    case SearchErrorCode::file_open_failed:
+    case SearchErrorCode::fileOpenFailed:
       return "search.error.fileOpenFailed";
-    case SearchErrorCode::file_read_failed:
+    case SearchErrorCode::fileReadFailed:
       return "search.error.fileReadFailed";
     }
 
     return "search.error.unknown";
   }
 
-  SearchError make_search_error(SearchErrorCode code, std::string context,
+  SearchError makeSearchError(SearchErrorCode code, std::string context,
                                 std::optional<std::size_t> offset)
   {
-    return SearchError{code, translation_key_for(code), std::move(context), offset};
+    return SearchError{code, translationKeyFor(code), std::move(context), offset};
   }
 
 } // namespace uburu::search

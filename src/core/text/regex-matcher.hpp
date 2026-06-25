@@ -20,21 +20,21 @@ namespace uburu::text
   enum class RegexMatchStatus
   {
     completed,
-    resource_limit_exceeded,
-    timed_out,
-    internal_error
+    resourceLimitExceeded,
+    timedOut,
+    internalError
   };
 
   struct RegexMatchResult
   {
     std::vector<MatchPosition> matches;
     RegexMatchStatus status{RegexMatchStatus::completed};
-    int backend_error_code{0};
+    int backendErrorCode{0};
   };
 
   struct RegexCompileResult;
 
-  [[nodiscard]] RegexCompileResult compile_regex(std::string_view expression,
+  [[nodiscard]] RegexCompileResult compileRegex(std::string_view expression,
                                                  const SearchOptions& options);
 
   class RegexMatcher final
@@ -47,21 +47,21 @@ namespace uburu::text
     RegexMatcher& operator=(RegexMatcher&& other) noexcept;
     ~RegexMatcher();
 
-    [[nodiscard]] RegexMatchResult find_all(std::string_view text) const;
-    [[nodiscard]] bool jit_enabled() const noexcept;
+    [[nodiscard]] RegexMatchResult findAll(std::string_view text) const;
+    [[nodiscard]] bool jitEnabled() const noexcept;
 
   private:
     friend struct RegexCompileResult;
-    friend RegexCompileResult compile_regex(std::string_view expression,
+    friend RegexCompileResult compileRegex(std::string_view expression,
                                             const SearchOptions& options);
 
-    explicit RegexMatcher(void* code, SearchOptions options, bool jit_enabled);
+    explicit RegexMatcher(void* code, SearchOptions options, bool jitWasEnabled);
 
     void reset() noexcept;
 
-    void* code_{nullptr};
-    SearchOptions options_;
-    bool jit_enabled_{false};
+    void* code{nullptr};
+    SearchOptions options;
+    bool jitWasEnabled{false};
   };
 
   struct RegexCompileResult

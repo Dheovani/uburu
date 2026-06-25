@@ -26,24 +26,24 @@ namespace uburu::filesystem
   namespace
   {
 
-    std::string normalized_extension(std::filesystem::path path)
+    std::string normalizedExtension(std::filesystem::path path)
     {
       auto extension = path.extension().string();
 
       if (extension.starts_with('.'))
         extension.erase(0, 1);
 
-      return normalized_path_key(std::move(extension));
+      return normalizedPathKey(std::move(extension));
     }
 
-    bool is_hidden(const std::filesystem::path& path)
+    bool isHidden(const std::filesystem::path& path)
     {
       const auto name = path.filename().string();
 
       return !name.empty() && name.front() == '.';
     }
 
-    bool is_sparse_file(const std::filesystem::path& path)
+    bool isSparseFile(const std::filesystem::path& path)
     {
 #ifdef _WIN32
       const auto attributes = GetFileAttributesW(path.wstring().c_str());
@@ -61,10 +61,10 @@ namespace uburu::filesystem
       if (!S_ISREG(status.st_mode))
         return false;
 
-      constexpr auto posix_stat_block_size = 512ULL;
+      constexpr auto posixStatBlockSize = 512ULL;
 
       return status.st_size > 0 && status.st_blocks >= 0 &&
-             static_cast<unsigned long long>(status.st_blocks) * posix_stat_block_size
+             static_cast<unsigned long long>(status.st_blocks) * posixStatBlockSize
               < static_cast<unsigned long long>(status.st_size);
 #else
       static_cast<void>(path);
@@ -73,7 +73,7 @@ namespace uburu::filesystem
 #endif
     }
 
-    bool is_windows_reparse_point(const std::filesystem::path& path)
+    bool isWindowsReparsePoint(const std::filesystem::path& path)
     {
 #ifdef _WIN32
       const auto attributes = GetFileAttributesW(path.wstring().c_str());
@@ -89,14 +89,14 @@ namespace uburu::filesystem
 #endif
     }
 
-    bool is_link_like_directory(const std::filesystem::directory_entry& entry)
+    bool isLinkLikeDirectory(const std::filesystem::directory_entry& entry)
     {
       std::error_code error;
 
-      return entry.is_symlink(error) || is_windows_reparse_point(entry.path());
+      return entry.is_symlink(error) || isWindowsReparsePoint(entry.path());
     }
 
-    std::string directory_identity(const std::filesystem::path& directory)
+    std::string directoryIdentity(const std::filesystem::path& directory)
     {
       std::error_code error;
       auto canonical = std::filesystem::weakly_canonical(directory, error);
@@ -105,77 +105,77 @@ namespace uburu::filesystem
         canonical = std::filesystem::absolute(directory, error).lexically_normal();
 
       if (error)
-        return normalized_path_key(directory);
+        return normalizedPathKey(directory);
 
-      return normalized_path_key(canonical);
+      return normalizedPathKey(canonical);
     }
 
-    bool has_allowed_extension(const std::filesystem::path& path, const std::vector<std::string>& extensions)
+    bool hasAllowedExtension(const std::filesystem::path& path, const std::vector<std::string>& extensions)
     {
       if (extensions.empty())
         return true;
 
-      const auto extension = normalized_extension(path);
+      const auto extension = normalizedExtension(path);
 
       return std::ranges::any_of(extensions, [&](const std::string& allowed) {
-        auto normalized_allowed = normalized_path_key(allowed);
+        auto normalizedAllowed = normalizedPathKey(allowed);
 
-        if (normalized_allowed.starts_with('.'))
-          normalized_allowed.erase(0, 1);
+        if (normalizedAllowed.starts_with('.'))
+          normalizedAllowed.erase(0, 1);
 
-        return extension == normalized_allowed;
+        return extension == normalizedAllowed;
       });
     }
 
-    bool is_included_directory(const std::filesystem::path& relative_path,
-                               const std::vector<std::filesystem::path>& included_directories)
+    bool isIncludedDirectory(const std::filesystem::path& relativePath,
+                               const std::vector<std::filesystem::path>& includedDirectories)
     {
-      if (included_directories.empty())
+      if (includedDirectories.empty())
         return true;
 
-      const auto relative_key = normalized_path_key(relative_path);
+      const auto relativeKey = normalizedPathKey(relativePath);
 
-      return std::ranges::any_of(included_directories, [&](const std::filesystem::path& included) {
-        return normalized_path_is_same_or_inside(relative_key, normalized_path_key(included));
+      return std::ranges::any_of(includedDirectories, [&](const std::filesystem::path& included) {
+        return normalizedPathIsSameOrInside(relativeKey, normalizedPathKey(included));
       });
     }
 
-    bool is_excluded_directory(const std::filesystem::path& relative_path,
-                               const std::vector<std::filesystem::path>& excluded_directories)
+    bool isExcludedDirectory(const std::filesystem::path& relativePath,
+                               const std::vector<std::filesystem::path>& excludedDirectories)
     {
-      const auto relative_key = normalized_path_key(relative_path);
+      const auto relativeKey = normalizedPathKey(relativePath);
 
-      return std::ranges::any_of(excluded_directories, [&](const std::filesystem::path& excluded) {
-        return normalized_path_is_same_or_inside(relative_key, normalized_path_key(excluded));
+      return std::ranges::any_of(excludedDirectories, [&](const std::filesystem::path& excluded) {
+        return normalizedPathIsSameOrInside(relativeKey, normalizedPathKey(excluded));
       });
     }
 
-    bool glob_matches(std::string_view pattern, std::string_view text)
+    bool globMatches(std::string_view pattern, std::string_view text)
     {
-      std::size_t pattern_index = 0;
-      std::size_t text_index = 0;
-      std::optional<std::size_t> star_pattern_index;
-      std::size_t star_text_index = 0;
+      std::size_t patternIndex = 0;
+      std::size_t textIndex = 0;
+      std::optional<std::size_t> starPatternIndex;
+      std::size_t starTextIndex = 0;
 
-      while (text_index < text.size()) {
-        if (pattern_index < pattern.size() &&
-            (pattern[pattern_index] == '?' || pattern[pattern_index] == text[text_index])) {
-          ++pattern_index;
-          ++text_index;
+      while (textIndex < text.size()) {
+        if (patternIndex < pattern.size() &&
+            (pattern[patternIndex] == '?' || pattern[patternIndex] == text[textIndex])) {
+          ++patternIndex;
+          ++textIndex;
 
           continue;
         }
 
-        if (pattern_index < pattern.size() && pattern[pattern_index] == '*') {
-          star_pattern_index = pattern_index++;
-          star_text_index = text_index;
+        if (patternIndex < pattern.size() && pattern[patternIndex] == '*') {
+          starPatternIndex = patternIndex++;
+          starTextIndex = textIndex;
 
           continue;
         }
 
-        if (star_pattern_index) {
-          pattern_index = *star_pattern_index + 1;
-          text_index = ++star_text_index;
+        if (starPatternIndex) {
+          patternIndex = *starPatternIndex + 1;
+          textIndex = ++starTextIndex;
 
           continue;
         }
@@ -183,29 +183,29 @@ namespace uburu::filesystem
         return false;
       }
 
-      while (pattern_index < pattern.size() && pattern[pattern_index] == '*')
-        ++pattern_index;
+      while (patternIndex < pattern.size() && pattern[patternIndex] == '*')
+        ++patternIndex;
 
-      return pattern_index == pattern.size();
+      return patternIndex == pattern.size();
     }
 
-    bool passes_globs(const std::filesystem::path& relative_path, const SearchOptions& options)
+    bool passesGlobs(const std::filesystem::path& relativePath, const SearchOptions& options)
     {
-      const auto text = normalized_path_key(relative_path);
-      const auto matches = std::ranges::any_of(options.included_globs, [&](const std::string& glob) {
-        return glob_matches(normalized_path_key(glob), text);
+      const auto text = normalizedPathKey(relativePath);
+      const auto matches = std::ranges::any_of(options.includedGlobs, [&](const std::string& glob) {
+        return globMatches(normalizedPathKey(glob), text);
       });
 
-      if (!options.included_globs.empty() && !matches)
+      if (!options.includedGlobs.empty() && !matches)
         return false;
 
-      return !std::ranges::any_of(options.excluded_globs, [&](const std::string& glob) {
-        return glob_matches(normalized_path_key(glob), text);
+      return !std::ranges::any_of(options.excludedGlobs, [&](const std::string& glob) {
+        return globMatches(normalizedPathKey(glob), text);
       });
     }
 
     std::vector<std::filesystem::directory_entry>
-    sorted_directory_entries(const std::filesystem::path& directory,
+    sortedDirectoryEntries(const std::filesystem::path& directory,
                              std::filesystem::directory_options options)
     {
       std::error_code error;
@@ -219,29 +219,29 @@ namespace uburu::filesystem
       }
 
       std::ranges::sort(entries, [](const auto& left, const auto& right) {
-        std::error_code left_error;
-        std::error_code right_error;
-        const auto left_is_directory = left.is_directory(left_error);
-        const auto right_is_directory = right.is_directory(right_error);
+        std::error_code leftError;
+        std::error_code rightError;
+        const auto leftIsDirectory = left.is_directory(leftError);
+        const auto rightIsDirectory = right.is_directory(rightError);
 
-        if (!left_error && !right_error && left_is_directory != right_is_directory)
-          return left_is_directory;
+        if (!leftError && !rightError && leftIsDirectory != rightIsDirectory)
+          return leftIsDirectory;
 
-        if (!left_is_directory && !right_is_directory) {
-          const auto left_size = left.file_size(left_error);
-          const auto right_size = right.file_size(right_error);
+        if (!leftIsDirectory && !rightIsDirectory) {
+          const auto leftSize = left.file_size(leftError);
+          const auto rightSize = right.file_size(rightError);
 
-          if (!left_error && !right_error && left_size != right_size)
-            return left_size < right_size;
+          if (!leftError && !rightError && leftSize != rightSize)
+            return leftSize < rightSize;
         }
 
-        return normalized_path_key(left.path()) < normalized_path_key(right.path());
+        return normalizedPathKey(left.path()) < normalizedPathKey(right.path());
       });
 
       return entries;
     }
 
-    std::filesystem::path relative_directory(const std::filesystem::path& directory, const std::filesystem::path& root)
+    std::filesystem::path relativeDirectory(const std::filesystem::path& directory, const std::filesystem::path& root)
     {
       std::error_code error;
       auto relative = std::filesystem::relative(directory, root, error);
@@ -251,19 +251,19 @@ namespace uburu::filesystem
       return relative;
     }
 
-    GitIgnoreRules initial_ignore_rules(const std::filesystem::path& root, const SearchOptions& options)
+    GitIgnoreRules initialIgnoreRules(const std::filesystem::path& root, const SearchOptions& options)
     {
-      GitIgnoreRules ignore_rules;
+      GitIgnoreRules ignoreRules;
 
-      if (!options.respect_gitignore)
-        return ignore_rules;
+      if (!options.respectGitignore)
+        return ignoreRules;
 
-      for (const auto& global_ignore_file : options.global_git_ignore_files)
-        ignore_rules.append_file(global_ignore_file, {});
+      for (const auto& globalIgnoreFile : options.globalGitIgnoreFiles)
+        ignoreRules.appendFile(globalIgnoreFile, {});
 
-      ignore_rules.append_file(root / ".git" / "info" / "exclude", {});
+      ignoreRules.appendFile(root / ".git" / "info" / "exclude", {});
 
-      return ignore_rules;
+      return ignoreRules;
     }
 
   } // namespace
@@ -276,54 +276,54 @@ namespace uburu::filesystem
   {
     auto flags = std::filesystem::directory_options::skip_permission_denied;
 
-    if (options.follow_symlinks)
+    if (options.followSymlinks)
       flags |= std::filesystem::directory_options::follow_directory_symlink;
 
-    std::unordered_set<std::string> visited_directories;
-    std::function<bool(const std::filesystem::path&, GitIgnoreRules)> scan_directory;
-    scan_directory = [&](const std::filesystem::path& directory, GitIgnoreRules ignore_rules) {
-      const auto identity = directory_identity(directory);
+    std::unordered_set<std::string> visitedDirectories;
+    std::function<bool(const std::filesystem::path&, GitIgnoreRules)> scanDirectory;
+    scanDirectory = [&](const std::filesystem::path& directory, GitIgnoreRules ignoreRules) {
+      const auto identity = directoryIdentity(directory);
 
-      if (!visited_directories.insert(identity).second)
+      if (!visitedDirectories.insert(identity).second)
         return true;
 
-      if (options.respect_gitignore)
-        ignore_rules.append_file(directory / ".gitignore", relative_directory(directory, root));
+      if (options.respectGitignore)
+        ignoreRules.appendFile(directory / ".gitignore", relativeDirectory(directory, root));
 
-      for (const auto& item : sorted_directory_entries(directory, flags)) {
+      for (const auto& item : sortedDirectoryEntries(directory, flags)) {
         if (stop_token.stop_requested())
           return false;
 
         std::error_code error;
         const auto path = item.path();
-        const bool hidden = is_hidden(path);
-        const auto relative_path = std::filesystem::relative(path, root, error);
+        const bool hidden = isHidden(path);
+        const auto relativePath = std::filesystem::relative(path, root, error);
 
         if (error)
           continue;
 
         if (item.is_directory(error)) {
-          const auto link_like_directory = is_link_like_directory(item);
+          const auto linkLikeDirectory = isLinkLikeDirectory(item);
 
-          if (link_like_directory && !options.follow_symlinks)
+          if (linkLikeDirectory && !options.followSymlinks)
             continue;
 
-          if (options.respect_gitignore && ignore_rules.ignores(relative_path, true))
+          if (options.respectGitignore && ignoreRules.ignores(relativePath, true))
             continue;
 
-          if ((hidden && !options.include_hidden) ||
-              is_excluded_directory(relative_path, options.excluded_directories))
+          if ((hidden && !options.includeHidden) ||
+              isExcludedDirectory(relativePath, options.excludedDirectories))
             continue;
 
-          if (!scan_directory(path, ignore_rules))
+          if (!scanDirectory(path, ignoreRules))
             return false;
 
           continue;
         }
 
-        if (options.respect_gitignore && ignore_rules.ignores(relative_path, false)) {
+        if (options.respectGitignore && ignoreRules.ignores(relativePath, false)) {
           if (metrics != nullptr)
-            ++metrics->ignored_files;
+            ++metrics->ignoredFiles;
 
           continue;
         }
@@ -331,33 +331,33 @@ namespace uburu::filesystem
         if (!item.is_regular_file(error))
           continue;
 
-        if (hidden && !options.include_hidden) {
+        if (hidden && !options.includeHidden) {
           if (metrics != nullptr)
-            ++metrics->hidden_files;
+            ++metrics->hiddenFiles;
 
           continue;
         }
 
-        if (is_excluded_directory(relative_path, options.excluded_directories) ||
-            !is_included_directory(relative_path, options.included_directories) ||
-            !has_allowed_extension(path, options.extensions) ||
-            !passes_globs(relative_path, options))
+        if (isExcludedDirectory(relativePath, options.excludedDirectories) ||
+            !isIncludedDirectory(relativePath, options.includedDirectories) ||
+            !hasAllowedExtension(path, options.extensions) ||
+            !passesGlobs(relativePath, options))
           continue;
 
         const auto size = item.file_size(error);
 
-        if (error || size > options.maximum_file_size)
+        if (error || size > options.maximumFileSize)
           continue;
 
-        FileEntry entry{.absolute_path = path,
-                        .relative_path = relative_path,
+        FileEntry entry{.absolutePath = path,
+                        .relativePath = relativePath,
                         .size = size,
-                        .modified_at = item.last_write_time(error),
+                        .modifiedAt = item.last_write_time(error),
                         .hidden = hidden,
                         .binary = false,
                         .symlink = item.is_symlink(error),
-                        .sparse = is_sparse_file(path),
-                        .search_root = root};
+                        .sparse = isSparseFile(path),
+                        .searchRoot = root};
 
         if (!error && !sink(std::move(entry)))
           return false;
@@ -366,7 +366,7 @@ namespace uburu::filesystem
       return true;
     };
 
-    scan_directory(root, initial_ignore_rules(root, options));
+    scanDirectory(root, initialIgnoreRules(root, options));
   }
 
 } // namespace uburu::filesystem

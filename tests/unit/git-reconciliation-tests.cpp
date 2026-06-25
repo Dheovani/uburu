@@ -7,91 +7,91 @@
 namespace
 {
 
-  [[nodiscard]] uburu::git::GitChangeState clean_state()
+  [[nodiscard]] uburu::git::GitChangeState cleanState()
   {
     return uburu::git::GitChangeState{
       .branch = "main",
-      .head_oid = "head-a",
-      .detached_head = false,
-      .head_signature = "head-file-a",
-      .index_signature = "index-a",
-      .relevant_refs_signature = "refs-a"};
+      .headOid = "head-a",
+      .detachedHead = false,
+      .headSignature = "head-file-a",
+      .indexSignature = "index-a",
+      .relevantRefsSignature = "refs-a"};
   }
 
 } // namespace
 
 TEST_CASE("git reconciliation reports no work for identical snapshots")
 {
-  const auto before = clean_state();
+  const auto before = cleanState();
   const auto after = before;
 
-  const auto plan = uburu::git::plan_reconciliation(before, after);
+  const auto plan = uburu::git::planReconciliation(before, after);
 
   CHECK(plan.reasons.empty());
-  CHECK_FALSE(plan.structural_reconciliation_required);
-  CHECK_FALSE(plan.overlay_reconciliation_required);
-  CHECK_FALSE(plan.can_reuse_content_by_blob);
+  CHECK_FALSE(plan.structuralReconciliationRequired);
+  CHECK_FALSE(plan.overlayReconciliationRequired);
+  CHECK_FALSE(plan.canReuseContentByBlob);
 }
 
 TEST_CASE("git reconciliation treats branch changes as structural incremental work")
 {
-  const auto before = clean_state();
+  const auto before = cleanState();
   auto after = before;
   after.branch = "feature";
-  after.head_oid = "head-b";
-  after.head_signature = "head-file-b";
-  after.relevant_refs_signature = "refs-b";
+  after.headOid = "head-b";
+  after.headSignature = "head-file-b";
+  after.relevantRefsSignature = "refs-b";
 
-  const auto plan = uburu::git::plan_reconciliation(before, after);
+  const auto plan = uburu::git::planReconciliation(before, after);
 
-  CHECK(uburu::git::has_reason(plan, uburu::git::GitReconciliationReason::branch_changed));
-  CHECK(uburu::git::has_reason(plan, uburu::git::GitReconciliationReason::head_changed));
-  CHECK(plan.structural_reconciliation_required);
-  CHECK(plan.overlay_reconciliation_required);
-  CHECK(plan.can_reuse_content_by_blob);
+  CHECK(uburu::git::hasReason(plan, uburu::git::GitReconciliationReason::branchChanged));
+  CHECK(uburu::git::hasReason(plan, uburu::git::GitReconciliationReason::headChanged));
+  CHECK(plan.structuralReconciliationRequired);
+  CHECK(plan.overlayReconciliationRequired);
+  CHECK(plan.canReuseContentByBlob);
 }
 
 TEST_CASE("git reconciliation treats detached head changes as structural work")
 {
-  const auto before = clean_state();
+  const auto before = cleanState();
   auto after = before;
   after.branch = std::nullopt;
-  after.detached_head = true;
-  after.head_oid = "head-detached";
+  after.detachedHead = true;
+  after.headOid = "head-detached";
 
-  const auto plan = uburu::git::plan_reconciliation(before, after);
+  const auto plan = uburu::git::planReconciliation(before, after);
 
-  CHECK(uburu::git::has_reason(plan, uburu::git::GitReconciliationReason::detached_head_changed));
-  CHECK(uburu::git::has_reason(plan, uburu::git::GitReconciliationReason::head_changed));
-  CHECK(plan.structural_reconciliation_required);
-  CHECK(plan.overlay_reconciliation_required);
-  CHECK(plan.can_reuse_content_by_blob);
+  CHECK(uburu::git::hasReason(plan, uburu::git::GitReconciliationReason::detachedHeadChanged));
+  CHECK(uburu::git::hasReason(plan, uburu::git::GitReconciliationReason::headChanged));
+  CHECK(plan.structuralReconciliationRequired);
+  CHECK(plan.overlayReconciliationRequired);
+  CHECK(plan.canReuseContentByBlob);
 }
 
 TEST_CASE("git reconciliation treats index-only changes as overlay work")
 {
-  const auto before = clean_state();
+  const auto before = cleanState();
   auto after = before;
-  after.index_signature = "index-b";
+  after.indexSignature = "index-b";
 
-  const auto plan = uburu::git::plan_reconciliation(before, after);
+  const auto plan = uburu::git::planReconciliation(before, after);
 
-  CHECK(uburu::git::has_reason(plan, uburu::git::GitReconciliationReason::index_changed));
-  CHECK_FALSE(plan.structural_reconciliation_required);
-  CHECK(plan.overlay_reconciliation_required);
-  CHECK_FALSE(plan.can_reuse_content_by_blob);
+  CHECK(uburu::git::hasReason(plan, uburu::git::GitReconciliationReason::indexChanged));
+  CHECK_FALSE(plan.structuralReconciliationRequired);
+  CHECK(plan.overlayReconciliationRequired);
+  CHECK_FALSE(plan.canReuseContentByBlob);
 }
 
 TEST_CASE("git reconciliation treats relevant ref changes conservatively as structural work")
 {
-  const auto before = clean_state();
+  const auto before = cleanState();
   auto after = before;
-  after.relevant_refs_signature = "refs-b";
+  after.relevantRefsSignature = "refs-b";
 
-  const auto plan = uburu::git::plan_reconciliation(before, after);
+  const auto plan = uburu::git::planReconciliation(before, after);
 
-  CHECK(uburu::git::has_reason(plan, uburu::git::GitReconciliationReason::refs_changed));
-  CHECK(plan.structural_reconciliation_required);
-  CHECK(plan.overlay_reconciliation_required);
-  CHECK(plan.can_reuse_content_by_blob);
+  CHECK(uburu::git::hasReason(plan, uburu::git::GitReconciliationReason::refsChanged));
+  CHECK(plan.structuralReconciliationRequired);
+  CHECK(plan.overlayReconciliationRequired);
+  CHECK(plan.canReuseContentByBlob);
 }

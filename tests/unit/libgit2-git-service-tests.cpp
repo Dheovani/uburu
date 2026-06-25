@@ -24,38 +24,38 @@ namespace
   {
   public:
     explicit TemporaryDirectory(std::string name)
-        : path_(std::filesystem::temp_directory_path() / unique_name(std::move(name)))
+        : pathValue(std::filesystem::temp_directory_path() / uniqueName(std::move(name)))
     {
       std::error_code error;
 
-      std::filesystem::remove_all(path_, error);
-      std::filesystem::create_directories(path_);
+      std::filesystem::remove_all(pathValue, error);
+      std::filesystem::create_directories(pathValue);
     }
 
     ~TemporaryDirectory()
     {
       std::error_code error;
 
-      std::filesystem::remove_all(path_, error);
+      std::filesystem::remove_all(pathValue, error);
     }
 
     [[nodiscard]] const std::filesystem::path& path() const
     {
-      return path_;
+      return pathValue;
     }
 
   private:
-    [[nodiscard]] static std::string unique_name(std::string name)
+    [[nodiscard]] static std::string uniqueName(std::string name)
     {
       const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
 
       return name + "-" + std::to_string(now);
     }
 
-    std::filesystem::path path_;
+    std::filesystem::path pathValue;
   };
 
-  void write_file(const std::filesystem::path& path, std::string_view content)
+  void writeFile(const std::filesystem::path& path, std::string_view content)
   {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream file(path, std::ios::binary);
@@ -64,17 +64,17 @@ namespace
 
 #if defined(UBURU_HAS_LIBGIT2)
 
-  void create_initial_commit(const std::filesystem::path& repository_root)
+  void createInitialCommit(const std::filesystem::path& repositoryRoot)
   {
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    REQUIRE(git_repository_init(&repository, repository_root.string().c_str(), false) == 0);
+    REQUIRE(git_repository_init(&repository, repositoryRoot.string().c_str(), false) == 0);
 
-    write_file(repository_root / "tracked.txt", "tracked\n");
-    write_file(repository_root / "modify-me.txt", "modify me\n");
-    write_file(repository_root / "delete-me.txt", "delete me\n");
-    write_file(repository_root / ".gitignore", "*.ignored\n");
+    writeFile(repositoryRoot / "tracked.txt", "tracked\n");
+    writeFile(repositoryRoot / "modify-me.txt", "modify me\n");
+    writeFile(repositoryRoot / "delete-me.txt", "delete me\n");
+    writeFile(repositoryRoot / ".gitignore", "*.ignored\n");
 
     git_index* index = nullptr;
     REQUIRE(git_repository_index(&index, repository) == 0);
@@ -84,17 +84,17 @@ namespace
     REQUIRE(git_index_add_bypath(index, ".gitignore") == 0);
     REQUIRE(git_index_write(index) == 0);
 
-    git_oid tree_oid{};
-    REQUIRE(git_index_write_tree(&tree_oid, index) == 0);
+    git_oid treeOid{};
+    REQUIRE(git_index_write_tree(&treeOid, index) == 0);
 
     git_tree* tree = nullptr;
-    REQUIRE(git_tree_lookup(&tree, repository, &tree_oid) == 0);
+    REQUIRE(git_tree_lookup(&tree, repository, &treeOid) == 0);
 
     git_signature* signature = nullptr;
     REQUIRE(git_signature_now(&signature, "Uburu Tests", "tests@uburu.local") == 0);
 
-    git_oid commit_oid{};
-    REQUIRE(git_commit_create_v(&commit_oid, repository, "refs/heads/main", signature, signature, nullptr,
+    git_oid commitOid{};
+    REQUIRE(git_commit_create_v(&commitOid, repository, "refs/heads/main", signature, signature, nullptr,
                                 "initial commit", tree, 0) == 0);
     REQUIRE(git_repository_set_head(repository, "refs/heads/main") == 0);
 
@@ -105,16 +105,16 @@ namespace
     git_libgit2_shutdown();
   }
 
-  void stage_file(const std::filesystem::path& repository_root, std::string_view relative_path)
+  void stageFile(const std::filesystem::path& repositoryRoot, std::string_view relativePath)
   {
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    REQUIRE(git_repository_open(&repository, (repository_root / ".git").string().c_str()) == 0);
+    REQUIRE(git_repository_open(&repository, (repositoryRoot / ".git").string().c_str()) == 0);
 
     git_index* index = nullptr;
     REQUIRE(git_repository_index(&index, repository) == 0);
-    REQUIRE(git_index_add_bypath(index, std::string(relative_path).c_str()) == 0);
+    REQUIRE(git_index_add_bypath(index, std::string(relativePath).c_str()) == 0);
     REQUIRE(git_index_write(index) == 0);
 
     git_index_free(index);
@@ -122,7 +122,7 @@ namespace
     git_libgit2_shutdown();
   }
 
-  git_index_entry conflict_entry(const git_oid& oid, const char* path, std::uint16_t stage)
+  git_index_entry conflictEntry(const git_oid& oid, const char* path, std::uint16_t stage)
   {
     git_index_entry entry{};
     entry.mode = GIT_FILEMODE_BLOB;
@@ -133,26 +133,26 @@ namespace
     return entry;
   }
 
-  void add_index_conflict(const std::filesystem::path& repository_root, const char* relative_path)
+  void addIndexConflict(const std::filesystem::path& repositoryRoot, const char* relativePath)
   {
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    REQUIRE(git_repository_open(&repository, (repository_root / ".git").string().c_str()) == 0);
+    REQUIRE(git_repository_open(&repository, (repositoryRoot / ".git").string().c_str()) == 0);
 
-    git_oid ancestor_oid{};
-    git_oid ours_oid{};
-    git_oid theirs_oid{};
-    REQUIRE(git_blob_create_frombuffer(&ancestor_oid, repository, "ancestor\n", 9) == 0);
-    REQUIRE(git_blob_create_frombuffer(&ours_oid, repository, "ours\n", 5) == 0);
-    REQUIRE(git_blob_create_frombuffer(&theirs_oid, repository, "theirs\n", 7) == 0);
+    git_oid ancestorOid{};
+    git_oid oursOid{};
+    git_oid theirsOid{};
+    REQUIRE(git_blob_create_frombuffer(&ancestorOid, repository, "ancestor\n", 9) == 0);
+    REQUIRE(git_blob_create_frombuffer(&oursOid, repository, "ours\n", 5) == 0);
+    REQUIRE(git_blob_create_frombuffer(&theirsOid, repository, "theirs\n", 7) == 0);
 
     git_index* index = nullptr;
     REQUIRE(git_repository_index(&index, repository) == 0);
 
-    const auto ancestor = conflict_entry(ancestor_oid, relative_path, 1);
-    const auto ours = conflict_entry(ours_oid, relative_path, 2);
-    const auto theirs = conflict_entry(theirs_oid, relative_path, 3);
+    const auto ancestor = conflictEntry(ancestorOid, relativePath, 1);
+    const auto ours = conflictEntry(oursOid, relativePath, 2);
+    const auto theirs = conflictEntry(theirsOid, relativePath, 3);
 
     REQUIRE(git_index_conflict_add(index, &ancestor, &ours, &theirs) == 0);
     REQUIRE(git_index_write(index) == 0);
@@ -162,44 +162,44 @@ namespace
     git_libgit2_shutdown();
   }
 
-  void add_linked_worktree(const std::filesystem::path& repository_root,
-                           const std::filesystem::path& worktree_root)
+  void addLinkedWorktree(const std::filesystem::path& repositoryRoot,
+                           const std::filesystem::path& worktreeRoot)
   {
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    REQUIRE(git_repository_open(&repository, (repository_root / ".git").string().c_str()) == 0);
+    REQUIRE(git_repository_open(&repository, (repositoryRoot / ".git").string().c_str()) == 0);
 
-    git_object* head_commit = nullptr;
-    REQUIRE(git_revparse_single(&head_commit, repository, "HEAD^{commit}") == 0);
+    git_object* headCommit = nullptr;
+    REQUIRE(git_revparse_single(&headCommit, repository, "HEAD^{commit}") == 0);
 
-    git_reference* feature_branch = nullptr;
-    REQUIRE(git_branch_create(&feature_branch, repository, "feature",
-                              reinterpret_cast<const git_commit*>(head_commit), false) == 0);
+    git_reference* featureBranch = nullptr;
+    REQUIRE(git_branch_create(&featureBranch, repository, "feature",
+                              reinterpret_cast<const git_commit*>(headCommit), false) == 0);
 
     git_worktree_add_options options = GIT_WORKTREE_ADD_OPTIONS_INIT;
-    options.ref = feature_branch;
+    options.ref = featureBranch;
 
     git_worktree* worktree = nullptr;
-    REQUIRE(git_worktree_add(&worktree, repository, "feature", worktree_root.string().c_str(), &options) == 0);
+    REQUIRE(git_worktree_add(&worktree, repository, "feature", worktreeRoot.string().c_str(), &options) == 0);
 
     git_worktree_free(worktree);
-    git_reference_free(feature_branch);
-    git_object_free(head_commit);
+    git_reference_free(featureBranch);
+    git_object_free(headCommit);
     git_repository_free(repository);
     git_libgit2_shutdown();
   }
 
-  void detach_head(const std::filesystem::path& repository_root)
+  void detachHead(const std::filesystem::path& repositoryRoot)
   {
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    REQUIRE(git_repository_open(&repository, (repository_root / ".git").string().c_str()) == 0);
+    REQUIRE(git_repository_open(&repository, (repositoryRoot / ".git").string().c_str()) == 0);
 
-    git_oid head_oid{};
-    REQUIRE(git_reference_name_to_id(&head_oid, repository, "HEAD") == 0);
-    REQUIRE(git_repository_set_head_detached(repository, &head_oid) == 0);
+    git_oid headOid{};
+    REQUIRE(git_reference_name_to_id(&headOid, repository, "HEAD") == 0);
+    REQUIRE(git_repository_set_head_detached(repository, &headOid) == 0);
 
     git_repository_free(repository);
     git_libgit2_shutdown();
@@ -214,29 +214,29 @@ TEST_CASE("libgit2 git service reports typed error outside repositories")
   TemporaryDirectory directory("uburu-libgit2-git-service-not-repo-test");
   const uburu::git::Libgit2GitService service;
 
-  const auto result = service.discover_repository(directory.path());
+  const auto result = service.discoverRepository(directory.path());
   const auto* error = std::get_if<uburu::git::GitError>(&result);
 
   REQUIRE(error != nullptr);
-  CHECK(error->code == uburu::git::GitErrorCode::not_repository);
+  CHECK(error->code == uburu::git::GitErrorCode::notRepository);
 }
 
 TEST_CASE("libgit2 git service discovers repository metadata")
 {
 #if defined(UBURU_HAS_LIBGIT2)
   TemporaryDirectory directory("uburu-libgit2-git-service-discover-test");
-  create_initial_commit(directory.path());
+  createInitialCommit(directory.path());
 
   const uburu::git::Libgit2GitService service;
-  const auto result = service.discover_repository(directory.path() / "tracked.txt");
+  const auto result = service.discoverRepository(directory.path() / "tracked.txt");
   const auto* repository = std::get_if<uburu::RepositoryInfo>(&result);
 
   REQUIRE(repository != nullptr);
   CHECK_FALSE(repository->id.empty());
-  REQUIRE(repository->worktree_root.has_value());
-  CHECK(std::filesystem::equivalent(*repository->worktree_root, directory.path()));
-  CHECK_FALSE(repository->head_oid.empty());
-  CHECK_FALSE(repository->detached_head);
+  REQUIRE(repository->worktreeRoot.has_value());
+  CHECK(std::filesystem::equivalent(*repository->worktreeRoot, directory.path()));
+  CHECK_FALSE(repository->headOid.empty());
+  CHECK_FALSE(repository->detachedHead);
 #else
   SUCCEED("libgit2 is not available in this build");
 #endif
@@ -246,18 +246,18 @@ TEST_CASE("libgit2 git service lists the main worktree")
 {
 #if defined(UBURU_HAS_LIBGIT2)
   TemporaryDirectory directory("uburu-libgit2-git-service-worktree-test");
-  create_initial_commit(directory.path());
+  createInitialCommit(directory.path());
 
   const uburu::git::Libgit2GitService service;
-  const auto repository_result = service.discover_repository(directory.path());
-  const auto& repository = std::get<uburu::RepositoryInfo>(repository_result);
-  const auto worktrees_result = service.list_worktrees(repository);
-  const auto* worktrees = std::get_if<std::vector<uburu::WorktreeInfo>>(&worktrees_result);
+  const auto repositoryResult = service.discoverRepository(directory.path());
+  const auto& repository = std::get<uburu::RepositoryInfo>(repositoryResult);
+  const auto worktreesResult = service.listWorktrees(repository);
+  const auto* worktrees = std::get_if<std::vector<uburu::WorktreeInfo>>(&worktreesResult);
 
   REQUIRE(worktrees != nullptr);
   REQUIRE_FALSE(worktrees->empty());
   CHECK(std::filesystem::equivalent(worktrees->front().root, directory.path()));
-  CHECK(worktrees->front().repository_id == repository.id);
+  CHECK(worktrees->front().repositoryId == repository.id);
 #else
   SUCCEED("libgit2 is not available in this build");
 #endif
@@ -267,30 +267,30 @@ TEST_CASE("libgit2 git service enumerates linked worktrees")
 {
 #if defined(UBURU_HAS_LIBGIT2)
   TemporaryDirectory directory("uburu-libgit2-git-service-linked-worktree-test");
-  const auto repository_root = directory.path() / "repo";
-  const auto linked_root = directory.path() / "feature-worktree";
+  const auto repositoryRoot = directory.path() / "repo";
+  const auto linkedRoot = directory.path() / "feature-worktree";
 
-  std::filesystem::create_directories(repository_root);
-  create_initial_commit(repository_root);
-  add_linked_worktree(repository_root, linked_root);
+  std::filesystem::create_directories(repositoryRoot);
+  createInitialCommit(repositoryRoot);
+  addLinkedWorktree(repositoryRoot, linkedRoot);
 
   const uburu::git::Libgit2GitService service;
-  const auto repository_result = service.discover_repository(repository_root);
-  const auto& repository = std::get<uburu::RepositoryInfo>(repository_result);
-  const auto worktrees_result = service.list_worktrees(repository);
-  const auto& worktrees = std::get<std::vector<uburu::WorktreeInfo>>(worktrees_result);
+  const auto repositoryResult = service.discoverRepository(repositoryRoot);
+  const auto& repository = std::get<uburu::RepositoryInfo>(repositoryResult);
+  const auto worktreesResult = service.listWorktrees(repository);
+  const auto& worktrees = std::get<std::vector<uburu::WorktreeInfo>>(worktreesResult);
 
   REQUIRE(worktrees.size() == 2);
 
-  const auto has_main_worktree = std::ranges::any_of(worktrees, [&](const auto& worktree) {
-    return std::filesystem::equivalent(worktree.root, repository_root);
+  const auto hasMainWorktree = std::ranges::any_of(worktrees, [&](const auto& worktree) {
+    return std::filesystem::equivalent(worktree.root, repositoryRoot);
   });
-  const auto has_linked_worktree = std::ranges::any_of(worktrees, [&](const auto& worktree) {
-    return std::filesystem::equivalent(worktree.root, linked_root);
+  const auto hasLinkedWorktree = std::ranges::any_of(worktrees, [&](const auto& worktree) {
+    return std::filesystem::equivalent(worktree.root, linkedRoot);
   });
 
-  CHECK(has_main_worktree);
-  CHECK(has_linked_worktree);
+  CHECK(hasMainWorktree);
+  CHECK(hasLinkedWorktree);
 #else
   SUCCEED("libgit2 is not available in this build");
 #endif
@@ -300,26 +300,26 @@ TEST_CASE("libgit2 git service detects detached HEAD")
 {
 #if defined(UBURU_HAS_LIBGIT2)
   TemporaryDirectory directory("uburu-libgit2-git-service-detached-test");
-  create_initial_commit(directory.path());
-  detach_head(directory.path());
+  createInitialCommit(directory.path());
+  detachHead(directory.path());
 
   const uburu::git::Libgit2GitService service;
-  const auto result = service.discover_repository(directory.path());
+  const auto result = service.discoverRepository(directory.path());
   const auto* repository = std::get_if<uburu::RepositoryInfo>(&result);
 
   REQUIRE(repository != nullptr);
-  CHECK(repository->detached_head);
-  CHECK_FALSE(repository->current_branch.has_value());
-  CHECK_FALSE(repository->head_oid.empty());
+  CHECK(repository->detachedHead);
+  CHECK_FALSE(repository->currentBranch.has_value());
+  CHECK_FALSE(repository->headOid.empty());
 
-  const auto worktrees_result = service.list_worktrees(*repository);
-  const auto& worktree = std::get<std::vector<uburu::WorktreeInfo>>(worktrees_result).front();
-  const auto state = service.change_state(worktree);
-  const auto& change_state = std::get<uburu::git::GitChangeState>(state);
+  const auto worktreesResult = service.listWorktrees(*repository);
+  const auto& worktree = std::get<std::vector<uburu::WorktreeInfo>>(worktreesResult).front();
+  const auto state = service.changeState(worktree);
+  const auto& changeState = std::get<uburu::git::GitChangeState>(state);
 
-  CHECK(change_state.detached_head);
-  CHECK_FALSE(change_state.branch.has_value());
-  CHECK_FALSE(change_state.head_signature.empty());
+  CHECK(changeState.detachedHead);
+  CHECK_FALSE(changeState.branch.has_value());
+  CHECK_FALSE(changeState.headSignature.empty());
 #else
   SUCCEED("libgit2 is not available in this build");
 #endif
@@ -329,43 +329,43 @@ TEST_CASE("libgit2 git service reads file status and blob hashes")
 {
 #if defined(UBURU_HAS_LIBGIT2)
   TemporaryDirectory directory("uburu-libgit2-git-service-status-test");
-  create_initial_commit(directory.path());
+  createInitialCommit(directory.path());
 
   const uburu::git::Libgit2GitService service;
-  const auto repository_result = service.discover_repository(directory.path());
-  const auto& repository = std::get<uburu::RepositoryInfo>(repository_result);
-  const auto worktrees_result = service.list_worktrees(repository);
-  const auto& worktree = std::get<std::vector<uburu::WorktreeInfo>>(worktrees_result).front();
+  const auto repositoryResult = service.discoverRepository(directory.path());
+  const auto& repository = std::get<uburu::RepositoryInfo>(repositoryResult);
+  const auto worktreesResult = service.listWorktrees(repository);
+  const auto& worktree = std::get<std::vector<uburu::WorktreeInfo>>(worktreesResult).front();
 
-  const auto clean = service.file_status(worktree, "tracked.txt");
+  const auto clean = service.fileStatus(worktree, "tracked.txt");
   CHECK(std::get<uburu::GitFileStatus>(clean) == uburu::GitFileStatus::clean);
 
-  const auto blob = service.blob_hash(worktree, "tracked.txt");
-  const auto& blob_hash = std::get<std::optional<std::string>>(blob);
+  const auto blob = service.blobHash(worktree, "tracked.txt");
+  const auto& blobHash = std::get<std::optional<std::string>>(blob);
 
-  REQUIRE(blob_hash.has_value());
-  CHECK_FALSE(blob_hash->empty());
+  REQUIRE(blobHash.has_value());
+  CHECK_FALSE(blobHash->empty());
 
-  const auto state_before_index_change = service.change_state(worktree);
-  const auto& before_index_change = std::get<uburu::git::GitChangeState>(state_before_index_change);
+  const auto stateBeforeIndexChange = service.changeState(worktree);
+  const auto& beforeIndexChange = std::get<uburu::git::GitChangeState>(stateBeforeIndexChange);
 
-  write_file(directory.path() / "modify-me.txt", "modified\n");
-  write_file(directory.path() / "new.txt", "new\n");
-  write_file(directory.path() / "staged.txt", "staged\n");
-  write_file(directory.path() / "ignored.ignored", "ignored\n");
+  writeFile(directory.path() / "modify-me.txt", "modified\n");
+  writeFile(directory.path() / "new.txt", "new\n");
+  writeFile(directory.path() / "staged.txt", "staged\n");
+  writeFile(directory.path() / "ignored.ignored", "ignored\n");
   std::filesystem::remove(directory.path() / "delete-me.txt");
-  stage_file(directory.path(), "staged.txt");
-  add_index_conflict(directory.path(), "tracked.txt");
+  stageFile(directory.path(), "staged.txt");
+  addIndexConflict(directory.path(), "tracked.txt");
 
-  const auto modified = service.file_status(worktree, "modify-me.txt");
-  const auto untracked = service.file_status(worktree, "new.txt");
-  const auto added = service.file_status(worktree, "staged.txt");
-  const auto deleted = service.file_status(worktree, "delete-me.txt");
-  const auto ignored = service.file_status(worktree, "ignored.ignored");
+  const auto modified = service.fileStatus(worktree, "modify-me.txt");
+  const auto untracked = service.fileStatus(worktree, "new.txt");
+  const auto added = service.fileStatus(worktree, "staged.txt");
+  const auto deleted = service.fileStatus(worktree, "delete-me.txt");
+  const auto ignored = service.fileStatus(worktree, "ignored.ignored");
 
-  const auto conflicted = service.file_status(worktree, "tracked.txt");
-  const auto state_after_index_change = service.change_state(worktree);
-  const auto& after_index_change = std::get<uburu::git::GitChangeState>(state_after_index_change);
+  const auto conflicted = service.fileStatus(worktree, "tracked.txt");
+  const auto stateAfterIndexChange = service.changeState(worktree);
+  const auto& afterIndexChange = std::get<uburu::git::GitChangeState>(stateAfterIndexChange);
 
   CHECK(std::get<uburu::GitFileStatus>(modified) == uburu::GitFileStatus::modified);
   CHECK(std::get<uburu::GitFileStatus>(conflicted) == uburu::GitFileStatus::conflicted);
@@ -373,7 +373,7 @@ TEST_CASE("libgit2 git service reads file status and blob hashes")
   CHECK(std::get<uburu::GitFileStatus>(added) == uburu::GitFileStatus::added);
   CHECK(std::get<uburu::GitFileStatus>(deleted) == uburu::GitFileStatus::deleted);
   CHECK(std::get<uburu::GitFileStatus>(ignored) == uburu::GitFileStatus::ignored);
-  CHECK(before_index_change.index_signature != after_index_change.index_signature);
+  CHECK(beforeIndexChange.indexSignature != afterIndexChange.indexSignature);
 #else
   SUCCEED("libgit2 is not available in this build");
 #endif

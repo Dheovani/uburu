@@ -16,7 +16,7 @@ namespace uburu::search
                                        std::stop_token stop_token = {}) const override;
 
   private:
-    std::shared_ptr<const filesystem::FileScanner> scanner_;
+    std::shared_ptr<const filesystem::FileScanner> scanner;
   };
 
 } // namespace uburu::search

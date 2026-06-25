@@ -6,7 +6,7 @@
 
 using uburu::SearchMode;
 using uburu::SearchOptions;
-using uburu::text::compile_regex;
+using uburu::text::compileRegex;
 using uburu::text::RegexMatchStatus;
 
 TEST_CASE("regex matching returns all PCRE2 matches")
@@ -14,11 +14,11 @@ TEST_CASE("regex matching returns all PCRE2 matches")
   SearchOptions options;
   options.mode = SearchMode::regex;
 
-  auto compiled = compile_regex(R"(todo\(\d+\))", options);
+  auto compiled = compileRegex(R"(todo\(\d+\))", options);
 
 #ifdef UBURU_HAS_PCRE2
   REQUIRE(compiled.matcher.has_value());
-  const auto result = compiled.matcher->find_all("todo(1) skip todo(42)");
+  const auto result = compiled.matcher->findAll("todo(1) skip todo(42)");
 
   CHECK(result.status == RegexMatchStatus::completed);
   REQUIRE(result.matches.size() == 2);
@@ -37,11 +37,11 @@ TEST_CASE("regex matching uses case insensitive mode by default")
   SearchOptions options;
   options.mode = SearchMode::regex;
 
-  auto compiled = compile_regex("ação", options);
+  auto compiled = compileRegex("ação", options);
 
 #ifdef UBURU_HAS_PCRE2
   REQUIRE(compiled.matcher.has_value());
-  const auto result = compiled.matcher->find_all("AÇÃO ação");
+  const auto result = compiled.matcher->findAll("AÇÃO ação");
 
   CHECK(result.status == RegexMatchStatus::completed);
   REQUIRE(result.matches.size() == 2);
@@ -54,13 +54,13 @@ TEST_CASE("regex matching can be case sensitive")
 {
   SearchOptions options;
   options.mode = SearchMode::regex;
-  options.case_sensitive = true;
+  options.caseSensitive = true;
 
-  auto compiled = compile_regex("ação", options);
+  auto compiled = compileRegex("ação", options);
 
 #ifdef UBURU_HAS_PCRE2
   REQUIRE(compiled.matcher.has_value());
-  const auto result = compiled.matcher->find_all("AÇÃO ação");
+  const auto result = compiled.matcher->findAll("AÇÃO ação");
 
   CHECK(result.status == RegexMatchStatus::completed);
   REQUIRE(result.matches.size() == 1);
@@ -75,7 +75,7 @@ TEST_CASE("regex matching reports compilation errors")
   SearchOptions options;
   options.mode = SearchMode::regex;
 
-  const auto compiled = compile_regex("(", options);
+  const auto compiled = compileRegex("(", options);
 
   REQUIRE_FALSE(compiled.matcher.has_value());
   REQUIRE(compiled.error.has_value());
@@ -86,11 +86,11 @@ TEST_CASE("regex matching exposes JIT availability when PCRE2 supports it")
   SearchOptions options;
   options.mode = SearchMode::regex;
 
-  auto compiled = compile_regex("needle", options);
+  auto compiled = compileRegex("needle", options);
 
 #ifdef UBURU_HAS_PCRE2
   REQUIRE(compiled.matcher.has_value());
-  CHECK(compiled.matcher->jit_enabled());
+  CHECK(compiled.matcher->jitEnabled());
 #else
   REQUIRE_FALSE(compiled.matcher.has_value());
 #endif
@@ -100,15 +100,15 @@ TEST_CASE("regex matching reports timeout")
 {
   SearchOptions options;
   options.mode = SearchMode::regex;
-  options.regex_timeout = std::chrono::milliseconds{0};
+  options.regexTimeout = std::chrono::milliseconds{0};
 
-  auto compiled = compile_regex("needle", options);
+  auto compiled = compileRegex("needle", options);
 
 #ifdef UBURU_HAS_PCRE2
   REQUIRE(compiled.matcher.has_value());
-  const auto result = compiled.matcher->find_all("needle");
+  const auto result = compiled.matcher->findAll("needle");
 
-  CHECK(result.status == RegexMatchStatus::timed_out);
+  CHECK(result.status == RegexMatchStatus::timedOut);
 #else
   REQUIRE_FALSE(compiled.matcher.has_value());
 #endif

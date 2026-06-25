@@ -25,31 +25,31 @@ namespace
   {
   public:
     explicit TemporaryDirectory(std::string name)
-        : path_(std::filesystem::temp_directory_path() / std::move(name))
+        : pathValue(std::filesystem::temp_directory_path() / std::move(name))
     {
       std::error_code error;
 
-      std::filesystem::remove_all(path_, error);
-      std::filesystem::create_directories(path_);
+      std::filesystem::remove_all(pathValue, error);
+      std::filesystem::create_directories(pathValue);
     }
 
     ~TemporaryDirectory()
     {
       std::error_code error;
 
-      std::filesystem::remove_all(path_, error);
+      std::filesystem::remove_all(pathValue, error);
     }
 
     [[nodiscard]] const std::filesystem::path& path() const
     {
-      return path_;
+      return pathValue;
     }
 
   private:
-    std::filesystem::path path_;
+    std::filesystem::path pathValue;
   };
 
-  void write_file(const std::filesystem::path& path, std::string_view content)
+  void writeFile(const std::filesystem::path& path, std::string_view content)
   {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream file(path, std::ios::binary);
@@ -57,9 +57,9 @@ namespace
   }
 
 #ifdef _WIN32
-  bool create_sparse_file(const std::filesystem::path& path)
+  bool createSparseFile(const std::filesystem::path& path)
   {
-    constexpr auto sparse_file_size = 1024LL * 1024LL;
+    constexpr auto sparseFileSize = 1024LL * 1024LL;
 
     std::filesystem::create_directories(path.parent_path());
 
@@ -69,22 +69,22 @@ namespace
     if (file == INVALID_HANDLE_VALUE)
       return false;
 
-    DWORD bytes_returned = 0;
-    const auto sparse_enabled =
-      DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &bytes_returned, nullptr);
+    DWORD bytesReturned = 0;
+    const auto sparseEnabled =
+      DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &bytesReturned, nullptr);
 
     LARGE_INTEGER distance;
-    distance.QuadPart = sparse_file_size;
+    distance.QuadPart = sparseFileSize;
     const auto moved = SetFilePointerEx(file, distance, nullptr, FILE_BEGIN);
     const auto resized = SetEndOfFile(file);
 
     CloseHandle(file);
 
-    return sparse_enabled != 0 && moved != 0 && resized != 0;
+    return sparseEnabled != 0 && moved != 0 && resized != 0;
   }
 #endif
 
-  bool create_directory_symlink_or_skip(const std::filesystem::path& target,
+  bool createDirectorySymlinkOrSkip(const std::filesystem::path& target,
                                         const std::filesystem::path& link)
   {
     std::error_code error;
@@ -93,7 +93,7 @@ namespace
     return !error;
   }
 
-  std::vector<uburu::FileEntry> scan_entries(const std::filesystem::path& root,
+  std::vector<uburu::FileEntry> scanEntries(const std::filesystem::path& root,
                                              const uburu::SearchOptions& options)
   {
     uburu::filesystem::RecursiveFileScanner scanner;
@@ -107,7 +107,7 @@ namespace
     return entries;
   }
 
-  uburu::diagnostics::SearchMetrics scan_metrics(const std::filesystem::path& root,
+  uburu::diagnostics::SearchMetrics scanMetrics(const std::filesystem::path& root,
                                                  const uburu::SearchOptions& options)
   {
     uburu::filesystem::RecursiveFileScanner scanner;
@@ -123,17 +123,17 @@ namespace
 TEST_CASE("recursive scanner filters by extension using platform case rules")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-extension-test");
-  write_file(directory.path() / "main.CPP", "int main() {}\n");
-  write_file(directory.path() / "notes.txt", "notes\n");
+  writeFile(directory.path() / "main.CPP", "int main() {}\n");
+  writeFile(directory.path() / "notes.txt", "notes\n");
 
   uburu::SearchOptions options;
   options.extensions = {"cpp"};
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
 #ifdef _WIN32
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("main.CPP"));
+  CHECK(entries.front().relativePath == std::filesystem::path("main.CPP"));
 #else
   CHECK(entries.empty());
 #endif
@@ -142,202 +142,202 @@ TEST_CASE("recursive scanner filters by extension using platform case rules")
 TEST_CASE("recursive scanner applies directory includes and excludes with exclusion precedence")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-directory-filter-test");
-  write_file(directory.path() / "src" / "main.cpp", "main\n");
-  write_file(directory.path() / "src" / "generated" / "main.cpp", "generated\n");
-  write_file(directory.path() / "tests" / "main.cpp", "tests\n");
+  writeFile(directory.path() / "src" / "main.cpp", "main\n");
+  writeFile(directory.path() / "src" / "generated" / "main.cpp", "generated\n");
+  writeFile(directory.path() / "tests" / "main.cpp", "tests\n");
 
   uburu::SearchOptions options;
-  options.included_directories = {std::filesystem::path("src")};
-  options.excluded_directories = {std::filesystem::path("src") / "generated"};
+  options.includedDirectories = {std::filesystem::path("src")};
+  options.excludedDirectories = {std::filesystem::path("src") / "generated"};
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries.front().relativePath == std::filesystem::path("src") / "main.cpp");
 }
 
 TEST_CASE("recursive scanner applies glob includes and excludes")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-glob-filter-test");
-  write_file(directory.path() / "src" / "main.cpp", "main\n");
-  write_file(directory.path() / "src" / "main.generated.cpp", "generated\n");
-  write_file(directory.path() / "docs" / "main.cpp", "docs\n");
+  writeFile(directory.path() / "src" / "main.cpp", "main\n");
+  writeFile(directory.path() / "src" / "main.generated.cpp", "generated\n");
+  writeFile(directory.path() / "docs" / "main.cpp", "docs\n");
 
   uburu::SearchOptions options;
-  options.included_globs = {"src/*.cpp"};
-  options.excluded_globs = {"*.generated.cpp"};
+  options.includedGlobs = {"src/*.cpp"};
+  options.excludedGlobs = {"*.generated.cpp"};
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries.front().relativePath == std::filesystem::path("src") / "main.cpp");
 }
 
 TEST_CASE("recursive scanner applies maximum file size before publishing entries")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-size-filter-test");
-  write_file(directory.path() / "small.txt", "ok");
-  write_file(directory.path() / "large.txt", "too large");
+  writeFile(directory.path() / "small.txt", "ok");
+  writeFile(directory.path() / "large.txt", "too large");
 
   uburu::SearchOptions options;
-  options.maximum_file_size = 2;
+  options.maximumFileSize = 2;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("small.txt"));
+  CHECK(entries.front().relativePath == std::filesystem::path("small.txt"));
 }
 
 TEST_CASE("recursive scanner publishes entries in deterministic path order")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-order-test");
-  write_file(directory.path() / "zeta.txt", "z\n");
-  write_file(directory.path() / "alpha" / "zeta.txt", "az\n");
-  write_file(directory.path() / "alpha" / "beta.txt", "ab\n");
+  writeFile(directory.path() / "zeta.txt", "z\n");
+  writeFile(directory.path() / "alpha" / "zeta.txt", "az\n");
+  writeFile(directory.path() / "alpha" / "beta.txt", "ab\n");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 3);
-  CHECK(entries[0].relative_path == std::filesystem::path("alpha") / "beta.txt");
-  CHECK(entries[1].relative_path == std::filesystem::path("alpha") / "zeta.txt");
-  CHECK(entries[2].relative_path == std::filesystem::path("zeta.txt"));
+  CHECK(entries[0].relativePath == std::filesystem::path("alpha") / "beta.txt");
+  CHECK(entries[1].relativePath == std::filesystem::path("alpha") / "zeta.txt");
+  CHECK(entries[2].relativePath == std::filesystem::path("zeta.txt"));
 }
 
 TEST_CASE("recursive scanner prioritizes smaller files deterministically")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-small-file-priority-test");
-  write_file(directory.path() / "a-large.txt", "larger content\n");
-  write_file(directory.path() / "z-small.txt", "x\n");
-  write_file(directory.path() / "m-small.txt", "y\n");
+  writeFile(directory.path() / "a-large.txt", "larger content\n");
+  writeFile(directory.path() / "z-small.txt", "x\n");
+  writeFile(directory.path() / "m-small.txt", "y\n");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 3);
-  CHECK(entries[0].relative_path == std::filesystem::path("m-small.txt"));
-  CHECK(entries[1].relative_path == std::filesystem::path("z-small.txt"));
-  CHECK(entries[2].relative_path == std::filesystem::path("a-large.txt"));
+  CHECK(entries[0].relativePath == std::filesystem::path("m-small.txt"));
+  CHECK(entries[1].relativePath == std::filesystem::path("z-small.txt"));
+  CHECK(entries[2].relativePath == std::filesystem::path("a-large.txt"));
 }
 
 TEST_CASE("recursive scanner respects root gitignore rules")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-root-gitignore-test");
-  write_file(directory.path() / ".gitignore", "*.log\n!important.log\nbuild/\n");
-  write_file(directory.path() / "debug.log", "ignored\n");
-  write_file(directory.path() / "important.log", "kept\n");
-  write_file(directory.path() / "build" / "output.txt", "ignored\n");
-  write_file(directory.path() / "src" / "main.cpp", "kept\n");
+  writeFile(directory.path() / ".gitignore", "*.log\n!important.log\nbuild/\n");
+  writeFile(directory.path() / "debug.log", "ignored\n");
+  writeFile(directory.path() / "important.log", "kept\n");
+  writeFile(directory.path() / "build" / "output.txt", "ignored\n");
+  writeFile(directory.path() / "src" / "main.cpp", "kept\n");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 2);
-  CHECK(entries[0].relative_path == std::filesystem::path("src") / "main.cpp");
-  CHECK(entries[1].relative_path == std::filesystem::path("important.log"));
+  CHECK(entries[0].relativePath == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries[1].relativePath == std::filesystem::path("important.log"));
 }
 
 TEST_CASE("recursive scanner respects nested gitignore rules")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-nested-gitignore-test");
-  write_file(directory.path() / "src" / ".gitignore", "*.generated.cpp\n");
-  write_file(directory.path() / "src" / "main.cpp", "kept\n");
-  write_file(directory.path() / "src" / "main.generated.cpp", "ignored\n");
-  write_file(directory.path() / "tests" / "main.generated.cpp", "kept\n");
+  writeFile(directory.path() / "src" / ".gitignore", "*.generated.cpp\n");
+  writeFile(directory.path() / "src" / "main.cpp", "kept\n");
+  writeFile(directory.path() / "src" / "main.generated.cpp", "ignored\n");
+  writeFile(directory.path() / "tests" / "main.generated.cpp", "kept\n");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 2);
-  CHECK(entries[0].relative_path == std::filesystem::path("src") / "main.cpp");
-  CHECK(entries[1].relative_path == std::filesystem::path("tests") / "main.generated.cpp");
+  CHECK(entries[0].relativePath == std::filesystem::path("src") / "main.cpp");
+  CHECK(entries[1].relativePath == std::filesystem::path("tests") / "main.generated.cpp");
 }
 
 TEST_CASE("recursive scanner can disable gitignore handling")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-disable-gitignore-test");
-  write_file(directory.path() / ".gitignore", "*.log\n");
-  write_file(directory.path() / "debug.log", "kept\n");
+  writeFile(directory.path() / ".gitignore", "*.log\n");
+  writeFile(directory.path() / "debug.log", "kept\n");
 
   uburu::SearchOptions options;
-  options.respect_gitignore = false;
+  options.respectGitignore = false;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries[0].relative_path == std::filesystem::path("debug.log"));
+  CHECK(entries[0].relativePath == std::filesystem::path("debug.log"));
 }
 
 TEST_CASE("recursive scanner respects git info exclude")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-git-info-exclude-test");
-  write_file(directory.path() / ".git" / "info" / "exclude", "*.local\n");
-  write_file(directory.path() / "settings.local", "ignored\n");
-  write_file(directory.path() / "settings.example", "kept\n");
+  writeFile(directory.path() / ".git" / "info" / "exclude", "*.local\n");
+  writeFile(directory.path() / "settings.local", "ignored\n");
+  writeFile(directory.path() / "settings.example", "kept\n");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries[0].relative_path == std::filesystem::path("settings.example"));
+  CHECK(entries[0].relativePath == std::filesystem::path("settings.example"));
 }
 
 TEST_CASE("recursive scanner respects configured global git ignore files")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-global-git-ignore-test");
-  const auto global_ignore_file = directory.path() / ".config" / "global-ignore";
-  write_file(global_ignore_file, "*.user\n");
-  write_file(directory.path() / "app.user", "ignored\n");
-  write_file(directory.path() / "app.config", "kept\n");
+  const auto globalIgnoreFile = directory.path() / ".config" / "global-ignore";
+  writeFile(globalIgnoreFile, "*.user\n");
+  writeFile(directory.path() / "app.user", "ignored\n");
+  writeFile(directory.path() / "app.config", "kept\n");
 
   uburu::SearchOptions options;
-  options.global_git_ignore_files = {global_ignore_file};
+  options.globalGitIgnoreFiles = {globalIgnoreFile};
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries[0].relative_path == std::filesystem::path("app.config"));
+  CHECK(entries[0].relativePath == std::filesystem::path("app.config"));
 }
 
 TEST_CASE("recursive scanner records hidden and ignored file metrics")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-skip-metrics-test");
-  write_file(directory.path() / ".gitignore", "*.log\n");
-  write_file(directory.path() / ".hidden", "hidden\n");
-  write_file(directory.path() / "debug.log", "ignored\n");
-  write_file(directory.path() / "visible.txt", "kept\n");
+  writeFile(directory.path() / ".gitignore", "*.log\n");
+  writeFile(directory.path() / ".hidden", "hidden\n");
+  writeFile(directory.path() / "debug.log", "ignored\n");
+  writeFile(directory.path() / "visible.txt", "kept\n");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
-  const auto metrics = scan_metrics(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
+  const auto metrics = scanMetrics(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries[0].relative_path == std::filesystem::path("visible.txt"));
-  CHECK(metrics.hidden_files == 2);
-  CHECK(metrics.ignored_files == 1);
+  CHECK(entries[0].relativePath == std::filesystem::path("visible.txt"));
+  CHECK(metrics.hiddenFiles == 2);
+  CHECK(metrics.ignoredFiles == 1);
 }
 
 #ifdef _WIN32
 TEST_CASE("recursive scanner marks sparse files on Windows")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-sparse-file-test");
-  const auto sparse_path = directory.path() / "sparse.bin";
+  const auto sparsePath = directory.path() / "sparse.bin";
 
-  if (!create_sparse_file(sparse_path))
+  if (!createSparseFile(sparsePath))
     SKIP("The current filesystem did not allow creating a sparse test file.");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("sparse.bin"));
+  CHECK(entries.front().relativePath == std::filesystem::path("sparse.bin"));
   CHECK(entries.front().sparse);
 }
 #endif
@@ -345,35 +345,35 @@ TEST_CASE("recursive scanner marks sparse files on Windows")
 TEST_CASE("recursive scanner does not follow directory symlinks by default")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-symlink-skip-test");
-  write_file(directory.path() / "target" / "inside.txt", "target\n");
+  writeFile(directory.path() / "target" / "inside.txt", "target\n");
 
   const auto link = directory.path() / "link";
-  if (!create_directory_symlink_or_skip(directory.path() / "target", link))
+  if (!createDirectorySymlinkOrSkip(directory.path() / "target", link))
     SKIP("The current environment did not allow creating a directory symlink.");
 
   uburu::SearchOptions options;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("target") / "inside.txt");
+  CHECK(entries.front().relativePath == std::filesystem::path("target") / "inside.txt");
 }
 
 TEST_CASE("recursive scanner avoids cycles when following directory symlinks")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-symlink-cycle-test");
-  write_file(directory.path() / "root.txt", "root\n");
+  writeFile(directory.path() / "root.txt", "root\n");
   std::filesystem::create_directories(directory.path() / "nested");
 
   const auto link = directory.path() / "nested" / "loop";
-  if (!create_directory_symlink_or_skip(directory.path(), link))
+  if (!createDirectorySymlinkOrSkip(directory.path(), link))
     SKIP("The current environment did not allow creating a directory symlink.");
 
   uburu::SearchOptions options;
-  options.follow_symlinks = true;
+  options.followSymlinks = true;
 
-  const auto entries = scan_entries(directory.path(), options);
+  const auto entries = scanEntries(directory.path(), options);
 
   REQUIRE(entries.size() == 1);
-  CHECK(entries.front().relative_path == std::filesystem::path("root.txt"));
+  CHECK(entries.front().relativePath == std::filesystem::path("root.txt"));
 }

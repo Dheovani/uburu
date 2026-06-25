@@ -8,291 +8,291 @@ namespace uburu::text
   namespace
   {
 
-    constexpr std::size_t single_byte_length = 1;
-    constexpr std::size_t two_byte_length = 2;
-    constexpr std::size_t three_byte_length = 3;
-    constexpr std::size_t four_byte_length = 4;
+    constexpr std::size_t singleByteLength = 1;
+    constexpr std::size_t twoByteLength = 2;
+    constexpr std::size_t threeByteLength = 3;
+    constexpr std::size_t fourByteLength = 4;
 
-    constexpr unsigned char ascii_max = 0x7FU;
-    constexpr unsigned char utf8_continuation_tag_mask = 0b1100'0000U;
-    constexpr unsigned char utf8_continuation_tag = 0b1000'0000U;
-    constexpr unsigned char utf8_continuation_payload_mask = 0b0011'1111U;
+    constexpr unsigned char asciiMax = 0x7FU;
+    constexpr unsigned char utf8ContinuationTagMask = 0b1100'0000U;
+    constexpr unsigned char utf8ContinuationTag = 0b1000'0000U;
+    constexpr unsigned char utf8ContinuationPayloadMask = 0b0011'1111U;
 
-    constexpr unsigned char utf8_two_byte_tag_mask = 0b1110'0000U;
-    constexpr unsigned char utf8_two_byte_tag = 0b1100'0000U;
-    constexpr unsigned char utf8_two_byte_payload_mask = 0b0001'1111U;
+    constexpr unsigned char utf8TwoByteTagMask = 0b1110'0000U;
+    constexpr unsigned char utf8TwoByteTag = 0b1100'0000U;
+    constexpr unsigned char utf8TwoBytePayloadMask = 0b0001'1111U;
 
-    constexpr unsigned char utf8_three_byte_tag_mask = 0b1111'0000U;
-    constexpr unsigned char utf8_three_byte_tag = 0b1110'0000U;
-    constexpr unsigned char utf8_three_byte_payload_mask = 0b0000'1111U;
+    constexpr unsigned char utf8ThreeByteTagMask = 0b1111'0000U;
+    constexpr unsigned char utf8ThreeByteTag = 0b1110'0000U;
+    constexpr unsigned char utf8ThreeBytePayloadMask = 0b0000'1111U;
 
-    constexpr unsigned char utf8_four_byte_tag_mask = 0b1111'1000U;
-    constexpr unsigned char utf8_four_byte_tag = 0b1111'0000U;
-    constexpr unsigned char utf8_four_byte_payload_mask = 0b0000'0111U;
+    constexpr unsigned char utf8FourByteTagMask = 0b1111'1000U;
+    constexpr unsigned char utf8FourByteTag = 0b1111'0000U;
+    constexpr unsigned char utf8FourBytePayloadMask = 0b0000'0111U;
 
-    constexpr std::size_t utf8_continuation_payload_bits = 6;
-    constexpr std::size_t utf8_three_byte_lead_shift = 12;
-    constexpr std::size_t utf8_four_byte_lead_shift = 18;
-    constexpr std::size_t utf8_four_byte_second_shift = 12;
+    constexpr std::size_t utf8ContinuationPayloadBits = 6;
+    constexpr std::size_t utf8ThreeByteLeadShift = 12;
+    constexpr std::size_t utf8FourByteLeadShift = 18;
+    constexpr std::size_t utf8FourByteSecondShift = 12;
 
-    constexpr char32_t minimum_two_byte_scalar = 0x80U;
-    constexpr char32_t minimum_three_byte_scalar = 0x800U;
-    constexpr char32_t minimum_four_byte_scalar = 0x10000U;
-    constexpr char32_t maximum_unicode_scalar = 0x10FFFFU;
-    constexpr char32_t surrogate_min = 0xD800U;
-    constexpr char32_t surrogate_max = 0xDFFFU;
+    constexpr char32_t minimumTwoByteScalar = 0x80U;
+    constexpr char32_t minimumThreeByteScalar = 0x800U;
+    constexpr char32_t minimumFourByteScalar = 0x10000U;
+    constexpr char32_t maximumUnicodeScalar = 0x10FFFFU;
+    constexpr char32_t surrogateMin = 0xD800U;
+    constexpr char32_t surrogateMax = 0xDFFFU;
 
-    constexpr char32_t ascii_uppercase_min = U'A';
-    constexpr char32_t ascii_uppercase_max = U'Z';
-    constexpr char32_t ascii_lowercase_min = U'a';
-    constexpr char32_t ascii_lowercase_max = U'z';
-    constexpr char32_t ascii_digit_min = U'0';
-    constexpr char32_t ascii_digit_max = U'9';
-    constexpr char32_t ascii_identifier_connector = U'_';
+    constexpr char32_t asciiUppercaseMin = U'A';
+    constexpr char32_t asciiUppercaseMax = U'Z';
+    constexpr char32_t asciiLowercaseMin = U'a';
+    constexpr char32_t asciiLowercaseMax = U'z';
+    constexpr char32_t asciiDigitMin = U'0';
+    constexpr char32_t asciiDigitMax = U'9';
+    constexpr char32_t asciiIdentifierConnector = U'_';
 
-    constexpr char32_t latin_uppercase_min = 0x00C0U;
-    constexpr char32_t latin_uppercase_before_multiplication_sign_max = 0x00D6U;
-    constexpr char32_t latin_uppercase_after_multiplication_sign_min = 0x00D8U;
-    constexpr char32_t latin_uppercase_max = 0x00DEU;
-    constexpr char32_t latin_lowercase_min = 0x00E0U;
-    constexpr char32_t latin_lowercase_before_division_sign_max = 0x00F6U;
-    constexpr char32_t latin_lowercase_after_division_sign_min = 0x00F8U;
-    constexpr char32_t latin_lowercase_max = 0x00FFU;
-    constexpr char32_t lowercase_codepoint_delta = 32U;
+    constexpr char32_t latinUppercaseMin = 0x00C0U;
+    constexpr char32_t latinUppercaseBeforeMultiplicationSignMax = 0x00D6U;
+    constexpr char32_t latinUppercaseAfterMultiplicationSignMin = 0x00D8U;
+    constexpr char32_t latinUppercaseMax = 0x00DEU;
+    constexpr char32_t latinLowercaseMin = 0x00E0U;
+    constexpr char32_t latinLowercaseBeforeDivisionSignMax = 0x00F6U;
+    constexpr char32_t latinLowercaseAfterDivisionSignMin = 0x00F8U;
+    constexpr char32_t latinLowercaseMax = 0x00FFU;
+    constexpr char32_t lowercaseCodepointDelta = 32U;
 
     struct DecodedScalar
     {
       char32_t value{0};
-      std::size_t byte_length{single_byte_length};
+      std::size_t byteLength{singleByteLength};
     };
 
-    bool is_ascii_letter(char32_t scalar)
+    bool isAsciiLetter(char32_t scalar)
     {
-      return (scalar >= ascii_uppercase_min && scalar <= ascii_uppercase_max) ||
-             (scalar >= ascii_lowercase_min && scalar <= ascii_lowercase_max);
+      return (scalar >= asciiUppercaseMin && scalar <= asciiUppercaseMax) ||
+             (scalar >= asciiLowercaseMin && scalar <= asciiLowercaseMax);
     }
 
-    bool is_ascii_digit(char32_t scalar)
+    bool isAsciiDigit(char32_t scalar)
     {
-      return scalar >= ascii_digit_min && scalar <= ascii_digit_max;
+      return scalar >= asciiDigitMin && scalar <= asciiDigitMax;
     }
 
-    bool is_latin_letter(char32_t scalar)
+    bool isLatinLetter(char32_t scalar)
     {
-      return (scalar >= latin_uppercase_min &&
-              scalar <= latin_uppercase_before_multiplication_sign_max) ||
-             (scalar >= latin_uppercase_after_multiplication_sign_min &&
-              scalar <= latin_uppercase_max) ||
-             (scalar >= latin_lowercase_min &&
-              scalar <= latin_lowercase_before_division_sign_max) ||
-             (scalar >= latin_lowercase_after_division_sign_min && scalar <= latin_lowercase_max);
+      return (scalar >= latinUppercaseMin &&
+              scalar <= latinUppercaseBeforeMultiplicationSignMax) ||
+             (scalar >= latinUppercaseAfterMultiplicationSignMin &&
+              scalar <= latinUppercaseMax) ||
+             (scalar >= latinLowercaseMin &&
+              scalar <= latinLowercaseBeforeDivisionSignMax) ||
+             (scalar >= latinLowercaseAfterDivisionSignMin && scalar <= latinLowercaseMax);
     }
 
-    bool is_natural_word_scalar(char32_t scalar)
+    bool isNaturalWordScalar(char32_t scalar)
     {
-      return is_ascii_letter(scalar) || is_ascii_digit(scalar) || is_latin_letter(scalar);
+      return isAsciiLetter(scalar) || isAsciiDigit(scalar) || isLatinLetter(scalar);
     }
 
-    bool is_code_identifier_scalar(char32_t scalar)
+    bool isCodeIdentifierScalar(char32_t scalar)
     {
-      return is_ascii_letter(scalar) || is_ascii_digit(scalar) ||
-             scalar == ascii_identifier_connector;
+      return isAsciiLetter(scalar) || isAsciiDigit(scalar) ||
+             scalar == asciiIdentifierConnector;
     }
 
-    bool is_continuation_byte(unsigned char byte)
+    bool isContinuationByte(unsigned char byte)
     {
-      return (byte & utf8_continuation_tag_mask) == utf8_continuation_tag;
+      return (byte & utf8ContinuationTagMask) == utf8ContinuationTag;
     }
 
-    DecodedScalar decode_utf8_at(std::string_view text, std::size_t offset)
+    DecodedScalar decodeUtf8At(std::string_view text, std::size_t offset)
     {
       const auto first = static_cast<unsigned char>(text[offset]);
-      if (first <= ascii_max)
-        return DecodedScalar{first, single_byte_length};
+      if (first <= asciiMax)
+        return DecodedScalar{first, singleByteLength};
 
       auto continuation = [&](std::size_t position) -> std::optional<unsigned char> {
         if (position >= text.size())
           return std::nullopt;
         const auto byte = static_cast<unsigned char>(text[position]);
-        if (!is_continuation_byte(byte))
+        if (!isContinuationByte(byte))
           return std::nullopt;
         return byte;
       };
 
-      if ((first & utf8_two_byte_tag_mask) == utf8_two_byte_tag) {
+      if ((first & utf8TwoByteTagMask) == utf8TwoByteTag) {
         const auto second = continuation(offset + 1);
         if (!second)
-          return DecodedScalar{first, single_byte_length};
+          return DecodedScalar{first, singleByteLength};
         const char32_t value =
-            ((first & utf8_two_byte_payload_mask) << utf8_continuation_payload_bits) |
-            (*second & utf8_continuation_payload_mask);
-        if (value < minimum_two_byte_scalar)
-          return DecodedScalar{first, single_byte_length};
-        return DecodedScalar{value, two_byte_length};
+            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) |
+            (*second & utf8ContinuationPayloadMask);
+        if (value < minimumTwoByteScalar)
+          return DecodedScalar{first, singleByteLength};
+        return DecodedScalar{value, twoByteLength};
       }
 
-      if ((first & utf8_three_byte_tag_mask) == utf8_three_byte_tag) {
+      if ((first & utf8ThreeByteTagMask) == utf8ThreeByteTag) {
         const auto second = continuation(offset + 1);
         const auto third = continuation(offset + 2);
         if (!second || !third)
-          return DecodedScalar{first, single_byte_length};
+          return DecodedScalar{first, singleByteLength};
         const char32_t value =
-            ((first & utf8_three_byte_payload_mask) << utf8_three_byte_lead_shift) |
-            ((*second & utf8_continuation_payload_mask) << utf8_continuation_payload_bits) |
-            (*third & utf8_continuation_payload_mask);
-        if (value < minimum_three_byte_scalar || (value >= surrogate_min && value <= surrogate_max))
-          return DecodedScalar{first, single_byte_length};
-        return DecodedScalar{value, three_byte_length};
+            ((first & utf8ThreeBytePayloadMask) << utf8ThreeByteLeadShift) |
+            ((*second & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
+            (*third & utf8ContinuationPayloadMask);
+        if (value < minimumThreeByteScalar || (value >= surrogateMin && value <= surrogateMax))
+          return DecodedScalar{first, singleByteLength};
+        return DecodedScalar{value, threeByteLength};
       }
 
-      if ((first & utf8_four_byte_tag_mask) == utf8_four_byte_tag) {
+      if ((first & utf8FourByteTagMask) == utf8FourByteTag) {
         const auto second = continuation(offset + 1);
         const auto third = continuation(offset + 2);
         const auto fourth = continuation(offset + 3);
         if (!second || !third || !fourth)
-          return DecodedScalar{first, single_byte_length};
+          return DecodedScalar{first, singleByteLength};
         const char32_t value =
-            ((first & utf8_four_byte_payload_mask) << utf8_four_byte_lead_shift) |
-            ((*second & utf8_continuation_payload_mask) << utf8_four_byte_second_shift) |
-            ((*third & utf8_continuation_payload_mask) << utf8_continuation_payload_bits) |
-            (*fourth & utf8_continuation_payload_mask);
-        if (value < minimum_four_byte_scalar || value > maximum_unicode_scalar)
-          return DecodedScalar{first, single_byte_length};
-        return DecodedScalar{value, four_byte_length};
+            ((first & utf8FourBytePayloadMask) << utf8FourByteLeadShift) |
+            ((*second & utf8ContinuationPayloadMask) << utf8FourByteSecondShift) |
+            ((*third & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
+            (*fourth & utf8ContinuationPayloadMask);
+        if (value < minimumFourByteScalar || value > maximumUnicodeScalar)
+          return DecodedScalar{first, singleByteLength};
+        return DecodedScalar{value, fourByteLength};
       }
 
-      return DecodedScalar{first, single_byte_length};
+      return DecodedScalar{first, singleByteLength};
     }
 
-    std::optional<DecodedScalar> scalar_before(std::string_view text, std::size_t offset)
+    std::optional<DecodedScalar> scalarBefore(std::string_view text, std::size_t offset)
     {
       if (offset == 0 || offset > text.size())
         return std::nullopt;
 
-      std::size_t scalar_offset = offset - 1;
-      while (scalar_offset > 0 &&
-             is_continuation_byte(static_cast<unsigned char>(text[scalar_offset]))) {
-        --scalar_offset;
+      std::size_t scalarOffset = offset - 1;
+      while (scalarOffset > 0 &&
+             isContinuationByte(static_cast<unsigned char>(text[scalarOffset]))) {
+        --scalarOffset;
       }
 
-      return decode_utf8_at(text, scalar_offset);
+      return decodeUtf8At(text, scalarOffset);
     }
 
-    std::optional<DecodedScalar> scalar_at(std::string_view text, std::size_t offset)
+    std::optional<DecodedScalar> scalarAt(std::string_view text, std::size_t offset)
     {
       if (offset >= text.size())
         return std::nullopt;
-      return decode_utf8_at(text, offset);
+      return decodeUtf8At(text, offset);
     }
 
-    bool has_boundaries(std::string_view text, std::size_t offset, std::size_t length,
-                        bool (*is_inside_boundary)(char32_t))
+    bool hasBoundaries(std::string_view text, std::size_t offset, std::size_t length,
+                        bool (*isInsideBoundary)(char32_t))
     {
-      const auto left = scalar_before(text, offset);
-      if (left && is_inside_boundary(left->value))
+      const auto left = scalarBefore(text, offset);
+      if (left && isInsideBoundary(left->value))
         return false;
 
-      const auto right = scalar_at(text, offset + length);
-      if (right && is_inside_boundary(right->value))
+      const auto right = scalarAt(text, offset + length);
+      if (right && isInsideBoundary(right->value))
         return false;
 
       return true;
     }
 
-    char32_t simple_case_fold(char32_t scalar)
+    char32_t simpleCaseFold(char32_t scalar)
     {
-      if (scalar >= ascii_uppercase_min && scalar <= ascii_uppercase_max)
-        return scalar + lowercase_codepoint_delta;
+      if (scalar >= asciiUppercaseMin && scalar <= asciiUppercaseMax)
+        return scalar + lowercaseCodepointDelta;
 
-      if ((scalar >= latin_uppercase_min &&
-           scalar <= latin_uppercase_before_multiplication_sign_max) ||
-          (scalar >= latin_uppercase_after_multiplication_sign_min &&
-           scalar <= latin_uppercase_max))
-        return scalar + lowercase_codepoint_delta;
+      if ((scalar >= latinUppercaseMin &&
+           scalar <= latinUppercaseBeforeMultiplicationSignMax) ||
+          (scalar >= latinUppercaseAfterMultiplicationSignMin &&
+           scalar <= latinUppercaseMax))
+        return scalar + lowercaseCodepointDelta;
 
       return scalar;
     }
 
-    bool same_scalar(DecodedScalar left, DecodedScalar right, const SearchOptions& options)
+    bool sameScalar(DecodedScalar left, DecodedScalar right, const SearchOptions& options)
     {
-      if (options.case_sensitive)
+      if (options.caseSensitive)
         return left.value == right.value;
-      return simple_case_fold(left.value) == simple_case_fold(right.value);
+      return simpleCaseFold(left.value) == simpleCaseFold(right.value);
     }
 
-    std::optional<std::size_t> literal_match_length_at(std::string_view text,
+    std::optional<std::size_t> literalMatchLengthAt(std::string_view text,
                                                        std::string_view expression,
-                                                       std::size_t text_offset,
+                                                       std::size_t textOffset,
                                                        const SearchOptions& options)
     {
-      std::size_t text_index = text_offset;
-      std::size_t expression_index = 0;
+      std::size_t textIndex = textOffset;
+      std::size_t expressionIndex = 0;
 
-      while (expression_index < expression.size()) {
-        if (text_index >= text.size())
+      while (expressionIndex < expression.size()) {
+        if (textIndex >= text.size())
           return std::nullopt;
 
-        const auto text_scalar = decode_utf8_at(text, text_index);
-        const auto expression_scalar = decode_utf8_at(expression, expression_index);
-        if (!same_scalar(text_scalar, expression_scalar, options))
+        const auto textScalar = decodeUtf8At(text, textIndex);
+        const auto expressionScalar = decodeUtf8At(expression, expressionIndex);
+        if (!sameScalar(textScalar, expressionScalar, options))
           return std::nullopt;
 
-        text_index += text_scalar.byte_length;
-        expression_index += expression_scalar.byte_length;
+        textIndex += textScalar.byteLength;
+        expressionIndex += expressionScalar.byteLength;
       }
 
-      return text_index - text_offset;
+      return textIndex - textOffset;
     }
 
   } // namespace
 
-  std::vector<MatchPosition> find_all_literals(std::string_view text, std::string_view expression,
+  std::vector<MatchPosition> findAllLiterals(std::string_view text, std::string_view expression,
                                                const SearchOptions& options)
   {
     std::vector<MatchPosition> matches;
     if (expression.empty())
       return matches;
 
-    const auto matches_at = [&](std::size_t offset) -> std::optional<std::size_t> {
-      const auto match_length = literal_match_length_at(text, expression, offset, options);
-      if (!match_length)
+    const auto matchesAt = [&](std::size_t offset) -> std::optional<std::size_t> {
+      const auto matchLength = literalMatchLengthAt(text, expression, offset, options);
+      if (!matchLength)
         return std::nullopt;
-      if (!matches_requested_boundaries(text, MatchPosition{offset, *match_length}, options))
+      if (!matchesRequestedBoundaries(text, MatchPosition{offset, *matchLength}, options))
         return std::nullopt;
-      return match_length;
+      return matchLength;
     };
 
     for (std::size_t offset = 0; offset < text.size();) {
-      const auto match_length = matches_at(offset);
-      if (match_length)
-        matches.push_back(MatchPosition{offset, *match_length});
+      const auto matchLength = matchesAt(offset);
+      if (matchLength)
+        matches.push_back(MatchPosition{offset, *matchLength});
 
-      const auto scalar = decode_utf8_at(text, offset);
-      offset += scalar.byte_length;
+      const auto scalar = decodeUtf8At(text, offset);
+      offset += scalar.byteLength;
     }
 
     return matches;
   }
 
-  std::optional<MatchPosition> find_literal(std::string_view text, std::string_view expression,
+  std::optional<MatchPosition> findLiteral(std::string_view text, std::string_view expression,
                                             const SearchOptions& options)
   {
-    const auto matches = find_all_literals(text, expression, options);
+    const auto matches = findAllLiterals(text, expression, options);
     if (matches.empty())
       return std::nullopt;
     return matches.front();
   }
 
-  bool matches_requested_boundaries(std::string_view text, MatchPosition match,
+  bool matchesRequestedBoundaries(std::string_view text, MatchPosition match,
                                     const SearchOptions& options)
   {
-    return (!options.whole_word ||
-            has_boundaries(text, match.offset, match.length, is_natural_word_scalar)) &&
-           (!options.whole_identifier ||
-            has_boundaries(text, match.offset, match.length, is_code_identifier_scalar));
+    return (!options.wholeWord ||
+            hasBoundaries(text, match.offset, match.length, isNaturalWordScalar)) &&
+           (!options.wholeIdentifier ||
+            hasBoundaries(text, match.offset, match.length, isCodeIdentifierScalar));
   }
 
-  bool looks_binary(std::string_view sample)
+  bool looksBinary(std::string_view sample)
   {
     return std::ranges::find(sample, '\0') != sample.end();
   }

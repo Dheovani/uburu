@@ -8,9 +8,9 @@
 
 namespace uburu::filesystem
 {
-  PollingFileWatcher::PollingFileWatcher(std::filesystem::path root) : root_(std::move(root))
+  PollingFileWatcher::PollingFileWatcher(std::filesystem::path root) : root(std::move(root))
   {
-    entries_ = snapshot({}).entries;
+    entries = snapshot({}).entries;
   }
 
   FileChangeBatch PollingFileWatcher::poll(std::stop_token stop_token)
@@ -19,18 +19,18 @@ namespace uburu::filesystem
     FileChangeBatch batch;
 
     if (current.incomplete) {
-      batch.events_may_be_incomplete = true;
-      batch.requires_rescan = true;
+      batch.eventsMayBeIncomplete = true;
+      batch.requiresRescan = true;
 
       return batch;
     }
 
     for (const auto& [key, entry] : current.entries) {
-      const auto previous = entries_.find(key);
+      const auto previous = entries.find(key);
 
-      if (previous == entries_.end()) {
+      if (previous == entries.end()) {
         batch.events.push_back(FileChangeEvent{
-          .relative_path = entry.relative_path,
+          .relativePath = entry.relativePath,
           .kind = FileChangeKind::created,
           .directory = entry.directory});
 
@@ -39,33 +39,33 @@ namespace uburu::filesystem
 
       if (changed(previous->second, entry)) {
         batch.events.push_back(FileChangeEvent{
-          .relative_path = entry.relative_path,
+          .relativePath = entry.relativePath,
           .kind = FileChangeKind::modified,
           .directory = entry.directory});
       }
     }
 
-    for (const auto& [key, entry] : entries_) {
+    for (const auto& [key, entry] : entries) {
       if (!current.entries.contains(key)) {
         batch.events.push_back(FileChangeEvent{
-          .relative_path = entry.relative_path,
+          .relativePath = entry.relativePath,
           .kind = FileChangeKind::deleted,
           .directory = entry.directory});
       }
     }
 
     std::ranges::sort(batch.events, [](const auto& left, const auto& right) {
-      return normalized_path_key(left.relative_path) < normalized_path_key(right.relative_path);
+      return normalizedPathKey(left.relativePath) < normalizedPathKey(right.relativePath);
     });
 
-    entries_ = std::move(current.entries);
+    entries = std::move(current.entries);
 
     return batch;
   }
 
   bool PollingFileWatcher::changed(const WatchedEntry& previous, const WatchedEntry& current)
   {
-    return previous.modified_at != current.modified_at || previous.size != current.size ||
+    return previous.modifiedAt != current.modifiedAt || previous.size != current.size ||
            previous.directory != current.directory;
   }
 
@@ -74,7 +74,7 @@ namespace uburu::filesystem
     Snapshot snapshot;
     std::error_code error;
     std::filesystem::recursive_directory_iterator iterator(
-      root_, std::filesystem::directory_options::skip_permission_denied, error);
+      root, std::filesystem::directory_options::skip_permission_denied, error);
     const std::filesystem::recursive_directory_iterator end;
 
     while (!error && iterator != end) {
@@ -85,7 +85,7 @@ namespace uburu::filesystem
       }
 
       const auto path = iterator->path();
-      const auto relative_path = std::filesystem::relative(path, root_, error);
+      const auto relativePath = std::filesystem::relative(path, root, error);
 
       if (error) {
         iterator.increment(error);
@@ -102,13 +102,13 @@ namespace uburu::filesystem
         continue;
       }
 
-      WatchedEntry entry{.relative_path = relative_path,
-                         .modified_at = iterator->last_write_time(error),
+      WatchedEntry entry{.relativePath = relativePath,
+                         .modifiedAt = iterator->last_write_time(error),
                          .size = size,
                          .directory = directory};
 
       if (!error)
-        snapshot.entries.emplace(normalized_path_key(relative_path), std::move(entry));
+        snapshot.entries.emplace(normalizedPathKey(relativePath), std::move(entry));
 
       iterator.increment(error);
     }

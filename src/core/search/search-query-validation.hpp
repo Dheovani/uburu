@@ -7,6 +7,6 @@
 namespace uburu::search
 {
 
-  [[nodiscard]] std::vector<SearchError> validate_search_query(const SearchQuery& query);
+  [[nodiscard]] std::vector<SearchError> validateSearchQuery(const SearchQuery& query);
 
 } // namespace uburu::search

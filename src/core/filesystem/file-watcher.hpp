@@ -16,7 +16,7 @@ namespace uburu::filesystem
 
   struct FileChangeEvent
   {
-    std::filesystem::path relative_path;
+    std::filesystem::path relativePath;
     FileChangeKind kind{FileChangeKind::modified};
     bool directory{false};
   };
@@ -24,8 +24,8 @@ namespace uburu::filesystem
   struct FileChangeBatch
   {
     std::vector<FileChangeEvent> events;
-    bool events_may_be_incomplete{false};
-    bool requires_rescan{false};
+    bool eventsMayBeIncomplete{false};
+    bool requiresRescan{false};
   };
 
   class FileWatcher

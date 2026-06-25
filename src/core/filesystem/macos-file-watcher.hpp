@@ -11,7 +11,7 @@ namespace uburu::filesystem
 
   class MacosFileWatcher;
 
-  void append_macos_events(MacosFileWatcher& watcher, FileChangeBatch batch);
+  void appendMacosEvents(MacosFileWatcher& watcher, FileChangeBatch batch);
 
   class MacosFileWatcher final : public FileWatcher
   {
@@ -25,17 +25,17 @@ namespace uburu::filesystem
     [[nodiscard]] FileChangeBatch poll(std::stop_token stop_token = {}) override;
 
   private:
-    friend void append_macos_events(MacosFileWatcher& watcher, FileChangeBatch batch);
+    friend void appendMacosEvents(MacosFileWatcher& watcher, FileChangeBatch batch);
 
     struct NativeStream;
 
     void append(FileChangeBatch batch);
-    [[nodiscard]] std::filesystem::path relative_from_root(const std::filesystem::path& path) const;
+    [[nodiscard]] std::filesystem::path relativeFromRoot(const std::filesystem::path& path) const;
 
-    std::filesystem::path root_;
-    std::mutex mutex_;
-    FileChangeBatch pending_;
-    NativeStream* stream_{nullptr};
+    std::filesystem::path root;
+    std::mutex mutex;
+    FileChangeBatch pending;
+    NativeStream* stream{nullptr};
   };
 
 } // namespace uburu::filesystem

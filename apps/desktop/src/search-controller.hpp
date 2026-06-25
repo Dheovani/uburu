@@ -32,7 +32,7 @@ namespace uburu::app
     void append(SearchResult result);
 
   private:
-    std::vector<SearchResult> results_;
+    std::vector<SearchResult> results;
   };
 
   class SearchController final : public QObject
@@ -52,8 +52,8 @@ namespace uburu::app
     [[nodiscard]] QAbstractItemModel* results();
 
     Q_INVOKABLE void selectDirectory(const QString& url);
-    Q_INVOKABLE void startSearch(const QString& expression, bool regex, bool case_sensitive,
-                                 bool whole_word, bool respect_gitignore);
+    Q_INVOKABLE void startSearch(const QString& expression, bool regex, bool caseSensitive,
+                                 bool wholeWord, bool respectGitignore);
     Q_INVOKABLE void cancel();
 
   signals:
@@ -62,15 +62,15 @@ namespace uburu::app
     void runningChanged();
 
   private:
-    void set_status(QString status);
-    void set_running(bool running);
-    QString directory_;
-    QString status_;
-    bool running_{false};
-    SearchResultModel results_;
-    std::shared_ptr<const SearchService> search_service_;
-    std::stop_source stop_source_;
-    QFutureWatcher<search::SearchSummary>* active_watcher_{nullptr};
+    void setStatus(QString status);
+    void setRunning(bool running);
+    QString directoryValue;
+    QString statusValue;
+    bool runningValue{false};
+    SearchResultModel resultsModel;
+    std::shared_ptr<const SearchService> searchService;
+    std::stop_source stopSource;
+    QFutureWatcher<search::SearchSummary>* activeWatcher{nullptr};
   };
 
 } // namespace uburu::app

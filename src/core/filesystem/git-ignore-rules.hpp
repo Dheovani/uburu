@@ -10,29 +10,29 @@ namespace uburu::filesystem
 
   struct GitIgnoreRule
   {
-    std::filesystem::path base_directory;
+    std::filesystem::path baseDirectory;
     std::string pattern;
     bool negated{false};
-    bool directory_only{false};
+    bool directoryOnly{false};
     bool anchored{false};
-    bool basename_only{false};
+    bool basenameOnly{false};
   };
 
   class GitIgnoreRules
   {
   public:
-    void append_file(const std::filesystem::path& ignore_file,
-                     const std::filesystem::path& base_directory);
+    void appendFile(const std::filesystem::path& ignoreFile,
+                     const std::filesystem::path& baseDirectory);
 
-    [[nodiscard]] bool ignores(const std::filesystem::path& relative_path, bool is_directory) const;
+    [[nodiscard]] bool ignores(const std::filesystem::path& relativePath, bool is_directory) const;
 
     [[nodiscard]] bool empty() const;
 
   private:
-    std::vector<GitIgnoreRule> rules_;
+    std::vector<GitIgnoreRule> rules;
   };
 
   [[nodiscard]] std::vector<GitIgnoreRule>
-  parse_git_ignore(std::string_view content, const std::filesystem::path& base_directory);
+  parseGitIgnore(std::string_view content, const std::filesystem::path& baseDirectory);
 
 } // namespace uburu::filesystem

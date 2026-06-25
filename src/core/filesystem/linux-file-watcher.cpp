@@ -15,10 +15,10 @@ namespace uburu::filesystem
   namespace
   {
 
-    constexpr std::size_t bytes_per_kibibyte = 1024U;
-    constexpr std::size_t inotify_buffer_kibibytes = 64U;
-    constexpr std::size_t inotify_buffer_size = inotify_buffer_kibibytes * bytes_per_kibibyte;
-    constexpr std::uint32_t watched_events =
+    constexpr std::size_t bytesPerKibibyte = 1024U;
+    constexpr std::size_t inotifyBufferKibibytes = 64U;
+    constexpr std::size_t inotifyBufferSize = inotifyBufferKibibytes * bytesPerKibibyte;
+    constexpr std::uint32_t watchedEvents =
       IN_CREATE |
       IN_MODIFY |
       IN_CLOSE_WRITE |
@@ -29,7 +29,7 @@ namespace uburu::filesystem
       IN_DELETE_SELF |
       IN_MOVE_SELF;
 
-    [[nodiscard]] FileChangeKind map_mask(std::uint32_t mask)
+    [[nodiscard]] FileChangeKind mapMask(std::uint32_t mask)
     {
       if ((mask & (IN_CREATE | IN_MOVED_TO)) != 0U)
         return FileChangeKind::created;
@@ -43,133 +43,133 @@ namespace uburu::filesystem
   } // namespace
 
   LinuxFileWatcher::LinuxFileWatcher(std::filesystem::path root)
-    : root_(std::move(root)),
-      descriptor_(inotify_init1(IN_NONBLOCK | IN_CLOEXEC)),
-      buffer_(inotify_buffer_size)
+    : root(std::move(root)),
+      descriptor(inotify_init1(IN_NONBLOCK | IN_CLOEXEC)),
+      buffer(inotifyBufferSize)
   {
     if (available())
-      add_recursive_watches();
+      addRecursiveWatches();
   }
 
   LinuxFileWatcher::~LinuxFileWatcher()
   {
-    if (descriptor_ >= 0)
-      close(descriptor_);
+    if (descriptor >= 0)
+      close(descriptor);
   }
 
   FileChangeBatch LinuxFileWatcher::poll(std::stop_token stop_token)
   {
     if (!available())
-      return unavailable_batch();
+      return unavailableBatch();
 
     FileChangeBatch batch;
 
     while (!stop_token.stop_requested()) {
-      const auto bytes_read = read(descriptor_, buffer_.data(), buffer_.size());
+      const auto bytesRead = read(descriptor, buffer.data(), buffer.size());
 
-      if (bytes_read < 0) {
+      if (bytesRead < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
           return batch;
 
-        return unavailable_batch();
+        return unavailableBatch();
       }
 
-      if (bytes_read == 0)
+      if (bytesRead == 0)
         return batch;
 
       std::size_t offset = 0;
 
-      while (offset < static_cast<std::size_t>(bytes_read)) {
-        const auto* event = reinterpret_cast<const inotify_event*>(buffer_.data() + offset);
+      while (offset < static_cast<std::size_t>(bytesRead)) {
+        const auto* event = reinterpret_cast<const inotify_event*>(buffer.data() + offset);
 
         if ((event->mask & IN_Q_OVERFLOW) != 0U) {
-          batch.events_may_be_incomplete = true;
-          batch.requires_rescan = true;
+          batch.eventsMayBeIncomplete = true;
+          batch.requiresRescan = true;
 
           return batch;
         }
 
-        const auto watched = watched_directories_.find(event->wd);
+        const auto watched = watchedDirectories.find(event->wd);
 
-        if (watched != watched_directories_.end() && event->len > 0) {
+        if (watched != watchedDirectories.end() && event->len > 0) {
           const auto name = std::filesystem::path(event->name);
-          const auto absolute_path = watched->second / name;
+          const auto absolutePath = watched->second / name;
           const auto directory = (event->mask & IN_ISDIR) != 0U;
 
           batch.events.push_back(FileChangeEvent{
-            .relative_path = relative_from_root(absolute_path),
-            .kind = map_mask(event->mask),
+            .relativePath = relativeFromRoot(absolutePath),
+            .kind = mapMask(event->mask),
             .directory = directory});
 
           if (directory && (event->mask & (IN_CREATE | IN_MOVED_TO)) != 0U)
-            add_directory_watch(absolute_path);
+            addDirectoryWatch(absolutePath);
         }
 
         if ((event->mask & IN_IGNORED) != 0U)
-          remove_watch(event->wd);
+          removeWatch(event->wd);
 
         offset += sizeof(inotify_event) + event->len;
       }
     }
 
-    batch.events_may_be_incomplete = true;
-    batch.requires_rescan = true;
+    batch.eventsMayBeIncomplete = true;
+    batch.requiresRescan = true;
 
     return batch;
   }
 
   bool LinuxFileWatcher::available() const
   {
-    return descriptor_ >= 0;
+    return descriptor >= 0;
   }
 
-  FileChangeBatch LinuxFileWatcher::unavailable_batch() const
+  FileChangeBatch LinuxFileWatcher::unavailableBatch() const
   {
-    return FileChangeBatch{.events = {}, .events_may_be_incomplete = true, .requires_rescan = true};
+    return FileChangeBatch{.events = {}, .eventsMayBeIncomplete = true, .requiresRescan = true};
   }
 
-  std::filesystem::path LinuxFileWatcher::relative_from_root(const std::filesystem::path& path) const
+  std::filesystem::path LinuxFileWatcher::relativeFromRoot(const std::filesystem::path& path) const
   {
     std::error_code error;
-    auto relative_path = std::filesystem::relative(path, root_, error);
+    auto relativePath = std::filesystem::relative(path, root, error);
 
     if (error)
       return path.filename();
 
-    return relative_path;
+    return relativePath;
   }
 
-  void LinuxFileWatcher::add_directory_watch(const std::filesystem::path& directory)
+  void LinuxFileWatcher::addDirectoryWatch(const std::filesystem::path& directory)
   {
     if (!available())
       return;
 
-    const auto watch_descriptor = inotify_add_watch(descriptor_, directory.c_str(), watched_events);
+    const auto watchDescriptor = inotify_add_watch(descriptor, directory.c_str(), watchedEvents);
 
-    if (watch_descriptor >= 0)
-      watched_directories_[watch_descriptor] = directory;
+    if (watchDescriptor >= 0)
+      watchedDirectories[watchDescriptor] = directory;
   }
 
-  void LinuxFileWatcher::add_recursive_watches()
+  void LinuxFileWatcher::addRecursiveWatches()
   {
-    add_directory_watch(root_);
+    addDirectoryWatch(root);
 
     std::error_code error;
     std::filesystem::recursive_directory_iterator iterator(
-      root_, std::filesystem::directory_options::skip_permission_denied, error);
+      root, std::filesystem::directory_options::skip_permission_denied, error);
     const std::filesystem::recursive_directory_iterator end;
 
     while (!error && iterator != end) {
       if (iterator->is_directory(error))
-        add_directory_watch(iterator->path());
+        addDirectoryWatch(iterator->path());
 
       iterator.increment(error);
     }
   }
 
-  void LinuxFileWatcher::remove_watch(int descriptor)
+  void LinuxFileWatcher::removeWatch(int descriptor)
   {
-    watched_directories_.erase(descriptor);
+    watchedDirectories.erase(descriptor);
   }
 
 } // namespace uburu::filesystem

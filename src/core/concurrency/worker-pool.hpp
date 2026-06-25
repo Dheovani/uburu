@@ -16,15 +16,15 @@ namespace uburu::concurrency
   public:
     using Task = std::function<void(std::stop_token)>;
 
-    explicit WorkerPool(std::size_t worker_count, std::size_t queue_capacity = 0)
-      : queue_(normalized_queue_capacity(worker_count, queue_capacity))
+    explicit WorkerPool(std::size_t workerCount, std::size_t queueCapacity = 0)
+      : queue(normalizedQueueCapacity(workerCount, queueCapacity))
     {
-      worker_count = normalized_worker_count(worker_count);
+      workerCount = normalizedWorkerCount(workerCount);
 
-      workers_.reserve(worker_count);
+      workers.reserve(workerCount);
 
-      for (std::size_t index = 0; index < worker_count; ++index) {
-        workers_.emplace_back([this](std::stop_token stop_token) {
+      for (std::size_t index = 0; index < workerCount; ++index) {
+        workers.emplace_back([this](std::stop_token stop_token) {
           run(stop_token);
         });
       }
@@ -35,59 +35,59 @@ namespace uburu::concurrency
 
     ~WorkerPool()
     {
-      request_stop();
+      requestStop();
     }
 
     [[nodiscard]] bool submit(Task task, std::stop_token stop_token = {})
     {
-      return queue_.push(std::move(task), stop_token);
+      return queue.push(std::move(task), stop_token);
     }
 
     void close()
     {
-      queue_.close();
-      join_workers();
+      queue.close();
+      joinWorkers();
     }
 
-    void request_stop()
+    void requestStop()
     {
-      for (auto& worker : workers_) {
+      for (auto& worker : workers) {
         worker.request_stop();
       }
 
-      queue_.close();
-      join_workers();
+      queue.close();
+      joinWorkers();
     }
 
-    [[nodiscard]] std::size_t worker_count() const
+    [[nodiscard]] std::size_t workerCount() const
     {
-      return workers_.size();
+      return workers.size();
     }
 
   private:
-    static constexpr std::size_t default_queue_capacity_multiplier = 2;
+    static constexpr std::size_t defaultQueueCapacityMultiplier = 2;
 
-    [[nodiscard]] static std::size_t normalized_worker_count(std::size_t worker_count)
+    [[nodiscard]] static std::size_t normalizedWorkerCount(std::size_t workerCount)
     {
-      if (worker_count == 0)
+      if (workerCount == 0)
         return 1;
 
-      return worker_count;
+      return workerCount;
     }
 
     [[nodiscard]]
-    static std::size_t normalized_queue_capacity(std::size_t worker_count, std::size_t requested_capacity)
+    static std::size_t normalizedQueueCapacity(std::size_t workerCount, std::size_t requestedCapacity)
     {
-      if (requested_capacity != 0)
-        return requested_capacity;
+      if (requestedCapacity != 0)
+        return requestedCapacity;
 
-      return normalized_worker_count(worker_count) * default_queue_capacity_multiplier;
+      return normalizedWorkerCount(workerCount) * defaultQueueCapacityMultiplier;
     }
 
     void run(std::stop_token stop_token)
     {
       while (!stop_token.stop_requested()) {
-        auto task = queue_.pop(stop_token);
+        auto task = queue.pop(stop_token);
 
         if (!task)
           return;
@@ -96,16 +96,16 @@ namespace uburu::concurrency
       }
     }
 
-    void join_workers()
+    void joinWorkers()
     {
-      for (auto& worker : workers_) {
+      for (auto& worker : workers) {
         if (worker.joinable())
           worker.join();
       }
     }
 
-    BoundedQueue<Task> queue_;
-    std::vector<std::jthread> workers_;
+    BoundedQueue<Task> queue;
+    std::vector<std::jthread> workers;
   };
 
 } // namespace uburu::concurrency

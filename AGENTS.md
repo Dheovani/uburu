@@ -143,8 +143,8 @@ Não trate o índice apenas como uma lista de caminhos. O mesmo caminho pode ter
 
 O índice deve considerar:
 
-* `repository_id`
-* `worktree_id`
+* `repositoryId`
+* `worktreeId`
 * caminho absoluto da worktree
 * caminho relativo do arquivo
 * tamanho
@@ -345,11 +345,11 @@ Nunca assuma que `path` identifica unicamente o conteúdo de um documento.
 Use uma chave conceitual mais rica:
 
 ```txt
-repository_id
-worktree_id
-relative_path
-content_hash
-git_blob_hash
+repositoryId
+worktreeId
+relativePath
+contentHash
+gitBlobHash
 ```
 
 Ao trocar de branch:
@@ -524,9 +524,9 @@ apenas quando forem exigidas por integração com pré-processador, plataforma o
 Exemplos preferidos:
 
 ```cpp
-constexpr unsigned char utf8_continuation_tag_mask = 0b1100'0000U;
-constexpr char32_t maximum_unicode_scalar = 0x10FFFFU;
-constexpr std::size_t default_preview_context_lines = 3;
+constexpr unsigned char utf8ContinuationTagMask = 0b1100'0000U;
+constexpr char32_t maximumUnicodeScalar = 0x10FFFFU;
+constexpr std::size_t defaultPreviewContextLines = 3;
 ```
 
 O nome da constante deve explicar o significado do valor, não apenas repetir sua representação.
@@ -539,8 +539,8 @@ Morgan mecanicamente, sem validar o comportamento com testes existentes ou novos
 Exemplo preferido:
 
 ```cpp
-return (!options.whole_word || has_word_boundary(match)) &&
-       (!options.whole_identifier || has_identifier_boundary(match));
+return (!options.wholeWord || hasWordBoundary(match)) &&
+       (!options.wholeIdentifier || hasIdentifierBoundary(match));
 ```
 
 Para legibilidade humana, separe visualmente declarações e blocos de controle:
@@ -660,6 +660,28 @@ Para assinaturas de funções, chamadas e declarações com parâmetros:
   legível.
 
 O target `format` é auxiliar e nunca deve ser requisito para compilar o projeto.
+
+### Nomes de identificadores C++
+
+Todo identificador próprio novo ou alterado em C++ deve usar `camelCase`, alinhado à convenção do Qt.
+Isso inclui funções, métodos, variáveis locais, membros de structs/classes, constantes internas e
+enumeradores próprios.
+
+Exemplos preferidos:
+
+```cpp
+constexpr std::size_t maximumLineLength = 1024U * 1024U;
+auto searchRoot = query.root;
+query.options.caseSensitive = true;
+```
+
+Classes, structs, enums e aliases de tipo continuam em `PascalCase`, como `SearchQuery`,
+`SearchResult`, `GitService` e `IndexDocument`.
+
+Arquivos continuam em `kebab-case`; não use `camelCase`, `PascalCase` ou `snake_case` no sistema de
+arquivos. APIs externas preservam sua convenção original, como `std::string_view`, `std::stop_token`,
+`std::filesystem::directory_options::follow_directory_symlink`, macros de sistema, Qt, PCRE2, libgit2
+e nomes exigidos por bibliotecas.
 
 ### Nomes de arquivos
 

@@ -13,57 +13,57 @@ namespace uburu::search
   namespace
   {
 
-    void append_if(bool condition, std::vector<SearchError>& errors, SearchErrorCode code,
+    void appendIf(bool condition, std::vector<SearchError>& errors, SearchErrorCode code,
                    std::string context = {})
     {
       if (condition)
-        errors.push_back(make_search_error(code, std::move(context)));
+        errors.push_back(makeSearchError(code, std::move(context)));
     }
 
-    void validate_root(const std::filesystem::path& root, std::vector<SearchError>& errors)
+    void validateRoot(const std::filesystem::path& root, std::vector<SearchError>& errors)
     {
       std::error_code error;
       const auto exists = std::filesystem::exists(root, error);
 
       if (error || !exists) {
-        errors.push_back(make_search_error(SearchErrorCode::root_not_found, root.string()));
+        errors.push_back(makeSearchError(SearchErrorCode::rootNotFound, root.string()));
       } else if (!std::filesystem::is_directory(root, error) || error) {
-        errors.push_back(make_search_error(SearchErrorCode::root_not_directory, root.string()));
+        errors.push_back(makeSearchError(SearchErrorCode::rootNotDirectory, root.string()));
       }
     }
 
   } // namespace
 
-  std::vector<SearchError> validate_search_query(const SearchQuery& query)
+  std::vector<SearchError> validateSearchQuery(const SearchQuery& query)
   {
     std::vector<SearchError> errors;
-    const auto roots = effective_search_roots(query);
+    const auto roots = effectiveSearchRoots(query);
 
-    append_if(roots.empty(), errors, SearchErrorCode::empty_root);
+    appendIf(roots.empty(), errors, SearchErrorCode::emptyRoot);
 
     for (const auto& root : roots) {
       if (root.path.empty()) {
-        errors.push_back(make_search_error(SearchErrorCode::empty_root));
+        errors.push_back(makeSearchError(SearchErrorCode::emptyRoot));
 
         continue;
       }
 
-      validate_root(root.path, errors);
+      validateRoot(root.path, errors);
     }
 
-    append_if(query.expression.empty(), errors, SearchErrorCode::empty_expression);
+    appendIf(query.expression.empty(), errors, SearchErrorCode::emptyExpression);
 #ifndef UBURU_HAS_PCRE2
-    append_if(query.options.mode == SearchMode::regex, errors,
-              SearchErrorCode::unsupported_search_mode, "regex");
+    appendIf(query.options.mode == SearchMode::regex, errors,
+              SearchErrorCode::unsupportedSearchMode, "regex");
 #endif
-    append_if(query.options.result_limit == 0, errors, SearchErrorCode::invalid_result_limit);
-    append_if(query.options.per_file_result_limit == 0, errors,
-              SearchErrorCode::invalid_per_file_result_limit);
-    append_if(query.options.maximum_file_size == 0, errors,
-              SearchErrorCode::invalid_maximum_file_size);
-    append_if(query.options.regex_match_limit == 0 || query.options.regex_depth_limit == 0 ||
-                  query.options.regex_heap_limit_kib == 0,
-              errors, SearchErrorCode::invalid_regex_limit);
+    appendIf(query.options.resultLimit == 0, errors, SearchErrorCode::invalidResultLimit);
+    appendIf(query.options.perFileResultLimit == 0, errors,
+              SearchErrorCode::invalidPerFileResultLimit);
+    appendIf(query.options.maximumFileSize == 0, errors,
+              SearchErrorCode::invalidMaximumFileSize);
+    appendIf(query.options.regexMatchLimit == 0 || query.options.regexDepthLimit == 0 ||
+                  query.options.regexHeapLimitKib == 0,
+              errors, SearchErrorCode::invalidRegexLimit);
 
     return errors;
   }

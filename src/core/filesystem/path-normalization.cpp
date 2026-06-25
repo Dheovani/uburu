@@ -8,66 +8,66 @@ namespace uburu::filesystem
   namespace
   {
 
-    constexpr std::size_t windows_network_prefix_size = 2;
-    constexpr char windows_path_separator = '\\';
-    constexpr char generic_path_separator = '/';
-    constexpr char ascii_uppercase_first = 'A';
-    constexpr char ascii_uppercase_last = 'Z';
-    constexpr char ascii_lowercase_offset = 'a' - 'A';
+    constexpr std::size_t windowsNetworkPrefixSize = 2;
+    constexpr char windowsPathSeparator = '\\';
+    constexpr char genericPathSeparator = '/';
+    constexpr char asciiUppercaseFirst = 'A';
+    constexpr char asciiUppercaseLast = 'Z';
+    constexpr char asciiLowercaseOffset = 'a' - 'A';
 
-    bool starts_with_windows_network_prefix(std::string_view text)
+    bool startsWithWindowsNetworkPrefix(std::string_view text)
     {
-      if (text.size() < windows_network_prefix_size)
+      if (text.size() < windowsNetworkPrefixSize)
         return false;
 
       const auto first = text[0];
       const auto second = text[1];
 
-      return (first == windows_path_separator || first == generic_path_separator) &&
-             (second == windows_path_separator || second == generic_path_separator);
+      return (first == windowsPathSeparator || first == genericPathSeparator) &&
+             (second == windowsPathSeparator || second == genericPathSeparator);
     }
 
-    char normalized_key_character(char value)
+    char normalizedKeyCharacter(char value)
     {
 #ifdef _WIN32
-      if (value >= ascii_uppercase_first && value <= ascii_uppercase_last)
-        return static_cast<char>(value + ascii_lowercase_offset);
+      if (value >= asciiUppercaseFirst && value <= asciiUppercaseLast)
+        return static_cast<char>(value + asciiLowercaseOffset);
 #endif
       return value;
     }
 
-    std::string normalized_key_text(std::string text)
+    std::string normalizedKeyText(std::string text)
     {
       for (auto& character : text)
-        character = normalized_key_character(character);
+        character = normalizedKeyCharacter(character);
 
       return text;
     }
 
-    std::string generic_normalized_path(const std::filesystem::path& path)
+    std::string genericNormalizedPath(const std::filesystem::path& path)
     {
       const auto original = path.string();
-      auto normalized = normalize_path_separators(path.lexically_normal().generic_string());
+      auto normalized = normalizePathSeparators(path.lexically_normal().generic_string());
 
 #ifdef _WIN32
-      if (starts_with_windows_network_prefix(original) &&
-          !starts_with_windows_network_prefix(normalized) &&
-          normalized.starts_with(generic_path_separator))
-        normalized.insert(normalized.begin(), generic_path_separator);
+      if (startsWithWindowsNetworkPrefix(original) &&
+          !startsWithWindowsNetworkPrefix(normalized) &&
+          normalized.starts_with(genericPathSeparator))
+        normalized.insert(normalized.begin(), genericPathSeparator);
 #endif
       return normalized;
     }
 
   } // namespace
 
-  std::string normalize_path_separators(std::string text)
+  std::string normalizePathSeparators(std::string text)
   {
-    std::ranges::replace(text, windows_path_separator, generic_path_separator);
+    std::ranges::replace(text, windowsPathSeparator, genericPathSeparator);
 
     return text;
   }
 
-  std::string normalized_relative_path(const std::filesystem::path& path)
+  std::string normalizedRelativePath(const std::filesystem::path& path)
   {
     const auto normalized = path.lexically_normal();
 
@@ -77,20 +77,20 @@ namespace uburu::filesystem
     if (normalized == ".")
       return {};
 
-    return normalize_path_separators(normalized.generic_string());
+    return normalizePathSeparators(normalized.generic_string());
   }
 
-  std::string normalized_absolute_path(const std::filesystem::path& path)
+  std::string normalizedAbsolutePath(const std::filesystem::path& path)
   {
-    return generic_normalized_path(std::filesystem::absolute(path));
+    return genericNormalizedPath(std::filesystem::absolute(path));
   }
 
-  std::string normalized_path_key(const std::filesystem::path& path)
+  std::string normalizedPathKey(const std::filesystem::path& path)
   {
-    return normalized_key_text(generic_normalized_path(path));
+    return normalizedKeyText(genericNormalizedPath(path));
   }
 
-  bool normalized_path_is_same_or_inside(std::string_view path, std::string_view base)
+  bool normalizedPathIsSameOrInside(std::string_view path, std::string_view base)
   {
     if (base.empty())
       return true;
@@ -100,7 +100,7 @@ namespace uburu::filesystem
 
     return path.size() > base.size()
         && path.starts_with(base)
-        && path[base.size()] == generic_path_separator;
+        && path[base.size()] == genericPathSeparator;
   }
 
 } // namespace uburu::filesystem

@@ -19,8 +19,8 @@ namespace uburu::filesystem
   private:
     struct WatchedEntry
     {
-      std::filesystem::path relative_path;
-      std::filesystem::file_time_type modified_at{};
+      std::filesystem::path relativePath;
+      std::filesystem::file_time_type modifiedAt{};
       std::uintmax_t size{0};
       bool directory{false};
     };
@@ -35,8 +35,8 @@ namespace uburu::filesystem
 
     [[nodiscard]] static bool changed(const WatchedEntry& previous, const WatchedEntry& current);
 
-    std::filesystem::path root_;
-    std::unordered_map<std::string, WatchedEntry> entries_;
+    std::filesystem::path root;
+    std::unordered_map<std::string, WatchedEntry> entries;
   };
 
 } // namespace uburu::filesystem

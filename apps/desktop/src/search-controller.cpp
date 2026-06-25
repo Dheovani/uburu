@@ -14,7 +14,7 @@ namespace uburu::app
   namespace
   {
 
-    std::filesystem::path native_path(const QString& path)
+    std::filesystem::path nativePath(const QString& path)
     {
 #ifdef _WIN32
       return std::filesystem::path(path.toStdWString());
@@ -29,21 +29,21 @@ namespace uburu::app
 
   int SearchResultModel::rowCount(const QModelIndex& parent) const
   {
-    return parent.isValid() ? 0 : static_cast<int>(results_.size());
+    return parent.isValid() ? 0 : static_cast<int>(results.size());
   }
 
   QVariant SearchResultModel::data(const QModelIndex& index, int role) const
   {
     if (!index.isValid() || index.row() < 0 ||
-        static_cast<std::size_t>(index.row()) >= results_.size())
+        static_cast<std::size_t>(index.row()) >= results.size())
       return {};
-    const auto& result = results_[static_cast<std::size_t>(index.row())];
+    const auto& result = results[static_cast<std::size_t>(index.row())];
     if (role == PathRole)
       return QString::fromStdString(result.path.generic_string());
     if (role == LocationRole)
       return QStringLiteral("%1:%2").arg(result.line).arg(result.column);
     if (role == PreviewRole)
-      return QString::fromStdString(result.line_text);
+      return QString::fromStdString(result.lineText);
     return {};
   }
 
@@ -55,21 +55,21 @@ namespace uburu::app
   void SearchResultModel::clear()
   {
     beginResetModel();
-    results_.clear();
+    results.clear();
     endResetModel();
   }
 
   void SearchResultModel::append(SearchResult result)
   {
-    const auto row = static_cast<int>(results_.size());
+    const auto row = static_cast<int>(results.size());
     beginInsertRows({}, row, row);
-    results_.push_back(std::move(result));
+    results.push_back(std::move(result));
     endInsertRows();
   }
 
   SearchController::SearchController(QObject* parent)
-      : QObject(parent), status_(tr("Pronto")), results_(this),
-        search_service_(
+      : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
+        searchService(
             std::make_shared<DefaultSearchService>(std::make_shared<search::DirectSearchEngine>(
                 std::make_shared<filesystem::RecursiveFileScanner>())))
   {}
@@ -77,73 +77,74 @@ namespace uburu::app
   SearchController::~SearchController()
   {
     cancel();
-    if (active_watcher_ != nullptr)
-      active_watcher_->waitForFinished();
+    if (activeWatcher != nullptr)
+      activeWatcher->waitForFinished();
   }
 
   QString SearchController::directory() const
   {
-    return directory_;
+    return directoryValue;
   }
 
   QString SearchController::status() const
   {
-    return status_;
+    return statusValue;
   }
 
   bool SearchController::running() const
   {
-    return running_;
+    return runningValue;
   }
 
   QAbstractItemModel* SearchController::results()
   {
-    return &results_;
+    return &resultsModel;
   }
 
   void SearchController::selectDirectory(const QString& url)
   {
-    directory_ = QUrl(url).toLocalFile();
+    directoryValue = QUrl(url).toLocalFile();
     emit directoryChanged();
   }
 
-  void SearchController::startSearch(const QString& expression, bool regex, bool case_sensitive,
-                                     bool whole_word, bool respect_gitignore)
+  void SearchController::startSearch(const QString& expression, bool regex, bool caseSensitive,
+                                     bool wholeWord, bool respectGitignore)
   {
-    if (running_ || directory_.isEmpty() || expression.isEmpty())
+    if (runningValue || directoryValue.isEmpty() || expression.isEmpty())
       return;
 
-    results_.clear();
-    stop_source_ = std::stop_source{};
-    set_running(true);
-    set_status(tr("Buscando…"));
-    SearchQuery query{.root = native_path(directory_),
+    resultsModel.clear();
+    stopSource = std::stop_source{};
+    setRunning(true);
+    setStatus(tr("Buscando…"));
+    SearchQuery query{.root = nativePath(directoryValue),
+                      .scope = {},
                       .expression = expression.toUtf8().toStdString(),
                       .options = {}};
     query.options.mode = regex ? SearchMode::regex : SearchMode::literal;
-    query.options.case_sensitive = case_sensitive;
-    query.options.whole_word = whole_word;
-    query.options.respect_gitignore = respect_gitignore;
-    const auto token = stop_source_.get_token();
+    query.options.caseSensitive = caseSensitive;
+    query.options.wholeWord = wholeWord;
+    query.options.respectGitignore = respectGitignore;
+    const auto token = stopSource.get_token();
 
-    active_watcher_ = new QFutureWatcher<search::SearchSummary>(this);
-    connect(active_watcher_, &QFutureWatcher<search::SearchSummary>::finished, this, [this] {
-      const auto summary = active_watcher_->result();
-      set_status(summary.cancelled ? tr("Busca cancelada")
+    activeWatcher = new QFutureWatcher<search::SearchSummary>(this);
+    connect(activeWatcher, &QFutureWatcher<search::SearchSummary>::finished, this, [this] {
+      const auto summary = activeWatcher->result();
+      setStatus(summary.cancelled ? tr("Busca cancelada")
                                    : tr("%n ocorrência(s) encontrada(s)", nullptr,
                                         static_cast<int>(summary.matches)));
-      set_running(false);
-      active_watcher_->deleteLater();
-      active_watcher_ = nullptr;
+      setRunning(false);
+      activeWatcher->deleteLater();
+      activeWatcher = nullptr;
     });
-    active_watcher_->setFuture(QtConcurrent::run([this, query = std::move(query), token] {
-      return search_service_->search(
+    activeWatcher->setFuture(QtConcurrent::run([this, query = std::move(query), token] {
+      return searchService->search(
           query,
           [this](SearchResult result) {
             QMetaObject::invokeMethod(
                 this,
                 [this, result = std::move(result)]() mutable {
-                  results_.append(std::move(result));
+                  resultsModel.append(std::move(result));
                 },
                 Qt::QueuedConnection);
             return true;
@@ -154,18 +155,18 @@ namespace uburu::app
 
   void SearchController::cancel()
   {
-    stop_source_.request_stop();
+    stopSource.request_stop();
   }
 
-  void SearchController::set_status(QString status)
+  void SearchController::setStatus(QString status)
   {
-    status_ = std::move(status);
+    statusValue = std::move(status);
     emit statusChanged();
   }
 
-  void SearchController::set_running(bool running)
+  void SearchController::setRunning(bool running)
   {
-    running_ = running;
+    runningValue = running;
     emit runningChanged();
   }
 

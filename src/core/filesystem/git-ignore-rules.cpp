@@ -12,72 +12,72 @@ namespace uburu::filesystem
   namespace
   {
 
-    constexpr char comment_marker = '#';
-    constexpr char escape_marker = '\\';
-    constexpr char negation_marker = '!';
-    constexpr char path_separator = '/';
-    constexpr char wildcard_any_sequence = '*';
-    constexpr char wildcard_single_character = '?';
-    constexpr char carriage_return = '\r';
+    constexpr char commentMarker = '#';
+    constexpr char escapeMarker = '\\';
+    constexpr char negationMarker = '!';
+    constexpr char pathSeparator = '/';
+    constexpr char wildcardAnySequence = '*';
+    constexpr char wildcardSingleCharacter = '?';
+    constexpr char carriageReturn = '\r';
     constexpr char space = ' ';
-    constexpr char horizontal_tab = '\t';
+    constexpr char horizontalTab = '\t';
 
-    bool is_space(char value)
+    bool isSpace(char value)
     {
-      return value == space || value == horizontal_tab;
+      return value == space || value == horizontalTab;
     }
 
-    void trim_unescaped_trailing_spaces(std::string& text)
+    void trimUnescapedTrailingSpaces(std::string& text)
     {
-      while (!text.empty() && is_space(text.back())) {
-        std::size_t slash_count = 0;
-        for (std::size_t index = text.size() - 1; index > 0 && text[index - 1] == escape_marker;
+      while (!text.empty() && isSpace(text.back())) {
+        std::size_t slashCount = 0;
+        for (std::size_t index = text.size() - 1; index > 0 && text[index - 1] == escapeMarker;
              --index)
-          ++slash_count;
+          ++slashCount;
 
-        if (slash_count % 2 != 0)
+        if (slashCount % 2 != 0)
           break;
 
         text.pop_back();
       }
     }
 
-    std::string unescape_leading_marker(std::string text)
+    std::string unescapeLeadingMarker(std::string text)
     {
-      if (text.size() >= 2 && text.front() == escape_marker &&
-         (text[1] == comment_marker || text[1] == negation_marker))
+      if (text.size() >= 2 && text.front() == escapeMarker &&
+         (text[1] == commentMarker || text[1] == negationMarker))
         text.erase(0, 1);
 
       return text;
     }
 
-    bool glob_matches(std::string_view pattern, std::string_view text)
+    bool globMatches(std::string_view pattern, std::string_view text)
     {
-      std::size_t pattern_index = 0;
-      std::size_t text_index = 0;
-      std::optional<std::size_t> star_pattern_index;
-      std::size_t star_text_index = 0;
+      std::size_t patternIndex = 0;
+      std::size_t textIndex = 0;
+      std::optional<std::size_t> starPatternIndex;
+      std::size_t starTextIndex = 0;
 
-      while (text_index < text.size()) {
-        if (pattern_index < pattern.size() &&
-            (pattern[pattern_index] == wildcard_single_character ||
-             pattern[pattern_index] == text[text_index])) {
-          ++pattern_index;
-          ++text_index;
-
-          continue;
-        }
-
-        if (pattern_index < pattern.size() && pattern[pattern_index] == wildcard_any_sequence) {
-          star_pattern_index = pattern_index++;
-          star_text_index = text_index;
+      while (textIndex < text.size()) {
+        if (patternIndex < pattern.size() &&
+            (pattern[patternIndex] == wildcardSingleCharacter ||
+             pattern[patternIndex] == text[textIndex])) {
+          ++patternIndex;
+          ++textIndex;
 
           continue;
         }
 
-        if (star_pattern_index) {
-          pattern_index = *star_pattern_index + 1;
-          text_index = ++star_text_index;
+        if (patternIndex < pattern.size() && pattern[patternIndex] == wildcardAnySequence) {
+          starPatternIndex = patternIndex++;
+          starTextIndex = textIndex;
+
+          continue;
+        }
+
+        if (starPatternIndex) {
+          patternIndex = *starPatternIndex + 1;
+          textIndex = ++starTextIndex;
 
           continue;
         }
@@ -85,13 +85,13 @@ namespace uburu::filesystem
         return false;
       }
 
-      while (pattern_index < pattern.size() && pattern[pattern_index] == wildcard_any_sequence)
-        ++pattern_index;
+      while (patternIndex < pattern.size() && pattern[patternIndex] == wildcardAnySequence)
+        ++patternIndex;
 
-      return pattern_index == pattern.size();
+      return patternIndex == pattern.size();
     }
 
-    std::string path_relative_to_base(std::string_view path, std::string_view base)
+    std::string pathRelativeToBase(std::string_view path, std::string_view base)
     {
       if (base.empty())
         return std::string{path};
@@ -99,111 +99,111 @@ namespace uburu::filesystem
       if (path == base)
         return {};
 
-      if (!normalized_path_is_same_or_inside(path, base))
+      if (!normalizedPathIsSameOrInside(path, base))
         return {};
 
       return std::string{path.substr(base.size() + 1)};
     }
 
-    bool basename_rule_matches(const GitIgnoreRule& rule, std::string_view relative_to_base, bool is_directory)
+    bool basenameRuleMatches(const GitIgnoreRule& rule, std::string_view relativeToBase, bool is_directory)
     {
-      if (rule.directory_only && !is_directory) {
-        std::size_t search_start = 0;
-        while (search_start < relative_to_base.size()) {
-          const auto separator = relative_to_base.find(path_separator, search_start);
+      if (rule.directoryOnly && !is_directory) {
+        std::size_t searchStart = 0;
+        while (searchStart < relativeToBase.size()) {
+          const auto separator = relativeToBase.find(pathSeparator, searchStart);
           const auto component =
             separator == std::string_view::npos
-              ? relative_to_base.substr(search_start)
-              : relative_to_base.substr(search_start, separator - search_start);
+              ? relativeToBase.substr(searchStart)
+              : relativeToBase.substr(searchStart, separator - searchStart);
 
-          if (glob_matches(rule.pattern, component))
+          if (globMatches(rule.pattern, component))
             return true;
 
           if (separator == std::string_view::npos)
             break;
 
-          search_start = separator + 1;
+          searchStart = separator + 1;
         }
 
         return false;
       }
 
-      const auto separator = relative_to_base.find_last_of(path_separator);
+      const auto separator = relativeToBase.find_last_of(pathSeparator);
       const auto basename = separator == std::string_view::npos
-        ? relative_to_base
-        : relative_to_base.substr(separator + 1);
+        ? relativeToBase
+        : relativeToBase.substr(separator + 1);
 
-      return glob_matches(rule.pattern, basename);
+      return globMatches(rule.pattern, basename);
     }
 
-    bool path_rule_matches(const GitIgnoreRule& rule, std::string_view relative_to_base, bool is_directory)
+    bool pathRuleMatches(const GitIgnoreRule& rule, std::string_view relativeToBase, bool is_directory)
     {
-      if (rule.directory_only && !is_directory && !relative_to_base.starts_with(rule.pattern + "/"))
+      if (rule.directoryOnly && !is_directory && !relativeToBase.starts_with(rule.pattern + "/"))
         return false;
 
-      if (rule.directory_only)
-        return relative_to_base == rule.pattern || relative_to_base.starts_with(rule.pattern + "/");
+      if (rule.directoryOnly)
+        return relativeToBase == rule.pattern || relativeToBase.starts_with(rule.pattern + "/");
 
       if (rule.anchored)
-        return glob_matches(rule.pattern, relative_to_base);
+        return globMatches(rule.pattern, relativeToBase);
 
-      if (glob_matches(rule.pattern, relative_to_base))
+      if (globMatches(rule.pattern, relativeToBase))
         return true;
 
       const auto suffix = std::string{"/"} + rule.pattern;
 
-      return relative_to_base.ends_with(suffix);
+      return relativeToBase.ends_with(suffix);
     }
 
-    bool rule_matches(const GitIgnoreRule& rule, const std::filesystem::path& relative_path, bool is_directory)
+    bool ruleMatches(const GitIgnoreRule& rule, const std::filesystem::path& relativePath, bool is_directory)
     {
-      const auto path = normalized_relative_path(relative_path);
-      const auto base = normalized_relative_path(rule.base_directory);
+      const auto path = normalizedRelativePath(relativePath);
+      const auto base = normalizedRelativePath(rule.baseDirectory);
 
-      if (!normalized_path_is_same_or_inside(path, base))
+      if (!normalizedPathIsSameOrInside(path, base))
         return false;
 
-      const auto relative_to_base = path_relative_to_base(path, base);
-      if (relative_to_base.empty())
+      const auto relativeToBase = pathRelativeToBase(path, base);
+      if (relativeToBase.empty())
         return false;
 
-      if (rule.basename_only)
-        return basename_rule_matches(rule, relative_to_base, is_directory);
+      if (rule.basenameOnly)
+        return basenameRuleMatches(rule, relativeToBase, is_directory);
 
-      return path_rule_matches(rule, relative_to_base, is_directory);
+      return pathRuleMatches(rule, relativeToBase, is_directory);
     }
 
-    std::optional<GitIgnoreRule> parse_line(std::string line, const std::filesystem::path& base_directory)
+    std::optional<GitIgnoreRule> parseLine(std::string line, const std::filesystem::path& baseDirectory)
     {
-      if (!line.empty() && line.back() == carriage_return)
+      if (!line.empty() && line.back() == carriageReturn)
         line.pop_back();
 
-      trim_unescaped_trailing_spaces(line);
+      trimUnescapedTrailingSpaces(line);
 
       if (line.empty())
         return std::nullopt;
 
-      if (line.front() == comment_marker)
+      if (line.front() == commentMarker)
         return std::nullopt;
 
-      line = unescape_leading_marker(std::move(line));
+      line = unescapeLeadingMarker(std::move(line));
 
       bool negated = false;
-      if (!line.empty() && line.front() == negation_marker) {
+      if (!line.empty() && line.front() == negationMarker) {
         negated = true;
         line.erase(0, 1);
       }
 
-      line = normalize_path_separators(std::move(line));
+      line = normalizePathSeparators(std::move(line));
 
-      bool directory_only = false;
-      while (!line.empty() && line.back() == path_separator) {
-        directory_only = true;
+      bool directoryOnly = false;
+      while (!line.empty() && line.back() == pathSeparator) {
+        directoryOnly = true;
         line.pop_back();
       }
 
       bool anchored = false;
-      while (!line.empty() && line.front() == path_separator) {
+      while (!line.empty() && line.front() == pathSeparator) {
         anchored = true;
         line.erase(0, 1);
       }
@@ -211,27 +211,27 @@ namespace uburu::filesystem
       if (line.empty())
         return std::nullopt;
 
-      const bool basename_only = line.find(path_separator) == std::string::npos;
+      const bool basenameOnly = line.find(pathSeparator) == std::string::npos;
 
-      return GitIgnoreRule{.base_directory = base_directory,
+      return GitIgnoreRule{.baseDirectory = baseDirectory,
                            .pattern = std::move(line),
                            .negated = negated,
-                           .directory_only = directory_only,
+                           .directoryOnly = directoryOnly,
                            .anchored = anchored,
-                           .basename_only = basename_only};
+                           .basenameOnly = basenameOnly};
     }
 
   } // namespace
 
-  std::vector<GitIgnoreRule> parse_git_ignore(std::string_view content,
-                                              const std::filesystem::path& base_directory)
+  std::vector<GitIgnoreRule> parseGitIgnore(std::string_view content,
+                                              const std::filesystem::path& baseDirectory)
   {
     std::istringstream stream{std::string{content}};
     std::vector<GitIgnoreRule> rules;
     std::string line;
 
     while (std::getline(stream, line)) {
-      auto rule = parse_line(std::move(line), base_directory);
+      auto rule = parseLine(std::move(line), baseDirectory);
       if (rule)
         rules.push_back(std::move(*rule));
     }
@@ -239,26 +239,26 @@ namespace uburu::filesystem
     return rules;
   }
 
-  void GitIgnoreRules::append_file(const std::filesystem::path& ignore_file,
-                                   const std::filesystem::path& base_directory)
+  void GitIgnoreRules::appendFile(const std::filesystem::path& ignoreFile,
+                                   const std::filesystem::path& baseDirectory)
   {
-    std::ifstream stream(ignore_file, std::ios::binary);
+    std::ifstream stream(ignoreFile, std::ios::binary);
     if (!stream)
       return;
 
     const std::string content{std::istreambuf_iterator<char>{stream},
                               std::istreambuf_iterator<char>{}};
-    auto parsed_rules = parse_git_ignore(content, base_directory);
-    rules_.insert(rules_.end(), std::make_move_iterator(parsed_rules.begin()),
-                  std::make_move_iterator(parsed_rules.end()));
+    auto parsedRules = parseGitIgnore(content, baseDirectory);
+    rules.insert(rules.end(), std::make_move_iterator(parsedRules.begin()),
+                  std::make_move_iterator(parsedRules.end()));
   }
 
-  bool GitIgnoreRules::ignores(const std::filesystem::path& relative_path, bool is_directory) const
+  bool GitIgnoreRules::ignores(const std::filesystem::path& relativePath, bool is_directory) const
   {
     std::optional<bool> ignored;
 
-    for (const auto& rule : rules_) {
-      if (rule_matches(rule, relative_path, is_directory))
+    for (const auto& rule : rules) {
+      if (ruleMatches(rule, relativePath, is_directory))
         ignored = !rule.negated;
     }
 
@@ -267,7 +267,7 @@ namespace uburu::filesystem
 
   bool GitIgnoreRules::empty() const
   {
-    return rules_.empty();
+    return rules.empty();
   }
 
 } // namespace uburu::filesystem

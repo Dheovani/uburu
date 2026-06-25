@@ -7,8 +7,8 @@
 namespace uburu::search
 {
 
-  [[nodiscard]] std::vector<SearchRoot> effective_search_roots(const SearchQuery& query);
+  [[nodiscard]] std::vector<SearchRoot> effectiveSearchRoots(const SearchQuery& query);
 
-  [[nodiscard]] SearchOptions options_for_root(const SearchOptions& options, const SearchRoot& root);
+  [[nodiscard]] SearchOptions optionsForRoot(const SearchOptions& options, const SearchRoot& root);
 
 } // namespace uburu::search

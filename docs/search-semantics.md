@@ -35,7 +35,7 @@ busca direta resolve roots efetivos assim:
 2. caso contrário, usa `SearchQuery::root` com os filtros globais de `SearchOptions`.
 
 `SearchResult::path` continua relativo ao root que produziu o resultado. Para desambiguar resultados
-com o mesmo caminho relativo em roots diferentes, `SearchResult::search_root` carrega a raiz física de
+com o mesmo caminho relativo em roots diferentes, `SearchResult::searchRoot` carrega a raiz física de
 origem.
 
 ## Validação da consulta
@@ -48,23 +48,23 @@ serviços possam traduzir mensagens sem acoplar texto visível ao core.
 
 Erros iniciais suportados:
 
-- `empty_root`;
-- `root_not_found`;
-- `root_not_directory`;
-- `empty_expression`;
-- `unsupported_search_mode`;
-- `regex_compile_failed`;
-- `regex_resource_limit_exceeded`;
-- `regex_timeout`;
-- `invalid_regex_limit`;
-- `invalid_result_limit`;
-- `invalid_per_file_result_limit`;
-- `invalid_maximum_file_size`;
-- `file_open_failed`;
-- `file_read_failed`.
+- `emptyRoot`;
+- `rootNotFound`;
+- `rootNotDirectory`;
+- `emptyExpression`;
+- `unsupportedSearchMode`;
+- `regexCompileFailed`;
+- `regexResourceLimitExceeded`;
+- `regexTimeout`;
+- `invalidRegexLimit`;
+- `invalidResultLimit`;
+- `invalidPerFileResultLimit`;
+- `invalidMaximumFileSize`;
+- `fileOpenFailed`;
+- `fileReadFailed`.
 
-O modo regex é reportado como `unsupported_search_mode` quando o build não possui PCRE2. Quando
-PCRE2 está disponível, erros de compilação retornam `regex_compile_failed` com mensagem e offset
+O modo regex é reportado como `unsupportedSearchMode` quando o build não possui PCRE2. Quando
+PCRE2 está disponível, erros de compilação retornam `regexCompileFailed` com mensagem e offset
 fornecidos pelo backend.
 
 ## Busca literal
@@ -72,7 +72,7 @@ fornecidos pelo backend.
 A busca literal interpreta a expressão como texto comum. Caracteres com significado especial em
 regex não possuem significado especial nesse modo.
 
-Por padrão, a busca literal é case-insensitive. Quando `case_sensitive` está habilitado, os code
+Por padrão, a busca literal é case-insensitive. Quando `caseSensitive` está habilitado, os code
 points UTF-8 da linha e da expressão devem corresponder exatamente.
 
 A comparação case-insensitive usa case folding Unicode simples, limitado a transformações de um code
@@ -104,7 +104,7 @@ estratégias de highlight, ranking e índice.
 
 ## Palavra inteira
 
-`whole_word` usa limites de palavra para texto natural. Letras ASCII, dígitos ASCII e letras latinas
+`wholeWord` usa limites de palavra para texto natural. Letras ASCII, dígitos ASCII e letras latinas
 pré-compostas são considerados parte de uma palavra. Pontuação e `_` são limites de palavra nesse
 modo.
 
@@ -114,7 +114,7 @@ Exemplos:
 - `ação` não casa em `préação`;
 - `search` casa em `search_engine`, porque `_` é pontuação para texto natural.
 
-Para código-fonte, `whole_identifier` usa limites de identificador. Letras ASCII, dígitos ASCII e `_`
+Para código-fonte, `wholeIdentifier` usa limites de identificador. Letras ASCII, dígitos ASCII e `_`
 são considerados parte do identificador.
 
 Exemplos:
@@ -124,7 +124,7 @@ Exemplos:
 - `search` não casa em `search2`;
 - `search` casa em `call(search)`.
 
-Se `whole_word` e `whole_identifier` forem habilitados ao mesmo tempo, a ocorrência precisa satisfazer
+Se `wholeWord` e `wholeIdentifier` forem habilitados ao mesmo tempo, a ocorrência precisa satisfazer
 as duas regras de boundary.
 
 ## Regex
@@ -133,32 +133,32 @@ Quando `SearchOptions::mode` estiver em `SearchMode::regex`, a expressão é com
 busca com PCRE2 em modo UTF/UCP. A busca reutiliza a regex compilada em todas as linhas processadas,
 evitando recompilar o padrão dentro do loop de arquivos.
 
-Por padrão, regex também respeita `case_sensitive`: quando desabilitado, o padrão é compilado com
+Por padrão, regex também respeita `caseSensitive`: quando desabilitado, o padrão é compilado com
 `PCRE2_CASELESS`.
 
 O matcher tenta habilitar PCRE2 JIT com `PCRE2_JIT_COMPLETE`. Quando JIT é aceito, o resumo da busca
 registra `RegexExecutionMode::jit`. Quando PCRE2 está disponível mas JIT não é aceito para o padrão
 ou build corrente, a busca continua com fallback interpretado e registra
-`RegexExecutionMode::interpreted_fallback`.
+`RegexExecutionMode::interpretedFallback`.
 
 Regex possui limites configuráveis em `SearchOptions`:
 
-- `regex_match_limit`;
-- `regex_depth_limit`;
-- `regex_heap_limit_kib`;
-- `regex_timeout`.
+- `regexMatchLimit`;
+- `regexDepthLimit`;
+- `regexHeapLimitKib`;
+- `regexTimeout`.
 
 Os três primeiros são aplicados no `pcre2_match_context`. O timeout usa callouts automáticos do PCRE2
 e interrompe a tentativa de match quando o orçamento de tempo expira. Quando um limite é atingido, a
-busca para e retorna erro tipado, distinguindo `regex_resource_limit_exceeded` de `regex_timeout`.
+busca para e retorna erro tipado, distinguindo `regexResourceLimitExceeded` de `regexTimeout`.
 
 Regex preserva a mesma unidade de resultado da busca literal: cada ocorrência vira um resultado
-individual, com offset e tamanho em bytes UTF-8. `whole_word` e `whole_identifier` também são
+individual, com offset e tamanho em bytes UTF-8. `wholeWord` e `wholeIdentifier` também são
 aplicados sobre matches regex.
 
-Erros de compilação retornam `regex_compile_failed` com:
+Erros de compilação retornam `regexCompileFailed` com:
 
-- `translation_key`, para a UI traduzir a mensagem visível;
+- `translationKey`, para a UI traduzir a mensagem visível;
 - `context`, com a mensagem técnica fornecida pelo backend;
 - `offset`, quando o PCRE2 informa a posição do erro no padrão.
 
@@ -167,10 +167,10 @@ Erros de compilação retornam `regex_compile_failed` com:
 `SearchOptions::target` define onde a expressão será aplicada:
 
 - `content`: busca apenas no conteúdo dos arquivos;
-- `file_name`: busca apenas no caminho relativo do arquivo;
-- `content_and_file_name`: publica ocorrências tanto no caminho relativo quanto no conteúdo.
+- `fileName`: busca apenas no caminho relativo do arquivo;
+- `contentAndFileName`: publica ocorrências tanto no caminho relativo quanto no conteúdo.
 
-Resultados de nome de arquivo usam `SearchResultKind::file_name`, linha `0` e coluna em base 1 dentro
+Resultados de nome de arquivo usam `SearchResultKind::fileName`, linha `0` e coluna em base 1 dentro
 do caminho relativo. Resultados de conteúdo usam `SearchResultKind::content` e linha em base 1.
 
 A busca por nome de arquivo não abre o arquivo, permitindo encontrar caminhos mesmo quando o conteúdo
@@ -187,7 +187,7 @@ O scanner aplica filtros antes de entregar `FileEntry` ao motor de busca:
 - diretórios excluídos;
 - globs incluídos;
 - globs excluídos;
-- arquivos ocultos, conforme `include_hidden`.
+- arquivos ocultos, conforme `includeHidden`.
 
 Exclusões têm precedência sobre inclusões. Portanto, um arquivo dentro de um diretório incluído ainda
 será ignorado se também cair em um diretório excluído ou glob excluído.
@@ -201,22 +201,22 @@ semântica simples de filtro do Marco 1, não uma implementação completa de `.
 
 ## Limites de resultados
 
-`result_limit` é um limite global da busca. Um resultado só pode ser publicado se ainda estiver dentro
+`resultLimit` é um limite global da busca. Um resultado só pode ser publicado se ainda estiver dentro
 do limite.
 
 Quando o limite é atingido:
 
 - nenhum resultado adicional deve ser emitido;
-- `SearchSummary::limit_reached` deve ser `true`;
+- `SearchSummary::limitReached` deve ser `true`;
 - `SearchSummary::matches` deve contar apenas os resultados publicados.
 
-`per_file_result_limit` limita a quantidade de resultados publicados para um mesmo arquivo. Quando o
+`perFileResultLimit` limita a quantidade de resultados publicados para um mesmo arquivo. Quando o
 limite por arquivo é atingido:
 
 - a busca para de publicar ocorrências daquele arquivo;
 - a varredura continua nos próximos arquivos;
-- `SearchSummary::files_with_match_limit_reached` é incrementado;
-- `SearchSummary::limit_reached` permanece reservado para o limite global.
+- `SearchSummary::filesWithMatchLimitReached` é incrementado;
+- `SearchSummary::limitReached` permanece reservado para o limite global.
 
 ## Ordem determinística
 
@@ -233,7 +233,7 @@ A busca direta publica resultados assim que cada ocorrência é encontrada. Ela 
 inteira terminar para entregar o primeiro resultado ao consumidor. A ordenação determinística é feita
 por diretório, não por materialização antecipada da árvore inteira.
 
-Quando `context_after_lines` é maior que zero, resultados de conteúdo podem ser retidos por até esse
+Quando `contextAfterLines` é maior que zero, resultados de conteúdo podem ser retidos por até esse
 número de linhas para preencher o contexto posterior. Esse atraso é local ao arquivo e não exige
 carregar o arquivo inteiro.
 
@@ -246,7 +246,7 @@ O leitor de texto do core detecta BOM e suporta:
 - UTF-16 BE com BOM;
 - fallback configurável para Latin-1 ou UTF-8 sem BOM.
 
-UTF-8 inválido segue `SearchOptions::invalid_utf8_policy`: substituir por U+FFFD, ignorar o byte
+UTF-8 inválido segue `SearchOptions::invalidUtf8Policy`: substituir por U+FFFD, ignorar o byte
 inválido ou falhar a leitura. A política padrão substitui sequências inválidas para preservar busca
 em arquivos parcialmente corrompidos sem abortar todo o diretório.
 
@@ -257,7 +257,7 @@ apenas por conter NULs alternados.
 ## Finais de linha
 
 A leitura linha a linha suporta `LF`, `CRLF`, `CR` isolado, linhas vazias e arquivo sem newline final.
-Os marcadores de fim de linha não fazem parte de `SearchResult::line_text`, e o leitor registra o tipo
+Os marcadores de fim de linha não fazem parte de `SearchResult::lineText`, e o leitor registra o tipo
 de final de linha em `TextLine` para uso futuro por preview, offsets e diagnósticos.
 
 ## Cancelamento e falhas parciais
@@ -274,7 +274,7 @@ O resumo distingue explicitamente:
 - query inválida.
 
 Falhas ao abrir ou ler um arquivo não interrompem silenciosamente toda a busca. O resumo marca
-`partial_failure`, incrementa `files_with_read_errors` e adiciona um erro tipado com o caminho relativo
+`partialFailure`, incrementa `filesWithReadErrors` e adiciona um erro tipado com o caminho relativo
 no contexto. Resultados já publicados continuam válidos.
 
 Falhas de permissão, arquivos removidos entre scan e leitura, e falhas de stream são normalizadas como

@@ -3,7 +3,7 @@
 namespace uburu::search
 {
 
-  std::vector<SearchRoot> effective_search_roots(const SearchQuery& query)
+  std::vector<SearchRoot> effectiveSearchRoots(const SearchQuery& query)
   {
     if (!query.scope.roots.empty())
       return query.scope.roots;
@@ -13,21 +13,21 @@ namespace uburu::search
 
     return {SearchRoot{
       .path = query.root,
-      .included_directories = query.options.included_directories,
-      .excluded_directories = query.options.excluded_directories}};
+      .includedDirectories = query.options.includedDirectories,
+      .excludedDirectories = query.options.excludedDirectories}};
   }
 
-  SearchOptions options_for_root(const SearchOptions& options, const SearchRoot& root)
+  SearchOptions optionsForRoot(const SearchOptions& options, const SearchRoot& root)
   {
-    auto root_options = options;
+    auto rootOptions = options;
 
-    if (!root.included_directories.empty())
-      root_options.included_directories = root.included_directories;
+    if (!root.includedDirectories.empty())
+      rootOptions.includedDirectories = root.includedDirectories;
 
-    if (!root.excluded_directories.empty())
-      root_options.excluded_directories = root.excluded_directories;
+    if (!root.excludedDirectories.empty())
+      rootOptions.excludedDirectories = root.excludedDirectories;
 
-    return root_options;
+    return rootOptions;
   }
 
 } // namespace uburu::search

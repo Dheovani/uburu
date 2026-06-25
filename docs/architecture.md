@@ -63,7 +63,7 @@ aleatoriedade. Priorização global entre subárvores e ranking por probabilidad
 tratados por uma etapa futura de filas/workers.
 
 Diretórios symlink, junctions e reparse points são tratados como fronteiras explícitas de
-travessia. Por padrão, o scanner não entra nesses diretórios. Quando `SearchOptions::follow_symlinks`
+travessia. Por padrão, o scanner não entra nesses diretórios. Quando `SearchOptions::followSymlinks`
 está ativo, o scanner pode atravessá-los, mas registra identidades canônicas dos diretórios visitados
 para evitar ciclos. Mount points são tratados como diretórios normais nesta fase; uma política futura
 para bloquear cruzamento de volumes deve ser adicionada como opção explícita, não como efeito
@@ -76,7 +76,7 @@ não substitui backends nativos eficientes. `WindowsFileWatcher`, `LinuxFileWatc
 `MacosFileWatcher` implementam os backends nativos iniciais com `ReadDirectoryChangesW`, `inotify` e
 `FSEvents`, respectivamente, preservando o mesmo contrato. O retorno é um `FileChangeBatch`; quando um
 backend detectar overflow, perda de eventos ou snapshot incompleto, ele deve marcar
-`events_may_be_incomplete` e `requires_rescan`. Chamadores devem tratar esse sinal como invalidação da
+`events_may_be_incomplete` e `requiresRescan`. Chamadores devem tratar esse sinal como invalidação da
 sequência incremental e executar um rescan de reconciliação antes de confiar em novos deltas. A escolha
 automática entre backend nativo e fallback deve ser feita por uma factory quando o monitoramento for
 conectado ao pipeline incremental.
@@ -101,10 +101,10 @@ ordenação determinística ou resultados progressivos.
 As regras de `.gitignore` são carregadas por diretório. Arquivos `.gitignore` em subdiretórios
 acrescentam regras com maior precedência para aquela subárvore. A implementação inicial cobre
 comentários, padrões por basename, padrões com caminho, regras ancoradas, diretórios, negação e
-desativação por `SearchOptions::respect_gitignore`.
+desativação por `SearchOptions::respectGitignore`.
 
 O scanner também carrega `.git/info/exclude` a partir da raiz pesquisada e arquivos globais de
-ignore passados explicitamente em `SearchOptions::global_git_ignore_files`. A descoberta automática
+ignore passados explicitamente em `SearchOptions::globalGitIgnoreFiles`. A descoberta automática
 do caminho global configurado no Git fica fora do scanner e deve entrar pelo `GitService` ou pela
 camada de configuração, para não misturar leitura de configuração Git com varredura genérica de
 filesystem.

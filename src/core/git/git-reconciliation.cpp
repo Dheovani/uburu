@@ -5,45 +5,45 @@
 namespace uburu::git
 {
 
-  GitReconciliationPlan plan_reconciliation(const GitChangeState& before, const GitChangeState& after)
+  GitReconciliationPlan planReconciliation(const GitChangeState& before, const GitChangeState& after)
   {
     GitReconciliationPlan plan;
 
     if (before.branch != after.branch) {
-      plan.reasons.push_back(GitReconciliationReason::branch_changed);
+      plan.reasons.push_back(GitReconciliationReason::branchChanged);
     }
 
-    if (before.head_oid != after.head_oid) {
-      plan.reasons.push_back(GitReconciliationReason::head_changed);
+    if (before.headOid != after.headOid) {
+      plan.reasons.push_back(GitReconciliationReason::headChanged);
     }
 
-    if (before.detached_head != after.detached_head) {
-      plan.reasons.push_back(GitReconciliationReason::detached_head_changed);
+    if (before.detachedHead != after.detachedHead) {
+      plan.reasons.push_back(GitReconciliationReason::detachedHeadChanged);
     }
 
-    if (before.index_signature != after.index_signature) {
-      plan.reasons.push_back(GitReconciliationReason::index_changed);
+    if (before.indexSignature != after.indexSignature) {
+      plan.reasons.push_back(GitReconciliationReason::indexChanged);
     }
 
-    if (before.relevant_refs_signature != after.relevant_refs_signature) {
-      plan.reasons.push_back(GitReconciliationReason::refs_changed);
+    if (before.relevantRefsSignature != after.relevantRefsSignature) {
+      plan.reasons.push_back(GitReconciliationReason::refsChanged);
     }
 
-    plan.structural_reconciliation_required =
-      has_reason(plan, GitReconciliationReason::branch_changed) ||
-      has_reason(plan, GitReconciliationReason::head_changed) ||
-      has_reason(plan, GitReconciliationReason::detached_head_changed) ||
-      has_reason(plan, GitReconciliationReason::refs_changed);
+    plan.structuralReconciliationRequired =
+      hasReason(plan, GitReconciliationReason::branchChanged) ||
+      hasReason(plan, GitReconciliationReason::headChanged) ||
+      hasReason(plan, GitReconciliationReason::detachedHeadChanged) ||
+      hasReason(plan, GitReconciliationReason::refsChanged);
 
-    plan.overlay_reconciliation_required =
-      plan.structural_reconciliation_required || has_reason(plan, GitReconciliationReason::index_changed);
+    plan.overlayReconciliationRequired =
+      plan.structuralReconciliationRequired || hasReason(plan, GitReconciliationReason::indexChanged);
 
-    plan.can_reuse_content_by_blob = plan.structural_reconciliation_required;
+    plan.canReuseContentByBlob = plan.structuralReconciliationRequired;
 
     return plan;
   }
 
-  bool has_reason(const GitReconciliationPlan& plan, GitReconciliationReason reason)
+  bool hasReason(const GitReconciliationPlan& plan, GitReconciliationReason reason)
   {
     return std::ranges::find(plan.reasons, reason) != plan.reasons.end();
   }

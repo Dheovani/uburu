@@ -16,48 +16,48 @@ namespace uburu::search
 
   enum class SearchErrorCode
   {
-    empty_root,
-    root_not_found,
-    root_not_directory,
-    empty_expression,
-    unsupported_search_mode,
-    regex_compile_failed,
-    regex_resource_limit_exceeded,
-    regex_timeout,
-    invalid_regex_limit,
-    invalid_result_limit,
-    invalid_per_file_result_limit,
-    invalid_maximum_file_size,
-    file_open_failed,
-    file_read_failed
+    emptyRoot,
+    rootNotFound,
+    rootNotDirectory,
+    emptyExpression,
+    unsupportedSearchMode,
+    regexCompileFailed,
+    regexResourceLimitExceeded,
+    regexTimeout,
+    invalidRegexLimit,
+    invalidResultLimit,
+    invalidPerFileResultLimit,
+    invalidMaximumFileSize,
+    fileOpenFailed,
+    fileReadFailed
   };
 
   struct SearchError
   {
-    SearchErrorCode code{SearchErrorCode::empty_expression};
-    std::string translation_key;
+    SearchErrorCode code{SearchErrorCode::emptyExpression};
+    std::string translationKey;
     std::string context;
     std::optional<std::size_t> offset;
   };
 
   enum class RegexExecutionMode
   {
-    not_used,
+    notUsed,
     jit,
-    interpreted_fallback
+    interpretedFallback
   };
 
   struct SearchSummary
   {
-    std::size_t files_scanned{0};
+    std::size_t filesScanned{0};
     std::size_t matches{0};
-    std::size_t files_with_match_limit_reached{0};
-    std::size_t files_with_read_errors{0};
+    std::size_t filesWithMatchLimitReached{0};
+    std::size_t filesWithReadErrors{0};
     bool cancelled{false};
-    bool limit_reached{false};
-    bool partial_failure{false};
+    bool limitReached{false};
+    bool partialFailure{false};
     std::vector<SearchError> errors;
-    RegexExecutionMode regex_execution_mode{RegexExecutionMode::not_used};
+    RegexExecutionMode regexExecutionMode{RegexExecutionMode::notUsed};
     diagnostics::SearchMetrics metrics;
   };
 

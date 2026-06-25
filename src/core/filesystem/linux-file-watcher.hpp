@@ -23,17 +23,17 @@ namespace uburu::filesystem
 
   private:
     [[nodiscard]] bool available() const;
-    [[nodiscard]] FileChangeBatch unavailable_batch() const;
-    [[nodiscard]] std::filesystem::path relative_from_root(const std::filesystem::path& path) const;
+    [[nodiscard]] FileChangeBatch unavailableBatch() const;
+    [[nodiscard]] std::filesystem::path relativeFromRoot(const std::filesystem::path& path) const;
 
-    void add_directory_watch(const std::filesystem::path& directory);
-    void add_recursive_watches();
-    void remove_watch(int descriptor);
+    void addDirectoryWatch(const std::filesystem::path& directory);
+    void addRecursiveWatches();
+    void removeWatch(int descriptor);
 
-    std::filesystem::path root_;
-    int descriptor_{-1};
-    std::unordered_map<int, std::filesystem::path> watched_directories_;
-    std::vector<unsigned char> buffer_;
+    std::filesystem::path root;
+    int descriptor{-1};
+    std::unordered_map<int, std::filesystem::path> watchedDirectories;
+    std::vector<unsigned char> buffer;
   };
 
 } // namespace uburu::filesystem

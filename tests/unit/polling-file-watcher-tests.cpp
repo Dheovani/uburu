@@ -17,31 +17,31 @@ namespace
   {
   public:
     explicit TemporaryDirectory(std::string name)
-        : path_(std::filesystem::temp_directory_path() / std::move(name))
+        : pathValue(std::filesystem::temp_directory_path() / std::move(name))
     {
       std::error_code error;
 
-      std::filesystem::remove_all(path_, error);
-      std::filesystem::create_directories(path_);
+      std::filesystem::remove_all(pathValue, error);
+      std::filesystem::create_directories(pathValue);
     }
 
     ~TemporaryDirectory()
     {
       std::error_code error;
 
-      std::filesystem::remove_all(path_, error);
+      std::filesystem::remove_all(pathValue, error);
     }
 
     [[nodiscard]] const std::filesystem::path& path() const
     {
-      return path_;
+      return pathValue;
     }
 
   private:
-    std::filesystem::path path_;
+    std::filesystem::path pathValue;
   };
 
-  void write_file(const std::filesystem::path& path, std::string_view content)
+  void writeFile(const std::filesystem::path& path, std::string_view content)
   {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream file(path, std::ios::binary);
@@ -55,15 +55,15 @@ TEST_CASE("polling file watcher reports created files")
   TemporaryDirectory directory("uburu-polling-file-watcher-created-test");
   uburu::filesystem::PollingFileWatcher watcher(directory.path());
 
-  write_file(directory.path() / "created.txt", "created\n");
+  writeFile(directory.path() / "created.txt", "created\n");
 
   const auto batch = watcher.poll();
   const auto& events = batch.events;
 
-  CHECK_FALSE(batch.events_may_be_incomplete);
-  CHECK_FALSE(batch.requires_rescan);
+  CHECK_FALSE(batch.eventsMayBeIncomplete);
+  CHECK_FALSE(batch.requiresRescan);
   REQUIRE(events.size() == 1);
-  CHECK(events.front().relative_path == std::filesystem::path("created.txt"));
+  CHECK(events.front().relativePath == std::filesystem::path("created.txt"));
   CHECK(events.front().kind == uburu::filesystem::FileChangeKind::created);
   CHECK_FALSE(events.front().directory);
 }
@@ -71,18 +71,18 @@ TEST_CASE("polling file watcher reports created files")
 TEST_CASE("polling file watcher reports modified files")
 {
   TemporaryDirectory directory("uburu-polling-file-watcher-modified-test");
-  write_file(directory.path() / "modified.txt", "before\n");
+  writeFile(directory.path() / "modified.txt", "before\n");
   uburu::filesystem::PollingFileWatcher watcher(directory.path());
 
-  write_file(directory.path() / "modified.txt", "after with a different size\n");
+  writeFile(directory.path() / "modified.txt", "after with a different size\n");
 
   const auto batch = watcher.poll();
   const auto& events = batch.events;
 
-  CHECK_FALSE(batch.events_may_be_incomplete);
-  CHECK_FALSE(batch.requires_rescan);
+  CHECK_FALSE(batch.eventsMayBeIncomplete);
+  CHECK_FALSE(batch.requiresRescan);
   REQUIRE(events.size() == 1);
-  CHECK(events.front().relative_path == std::filesystem::path("modified.txt"));
+  CHECK(events.front().relativePath == std::filesystem::path("modified.txt"));
   CHECK(events.front().kind == uburu::filesystem::FileChangeKind::modified);
 }
 
@@ -90,7 +90,7 @@ TEST_CASE("polling file watcher reports deleted files")
 {
   TemporaryDirectory directory("uburu-polling-file-watcher-deleted-test");
   const auto path = directory.path() / "deleted.txt";
-  write_file(path, "deleted\n");
+  writeFile(path, "deleted\n");
   uburu::filesystem::PollingFileWatcher watcher(directory.path());
 
   std::filesystem::remove(path);
@@ -98,17 +98,17 @@ TEST_CASE("polling file watcher reports deleted files")
   const auto batch = watcher.poll();
   const auto& events = batch.events;
 
-  CHECK_FALSE(batch.events_may_be_incomplete);
-  CHECK_FALSE(batch.requires_rescan);
+  CHECK_FALSE(batch.eventsMayBeIncomplete);
+  CHECK_FALSE(batch.requiresRescan);
   REQUIRE(events.size() == 1);
-  CHECK(events.front().relative_path == std::filesystem::path("deleted.txt"));
+  CHECK(events.front().relativePath == std::filesystem::path("deleted.txt"));
   CHECK(events.front().kind == uburu::filesystem::FileChangeKind::deleted);
 }
 
 TEST_CASE("polling file watcher requests rescan after cancelled snapshot")
 {
   TemporaryDirectory directory("uburu-polling-file-watcher-cancelled-test");
-  write_file(directory.path() / "known.txt", "known\n");
+  writeFile(directory.path() / "known.txt", "known\n");
   uburu::filesystem::PollingFileWatcher watcher(directory.path());
 
   std::stop_source cancellation;
@@ -117,16 +117,16 @@ TEST_CASE("polling file watcher requests rescan after cancelled snapshot")
   const auto cancelled = watcher.poll(cancellation.get_token());
 
   CHECK(cancelled.events.empty());
-  CHECK(cancelled.events_may_be_incomplete);
-  CHECK(cancelled.requires_rescan);
+  CHECK(cancelled.eventsMayBeIncomplete);
+  CHECK(cancelled.requiresRescan);
 
-  write_file(directory.path() / "created-after-cancel.txt", "created\n");
+  writeFile(directory.path() / "created-after-cancel.txt", "created\n");
 
   const auto recovered = watcher.poll();
 
-  CHECK_FALSE(recovered.events_may_be_incomplete);
-  CHECK_FALSE(recovered.requires_rescan);
+  CHECK_FALSE(recovered.eventsMayBeIncomplete);
+  CHECK_FALSE(recovered.requiresRescan);
   REQUIRE(recovered.events.size() == 1);
-  CHECK(recovered.events.front().relative_path == std::filesystem::path("created-after-cancel.txt"));
+  CHECK(recovered.events.front().relativePath == std::filesystem::path("created-after-cancel.txt"));
   CHECK(recovered.events.front().kind == uburu::filesystem::FileChangeKind::created);
 }

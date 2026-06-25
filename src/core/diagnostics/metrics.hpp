@@ -8,15 +8,15 @@ namespace uburu::diagnostics
 
   struct SearchMetrics
   {
-    std::chrono::nanoseconds time_to_first_result{};
-    std::chrono::nanoseconds total_time{};
-    std::uint64_t files_processed{0};
-    std::uint64_t bytes_processed{0};
-    std::uint64_t results_emitted{0};
-    std::uint64_t ignored_files{0};
-    std::uint64_t hidden_files{0};
-    std::uint64_t binary_files{0};
-    std::uint64_t binary_files_skipped{0};
+    std::chrono::nanoseconds timeToFirstResult{};
+    std::chrono::nanoseconds totalTime{};
+    std::uint64_t filesProcessed{0};
+    std::uint64_t bytesProcessed{0};
+    std::uint64_t resultsEmitted{0};
+    std::uint64_t ignoredFiles{0};
+    std::uint64_t hiddenFiles{0};
+    std::uint64_t binaryFiles{0};
+    std::uint64_t binaryFilesSkipped{0};
   };
 
   class MetricsSink

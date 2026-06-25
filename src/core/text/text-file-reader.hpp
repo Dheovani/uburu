@@ -16,11 +16,11 @@ namespace uburu::text
   {
     completed,
     cancelled,
-    open_failed,
-    read_failed,
-    binary_skipped,
-    invalid_encoding,
-    line_too_long
+    openFailed,
+    readFailed,
+    binarySkipped,
+    invalidEncoding,
+    lineTooLong
   };
 
   enum class LineEnding
@@ -34,8 +34,8 @@ namespace uburu::text
   struct TextLine
   {
     std::string text;
-    std::size_t line_number{0};
-    std::uintmax_t byte_offset{0};
+    std::size_t lineNumber{0};
+    std::uintmax_t byteOffset{0};
     LineEnding ending{LineEnding::none};
   };
 
@@ -44,20 +44,20 @@ namespace uburu::text
     TextReadStatus status{TextReadStatus::completed};
     TextEncoding encoding{TextEncoding::utf8};
     std::error_code error;
-    std::size_t lines_read{0};
-    bool had_bom{false};
-    bool had_invalid_sequences{false};
+    std::size_t linesRead{0};
+    bool hadBom{false};
+    bool hadInvalidSequences{false};
   };
 
   using TextLineSink = std::function<bool(const TextLine&)>;
 
-  [[nodiscard]] TextReadSummary read_text_file_lines(const std::filesystem::path& path,
+  [[nodiscard]] TextReadSummary readTextFileLines(const std::filesystem::path& path,
                                                      const SearchOptions& options,
                                                      const TextLineSink& sink,
                                                      std::stop_token stop_token = {});
 
-  [[nodiscard]] bool sample_looks_binary(std::string_view sample, TextEncoding encoding);
-  [[nodiscard]] std::size_t visual_column_for_byte_offset(std::string_view utf8_text,
-                                                          std::size_t byte_offset);
+  [[nodiscard]] bool sampleLooksBinary(std::string_view sample, TextEncoding encoding);
+  [[nodiscard]] std::size_t visualColumnForByteOffset(std::string_view utf8Text,
+                                                          std::size_t byteOffset);
 
 } // namespace uburu::text

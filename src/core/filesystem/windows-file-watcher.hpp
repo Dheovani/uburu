@@ -23,12 +23,12 @@ namespace uburu::filesystem
   private:
     struct NativeHandle;
 
-    [[nodiscard]] FileChangeBatch unavailable_batch() const;
-    [[nodiscard]] std::filesystem::path relative_from_root(const std::filesystem::path& path) const;
+    [[nodiscard]] FileChangeBatch unavailableBatch() const;
+    [[nodiscard]] std::filesystem::path relativeFromRoot(const std::filesystem::path& path) const;
 
-    std::filesystem::path root_;
-    std::unique_ptr<NativeHandle> handle_;
-    std::vector<unsigned char> buffer_;
+    std::filesystem::path root;
+    std::unique_ptr<NativeHandle> handle;
+    std::vector<unsigned char> buffer;
   };
 
 } // namespace uburu::filesystem

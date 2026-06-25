@@ -9,19 +9,19 @@
 namespace
 {
 
-  constexpr auto async_poll_interval = std::chrono::milliseconds{1};
-  constexpr auto async_timeout = std::chrono::milliseconds{200};
+  constexpr auto asyncPollInterval = std::chrono::milliseconds{1};
+  constexpr auto asyncTimeout = std::chrono::milliseconds{200};
 
   template <typename Predicate>
   bool eventually(Predicate predicate)
   {
-    const auto deadline = std::chrono::steady_clock::now() + async_timeout;
+    const auto deadline = std::chrono::steady_clock::now() + asyncTimeout;
 
     while (std::chrono::steady_clock::now() < deadline) {
       if (predicate())
         return true;
 
-      std::this_thread::sleep_for(async_poll_interval);
+      std::this_thread::sleep_for(asyncPollInterval);
     }
 
     return predicate();
@@ -53,7 +53,7 @@ TEST_CASE("worker pool normalizes zero workers to one worker")
 {
   uburu::concurrency::WorkerPool pool(0, 1);
 
-  CHECK(pool.worker_count() == 1);
+  CHECK(pool.workerCount() == 1);
 }
 
 TEST_CASE("worker pool rejects submissions after close")
@@ -67,27 +67,27 @@ TEST_CASE("worker pool rejects submissions after close")
 
 TEST_CASE("worker pool forwards stop tokens to tasks")
 {
-  std::atomic<bool> task_started{false};
-  std::atomic<bool> saw_stop{false};
+  std::atomic<bool> taskStarted{false};
+  std::atomic<bool> sawStop{false};
 
   {
     uburu::concurrency::WorkerPool pool(1, 1);
 
     REQUIRE(pool.submit([&](std::stop_token stop_token) {
-      task_started = true;
+      taskStarted = true;
 
       while (!stop_token.stop_requested())
         std::this_thread::sleep_for(std::chrono::milliseconds{1});
 
-      saw_stop = true;
+      sawStop = true;
     }));
 
     REQUIRE(eventually([&] {
-      return task_started.load();
+      return taskStarted.load();
     }));
 
-    pool.request_stop();
+    pool.requestStop();
   }
 
-  CHECK(saw_stop.load());
+  CHECK(sawStop.load());
 }

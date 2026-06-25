@@ -3,6 +3,7 @@
 Uburu é uma aplicação desktop de busca avançada em arquivos e repositórios de software. A base atual oferece uma busca literal direta e progressiva, uma UI Qt Quick não bloqueante e contratos para a futura indexação persistente e consciente de Git.
 
 O planejamento completo de evolução e os critérios para a versão 1.0 estão em [TODO.md](TODO.md).
+Regras de branch, commits e validação local ficam em [docs/development.md](docs/development.md).
 
 ## Dependências
 
@@ -41,9 +42,9 @@ variáveis do ambiente do processo, então defina-as no terminal antes de execut
 No Windows com Qt/MinGW:
 
 ```powershell
-cmake --preset windows-mingw-debug
-cmake --build --preset windows-mingw-debug
-ctest --preset windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test
 .\scripts\run-windows-mingw-desktop.ps1
 .\scripts\deploy-windows-mingw-desktop.ps1
 ```
@@ -51,9 +52,9 @@ ctest --preset windows-mingw-debug
 Para trabalhar apenas no core sem uma instalação do Qt:
 
 ```powershell
-cmake --preset core-windows-mingw-debug
-cmake --build --preset core-windows-mingw-debug
-ctest --preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-mingw-debug
 ```
 
 ## Build manual no Windows com PowerShell

@@ -28,9 +28,9 @@ $env:MINGW_ROOT = "C:\Qt\Tools\mingw1310_64"
 Garanta que Ninja esteja no `PATH` e execute:
 
 ```powershell
-cmake --preset windows-mingw-debug
-cmake --build --preset windows-mingw-debug
-ctest --preset windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test
 ```
 
 Para executar a aplicação sem instalar DLLs no sistema:
@@ -75,9 +75,9 @@ Se o Qt estiver instalado fora dos prefixos padrão do sistema, defina `QT_ROOT`
 O projeto permite `UBURU_BUILD_DESKTOP=OFF` para compilar e testar o core sem Qt:
 
 ```powershell
-cmake --preset core-windows-mingw-debug
-cmake --build --preset core-windows-mingw-debug
-ctest --preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-mingw-debug
 ```
 
 No Linux, use `core-linux-debug` para o mesmo fluxo sem Qt.
@@ -117,10 +117,10 @@ o formatador não oferece o valor `c++23`; essa opção habilita as regras de si
 reconhecidas pela versão instalada.
 
 ```powershell
-cmake --preset core-windows-mingw-debug
-cmake --build --preset format
-cmake --build --preset format-check
-cmake --build --preset tidy
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
 ```
 
 Também é possível formatar um arquivo isolado diretamente:
@@ -138,8 +138,8 @@ O arquivo `.clang-tidy` define o conjunto inicial de checks. Quando `clang-tidy`
 CMake cria o target opcional `tidy`:
 
 ```powershell
-cmake --preset core-windows-mingw-debug
-cmake --build --preset tidy
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
 ```
 
 Esse target é diagnóstico e não participa do build normal. A CI futura deve decidir quando transformar

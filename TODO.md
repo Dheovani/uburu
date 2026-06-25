@@ -29,9 +29,8 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 0 — Engenharia reproduzível e higiene do repositório (P0)
 
-- [ ] Inicializar e documentar o repositório Git, branch principal e política de commits.
-- [x] Adicionar `CMakePresets.json` para Windows/MinGW, Windows/MSVC, Linux e desenvolvimento apenas
-  do core.
+- [x] Inicializar e documentar o repositório Git, branch principal e política de commits.
+- [x] Adicionar `CMakePresets.json` para Windows/MinGW, Windows/MSVC, Linux e desenvolvimento apenas do core.
 - [x] Eliminar comandos dependentes de caminhos locais fixos como `C:\Qt\6.11.1`.
 - [x] Corrigir `README.md` e `docs/build.md` com o fluxo MinGW atualmente validado.
 - [x] Adicionar scripts ou presets para configurar, compilar, testar, formatar e executar a aplicação.
@@ -44,7 +43,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Criar CI para Windows, Linux e, quando viável, macOS.
 - [ ] Executar em CI: configure, build, testes, format-check e análise estática.
 - [x] Definir política de versões mínimas de CMake, Qt, compiladores e vcpkg.
-- [ ] Fixar baseline do vcpkg para builds reproduzíveis.
+- [x] Fixar baseline do vcpkg para builds reproduzíveis.
 - [ ] Adicionar `LICENSE`, `CONTRIBUTING.md`, código de conduta e política de segurança.
 - [ ] Documentar licenças das dependências e obrigações de redistribuição do Qt.
 

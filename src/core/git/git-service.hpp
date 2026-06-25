@@ -28,6 +28,16 @@ namespace uburu::git
     std::string message;
   };
 
+  struct GitChangeState
+  {
+    std::optional<std::string> branch;
+    std::string head_oid;
+    bool detached_head{false};
+    std::string head_signature;
+    std::string index_signature;
+    std::string relevant_refs_signature;
+  };
+
   template <typename T>
   using GitResult = std::variant<T, GitError>;
 
@@ -49,6 +59,8 @@ namespace uburu::git
     file_status(const WorktreeInfo& worktree, const std::filesystem::path& relative_path) const = 0;
     [[nodiscard]] virtual GitResult<std::optional<std::string>>
     blob_hash(const WorktreeInfo& worktree, const std::filesystem::path& relative_path) const = 0;
+    [[nodiscard]] virtual GitResult<GitChangeState>
+    change_state(const WorktreeInfo& worktree) const = 0;
   };
 
 } // namespace uburu::git

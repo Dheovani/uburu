@@ -22,6 +22,8 @@ namespace uburu::git
     file_status(const WorktreeInfo& worktree, const std::filesystem::path& relative_path) const override;
     [[nodiscard]] GitResult<std::optional<std::string>>
     blob_hash(const WorktreeInfo& worktree, const std::filesystem::path& relative_path) const override;
+    [[nodiscard]] GitResult<GitChangeState>
+    change_state(const WorktreeInfo& worktree) const override;
   };
 
 } // namespace uburu::git

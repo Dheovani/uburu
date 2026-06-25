@@ -6,10 +6,16 @@ HEAD e sua branch opcional. Branch ausente com HEAD válido representa detached 
 
 O backend `Libgit2GitService` é a implementação inicial de `GitService`. Ele descobre repositórios via
 libgit2, resolve diretório Git comum, raiz da worktree, branch atual, detached HEAD, OID de `HEAD`,
-status de arquivos e OID de blobs rastreados. As operações retornam `GitResult<T>` com `GitErrorCode`
-tipado, para diferenciar ausência de repositório, falha de leitura e backend indisponível. Git CLI será
-apenas fallback isolado em adapter explícito. Mudanças em `HEAD`, no index e nas refs relevantes
-disparam reconciliação incremental.
+worktrees linked, status de arquivos e OID de blobs rastreados. O status já diferencia arquivos limpos,
+adicionados ao índice, não rastreados, ignorados, modificados, deletados e conflitantes. As operações
+retornam `GitResult<T>` com `GitErrorCode` tipado, para diferenciar ausência de repositório, falha de
+leitura e backend indisponível. Git CLI será apenas fallback isolado em adapter explícito. Mudanças em
+`HEAD`, no index e nas refs relevantes disparam reconciliação incremental.
+
+`GitService::change_state()` expõe um snapshot comparável do estado Git visível para uma worktree:
+branch atual, `HEAD`, detached HEAD e assinaturas de `HEAD`, `index`, ref da branch e `packed-refs`.
+Esse snapshot não substitui watchers de filesystem; ele define o estado que os watchers devem comparar
+para decidir quando invalidar deltas e iniciar reconciliação incremental.
 
 A visão pesquisável é sempre:
 

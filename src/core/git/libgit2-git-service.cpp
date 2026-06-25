@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <memory>
 #include <sstream>
@@ -20,6 +21,17 @@ namespace uburu::git
 
     constexpr std::uint64_t fnv_offset_basis = 14695981039346656037ULL;
     constexpr std::uint64_t fnv_prime = 1099511628211ULL;
+    constexpr std::size_t bytes_per_kibibyte = 1024U;
+    constexpr std::size_t signature_buffer_kibibytes = 8U;
+    constexpr std::size_t signature_buffer_size = signature_buffer_kibibytes * bytes_per_kibibyte;
+
+    [[nodiscard]] std::string hex_hash(std::uint64_t hash)
+    {
+      std::ostringstream output;
+      output << std::hex << std::setw(16) << std::setfill('0') << hash;
+
+      return output.str();
+    }
 
     [[nodiscard]] std::string stable_id(std::string_view prefix, const std::filesystem::path& path)
     {
@@ -32,9 +44,56 @@ namespace uburu::git
       }
 
       std::ostringstream output;
-      output << prefix << '-' << std::hex << std::setw(16) << std::setfill('0') << hash;
+      output << prefix << '-' << hex_hash(hash);
 
       return output.str();
+    }
+
+    [[nodiscard]] std::uint64_t update_hash(std::uint64_t hash, std::string_view bytes)
+    {
+      for (const auto character : bytes) {
+        hash ^= static_cast<unsigned char>(character);
+        hash *= fnv_prime;
+      }
+
+      return hash;
+    }
+
+    [[nodiscard]] std::string file_signature(const std::filesystem::path& path)
+    {
+      if (!std::filesystem::exists(path))
+        return {};
+
+      std::ifstream file(path, std::ios::binary);
+
+      if (!file)
+        return {};
+
+      auto hash = update_hash(fnv_offset_basis, path.lexically_normal().generic_string());
+      std::array<char, signature_buffer_size> buffer{};
+
+      while (file) {
+        file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+        const auto bytes_read = file.gcount();
+
+        if (bytes_read > 0) {
+          hash = update_hash(hash, std::string_view(buffer.data(), static_cast<std::size_t>(bytes_read)));
+        }
+      }
+
+      return hex_hash(hash);
+    }
+
+    [[nodiscard]] std::string combined_signature(const std::vector<std::filesystem::path>& paths)
+    {
+      auto hash = fnv_offset_basis;
+
+      for (const auto& path : paths) {
+        hash = update_hash(hash, path.lexically_normal().generic_string());
+        hash = update_hash(hash, file_signature(path));
+      }
+
+      return hex_hash(hash);
     }
 
     [[nodiscard]] [[maybe_unused]] GitError unavailable_error()
@@ -317,6 +376,39 @@ namespace uburu::git
 #else
     static_cast<void>(worktree);
     static_cast<void>(relative_path);
+
+    return unavailable_error();
+#endif
+  }
+
+  GitResult<GitChangeState> Libgit2GitService::change_state(const WorktreeInfo& worktree) const
+  {
+#if defined(UBURU_HAS_LIBGIT2)
+    git_repository* raw_repository = nullptr;
+
+    if (git_repository_open_ext(&raw_repository, worktree.root.string().c_str(), 0, nullptr) != 0)
+      return git_error(GitErrorCode::repository_open_failed, "failed to open Git repository");
+
+    GitPointer<git_repository, git_repository_free> repository(raw_repository, git_repository_free);
+    const auto git_directory = std::filesystem::path(git_repository_path(repository.get()));
+    const auto common_directory = std::filesystem::path(git_repository_commondir(repository.get()));
+    std::vector<std::filesystem::path> relevant_ref_paths;
+
+    if (auto branch = current_branch(repository.get())) {
+      relevant_ref_paths.push_back(common_directory / "refs" / "heads" / *branch);
+    }
+
+    relevant_ref_paths.push_back(common_directory / "packed-refs");
+
+    return GitChangeState{
+      .branch = current_branch(repository.get()),
+      .head_oid = head_oid(repository.get()).value_or(std::string{}),
+      .detached_head = git_repository_head_detached(repository.get()) == 1,
+      .head_signature = file_signature(git_directory / "HEAD"),
+      .index_signature = file_signature(git_directory / "index"),
+      .relevant_refs_signature = combined_signature(relevant_ref_paths)};
+#else
+    static_cast<void>(worktree);
 
     return unavailable_error();
 #endif

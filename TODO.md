@@ -133,10 +133,10 @@ e UI para avançarem mais rapidamente.
 - [x] Descobrir repositório comum, `.git` arquivo/diretório e raiz da worktree.
 - [x] Gerar identificadores estáveis para repositório e worktree.
 - [x] Detectar branch atual, HEAD e detached HEAD.
-- [ ] Enumerar múltiplas worktrees.
-- [ ] Ler arquivos rastreados, não rastreados, ignorados, modificados, deletados e conflitantes.
+- [x] Enumerar múltiplas worktrees.
+- [x] Ler arquivos rastreados, não rastreados, ignorados, modificados, deletados e conflitantes.
 - [x] Obter blob OID de arquivos rastreados.
-- [ ] Detectar alterações em HEAD, index e refs relevantes.
+- [x] Detectar alterações em HEAD, index e refs relevantes.
 - [ ] Tratar troca de branch como reconciliação estrutural incremental.
 - [ ] Modelar overlay local sobre conteúdo versionado.
 - [ ] Tratar renames e movimentos com reutilização de conteúdo.

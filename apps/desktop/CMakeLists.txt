@@ -11,7 +11,12 @@ qt_add_executable(uburu_desktop
 qt_add_resources(uburu_desktop "uburu_qml"
   PREFIX "/"
   BASE "${CMAKE_CURRENT_SOURCE_DIR}"
-  FILES qml/main.qml
+  FILES
+    qml/main.qml
+    qml/components/PrimaryButton.qml
+    qml/components/SecondaryButton.qml
+    qml/theme/Theme.qml
+    qml/theme/qmldir
 )
 
 qt_add_translations(uburu_desktop

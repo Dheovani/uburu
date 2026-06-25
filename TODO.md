@@ -121,9 +121,9 @@ e UI para avançarem mais rapidamente.
 - [x] Garantir cancelamento cooperativo em scan, fila, leitura e matching.
 - [x] Evitar mutex global e medir contenção.
 - [x] Implementar watchers por interface comum.
-- [ ] Implementar backend Windows com `ReadDirectoryChangesW`.
-- [ ] Implementar backend Linux com `inotify`.
-- [ ] Implementar backend macOS com `FSEvents`.
+- [x] Implementar backend Windows com `ReadDirectoryChangesW`.
+- [x] Implementar backend Linux com `inotify`.
+- [x] Implementar backend macOS com `FSEvents`.
 - [x] Tratar overflow/perda de eventos com rescan de reconciliação.
 - [x] Adicionar fallback inicial documentado quando backend nativo não estiver disponível.
 

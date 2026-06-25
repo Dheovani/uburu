@@ -11,6 +11,15 @@ add_library(uburu_core STATIC
   text/text-matcher.cpp
 )
 
+if(WIN32)
+  target_sources(uburu_core PRIVATE filesystem/windows-file-watcher.cpp)
+elseif(APPLE)
+  target_sources(uburu_core PRIVATE filesystem/macos-file-watcher.cpp)
+  target_link_libraries(uburu_core PRIVATE "-framework CoreServices")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_sources(uburu_core PRIVATE filesystem/linux-file-watcher.cpp)
+endif()
+
 add_library(Uburu::Core ALIAS uburu_core)
 
 target_include_directories(uburu_core PUBLIC ${PROJECT_SOURCE_DIR}/src)

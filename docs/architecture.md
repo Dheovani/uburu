@@ -72,11 +72,14 @@ colateral da varredura.
 Watchers de filesystem usam a interface `FileWatcher`, que emite lotes de eventos relativos de criação,
 modificação e remoção. O backend inicial é `PollingFileWatcher`: ele mantém snapshots normalizados e
 compara tamanho, timestamp e tipo da entrada a cada `poll()`. Esse fallback é portátil e simples, mas
-não substitui backends nativos eficientes. Implementações futuras com `ReadDirectoryChangesW`,
-`inotify` e `FSEvents` devem preservar o mesmo contrato. O retorno é um `FileChangeBatch`; quando um
+não substitui backends nativos eficientes. `WindowsFileWatcher`, `LinuxFileWatcher` e
+`MacosFileWatcher` implementam os backends nativos iniciais com `ReadDirectoryChangesW`, `inotify` e
+`FSEvents`, respectivamente, preservando o mesmo contrato. O retorno é um `FileChangeBatch`; quando um
 backend detectar overflow, perda de eventos ou snapshot incompleto, ele deve marcar
 `events_may_be_incomplete` e `requires_rescan`. Chamadores devem tratar esse sinal como invalidação da
-sequência incremental e executar um rescan de reconciliação antes de confiar em novos deltas.
+sequência incremental e executar um rescan de reconciliação antes de confiar em novos deltas. A escolha
+automática entre backend nativo e fallback deve ser feita por uma factory quando o monitoramento for
+conectado ao pipeline incremental.
 
 Pipelines concorrentes devem usar `concurrency::BoundedQueue` para comunicar etapas de scan, leitura,
 matching e publicação. A fila tem capacidade fixa, bloqueia produtores quando cheia, acorda

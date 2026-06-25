@@ -187,6 +187,22 @@ namespace uburu::filesystem
       return relative;
     }
 
+    GitIgnoreRules initial_ignore_rules(const std::filesystem::path& root,
+                                        const SearchOptions& options)
+    {
+      GitIgnoreRules ignore_rules;
+
+      if (!options.respect_gitignore)
+        return ignore_rules;
+
+      for (const auto& global_ignore_file : options.global_git_ignore_files)
+        ignore_rules.append_file(global_ignore_file, {});
+
+      ignore_rules.append_file(root / ".git" / "info" / "exclude", {});
+
+      return ignore_rules;
+    }
+
   } // namespace
 
   void RecursiveFileScanner::scan(const std::filesystem::path& root, const SearchOptions& options,
@@ -258,7 +274,7 @@ namespace uburu::filesystem
       return true;
     };
 
-    scan_directory(root, GitIgnoreRules{});
+    scan_directory(root, initial_ignore_rules(root, options));
   }
 
 } // namespace uburu::filesystem

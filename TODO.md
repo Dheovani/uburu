@@ -107,7 +107,7 @@ e UI para avançarem mais rapidamente.
 ## Marco 3 — Filesystem, ignore e concorrência (P0)
 
 - [x] Implementar `.gitignore` real com regras aninhadas, negação e precedência.
-- [ ] Suportar arquivos globais de ignore do Git e `.git/info/exclude` quando configurado.
+- [x] Suportar arquivos globais de ignore do Git e `.git/info/exclude` quando configurado.
 - [ ] Separar arquivos ocultos, ignorados e binários nas métricas.
 - [x] Aplicar corretamente diretórios incluídos e excluídos no scanner.
 - [ ] Normalizar caminhos absolutos e relativos por plataforma.

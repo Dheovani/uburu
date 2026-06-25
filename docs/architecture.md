@@ -42,5 +42,8 @@ acrescentam regras com maior precedência para aquela subárvore. A implementaç
 comentários, padrões por basename, padrões com caminho, regras ancoradas, diretórios, negação e
 desativação por `SearchOptions::respect_gitignore`.
 
-Ignores globais do Git e `.git/info/exclude` ainda devem entrar por adaptadores explícitos para não
-misturar descoberta Git com varredura genérica de filesystem.
+O scanner também carrega `.git/info/exclude` a partir da raiz pesquisada e arquivos globais de
+ignore passados explicitamente em `SearchOptions::global_git_ignore_files`. A descoberta automática
+do caminho global configurado no Git fica fora do scanner e deve entrar pelo `GitService` ou pela
+camada de configuração, para não misturar leitura de configuração Git com varredura genérica de
+filesystem.

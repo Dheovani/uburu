@@ -87,6 +87,7 @@ namespace uburu
     std::vector<std::filesystem::path> excluded_directories;
     std::vector<std::string> included_globs;
     std::vector<std::string> excluded_globs;
+    std::vector<std::filesystem::path> global_git_ignore_files;
   };
 
   struct SearchQuery

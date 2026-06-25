@@ -198,3 +198,35 @@ TEST_CASE("recursive scanner can disable gitignore handling")
   REQUIRE(entries.size() == 1);
   CHECK(entries[0].relative_path == std::filesystem::path("debug.log"));
 }
+
+TEST_CASE("recursive scanner respects git info exclude")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-git-info-exclude-test");
+  write_file(directory.path() / ".git" / "info" / "exclude", "*.local\n");
+  write_file(directory.path() / "settings.local", "ignored\n");
+  write_file(directory.path() / "settings.example", "kept\n");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries[0].relative_path == std::filesystem::path("settings.example"));
+}
+
+TEST_CASE("recursive scanner respects configured global git ignore files")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-global-git-ignore-test");
+  const auto global_ignore_file = directory.path() / ".config" / "global-ignore";
+  write_file(global_ignore_file, "*.user\n");
+  write_file(directory.path() / "app.user", "ignored\n");
+  write_file(directory.path() / "app.config", "kept\n");
+
+  uburu::SearchOptions options;
+  options.global_git_ignore_files = {global_ignore_file};
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries[0].relative_path == std::filesystem::path("app.config"));
+}

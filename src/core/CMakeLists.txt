@@ -3,6 +3,7 @@ add_library(uburu_core STATIC
   search/direct-search-engine.cpp
   search/search-errors.cpp
   search/search-query-validation.cpp
+  text/text-file-reader.cpp
   text/regex-matcher.cpp
   text/text-matcher.cpp
 )

@@ -32,6 +32,21 @@ namespace uburu
     file_name
   };
 
+  enum class TextEncoding
+  {
+    utf8,
+    utf16_le,
+    utf16_be,
+    latin1
+  };
+
+  enum class InvalidUtf8Policy
+  {
+    replace,
+    skip,
+    fail
+  };
+
   enum class GitFileStatus
   {
     clean,
@@ -61,6 +76,12 @@ namespace uburu
     std::uint32_t regex_depth_limit{1'000};
     std::uint32_t regex_heap_limit_kib{16U * 1024U};
     std::chrono::milliseconds regex_timeout{100};
+    std::size_t binary_sample_size{8192};
+    std::size_t maximum_line_length{1024U * 1024U};
+    TextEncoding fallback_encoding{TextEncoding::latin1};
+    InvalidUtf8Policy invalid_utf8_policy{InvalidUtf8Policy::replace};
+    std::size_t context_before_lines{0};
+    std::size_t context_after_lines{0};
     std::vector<std::string> extensions;
     std::vector<std::filesystem::path> included_directories;
     std::vector<std::filesystem::path> excluded_directories;
@@ -75,6 +96,13 @@ namespace uburu
     SearchOptions options;
   };
 
+  struct MatchSpan
+  {
+    std::size_t column{0};
+    std::size_t byte_offset{0};
+    std::size_t byte_length{0};
+  };
+
   struct SearchResult
   {
     SearchResultKind kind{SearchResultKind::content};
@@ -83,6 +111,9 @@ namespace uburu
     std::size_t column{0};
     std::size_t match_length{0};
     std::string line_text;
+    std::vector<MatchSpan> highlights;
+    std::vector<std::string> context_before;
+    std::vector<std::string> context_after;
   };
 
   struct FileEntry

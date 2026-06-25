@@ -5,6 +5,7 @@ add_executable(uburu_core_tests
   unit/recursive-file-scanner-tests.cpp
   unit/regex-matcher-tests.cpp
   unit/search-query-validation-tests.cpp
+  unit/text-file-reader-tests.cpp
   unit/text-matcher-tests.cpp
 )
 

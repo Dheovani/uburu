@@ -5,6 +5,7 @@
 ```text
 QML -> SearchController -> SearchEngine
                            |-> FileScanner
+                           |-> TextFileReader
                            |-> Text matcher
 
 IndexService -> GitService / StorageService / FileScanner
@@ -19,3 +20,13 @@ Os tipos compartilhados ficam em `src/shared/types`. Eles modelam identidade ló
 O `SearchController` agenda a busca no pool de `QtConcurrent`. Resultados são devolvidos progressivamente à thread da UI por eventos enfileirados. O core usa `std::stop_token`, permitindo que CLI, testes ou outras interfaces usem o mesmo cancelamento sem Qt.
 
 Os próximos serviços concretos devem ser construídos atrás das interfaces existentes. Operações de filesystem, Git ou SQLite não devem migrar para o controller.
+
+## Leitura de texto
+
+`core/text` possui um leitor de arquivos orientado a linhas que entrega texto UTF-8 ao motor de
+busca. O `SearchEngine` não interpreta BOM, UTF-16, Latin-1, binários ou finais de linha diretamente;
+ele consome `TextLine` e delega matching para `text-matcher` ou `regex-matcher`.
+
+Essa separação mantém encoding, política de binários, limites de linha e contexto de preview fora da
+lógica de busca, preservando a possibilidade de evoluir para leitores mais especializados sem mudar
+o contrato público do engine.

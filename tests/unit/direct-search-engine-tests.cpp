@@ -85,6 +85,13 @@ namespace
     return {.root = std::move(root), .expression = std::move(expression), .options = {}};
   }
 
+  void write_bytes(const std::filesystem::path& path, const std::vector<unsigned char>& bytes)
+  {
+    std::ofstream file(path, std::ios::binary);
+    for (const auto byte : bytes)
+      file.put(static_cast<char>(byte));
+  }
+
 } // namespace
 
 TEST_CASE("an empty expression does not start filesystem traversal")
@@ -267,6 +274,87 @@ TEST_CASE("direct search supports CRLF, LF, empty lines and files without final 
   CHECK(results[0].column == 1);
   CHECK(results[1].line == 3);
   CHECK(results[1].column == 6);
+  CHECK(summary.matches == 2);
+}
+
+TEST_CASE("direct search decodes UTF-16 content before matching")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-utf16-content.txt";
+  write_bytes(
+      path, {0xFFU, 0xFEU, 'n', 0x00U, 'e', 0x00U, 'e', 0x00U, 'd', 0x00U, 'l', 0x00U, 'e', 0x00U});
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = make_query(std::filesystem::temp_directory_path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().line_text == "needle");
+  CHECK(results.front().column == 1);
+  CHECK(summary.matches == 1);
+}
+
+TEST_CASE("direct search skips sampled binary files without reporting read errors")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-binary-content.bin";
+  write_bytes(path, {'n', 'e', 'e', 'd', 'l', 'e', 0x00U, 'n', 'e', 'e', 'd', 'l', 'e'});
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = make_query(std::filesystem::temp_directory_path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+  cleanup();
+
+  CHECK(results.empty());
+  CHECK(summary.matches == 0);
+  CHECK_FALSE(summary.partial_failure);
+  CHECK(summary.files_with_read_errors == 0);
+}
+
+TEST_CASE("direct search returns context lines and highlight spans")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-context-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "before\nneedle and needle\nafter\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = make_query(std::filesystem::temp_directory_path(), "needle");
+  query.options.context_before_lines = 1;
+  query.options.context_after_lines = 1;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 2);
+  CHECK(results.front().context_before == std::vector<std::string>{"before"});
+  CHECK(results.front().context_after == std::vector<std::string>{"after"});
+  REQUIRE(results.front().highlights.size() == 2);
+  CHECK(results.front().highlights[0].column == 1);
+  CHECK(results.front().highlights[1].column == 12);
   CHECK(summary.matches == 2);
 }
 

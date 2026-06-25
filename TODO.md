@@ -86,24 +86,24 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 2 — Texto, encoding e arquivos grandes (P0)
 
-- [ ] Criar abstração de leitor de texto streaming no módulo `core/text`.
-- [ ] Detectar BOM e suportar UTF-8, UTF-16 LE e UTF-16 BE.
-- [ ] Definir fallback configurável para Latin-1 e encoding desconhecido.
-- [ ] Validar UTF-8 e definir política explícita para sequências inválidas.
-- [ ] Detectar binários usando amostragem robusta, não apenas byte NUL por linha.
-- [ ] Tornar tamanho da amostra e política de binários configuráveis.
-- [ ] Ler arquivos grandes em blocos sem perder matches nas fronteiras.
-- [ ] Preservar offsets corretos entre bytes, code points, linha e coluna visual.
-- [ ] Extrair contexto anterior/posterior sem carregar o arquivo inteiro.
-- [ ] Produzir spans de highlight para múltiplas ocorrências.
-- [ ] Suportar LF, CRLF e CR isolado de maneira documentada.
+- [x] Criar abstração de leitor de texto streaming no módulo `core/text`.
+- [x] Detectar BOM e suportar UTF-8, UTF-16 LE e UTF-16 BE.
+- [x] Definir fallback configurável para Latin-1 e encoding desconhecido.
+- [x] Validar UTF-8 e definir política explícita para sequências inválidas.
+- [x] Detectar binários usando amostragem robusta, não apenas byte NUL por linha.
+- [x] Tornar tamanho da amostra e política de binários configuráveis.
+- [x] Ler arquivos grandes em blocos sem perder matches nas fronteiras.
+- [x] Preservar offsets corretos entre bytes, code points, linha e coluna visual.
+- [x] Extrair contexto anterior/posterior sem carregar o arquivo inteiro.
+- [x] Produzir spans de highlight para múltiplas ocorrências.
+- [x] Suportar LF, CRLF e CR isolado de maneira documentada.
 - [ ] Adicionar normalização Unicode opcional com custo mensurável.
 - [ ] Definir limites para linha extremamente longa e arquivos esparsos.
 
 ### Critério de saída
 
-- [ ] Buscar em arquivos maiores que o orçamento de memória sem alocação proporcional ao tamanho.
-- [ ] Fixtures determinísticas cobrem todos os encodings e finais de linha suportados.
+- [x] Buscar em arquivos maiores que o orçamento de memória sem alocação proporcional ao tamanho.
+- [x] Fixtures determinísticas cobrem todos os encodings e finais de linha suportados.
 
 ## Marco 3 — Filesystem, ignore e concorrência (P0)
 

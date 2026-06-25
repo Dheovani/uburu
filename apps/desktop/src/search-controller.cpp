@@ -118,7 +118,8 @@ namespace uburu::app
     set_running(true);
     set_status(tr("Buscando…"));
     SearchQuery query{.root = native_path(directory_),
-                      .expression = expression.toUtf8().toStdString()};
+                      .expression = expression.toUtf8().toStdString(),
+                      .options = {}};
     query.options.mode = regex ? SearchMode::regex : SearchMode::literal;
     query.options.case_sensitive = case_sensitive;
     query.options.whole_word = whole_word;

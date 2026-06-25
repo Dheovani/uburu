@@ -12,9 +12,11 @@ Cada ocorrência deve conter:
 
 - caminho relativo ao diretório pesquisado;
 - linha em base 1;
-- coluna em base 1;
-- tamanho da ocorrência;
-- texto da linha para preview e highlight.
+- coluna visual em base 1;
+- tamanho da ocorrência em bytes UTF-8;
+- texto da linha para preview;
+- spans de highlight da linha;
+- contexto anterior/posterior quando configurado.
 
 Se uma linha contém mais de uma ocorrência, cada ocorrência é publicada como um `SearchResult`
 separado.
@@ -61,11 +63,12 @@ point para um code point. Isso cobre ASCII e letras latinas pré-compostas comun
 `ação` e `CAFÉ` contra `café`.
 
 Ainda não há normalização canônica. Portanto, `é` pré-composto e `e` + acento combinante podem ser
-tratados como sequências diferentes até o Marco 2 introduzir normalização Unicode opcional e política
-formal de encoding.
+tratados como sequências diferentes até introduzirmos uma etapa opcional de normalização com custo
+medido.
 
-Offsets e tamanhos de match ainda são expressos em bytes UTF-8. A separação entre byte offset, code
-point, coluna visual e spans de highlight será formalizada no Marco 2.
+O matcher trabalha sobre texto UTF-8 normalizado pelo leitor de texto. Offsets e tamanhos internos de
+match permanecem em bytes UTF-8; `SearchResult::column` e `MatchSpan::column` são colunas visuais em
+base 1 calculadas por code point UTF-8.
 
 ## Ocorrências sobrepostas
 
@@ -213,11 +216,32 @@ A busca direta publica resultados assim que cada ocorrência é encontrada. Ela 
 inteira terminar para entregar o primeiro resultado ao consumidor. A ordenação determinística é feita
 por diretório, não por materialização antecipada da árvore inteira.
 
+Quando `context_after_lines` é maior que zero, resultados de conteúdo podem ser retidos por até esse
+número de linhas para preencher o contexto posterior. Esse atraso é local ao arquivo e não exige
+carregar o arquivo inteiro.
+
+## Encoding, binários e linhas
+
+O leitor de texto do core detecta BOM e suporta:
+
+- UTF-8 com ou sem BOM;
+- UTF-16 LE com BOM;
+- UTF-16 BE com BOM;
+- fallback configurável para Latin-1 ou UTF-8 sem BOM.
+
+UTF-8 inválido segue `SearchOptions::invalid_utf8_policy`: substituir por U+FFFD, ignorar o byte
+inválido ou falhar a leitura. A política padrão substitui sequências inválidas para preservar busca
+em arquivos parcialmente corrompidos sem abortar todo o diretório.
+
+Arquivos binários são detectados por amostra configurável antes da leitura linha a linha. A detecção
+considera byte NUL e proporção de bytes de controle, mas não classifica UTF-16 com BOM como binário
+apenas por conter NULs alternados.
+
 ## Finais de linha
 
-A leitura linha a linha suporta `LF`, `CRLF`, linhas vazias e arquivo sem newline final. No Marco 1,
-quando uma linha vem de `CRLF`, o `\r` residual permanece no texto da linha porque a política completa
-de normalização de finais de linha será consolidada no Marco 2.
+A leitura linha a linha suporta `LF`, `CRLF`, `CR` isolado, linhas vazias e arquivo sem newline final.
+Os marcadores de fim de linha não fazem parte de `SearchResult::line_text`, e o leitor registra o tipo
+de final de linha em `TextLine` para uso futuro por preview, offsets e diagnósticos.
 
 ## Cancelamento e falhas parciais
 

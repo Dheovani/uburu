@@ -56,6 +56,7 @@ namespace uburu
     bool follow_symlinks{false};
     std::uintmax_t maximum_file_size{16U * 1024U * 1024U};
     std::size_t result_limit{10'000};
+    std::size_t per_file_result_limit{1'000};
     std::uint32_t regex_match_limit{100'000};
     std::uint32_t regex_depth_limit{1'000};
     std::uint32_t regex_heap_limit_kib{16U * 1024U};

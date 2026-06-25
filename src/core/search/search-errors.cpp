@@ -28,8 +28,14 @@ namespace uburu::search
       return "search.error.invalidRegexLimit";
     case SearchErrorCode::invalid_result_limit:
       return "search.error.invalidResultLimit";
+    case SearchErrorCode::invalid_per_file_result_limit:
+      return "search.error.invalidPerFileResultLimit";
     case SearchErrorCode::invalid_maximum_file_size:
       return "search.error.invalidMaximumFileSize";
+    case SearchErrorCode::file_open_failed:
+      return "search.error.fileOpenFailed";
+    case SearchErrorCode::file_read_failed:
+      return "search.error.fileReadFailed";
     }
 
     return "search.error.unknown";

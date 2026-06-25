@@ -17,6 +17,13 @@ namespace uburu::search
   namespace
   {
 
+    enum class PublishDecision
+    {
+      continue_search,
+      stop_current_file,
+      stop_search
+    };
+
     SearchErrorCode error_code_from_regex_status(text::RegexMatchStatus status)
     {
       if (status == text::RegexMatchStatus::timed_out)
@@ -68,25 +75,43 @@ namespace uburu::search
       return find_literal_matches(text, query);
     }
 
-    bool publish_matches(const FileEntry& entry, SearchResultKind kind, std::size_t line_number,
-                         std::string line_text, const std::vector<text::MatchPosition>& matches,
-                         const SearchQuery& query, SearchSummary& summary, const ResultSink& sink)
+    void report_partial_failure(SearchSummary& summary,
+                                SearchErrorCode code,
+                                const FileEntry& entry)
+    {
+      ++summary.files_with_read_errors;
+      summary.partial_failure = true;
+      summary.errors.push_back(make_search_error(code, entry.relative_path.generic_string()));
+    }
+
+    PublishDecision publish_matches(const FileEntry& entry, SearchResultKind kind,
+                                    std::size_t line_number, std::string line_text,
+                                    const std::vector<text::MatchPosition>& matches,
+                                    const SearchQuery& query, SearchSummary& summary,
+                                    std::size_t& file_matches, const ResultSink& sink)
     {
       for (const auto& match : matches) {
         if (summary.matches >= query.options.result_limit) {
           summary.limit_reached = true;
 
-          return false;
+          return PublishDecision::stop_search;
+        }
+
+        if (file_matches >= query.options.per_file_result_limit) {
+          ++summary.files_with_match_limit_reached;
+
+          return PublishDecision::stop_current_file;
         }
 
         ++summary.matches;
+        ++file_matches;
 
         if (!sink(SearchResult{kind, entry.relative_path, line_number, match.offset + 1,
                                match.length, line_text}))
-          return false;
+          return PublishDecision::stop_search;
       }
 
-      return true;
+      return PublishDecision::continue_search;
     }
 
   } // namespace
@@ -130,6 +155,7 @@ namespace uburu::search
             return false;
 
           ++summary.files_scanned;
+          std::size_t file_matches = 0;
 
           if (searches_file_name(query.options.target)) {
             const auto path_text = entry.relative_path.generic_string();
@@ -138,17 +164,26 @@ namespace uburu::search
             if (!path_matches)
               return false;
 
-            if (!publish_matches(entry, SearchResultKind::file_name, 0, path_text, *path_matches,
-                                 query, summary, sink))
+            const auto decision =
+                publish_matches(entry, SearchResultKind::file_name, 0, path_text, *path_matches,
+                                query, summary, file_matches, sink);
+
+            if (decision == PublishDecision::stop_search)
               return false;
+
+            if (decision == PublishDecision::stop_current_file)
+              return true;
           }
 
           if (!searches_content(query.options.target))
             return true;
 
           std::ifstream stream(entry.absolute_path, std::ios::binary);
-          if (!stream)
+          if (!stream) {
+            report_partial_failure(summary, SearchErrorCode::file_open_failed, entry);
+
             return true;
+          }
 
           std::string line;
           std::size_t line_number = 0;
@@ -165,10 +200,19 @@ namespace uburu::search
             if (matches->empty())
               continue;
 
-            if (!publish_matches(entry, SearchResultKind::content, line_number, line, *matches,
-                                 query, summary, sink))
+            const auto decision =
+                publish_matches(entry, SearchResultKind::content, line_number, line, *matches,
+                                query, summary, file_matches, sink);
+
+            if (decision == PublishDecision::stop_search)
               return false;
+
+            if (decision == PublishDecision::stop_current_file)
+              return true;
           }
+
+          if (stream.bad())
+            report_partial_failure(summary, SearchErrorCode::file_read_failed, entry);
 
           return true;
         },

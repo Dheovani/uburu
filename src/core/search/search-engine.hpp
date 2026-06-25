@@ -25,7 +25,10 @@ namespace uburu::search
     regex_timeout,
     invalid_regex_limit,
     invalid_result_limit,
-    invalid_maximum_file_size
+    invalid_per_file_result_limit,
+    invalid_maximum_file_size,
+    file_open_failed,
+    file_read_failed
   };
 
   struct SearchError
@@ -47,8 +50,11 @@ namespace uburu::search
   {
     std::size_t files_scanned{0};
     std::size_t matches{0};
+    std::size_t files_with_match_limit_reached{0};
+    std::size_t files_with_read_errors{0};
     bool cancelled{false};
     bool limit_reached{false};
+    bool partial_failure{false};
     std::vector<SearchError> errors;
     RegexExecutionMode regex_execution_mode{RegexExecutionMode::not_used};
   };

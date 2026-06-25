@@ -70,12 +70,12 @@ e UI para avançarem mais rapidamente.
 - [x] Implementar filtros por glob, extensão, diretório e tamanho.
 - [x] Normalizar extensões e definir sensibilidade a maiúsculas por plataforma.
 - [x] Implementar include/exclude com precedência documentada.
-- [ ] Aplicar limite de resultados global e por arquivo.
-- [ ] Implementar ordenação determinística e estratégia de relevância inicial.
-- [ ] Preservar resultados progressivos sem esperar a conclusão da varredura.
-- [ ] Distinguir cancelamento, falha parcial e conclusão normal no resumo.
-- [ ] Propagar erros de leitura sem interromper silenciosamente toda a busca.
-- [ ] Definir comportamento para arquivos alterados ou removidos durante a leitura.
+- [x] Aplicar limite de resultados global e por arquivo.
+- [x] Implementar ordenação determinística e estratégia de relevância inicial.
+- [x] Preservar resultados progressivos sem esperar a conclusão da varredura.
+- [x] Distinguir cancelamento, falha parcial e conclusão normal no resumo.
+- [x] Propagar erros de leitura sem interromper silenciosamente toda a busca.
+- [x] Definir comportamento para arquivos alterados ou removidos durante a leitura.
 - [ ] Evitar cópias desnecessárias de linhas, caminhos e resultados.
 
 ### Testes obrigatórios
@@ -84,8 +84,8 @@ e UI para avançarem mais rapidamente.
 - [x] Case-sensitive e case-insensitive com ASCII e Unicode.
 - [x] Palavra inteira, identificadores, pontuação e limites Unicode.
 - [ ] Regex válida, inválida, JIT/fallback e cancelamento.
-- [ ] CRLF, LF, arquivo sem newline final e linhas vazias.
-- [ ] Limite de resultados, filtros e ordenação determinística.
+- [x] CRLF, LF, arquivo sem newline final e linhas vazias.
+- [x] Limite de resultados, filtros e ordenação determinística.
 - [ ] Erros de permissão, arquivo removido e leitura parcial.
 
 ## Marco 2 — Texto, encoding e arquivos grandes (P0)

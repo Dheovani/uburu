@@ -131,3 +131,20 @@ TEST_CASE("recursive scanner applies maximum file size before publishing entries
   REQUIRE(entries.size() == 1);
   CHECK(entries.front().relative_path == std::filesystem::path("small.txt"));
 }
+
+TEST_CASE("recursive scanner publishes entries in deterministic path order")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-order-test");
+  write_file(directory.path() / "zeta.txt", "z\n");
+  write_file(directory.path() / "alpha" / "zeta.txt", "az\n");
+  write_file(directory.path() / "alpha" / "beta.txt", "ab\n");
+
+  uburu::SearchOptions options;
+
+  const auto entries = scan_entries(directory.path(), options);
+
+  REQUIRE(entries.size() == 3);
+  CHECK(entries[0].relative_path == std::filesystem::path("alpha") / "beta.txt");
+  CHECK(entries[1].relative_path == std::filesystem::path("alpha") / "zeta.txt");
+  CHECK(entries[2].relative_path == std::filesystem::path("zeta.txt"));
+}

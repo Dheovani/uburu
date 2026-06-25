@@ -1,6 +1,7 @@
 #include "core/filesystem/recursive-file-scanner.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -151,66 +152,91 @@ namespace uburu::filesystem
       });
     }
 
+    std::vector<std::filesystem::directory_entry>
+    sorted_directory_entries(const std::filesystem::path& directory,
+                             std::filesystem::directory_options options)
+    {
+      std::error_code error;
+      std::filesystem::directory_iterator iterator(directory, options, error);
+      const std::filesystem::directory_iterator end;
+      std::vector<std::filesystem::directory_entry> entries;
+
+      while (!error && iterator != end) {
+        entries.push_back(*iterator);
+        iterator.increment(error);
+      }
+
+      std::ranges::sort(entries, [](const auto& left, const auto& right) {
+        return normalized_string(left.path().generic_string()) <
+               normalized_string(right.path().generic_string());
+      });
+
+      return entries;
+    }
+
   } // namespace
 
   void RecursiveFileScanner::scan(const std::filesystem::path& root, const SearchOptions& options,
                                   FileSink sink, std::stop_token stop_token) const
   {
-    std::error_code error;
     auto flags = std::filesystem::directory_options::skip_permission_denied;
+
     if (options.follow_symlinks)
       flags |= std::filesystem::directory_options::follow_directory_symlink;
 
-    std::filesystem::recursive_directory_iterator iterator(root, flags, error);
-    const std::filesystem::recursive_directory_iterator end;
-    while (!error && iterator != end && !stop_token.stop_requested()) {
-      const auto path = iterator->path();
-      const bool hidden = is_hidden(path);
-      const auto relative_path = std::filesystem::relative(path, root, error);
+    std::function<bool(const std::filesystem::path&)> scan_directory;
+    scan_directory = [&](const std::filesystem::path& directory) {
+      for (const auto& item : sorted_directory_entries(directory, flags)) {
+        if (stop_token.stop_requested())
+          return false;
 
-      if (error) {
-        error.clear();
-        iterator.increment(error);
+        std::error_code error;
+        const auto path = item.path();
+        const bool hidden = is_hidden(path);
+        const auto relative_path = std::filesystem::relative(path, root, error);
 
-        continue;
-      }
+        if (error)
+          continue;
 
-      if (iterator->is_directory(error)) {
-        if ((hidden && !options.include_hidden) ||
-            is_excluded_directory(relative_path, options.excluded_directories))
-          iterator.disable_recursion_pending();
+        if (item.is_directory(error)) {
+          if ((hidden && !options.include_hidden) ||
+              is_excluded_directory(relative_path, options.excluded_directories))
+            continue;
 
-        iterator.increment(error);
+          if (!scan_directory(path))
+            return false;
 
-        continue;
-      }
+          continue;
+        }
 
-      if (!iterator->is_regular_file(error) || (hidden && !options.include_hidden) ||
-          !is_included_directory(relative_path, options.included_directories) ||
-          is_excluded_directory(relative_path, options.excluded_directories) ||
-          !has_allowed_extension(path, options.extensions) ||
-          !passes_globs(relative_path, options)) {
-        iterator.increment(error);
+        if (!item.is_regular_file(error) || (hidden && !options.include_hidden) ||
+            !is_included_directory(relative_path, options.included_directories) ||
+            is_excluded_directory(relative_path, options.excluded_directories) ||
+            !has_allowed_extension(path, options.extensions) ||
+            !passes_globs(relative_path, options))
+          continue;
 
-        continue;
-      }
+        const auto size = item.file_size(error);
 
-      const auto size = iterator->file_size(error);
-      if (!error && size <= options.maximum_file_size) {
+        if (error || size > options.maximum_file_size)
+          continue;
+
         FileEntry entry{.absolute_path = path,
                         .relative_path = relative_path,
                         .size = size,
-                        .modified_at = iterator->last_write_time(error),
+                        .modified_at = item.last_write_time(error),
                         .hidden = hidden,
                         .binary = false,
-                        .symlink = iterator->is_symlink(error)};
+                        .symlink = item.is_symlink(error)};
+
         if (!error && !sink(std::move(entry)))
-          return;
+          return false;
       }
 
-      error.clear();
-      iterator.increment(error);
-    }
+      return true;
+    };
+
+    scan_directory(root);
   }
 
 } // namespace uburu::filesystem

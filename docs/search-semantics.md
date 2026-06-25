@@ -39,7 +39,10 @@ Erros iniciais suportados:
 - `regex_timeout`;
 - `invalid_regex_limit`;
 - `invalid_result_limit`;
-- `invalid_maximum_file_size`.
+- `invalid_per_file_result_limit`;
+- `invalid_maximum_file_size`;
+- `file_open_failed`;
+- `file_read_failed`.
 
 O modo regex é reportado como `unsupported_search_mode` quando o build não possui PCRE2. Quando
 PCRE2 está disponível, erros de compilação retornam `regex_compile_failed` com mensagem e offset
@@ -187,18 +190,61 @@ Quando o limite é atingido:
 - `SearchSummary::limit_reached` deve ser `true`;
 - `SearchSummary::matches` deve contar apenas os resultados publicados.
 
+`per_file_result_limit` limita a quantidade de resultados publicados para um mesmo arquivo. Quando o
+limite por arquivo é atingido:
+
+- a busca para de publicar ocorrências daquele arquivo;
+- a varredura continua nos próximos arquivos;
+- `SearchSummary::files_with_match_limit_reached` é incrementado;
+- `SearchSummary::limit_reached` permanece reservado para o limite global.
+
+## Ordem determinística
+
+A busca direta publica arquivos em ordem determinística de caminho. O scanner ordena as entradas de
+cada diretório pelo caminho normalizado antes de visitar arquivos e subdiretórios.
+
+A estratégia inicial de relevância é deliberadamente simples: em buscas combinadas, ocorrências no
+nome/caminho relativo são publicadas antes das ocorrências de conteúdo do mesmo arquivo. Ranking mais
+sofisticado deve ser introduzido depois com métricas e sem quebrar a estabilidade da ordem final.
+
+## Resultados progressivos
+
+A busca direta publica resultados assim que cada ocorrência é encontrada. Ela não espera a varredura
+inteira terminar para entregar o primeiro resultado ao consumidor. A ordenação determinística é feita
+por diretório, não por materialização antecipada da árvore inteira.
+
+## Finais de linha
+
+A leitura linha a linha suporta `LF`, `CRLF`, linhas vazias e arquivo sem newline final. No Marco 1,
+quando uma linha vem de `CRLF`, o `\r` residual permanece no texto da linha porque a política completa
+de normalização de finais de linha será consolidada no Marco 2.
+
 ## Cancelamento e falhas parciais
 
 Cancelamento é cooperativo. A busca deve parar assim que possível depois que o token de cancelamento
 for sinalizado.
 
-O Marco 1 ainda deve distinguir explicitamente:
+O resumo distingue explicitamente:
 
 - conclusão normal;
 - cancelamento;
 - limite atingido;
 - falha parcial de leitura;
 - query inválida.
+
+Falhas ao abrir ou ler um arquivo não interrompem silenciosamente toda a busca. O resumo marca
+`partial_failure`, incrementa `files_with_read_errors` e adiciona um erro tipado com o caminho relativo
+no contexto. Resultados já publicados continuam válidos.
+
+## Arquivos alterados durante a busca
+
+A busca direta representa o estado observado no momento em que cada arquivo é aberto. Se um arquivo
+for alterado entre o scan e a leitura, o conteúdo lido depois da abertura é a fonte da verdade para
+aquela ocorrência.
+
+Se o arquivo for removido, ficar inacessível ou falhar durante a leitura, a busca registra falha
+parcial tipada e continua nos demais arquivos. O Marco 1 não tenta criar snapshots consistentes da
+árvore inteira; essa garantia pertence ao desenho futuro de índice, overlay e integração com Git.
 
 ## Comportamentos ainda pendentes no Marco 1
 

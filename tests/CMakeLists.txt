@@ -8,8 +8,7 @@ add_executable(uburu_core_tests
   unit/text-matcher-tests.cpp
 )
 
-target_link_libraries(uburu_core_tests PRIVATE Uburu::Core Catch2::Catch2WithMain)
-target_compile_features(uburu_core_tests PRIVATE cxx_std_23)
+target_link_libraries(uburu_core_tests PRIVATE Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)
 
 include(Catch)
 catch_discover_tests(uburu_core_tests)

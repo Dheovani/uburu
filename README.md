@@ -24,8 +24,7 @@ O manifesto `vcpkg.json` fornece as dependências não Qt. O Qt pode ser instala
 - Windows/MinGW validado: Qt 6.11.1 com MinGW 13.1.
 - Windows/MSVC: suportado por preset, desde que o ambiente do Visual Studio e um Qt compatível com
   MSVC estejam configurados.
-- vcpkg: obrigatório para dependências não Qt; o baseline ainda será fixado em uma próxima etapa do
-  Marco 0.
+- vcpkg: obrigatório para dependências não Qt; o baseline está fixado em `vcpkg.json`.
 
 ## Build recomendado por presets
 
@@ -34,6 +33,8 @@ Configure estas variáveis de ambiente:
 - `VCPKG_ROOT`: raiz do vcpkg.
 - `QT_ROOT`: prefixo do Qt usado pelo CMake, por exemplo `C:\Qt\6.11.1\mingw_64`.
 - `MINGW_ROOT`: raiz do toolchain MinGW, por exemplo `C:\Qt\Tools\mingw1310_64`.
+- `NINJA_ROOT`: diretório que contém `ninja.exe`, quando Ninja não estiver no `PATH`, por exemplo
+  `C:\Qt\Tools\Ninja`.
 
 Use `.env.example` como referência para criar um `.env` local. O arquivo `.env` é ignorado pelo Git.
 Os scripts PowerShell em `scripts/` carregam `.env` automaticamente; os presets do CMake ainda leem
@@ -82,11 +83,32 @@ com `QT_ROOT` apontando para uma instalação de Qt compatível com MSVC.
 ## Formatação
 
 ```powershell
-cmake --preset core-windows-mingw-debug
-cmake --build --preset format
-cmake --build --preset format-check
-cmake --build --preset tidy
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy -Preset core-windows-mingw-debug
 ```
+
+## Qualidade e CI
+
+Os gates iniciais do core usam presets sem Qt:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-werror-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build -Preset core-windows-mingw-werror-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-mingw-werror-debug
+```
+
+No Linux, os presets equivalentes são `core-linux-werror-debug` e
+`core-linux-sanitize-debug`. O workflow em `.github/workflows/ci.yml` executa configure, build,
+testes, sanitizers e `format-check` para o core.
+
+Consulte também:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [docs/licenses.md](docs/licenses.md)
 
 ## Estado atual
 

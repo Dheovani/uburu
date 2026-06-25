@@ -22,6 +22,7 @@ function Add-RuntimePathForPreset {
   $buildDirectory = switch ($RuntimePreset) {
     "windows-mingw-debug" { "build/windows-mingw-debug" }
     "core-windows-mingw-debug" { "build/core-windows-mingw-debug" }
+    "core-windows-mingw-werror-debug" { "build/core-windows-mingw-werror-debug" }
     default { "" }
   }
 
@@ -39,6 +40,7 @@ function Add-RuntimePathForPreset {
 
 Add-PathEntry (Join-Path $env:MINGW_ROOT "bin")
 Add-PathEntry (Join-Path $env:QT_ROOT "bin")
+Add-PathEntry $env:NINJA_ROOT
 
 switch ($Command) {
   "configure" {
@@ -52,13 +54,13 @@ switch ($Command) {
     & ctest --preset $Preset
   }
   "format" {
-    & cmake --build --preset format
+    & cmake --build --preset $Preset --target format
   }
   "format-check" {
-    & cmake --build --preset format-check
+    & cmake --build --preset $Preset --target format-check
   }
   "tidy" {
-    & cmake --build --preset tidy
+    & cmake --build --preset $Preset --target tidy
   }
 }
 

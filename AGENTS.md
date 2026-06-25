@@ -624,6 +624,7 @@ docs/performance.md
 docs/storage.md
 docs/ui.md
 docs/build.md
+docs/licenses.md
 ```
 
 Sempre que uma decisão arquitetural importante for tomada, registre em documentação.

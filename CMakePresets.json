@@ -74,6 +74,16 @@
       }
     },
     {
+      "name": "core-windows-mingw-werror-debug",
+      "displayName": "Core-only Windows MinGW Debug with warnings as errors",
+      "description": "CI-oriented core build using MinGW with project warnings promoted to errors.",
+      "inherits": "core-windows-mingw-debug",
+      "binaryDir": "${sourceDir}/build/core-windows-mingw-werror-debug",
+      "cacheVariables": {
+        "UBURU_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
       "name": "core-linux-debug",
       "displayName": "Core-only Linux Debug",
       "description": "Build only the UI-independent core and tests on Linux; does not require Qt.",
@@ -84,6 +94,27 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "VCPKG_TARGET_TRIPLET": "x64-linux",
         "UBURU_BUILD_DESKTOP": "OFF"
+      }
+    },
+    {
+      "name": "core-linux-werror-debug",
+      "displayName": "Core-only Linux Debug with warnings as errors",
+      "description": "CI-oriented core build on Linux with project warnings promoted to errors.",
+      "inherits": "core-linux-debug",
+      "binaryDir": "${sourceDir}/build/core-linux-werror-debug",
+      "cacheVariables": {
+        "UBURU_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "core-linux-sanitize-debug",
+      "displayName": "Core-only Linux Debug with sanitizers",
+      "description": "Core build with AddressSanitizer and UndefinedBehaviorSanitizer enabled.",
+      "inherits": "core-linux-debug",
+      "binaryDir": "${sourceDir}/build/core-linux-sanitize-debug",
+      "cacheVariables": {
+        "UBURU_ENABLE_SANITIZERS": "ON",
+        "UBURU_WARNINGS_AS_ERRORS": "ON"
       }
     }
   ],
@@ -105,8 +136,20 @@
       "configurePreset": "core-windows-mingw-debug"
     },
     {
+      "name": "core-windows-mingw-werror-debug",
+      "configurePreset": "core-windows-mingw-werror-debug"
+    },
+    {
       "name": "core-linux-debug",
       "configurePreset": "core-linux-debug"
+    },
+    {
+      "name": "core-linux-werror-debug",
+      "configurePreset": "core-linux-werror-debug"
+    },
+    {
+      "name": "core-linux-sanitize-debug",
+      "configurePreset": "core-linux-sanitize-debug"
     },
     {
       "name": "format",
@@ -154,8 +197,29 @@
       }
     },
     {
+      "name": "core-windows-mingw-werror-debug",
+      "configurePreset": "core-windows-mingw-werror-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
       "name": "core-linux-debug",
       "configurePreset": "core-linux-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-linux-werror-debug",
+      "configurePreset": "core-linux-werror-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-linux-sanitize-debug",
+      "configurePreset": "core-linux-sanitize-debug",
       "output": {
         "outputOnFailure": true
       }

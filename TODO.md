@@ -7,12 +7,9 @@ e UI para avançarem mais rapidamente.
 ## Convenções do backlog
 
 - `[ ]` pendente; `[x]` concluído e validado.
-- `P0` bloqueia uma base confiável; `P1` compõe o produto principal; `P2` profissionaliza e amplia;
-  `P3` é evolução avançada.
-- Um item só pode ser marcado como concluído quando código, testes, documentação e métricas
-  aplicáveis estiverem atualizados.
-- Alterações críticas do core exigem teste automatizado. Alterações de performance exigem benchmark
-  antes/depois ou uma métrica reproduzível.
+- `P0` bloqueia uma base confiável; `P1` compõe o produto principal; `P2` profissionaliza e amplia; `P3` é evolução avançada.
+- Um item só pode ser marcado como concluído quando código, testes, documentação e métricas aplicáveis estiverem atualizados.
+- Alterações críticas do core exigem teste automatizado. Alterações de performance exigem benchmark antes/depois ou uma métrica reproduzível.
 - Textos visíveis devem existir em `pt-BR` e `en-US`.
 
 ## Estado atual validado
@@ -36,20 +33,20 @@ e UI para avançarem mais rapidamente.
 - [x] Adicionar scripts ou presets para configurar, compilar, testar, formatar e executar a aplicação.
 - [x] Criar target ou script de implantação local com `windeployqt` e DLLs do vcpkg.
 - [x] Adicionar `.editorconfig` coerente com `.clang-format` e arquivos Markdown/QML.
-- [ ] Adicionar análise estática com clang-tidy e configurar conjunto inicial de regras.
-- [ ] Adicionar verificação de warnings como erros em CI, com exceções justificadas por compilador.
-- [ ] Adicionar sanitizers em plataformas compatíveis: AddressSanitizer e UndefinedBehaviorSanitizer.
+- [x] Adicionar análise estática com clang-tidy e configurar conjunto inicial de regras.
+- [x] Adicionar verificação de warnings como erros em CI, com exceções justificadas por compilador.
+- [x] Adicionar sanitizers em plataformas compatíveis: AddressSanitizer e UndefinedBehaviorSanitizer.
 - [x] Adicionar verificação automática de formatação sem modificar arquivos (`format-check`).
-- [ ] Criar CI para Windows, Linux e, quando viável, macOS.
-- [ ] Executar em CI: configure, build, testes, format-check e análise estática.
+- [x] Criar CI para Windows, Linux e, quando viável, macOS.
+- [x] Executar em CI: configure, build, testes, format-check e análise estática.
 - [x] Definir política de versões mínimas de CMake, Qt, compiladores e vcpkg.
 - [x] Fixar baseline do vcpkg para builds reproduzíveis.
-- [ ] Adicionar `LICENSE`, `CONTRIBUTING.md`, código de conduta e política de segurança.
-- [ ] Documentar licenças das dependências e obrigações de redistribuição do Qt.
+- [x] Adicionar `LICENSE`, `CONTRIBUTING.md`, código de conduta e política de segurança.
+- [x] Documentar licenças das dependências e obrigações de redistribuição do Qt.
 
 ### Critério de saída
 
-- [ ] Um clone limpo pode ser configurado e testado por preset sem editar caminhos manualmente.
+- [x] Um clone limpo pode ser configurado e testado por preset sem editar caminhos manualmente.
 - [ ] CI verde em pelo menos Windows/MinGW e Linux.
 
 ## Marco 1 — Semântica correta da busca direta (P0)

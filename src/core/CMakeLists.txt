@@ -10,13 +10,7 @@ add_library(uburu_core STATIC
 add_library(Uburu::Core ALIAS uburu_core)
 
 target_include_directories(uburu_core PUBLIC ${PROJECT_SOURCE_DIR}/src)
-target_compile_features(uburu_core PUBLIC cxx_std_23)
-
-if(MSVC)
-  target_compile_options(uburu_core PRIVATE /W4 /permissive- /utf-8)
-else()
-  target_compile_options(uburu_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
-endif()
+target_link_libraries(uburu_core PUBLIC Uburu::ProjectOptions)
 
 find_package(SQLite3 QUIET)
 if(SQLite3_FOUND)

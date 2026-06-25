@@ -9,6 +9,8 @@ máquina informar seus próprios diretórios por variáveis de ambiente.
 - `QT_ROOT`: prefixo do Qt usado pelo CMake. Exemplo Windows/MinGW:
   `C:\Qt\6.11.1\mingw_64`.
 - `MINGW_ROOT`: raiz do toolchain MinGW. Exemplo: `C:\Qt\Tools\mingw1310_64`.
+- `NINJA_ROOT`: diretório que contém `ninja.exe`, quando Ninja não estiver no `PATH`. Exemplo:
+  `C:\Qt\Tools\Ninja`.
 
 `CMakeUserPresets.json` é ignorado pelo Git e pode ser usado para aliases ou caminhos pessoais.
 `.env.example` lista as variáveis esperadas. Copie para `.env` se quiser registrar seus caminhos
@@ -21,6 +23,7 @@ Exemplo PowerShell:
 $env:VCPKG_ROOT = "C:\Users\dheov\vcpkg"
 $env:QT_ROOT = "C:\Qt\6.11.1\mingw_64"
 $env:MINGW_ROOT = "C:\Qt\Tools\mingw1310_64"
+$env:NINJA_ROOT = "C:\Qt\Tools\Ninja"
 ```
 
 ## Windows com Qt/MinGW
@@ -82,6 +85,28 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 
 No Linux, use `core-linux-debug` para o mesmo fluxo sem Qt.
 
+## Presets de qualidade
+
+O projeto separa presets de desenvolvimento e presets de gate. Os presets abaixo não exigem Qt e
+são adequados para CI e validação rápida do core:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-werror-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build -Preset core-windows-mingw-werror-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-mingw-werror-debug
+```
+
+No Linux, use `core-linux-werror-debug` para tratar warnings como erros. Para ASan/UBSan, use
+`core-linux-sanitize-debug`.
+
+As opções CMake correspondentes são:
+
+- `UBURU_WARNINGS_AS_ERRORS`: promove warnings dos targets próprios para erro.
+- `UBURU_ENABLE_SANITIZERS`: habilita AddressSanitizer e UndefinedBehaviorSanitizer onde suportado.
+
+Sanitizers ficam desligados por padrão para não afetar builds normais, empacotamento ou ambientes
+onde o runtime não esteja disponível.
+
 ## Política inicial de versões
 
 - CMake mínimo: 3.25.
@@ -91,8 +116,7 @@ No Linux, use `core-linux-debug` para o mesmo fluxo sem Qt.
 - Windows/MSVC: suportado quando o preset é executado dentro de um ambiente de desenvolvimento do
   Visual Studio e com um Qt compatível em `QT_ROOT`.
 - Linux: preset inicial com Ninja e triplet `x64-linux`.
-- vcpkg: usado para Catch2, SQLite, PCRE2 e libgit2. O baseline será fixado em uma etapa própria do
-  Marco 0.
+- vcpkg: usado para Catch2, SQLite, PCRE2 e libgit2. O baseline está fixado em `vcpkg.json`.
 
 ## Build manual
 
@@ -118,9 +142,9 @@ reconhecidas pela versão instalada.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
-powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format
-powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check
-powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check -Preset core-windows-mingw-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy -Preset core-windows-mingw-debug
 ```
 
 Também é possível formatar um arquivo isolado diretamente:
@@ -139,7 +163,7 @@ CMake cria o target opcional `tidy`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-debug
-powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy -Preset core-windows-mingw-debug
 ```
 
 Esse target é diagnóstico e não participa do build normal. A CI futura deve decidir quando transformar
@@ -149,3 +173,16 @@ Observação: no ambiente Windows/MinGW validado em desenvolvimento, o `clang-ti
 Visual Studio 18 foi encontrado, mas crashou ao analisar o compile database MinGW. Por isso, o alvo
 está versionado como preparação, mas ainda não é critério concluído do Marco 0 até validarmos uma
 versão estável da ferramenta ou outro backend de análise.
+
+## CI
+
+O workflow `.github/workflows/ci.yml` valida inicialmente o core independente de Qt:
+
+- Windows/MinGW com warnings como erros;
+- Linux com warnings como erros;
+- Linux com AddressSanitizer e UndefinedBehaviorSanitizer;
+- testes via CTest;
+- `format-check` sem modificar arquivos.
+
+A aplicação desktop Qt continua validada localmente pelo preset `windows-mingw-debug`. Um job Qt
+completo deve ser adicionado quando o pipeline de instalação/cache do Qt estiver estabilizado.

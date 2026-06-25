@@ -51,14 +51,25 @@ Para o fluxo Windows/MinGW validado:
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test
-powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check -Preset windows-mingw-debug
 ```
 
 Quando a alteração tocar código C++, rode `format` antes do `format-check`:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format -Preset windows-mingw-debug
 ```
+
+Para validar o core com a mesma régua inicial de CI:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-mingw-werror-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command build -Preset core-windows-mingw-werror-debug
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-mingw-werror-debug
+```
+
+No Linux, rode também `core-linux-sanitize-debug` antes de mudanças sensíveis em parsing, regex,
+filesystem, concorrência ou armazenamento.
 
 ## O que não commitar
 

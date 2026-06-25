@@ -97,8 +97,7 @@ e UI para avançarem mais rapidamente.
 - [x] Extrair contexto anterior/posterior sem carregar o arquivo inteiro.
 - [x] Produzir spans de highlight para múltiplas ocorrências.
 - [x] Suportar LF, CRLF e CR isolado de maneira documentada.
-- [ ] Adicionar normalização Unicode opcional com custo mensurável.
-- [ ] Definir limites para linha extremamente longa e arquivos esparsos.
+- [x] Definir limite para linha extremamente longa.
 
 ### Critério de saída
 
@@ -113,6 +112,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Aplicar corretamente diretórios incluídos e excluídos no scanner.
 - [ ] Normalizar caminhos absolutos e relativos por plataforma.
 - [ ] Tratar caminhos longos, UNC e diferenças de caixa no Windows.
+- [ ] Detectar arquivos esparsos e definir política de leitura por plataforma.
 - [ ] Definir política para junctions, symlinks e mount points.
 - [ ] Detectar ciclos ao seguir symlinks.
 - [ ] Implementar pool de workers com tamanho configurável.
@@ -224,6 +224,10 @@ e UI para avançarem mais rapidamente.
 - [ ] Implementar highlight de múltiplas ocorrências e linhas de contexto.
 - [ ] Adicionar números de linha, monospace e tab width configurável.
 - [ ] Abrir arquivo no editor configurado e copiar caminho/ocorrência.
+- [ ] Exibir menu de contexto nativo do sistema operacional ao clicar com botão direito em um
+  arquivo listado, equivalente ao menu do Explorer/Finder/gerenciador de arquivos.
+- [ ] Oferecer fallback próprio para ações essenciais quando o menu nativo não estiver disponível:
+  abrir arquivo, abrir pasta, copiar caminho e copiar ocorrência.
 - [ ] Adicionar atalhos de teclado completos e command palette.
 - [ ] Implementar histórico, buscas salvas e favoritos.
 - [ ] Implementar tema claro, escuro e sistema.
@@ -262,6 +266,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Criar gerador determinístico de datasets.
 - [ ] Medir muitos arquivos pequenos e poucos arquivos grandes.
 - [ ] Medir literal case-sensitive, case-insensitive, palavra inteira e regex/JIT.
+- [ ] Medir custo de normalização Unicode opcional antes de ativá-la no caminho quente.
 - [ ] Medir tempo até primeiro resultado separadamente do tempo total.
 - [ ] Medir scan frio/quente e efeitos do cache do sistema operacional.
 - [ ] Medir indexação inicial, incremental e troca de branch.

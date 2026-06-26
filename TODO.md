@@ -139,20 +139,20 @@ e UI para avançarem mais rapidamente.
 - [x] Obter blob OID de arquivos rastreados.
 - [x] Detectar alterações em HEAD, index e refs relevantes.
 - [x] Tratar troca de branch como reconciliação estrutural incremental.
-- [ ] Modelar overlay local sobre conteúdo versionado.
-- [ ] Tratar renames e movimentos com reutilização de conteúdo.
-- [ ] Definir comportamento para submodules e repositórios aninhados.
-- [ ] Suportar worktrees bloqueadas, removidas e prunable.
-- [ ] Isolar fallback por Git CLI atrás de adapter explícito.
-- [ ] Testar repositórios SHA-1 e preparar tipos para SHA-256.
+- [x] Modelar overlay local sobre conteúdo versionado.
+- [x] Tratar renames e movimentos com reutilização de conteúdo.
+- [x] Definir comportamento para submodules e repositórios aninhados.
+- [x] Suportar worktrees bloqueadas, removidas e prunable.
+- [x] Isolar fallback por Git CLI atrás de adapter explícito.
+- [x] Testar repositórios SHA-1 e preparar tipos para SHA-256.
 
 ### Testes de integração Git
 
-- [ ] Branch normal e detached HEAD.
-- [ ] Troca de branch com arquivos adicionados, removidos e iguais por blob.
-- [ ] Modificado local, novo, deletado, ignorado e conflito.
-- [ ] Múltiplas worktrees e submodule.
-- [ ] Reuso de conteúdo por blob/hash entre branches e worktrees.
+- [x] Branch normal e detached HEAD.
+- [x] Troca de branch com arquivos adicionados, removidos e iguais por blob.
+- [x] Modificado local, novo, deletado, ignorado e conflito.
+- [x] Múltiplas worktrees e submodule.
+- [x] Reuso de conteúdo por blob/hash entre branches e worktrees.
 
 ## Marco 5 — Storage SQLite profissional (P1)
 
@@ -329,7 +329,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Documentar contratos de cancelamento, ownership e threading.
 - [ ] Documentar schema, migrations e recuperação em `docs/storage.md`.
 - [ ] Documentar formato, gerações e invalidação em `docs/indexing.md`.
-- [ ] Documentar branch/worktree/overlay em `docs/git-awareness.md`.
+- [x] Documentar branch/worktree/overlay em `docs/git-awareness.md`.
 - [ ] Documentar métricas e metodologia em `docs/performance.md`.
 - [ ] Documentar estados, atalhos e acessibilidade em `docs/ui.md`.
 - [ ] Manter instruções de build por plataforma testadas em CI.

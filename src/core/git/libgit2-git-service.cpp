@@ -24,6 +24,7 @@ namespace uburu::git
     constexpr std::size_t bytesPerKibibyte = 1024U;
     constexpr std::size_t signatureBufferKibibytes = 8U;
     constexpr std::size_t signatureBufferSize = signatureBufferKibibytes * bytesPerKibibyte;
+    constexpr int gitOidSha256TypeValue = 2;
 
     [[nodiscard]] std::string hexHash(std::uint64_t hash)
     {
@@ -121,10 +122,25 @@ namespace uburu::git
 
     [[nodiscard]] std::string oidToString(const git_oid* oid)
     {
-      std::array<char, GIT_OID_SHA1_HEXSIZE + 1> buffer{};
-      git_oid_tostr(buffer.data(), buffer.size(), oid);
+      return git_oid_tostr_s(oid);
+    }
 
-      return buffer.data();
+    [[nodiscard]] GitObjectHashAlgorithm mapObjectHashAlgorithm(git_oid_t type)
+    {
+      if (type == GIT_OID_SHA1)
+        return GitObjectHashAlgorithm::sha1;
+
+      if (static_cast<int>(type) == gitOidSha256TypeValue)
+        return GitObjectHashAlgorithm::sha256;
+
+      return GitObjectHashAlgorithm::unknown;
+    }
+
+    [[nodiscard]] GitObjectId objectId(git_repository* repository, const git_oid* oid)
+    {
+      return GitObjectId{
+        .algorithm = mapObjectHashAlgorithm(git_repository_oid_type(repository)),
+        .value = oidToString(oid)};
     }
 
     [[nodiscard]] std::optional<std::string> headOid(git_repository* repository)
@@ -175,7 +191,11 @@ namespace uburu::git
         .detachedHead = git_repository_head_detached(repository) == 1};
     }
 
-    [[nodiscard]] WorktreeInfo worktreeInfo(git_repository* repository, const RepositoryInfo& info)
+    [[nodiscard]] WorktreeInfo worktreeInfo(git_repository* repository,
+                                            const RepositoryInfo& info,
+                                            bool locked = false,
+                                            bool prunable = false,
+                                            std::string lockReason = {})
     {
       const auto* workdir = git_repository_workdir(repository);
       const auto root = workdir == nullptr ? std::filesystem::path{} : std::filesystem::path(workdir);
@@ -186,7 +206,10 @@ namespace uburu::git
         .root = root,
         .gitDirectory = std::filesystem::path(git_repository_path(repository)),
         .branch = currentBranch(repository),
-        .headOid = headOid(repository).value_or(std::string{})};
+        .headOid = headOid(repository).value_or(std::string{}),
+        .locked = locked,
+        .prunable = prunable,
+        .lockReason = std::move(lockReason)};
     }
 
     [[nodiscard]] GitFileStatus mapStatus(unsigned int status)
@@ -211,6 +234,107 @@ namespace uburu::git
         return GitFileStatus::modified;
 
       return GitFileStatus::clean;
+    }
+
+    [[nodiscard]] GitOverlayDisposition overlayDisposition(GitFileStatus status)
+    {
+      switch (status) {
+      case GitFileStatus::clean:
+        return GitOverlayDisposition::useIndexedContent;
+      case GitFileStatus::modified:
+        return GitOverlayDisposition::replaceWithWorkingTree;
+      case GitFileStatus::added:
+      case GitFileStatus::untracked:
+      case GitFileStatus::ignored:
+        return GitOverlayDisposition::addWorkingTreeFile;
+      case GitFileStatus::deleted:
+        return GitOverlayDisposition::hideIndexedContent;
+      case GitFileStatus::conflicted:
+        return GitOverlayDisposition::conflict;
+      }
+
+      return GitOverlayDisposition::replaceWithWorkingTree;
+    }
+
+    [[nodiscard]] const git_diff_delta* preferredDelta(const git_status_entry* entry)
+    {
+      if (entry->index_to_workdir != nullptr)
+        return entry->index_to_workdir;
+
+      return entry->head_to_index;
+    }
+
+    [[nodiscard]] std::filesystem::path currentPath(const git_status_entry* entry)
+    {
+      const auto* delta = preferredDelta(entry);
+
+      if (delta == nullptr || delta->new_file.path == nullptr)
+        return {};
+
+      return std::filesystem::path(delta->new_file.path);
+    }
+
+    [[nodiscard]] std::optional<std::filesystem::path> previousPath(const git_status_entry* entry)
+    {
+      const auto renamed = (entry->status & (GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_RENAMED)) != 0U;
+
+      if (!renamed)
+        return std::nullopt;
+
+      const auto* delta = preferredDelta(entry);
+
+      if (delta == nullptr || delta->old_file.path == nullptr)
+        return std::nullopt;
+
+      return std::filesystem::path(delta->old_file.path);
+    }
+
+    [[nodiscard]] GitResult<std::optional<GitObjectId>>
+    reusableBlob(git_repository* repository, const WorktreeInfo& worktree, const std::filesystem::path& relativePath)
+    {
+      git_object* rawTree = nullptr;
+
+      if (git_revparse_single(&rawTree, repository, "HEAD^{tree}") != 0)
+        return std::optional<GitObjectId>{};
+
+      GitPointer<git_object, git_object_free> treeObject(rawTree, git_object_free);
+      const auto* tree = reinterpret_cast<const git_tree*>(treeObject.get());
+      git_tree_entry* rawEntry = nullptr;
+      const auto path = relativePath.generic_string();
+
+      if (git_tree_entry_bypath(&rawEntry, tree, path.c_str()) != 0)
+        return std::optional<GitObjectId>{};
+
+      GitPointer<git_tree_entry, git_tree_entry_free> entry(rawEntry, git_tree_entry_free);
+
+      if (git_tree_entry_type(entry.get()) != GIT_OBJECT_BLOB)
+        return std::optional<GitObjectId>{};
+
+      static_cast<void>(worktree);
+
+      return std::optional<GitObjectId>{objectId(repository, git_tree_entry_id(entry.get()))};
+    }
+
+    [[nodiscard]] std::string lockReason(git_worktree* worktree, bool& locked)
+    {
+      git_buf reason = GIT_BUF_INIT;
+      const auto result = git_worktree_is_locked(&reason, worktree);
+      locked = result > 0;
+      std::string message;
+
+      if (locked && reason.ptr != nullptr)
+        message = reason.ptr;
+
+      git_buf_dispose(&reason);
+
+      return message;
+    }
+
+    [[nodiscard]] bool isPrunable(git_worktree* worktree)
+    {
+      git_worktree_prune_options options = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
+
+      return git_worktree_is_prunable(worktree, &options) == 1;
     }
 
 #endif
@@ -290,7 +414,11 @@ namespace uburu::git
         continue;
 
       GitPointer<git_worktree, git_worktree_free> worktree(rawWorktree, git_worktree_free);
-      auto discovered = discoverRepository(std::filesystem::path(git_worktree_path(worktree.get())));
+      bool locked = false;
+      auto reason = lockReason(worktree.get(), locked);
+      const auto prunable = isPrunable(worktree.get());
+      const auto worktreeRoot = std::filesystem::path(git_worktree_path(worktree.get()));
+      auto discovered = discoverRepository(worktreeRoot);
 
       if (auto* info = std::get_if<RepositoryInfo>(&discovered)) {
         if (!info->worktreeRoot)
@@ -304,8 +432,19 @@ namespace uburu::git
         if (openResult == 0) {
           GitPointer<git_repository, git_repository_free> worktreeRepository(rawWorktreeRepository,
                                                                               git_repository_free);
-          worktrees.push_back(worktreeInfo(worktreeRepository.get(), *info));
+          worktrees.push_back(worktreeInfo(worktreeRepository.get(), *info, locked, prunable, std::move(reason)));
         }
+      } else if (locked || prunable) {
+        worktrees.push_back(WorktreeInfo{
+          .id = stableId("worktree", worktreeRoot),
+          .repositoryId = repository.id,
+          .root = worktreeRoot,
+          .gitDirectory = {},
+          .branch = std::nullopt,
+          .headOid = {},
+          .locked = locked,
+          .prunable = prunable,
+          .lockReason = std::move(reason)});
       }
     }
 
@@ -376,6 +515,124 @@ namespace uburu::git
 #else
     static_cast<void>(worktree);
     static_cast<void>(relativePath);
+
+    return unavailableError();
+#endif
+  }
+
+  GitResult<std::vector<GitOverlayEntry>> Libgit2GitService::workingTreeOverlay(const WorktreeInfo& worktree) const
+  {
+#if defined(UBURU_HAS_LIBGIT2)
+    git_repository* rawRepository = nullptr;
+
+    if (git_repository_open_ext(&rawRepository, worktree.root.string().c_str(), 0, nullptr) != 0)
+      return git_error(GitErrorCode::repositoryOpenFailed, "failed to open Git repository");
+
+    GitPointer<git_repository, git_repository_free> repository(rawRepository, git_repository_free);
+    git_status_options options = GIT_STATUS_OPTIONS_INIT;
+    options.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+    options.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+                    GIT_STATUS_OPT_INCLUDE_IGNORED |
+                    GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+                    GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+                    GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
+
+    git_status_list* rawStatus = nullptr;
+
+    if (git_status_list_new(&rawStatus, repository.get(), &options) != 0)
+      return git_error(GitErrorCode::statusReadFailed, "failed to read Git status list");
+
+    GitPointer<git_status_list, git_status_list_free> statusList(rawStatus, git_status_list_free);
+    std::vector<GitOverlayEntry> overlay;
+    const auto count = git_status_list_entrycount(statusList.get());
+
+    overlay.reserve(count);
+
+    for (std::size_t index = 0; index < count; ++index) {
+      const auto* entry = git_status_byindex(statusList.get(), index);
+
+      if (entry == nullptr)
+        continue;
+
+      const auto status = mapStatus(entry->status);
+      const auto path = currentPath(entry);
+
+      if (path.empty())
+        continue;
+
+      auto oldPath = previousPath(entry);
+      std::optional<GitObjectId> reusable;
+
+      if (oldPath) {
+        auto blob = reusableBlob(repository.get(), worktree, *oldPath);
+
+        if (auto* id = std::get_if<std::optional<GitObjectId>>(&blob))
+          reusable = *id;
+      }
+
+      overlay.push_back(GitOverlayEntry{
+        .relativePath = path,
+        .previousRelativePath = oldPath,
+        .status = status,
+        .disposition = overlayDisposition(status),
+        .reusableBlob = reusable});
+    }
+
+    return overlay;
+#else
+    static_cast<void>(worktree);
+
+    return unavailableError();
+#endif
+  }
+
+  GitResult<GitRepositoryBoundary>
+  Libgit2GitService::repositoryBoundary(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const
+  {
+#if defined(UBURU_HAS_LIBGIT2)
+    git_repository* rawRepository = nullptr;
+
+    if (git_repository_open_ext(&rawRepository, worktree.root.string().c_str(), 0, nullptr) != 0)
+      return git_error(GitErrorCode::repositoryOpenFailed, "failed to open Git repository");
+
+    GitPointer<git_repository, git_repository_free> repository(rawRepository, git_repository_free);
+    const auto relative = relativePath.generic_string();
+    git_submodule* rawSubmodule = nullptr;
+
+    if (git_submodule_lookup(&rawSubmodule, repository.get(), relative.c_str()) == 0) {
+      GitPointer<git_submodule, git_submodule_free> submodule(rawSubmodule, git_submodule_free);
+
+      return GitRepositoryBoundary{.relativePath = relativePath, .kind = GitRepositoryBoundaryKind::submodule};
+    }
+
+    const auto nestedGitPath = worktree.root / relativePath / ".git";
+    std::error_code error;
+
+    if (std::filesystem::exists(nestedGitPath, error) && !error)
+      return GitRepositoryBoundary{.relativePath = relativePath, .kind = GitRepositoryBoundaryKind::nestedRepository};
+
+    return GitRepositoryBoundary{.relativePath = relativePath, .kind = GitRepositoryBoundaryKind::none};
+#else
+    static_cast<void>(worktree);
+    static_cast<void>(relativePath);
+
+    return unavailableError();
+#endif
+  }
+
+  GitResult<GitObjectHashAlgorithm> Libgit2GitService::objectHashAlgorithm(const RepositoryInfo& repository) const
+  {
+#if defined(UBURU_HAS_LIBGIT2)
+    git_repository* rawRepository = nullptr;
+
+    if (git_repository_open(&rawRepository, repository.commonGitDirectory.string().c_str()) != 0)
+      return git_error(GitErrorCode::repositoryOpenFailed, "failed to open Git repository");
+
+    GitPointer<git_repository, git_repository_free> openedRepository(rawRepository, git_repository_free);
+
+    return mapObjectHashAlgorithm(git_repository_oid_type(openedRepository.get()));
+#else
+    static_cast<void>(repository);
 
     return unavailableError();
 #endif

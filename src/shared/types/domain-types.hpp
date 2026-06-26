@@ -58,6 +58,29 @@ namespace uburu
     conflicted
   };
 
+  enum class GitObjectHashAlgorithm
+  {
+    unknown,
+    sha1,
+    sha256
+  };
+
+  enum class GitRepositoryBoundaryKind
+  {
+    none,
+    submodule,
+    nestedRepository
+  };
+
+  enum class GitOverlayDisposition
+  {
+    useIndexedContent,
+    replaceWithWorkingTree,
+    addWorkingTreeFile,
+    hideIndexedContent,
+    conflict
+  };
+
   struct SearchOptions
   {
     SearchMode mode{SearchMode::literal};
@@ -162,6 +185,30 @@ namespace uburu
     std::filesystem::path gitDirectory;
     std::optional<std::string> branch;
     std::string headOid;
+    bool locked{false};
+    bool prunable{false};
+    std::string lockReason;
+  };
+
+  struct GitObjectId
+  {
+    GitObjectHashAlgorithm algorithm{GitObjectHashAlgorithm::unknown};
+    std::string value;
+  };
+
+  struct GitOverlayEntry
+  {
+    std::filesystem::path relativePath;
+    std::optional<std::filesystem::path> previousRelativePath;
+    GitFileStatus status{GitFileStatus::clean};
+    GitOverlayDisposition disposition{GitOverlayDisposition::useIndexedContent};
+    std::optional<GitObjectId> reusableBlob;
+  };
+
+  struct GitRepositoryBoundary
+  {
+    std::filesystem::path relativePath;
+    GitRepositoryBoundaryKind kind{GitRepositoryBoundaryKind::none};
   };
 
   struct IndexDocument

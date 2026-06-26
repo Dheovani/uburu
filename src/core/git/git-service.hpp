@@ -19,6 +19,7 @@ namespace uburu::git
     worktreeReadFailed,
     statusReadFailed,
     blobReadFailed,
+    boundaryReadFailed,
     backendUnavailable
   };
 
@@ -59,6 +60,12 @@ namespace uburu::git
     fileStatus(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
     [[nodiscard]] virtual GitResult<std::optional<std::string>>
     blobHash(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
+    [[nodiscard]] virtual GitResult<std::vector<GitOverlayEntry>>
+    workingTreeOverlay(const WorktreeInfo& worktree) const = 0;
+    [[nodiscard]] virtual GitResult<GitRepositoryBoundary>
+    repositoryBoundary(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
+    [[nodiscard]] virtual GitResult<GitObjectHashAlgorithm>
+    objectHashAlgorithm(const RepositoryInfo& repository) const = 0;
     [[nodiscard]] virtual GitResult<GitChangeState>
     changeState(const WorktreeInfo& worktree) const = 0;
   };

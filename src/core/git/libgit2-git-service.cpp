@@ -407,8 +407,9 @@ namespace uburu::git
       GitPointer<git_worktree, git_worktree_free> worktree(rawWorktree, git_worktree_free);
       bool locked = false;
       auto reason = lockReason(worktree.get(), locked);
-      const auto prunable = isPrunable(worktree.get());
       const auto worktreeRoot = std::filesystem::path(git_worktree_path(worktree.get()));
+      const auto missingWorktreeRoot = !std::filesystem::exists(worktreeRoot);
+      const auto prunable = isPrunable(worktree.get()) || missingWorktreeRoot;
       auto discovered = discoverRepository(worktreeRoot);
 
       if (auto* info = std::get_if<RepositoryInfo>(&discovered)) {

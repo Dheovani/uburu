@@ -549,6 +549,37 @@ namespace uburu::storage
       statement.executeDone();
     }
 
+    [[nodiscard]] std::size_t changedRowCount(sqlite3* database)
+    {
+      return static_cast<std::size_t>(sqlite3_changes64(database));
+    }
+
+    [[nodiscard]] std::size_t recoverIncompleteGenerationRecords(sqlite3* database)
+    {
+      Statement statement(database, "DELETE FROM generations WHERE published = 0");
+
+      statement.executeDone();
+
+      return changedRowCount(database);
+    }
+
+    [[nodiscard]] std::size_t collectOrphanDocumentRecords(sqlite3* database)
+    {
+      Statement statement(database, R"sql(
+        DELETE FROM documents
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM files
+          WHERE files.content_hash_algorithm = documents.content_hash_algorithm
+            AND files.content_hash = documents.content_hash
+        );
+      )sql");
+
+      statement.executeDone();
+
+      return changedRowCount(database);
+    }
+
     void validateGenerationDocument(const IndexGeneration& generation, const IndexDocument& document)
     {
       if (document.repositoryId != generation.repositoryId)
@@ -601,6 +632,7 @@ namespace uburu::storage
     execute(database, "PRAGMA synchronous = NORMAL");
     applyInitialSchema(database);
     applyMigrations(database);
+    static_cast<void>(recoverIncompleteGenerationRecords(database));
 #else
     throw std::runtime_error("SQLite support is not available in this build");
 #endif
@@ -712,6 +744,28 @@ namespace uburu::storage
     }
 #else
     static_cast<void>(generation);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::size_t SQLiteStorageService::recoverIncompleteGenerations()
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+
+    return recoverIncompleteGenerationRecords(database);
+#else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::size_t SQLiteStorageService::collectOrphanDocuments()
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+
+    return collectOrphanDocumentRecords(database);
+#else
     throw std::runtime_error("SQLite support is not available in this build");
 #endif
   }

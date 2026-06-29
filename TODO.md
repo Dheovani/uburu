@@ -163,9 +163,9 @@ e UI para avançarem mais rapidamente.
 - [x] Armazenar content hash e blob hash com algoritmo/versionamento explícitos.
 - [ ] Ativar WAL, foreign keys, busy timeout e pragmas medidos.
 - [x] Publicar gerações do índice em transação atômica.
-- [ ] Recuperar de interrupção durante migration ou indexação.
+- [x] Recuperar de interrupção durante migration ou indexação.
 - [ ] Validar integridade e oferecer reconstrução segura do índice corrompido.
-- [ ] Implementar retenção e coleta de documentos órfãos.
+- [x] Implementar retenção e coleta de documentos órfãos.
 - [ ] Persistir preferências globais e por repositório.
 - [ ] Persistir histórico de buscas e buscas salvas.
 - [ ] Persistir métricas de indexação sem crescimento ilimitado.

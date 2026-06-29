@@ -23,6 +23,8 @@ namespace uburu::storage
     void upsertWorktree(const WorktreeInfo& worktree) override;
     void upsertDocument(const IndexDocument& document) override;
     void publishGeneration(const IndexGeneration& generation) override;
+    [[nodiscard]] std::size_t recoverIncompleteGenerations() override;
+    [[nodiscard]] std::size_t collectOrphanDocuments() override;
     void removeDocument(const WorktreeId& worktreeId, const std::filesystem::path& relativePath) override;
     [[nodiscard]] std::optional<IndexDocument>
     findDocument(const WorktreeId& worktreeId, const std::filesystem::path& relativePath) const override;

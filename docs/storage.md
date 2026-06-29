@@ -58,9 +58,25 @@ diferentes que produzam a mesma representação textual.
 Se qualquer documento pertencer a outro repositório ou worktree, ou se qualquer escrita falhar, a
 transação é revertida. Assim, o índice nunca deve observar metade da geração nova e metade da anterior.
 
+## Recuperação e retenção
+
+As migrations rodam dentro de transações explícitas. Se uma migration falhar, a transação é revertida e
+o banco não deve avançar `user_version`. Durante `initialize()`, o backend também remove registros de
+`generations` que ficaram com `published = 0`, representando publicações interrompidas antes de se
+tornarem visíveis.
+
+`StorageService::recoverIncompleteGenerations()` expõe a mesma limpeza para chamadas controladas pelo
+indexador. O método remove somente metadados de gerações não publicadas; ele não remove documentos nem a
+visão publicada anterior.
+
+`StorageService::collectOrphanDocuments()` remove documentos que não são mais referenciados por nenhum
+caminho em `files`, usando a identidade composta `(content_hash_algorithm, content_hash)`. Essa coleta é
+separada da publicação de geração para permitir políticas futuras de retenção, orçamento de disco e
+diagnóstico antes de apagar cache reaproveitável.
+
 ## Escopo desta etapa
 
 Esta etapa persiste e recupera `RepositoryInfo`, `WorktreeInfo` e `IndexDocument`, incluindo remoção
-lógica por caminho e publicação atômica de gerações. Ainda não implementa recuperação de banco
-corrompido, retenção de documentos órfãos, preferências, histórico de buscas ou métricas persistentes.
-Esses pontos permanecem no Marco 5.
+lógica por caminho, publicação atômica de gerações, recuperação de publicações interrompidas e coleta de
+documentos órfãos. Ainda não implementa recuperação de banco corrompido, preferências, histórico de
+buscas ou métricas persistentes. Esses pontos permanecem no Marco 5.

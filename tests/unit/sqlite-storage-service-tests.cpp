@@ -10,6 +10,10 @@
 #include <utility>
 #include <vector>
 
+#if defined(UBURU_HAS_SQLITE)
+#include <sqlite3.h>
+#endif
+
 namespace
 {
 
@@ -100,6 +104,63 @@ namespace
       .createdAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{5678}},
       .documents = std::move(documents)};
   }
+
+#if defined(UBURU_HAS_SQLITE)
+
+  void executeSql(sqlite3* database, std::string_view sql)
+  {
+    char* errorMessage = nullptr;
+    const auto result = sqlite3_exec(database, std::string(sql).c_str(), nullptr, nullptr, &errorMessage);
+
+    if (result == SQLITE_OK)
+      return;
+
+    std::string message = "SQLite test helper failed";
+    if (errorMessage != nullptr) {
+      message += ": ";
+      message += errorMessage;
+    }
+
+    sqlite3_free(errorMessage);
+    FAIL(message);
+  }
+
+  void insertIncompleteGeneration(const std::filesystem::path& databasePath)
+  {
+    sqlite3* database = nullptr;
+    REQUIRE(sqlite3_open_v2(databasePath.string().c_str(), &database, SQLITE_OPEN_READWRITE, nullptr) == SQLITE_OK);
+
+    executeSql(database, R"sql(
+      INSERT INTO generations (
+        repository_id, worktree_id, head_oid, branch, created_at_unix_ms, published
+      ) VALUES ('repository-id', 'worktree-id', 'interrupted', 'main', 1, 0);
+    )sql");
+
+    sqlite3_close(database);
+  }
+
+  [[nodiscard]] int unpublishedGenerationCount(const std::filesystem::path& databasePath)
+  {
+    sqlite3* database = nullptr;
+    REQUIRE(sqlite3_open_v2(databasePath.string().c_str(), &database, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK);
+
+    sqlite3_stmt* statement = nullptr;
+    REQUIRE(sqlite3_prepare_v2(database,
+                               "SELECT COUNT(*) FROM generations WHERE published = 0",
+                               -1,
+                               &statement,
+                               nullptr) == SQLITE_OK);
+    REQUIRE(sqlite3_step(statement) == SQLITE_ROW);
+
+    const auto count = sqlite3_column_int(statement, 0);
+
+    sqlite3_finalize(statement);
+    sqlite3_close(database);
+
+    return count;
+  }
+
+#endif
 
 } // namespace
 
@@ -267,6 +328,56 @@ TEST_CASE("sqlite storage rolls back invalid generation publication")
   REQUIRE(preserved.has_value());
   CHECK(preserved->contentHash == "content-before");
   CHECK_FALSE(invalid.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage recovers incomplete generations on initialization")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-recovery-test");
+  const auto databasePath = directory.path() / "uburu.db";
+
+  {
+    uburu::storage::SQLiteStorageService storage(databasePath);
+    storage.initialize();
+    storage.upsertRepository(repositoryInfo(directory.path()));
+    storage.upsertWorktree(worktreeInfo(directory.path()));
+  }
+
+  insertIncompleteGeneration(databasePath);
+  REQUIRE(unpublishedGenerationCount(databasePath) == 1);
+
+  uburu::storage::SQLiteStorageService storage(databasePath);
+  storage.initialize();
+
+  CHECK(unpublishedGenerationCount(databasePath) == 0);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage collects orphan documents")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-orphan-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({
+    indexDocument("orphan-a", "src/a.cpp"),
+    indexDocument("orphan-b", "src/b.cpp"),
+  }));
+  storage.publishGeneration(indexGeneration({
+    indexDocument("live-c", "src/c.cpp"),
+  }));
+
+  CHECK(storage.collectOrphanDocuments() == 2);
+  CHECK(storage.collectOrphanDocuments() == 0);
+  REQUIRE(storage.findDocument("worktree-id", "src/c.cpp").has_value());
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

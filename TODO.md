@@ -156,13 +156,13 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 5 — Storage SQLite profissional (P1)
 
-- [ ] Implementar `StorageService` com RAII e statements preparados.
-- [ ] Criar sistema versionado de migrations.
-- [ ] Definir schema para repositories, worktrees, generations, files, documents e overlays.
-- [ ] Separar identidade de caminho da identidade de conteúdo.
-- [ ] Armazenar content hash e blob hash com algoritmo/versionamento explícitos.
+- [x] Implementar `StorageService` com RAII e statements preparados.
+- [x] Criar sistema versionado de migrations.
+- [x] Definir schema para repositories, worktrees, generations, files, documents e overlays.
+- [x] Separar identidade de caminho da identidade de conteúdo.
+- [x] Armazenar content hash e blob hash com algoritmo/versionamento explícitos.
 - [ ] Ativar WAL, foreign keys, busy timeout e pragmas medidos.
-- [ ] Publicar gerações do índice em transação atômica.
+- [x] Publicar gerações do índice em transação atômica.
 - [ ] Recuperar de interrupção durante migration ou indexação.
 - [ ] Validar integridade e oferecer reconstrução segura do índice corrompido.
 - [ ] Implementar retenção e coleta de documentos órfãos.
@@ -250,7 +250,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Criar fixtures pequenas de texto, encoding, ignore e Git.
 - [ ] Adicionar testes unitários para cada regra pura de matching e filtro.
 - [ ] Adicionar testes de integração de scanner em filesystem real temporário.
-- [ ] Adicionar testes de integração SQLite com banco descartável.
+- [x] Adicionar testes de integração SQLite com banco descartável.
 - [ ] Adicionar testes de integração libgit2 com repositórios descartáveis.
 - [ ] Testar cancelamento em diferentes pontos do pipeline.
 - [ ] Testar backpressure e limites de memória.

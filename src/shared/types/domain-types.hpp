@@ -65,6 +65,12 @@ namespace uburu
     sha256
   };
 
+  enum class ContentHashAlgorithm
+  {
+    unknown,
+    sha256
+  };
+
   enum class GitRepositoryBoundaryKind
   {
     none,
@@ -217,11 +223,23 @@ namespace uburu
     WorktreeId worktreeId;
     std::filesystem::path relativePath;
     std::string contentHash;
+    ContentHashAlgorithm contentHashAlgorithm{ContentHashAlgorithm::unknown};
     std::optional<std::string> gitBlobHash;
+    GitObjectHashAlgorithm gitBlobHashAlgorithm{GitObjectHashAlgorithm::unknown};
     GitFileStatus status{GitFileStatus::clean};
     std::uintmax_t size{0};
     std::chrono::system_clock::time_point indexedAt{};
     bool deleted{false};
+  };
+
+  struct IndexGeneration
+  {
+    RepositoryId repositoryId;
+    WorktreeId worktreeId;
+    std::string headOid;
+    std::optional<std::string> branch;
+    std::chrono::system_clock::time_point createdAt{};
+    std::vector<IndexDocument> documents;
   };
 
 } // namespace uburu

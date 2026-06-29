@@ -10,6 +10,7 @@ add_library(uburu_core STATIC
   search/search-errors.cpp
   search/search-query-validation.cpp
   search/search-scope.cpp
+  storage/sqlite-storage-service.cpp
   text/text-file-reader.cpp
   text/regex-matcher.cpp
   text/text-matcher.cpp

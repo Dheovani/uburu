@@ -2,13 +2,6 @@
 
 namespace uburu::index
 {
-  namespace
-  {
-
-    constexpr std::uint32_t oldestSupportedIndexDocumentFormatVersion = 1;
-
-  } // namespace
-
   IndexDocumentFormatDescriptor currentIndexDocumentFormat()
   {
     return IndexDocumentFormatDescriptor{};
@@ -16,7 +9,7 @@ namespace uburu::index
 
   bool isSupportedIndexDocumentFormatVersion(std::uint32_t version)
   {
-    return version >= oldestSupportedIndexDocumentFormatVersion && version <= currentIndexDocumentFormatVersion;
+    return version >= initialIndexDocumentFormatVersion && version <= latestIndexDocumentFormatVersion;
   }
 
   std::optional<std::string> validateIndexDocumentFormat(const IndexDocument& document)

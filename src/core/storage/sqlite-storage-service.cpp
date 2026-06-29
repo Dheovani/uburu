@@ -25,7 +25,7 @@ namespace uburu::storage
     constexpr int metadataSchemaVersion = 4;
     constexpr int documentFormatSchemaVersion = 5;
     constexpr int currentSchemaVersion = documentFormatSchemaVersion;
-    constexpr int defaultDocumentFormatVersion = static_cast<int>(currentIndexDocumentFormatVersion);
+    constexpr int defaultDocumentFormatVersion = static_cast<int>(latestIndexDocumentFormatVersion);
     constexpr int sqliteOk = SQLITE_OK;
     constexpr int sqliteDone = SQLITE_DONE;
     constexpr int sqliteRow = SQLITE_ROW;
@@ -610,7 +610,7 @@ namespace uburu::storage
       execute(database, "BEGIN IMMEDIATE");
       try {
         const auto definition =
-          "format_version INTEGER NOT NULL DEFAULT " + std::to_string(defaultDocumentFormatVersion);
+            "format_version INTEGER NOT NULL DEFAULT " + std::to_string(defaultDocumentFormatVersion);
 
         addColumnIfMissing(database, "documents", "format_version", definition);
         addColumnIfMissing(database, "files", "format_version", definition);

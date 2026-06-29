@@ -1,3 +1,4 @@
+#include "core/filesystem/path-normalization.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/git/libgit2-git-service.hpp"
 
@@ -371,8 +372,10 @@ TEST_CASE("libgit2 git service reports locked and prunable worktrees")
 
   const auto refreshedResult = service.listWorktrees(repository);
   const auto& refreshed = std::get<std::vector<uburu::WorktreeInfo>>(refreshedResult);
-  const auto prunable =
-      std::ranges::find_if(refreshed, [&](const auto& worktree) { return worktree.root == removedRoot; });
+  const auto removedRootKey = uburu::filesystem::normalizedPathKey(removedRoot);
+  const auto prunable = std::ranges::find_if(refreshed, [&](const auto& worktree) {
+    return uburu::filesystem::normalizedPathKey(worktree.root) == removedRootKey;
+  });
 
   REQUIRE(prunable != refreshed.end());
   CHECK(prunable->prunable);

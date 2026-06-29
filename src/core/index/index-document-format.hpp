@@ -1,4 +1,4 @@
- #pragma once
+#pragma once
 
 #include "shared/types/domain-types.hpp"
 
@@ -11,7 +11,7 @@ namespace uburu::index
 
   struct IndexDocumentFormatDescriptor
   {
-    std::uint32_t version{currentIndexDocumentFormatVersion};
+    std::uint32_t version{latestIndexDocumentFormatVersion};
     ContentHashAlgorithm contentHashAlgorithm{ContentHashAlgorithm::sha256};
     bool contentAddressed{true};
     bool storesGitBlobHash{true};

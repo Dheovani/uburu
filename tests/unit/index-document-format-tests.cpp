@@ -28,7 +28,7 @@ TEST_CASE("index document format exposes the current descriptor")
 {
   const auto descriptor = uburu::index::currentIndexDocumentFormat();
 
-  CHECK(descriptor.version == uburu::currentIndexDocumentFormatVersion);
+  CHECK(descriptor.version == uburu::latestIndexDocumentFormatVersion);
   CHECK(descriptor.contentHashAlgorithm == uburu::ContentHashAlgorithm::sha256);
   CHECK(descriptor.contentAddressed);
   CHECK(descriptor.storesGitBlobHash);
@@ -37,9 +37,10 @@ TEST_CASE("index document format exposes the current descriptor")
 
 TEST_CASE("index document format accepts only supported versions")
 {
-  CHECK(uburu::index::isSupportedIndexDocumentFormatVersion(uburu::currentIndexDocumentFormatVersion));
+  CHECK(uburu::index::isSupportedIndexDocumentFormatVersion(uburu::initialIndexDocumentFormatVersion));
+  CHECK(uburu::index::isSupportedIndexDocumentFormatVersion(uburu::latestIndexDocumentFormatVersion));
   CHECK_FALSE(uburu::index::isSupportedIndexDocumentFormatVersion(0));
-  CHECK_FALSE(uburu::index::isSupportedIndexDocumentFormatVersion(uburu::currentIndexDocumentFormatVersion + 1U));
+  CHECK_FALSE(uburu::index::isSupportedIndexDocumentFormatVersion(uburu::latestIndexDocumentFormatVersion + 1U));
 }
 
 TEST_CASE("index document format validates persisted document metadata")
@@ -47,7 +48,7 @@ TEST_CASE("index document format validates persisted document metadata")
   CHECK_FALSE(uburu::index::validateIndexDocumentFormat(validDocument()).has_value());
 
   auto unsupportedVersion = validDocument();
-  unsupportedVersion.formatVersion = uburu::currentIndexDocumentFormatVersion + 1U;
+  unsupportedVersion.formatVersion = uburu::latestIndexDocumentFormatVersion + 1U;
 
   CHECK(uburu::index::validateIndexDocumentFormat(unsupportedVersion) == "unsupported index document format version");
 

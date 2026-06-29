@@ -13,7 +13,8 @@ namespace uburu
   using RepositoryId = std::string;
   using WorktreeId = std::string;
 
-  inline constexpr std::uint32_t currentIndexDocumentFormatVersion = 1;
+  inline constexpr std::uint32_t initialIndexDocumentFormatVersion = 1;
+  inline constexpr std::uint32_t latestIndexDocumentFormatVersion = initialIndexDocumentFormatVersion;
 
   enum class SearchMode
   {
@@ -221,7 +222,7 @@ namespace uburu
 
   struct IndexDocument
   {
-    std::uint32_t formatVersion{currentIndexDocumentFormatVersion};
+    std::uint32_t formatVersion{latestIndexDocumentFormatVersion};
     RepositoryId repositoryId;
     WorktreeId worktreeId;
     std::filesystem::path relativePath;

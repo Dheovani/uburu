@@ -181,6 +181,7 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
   const auto document = reopened.findDocument("worktree-id", "src/main.cpp");
 
   REQUIRE(document.has_value());
+  CHECK(document->formatVersion == uburu::currentIndexDocumentFormatVersion);
   CHECK(document->repositoryId == "repository-id");
   CHECK(document->worktreeId == "worktree-id");
   CHECK(document->relativePath == std::filesystem::path("src/main.cpp"));

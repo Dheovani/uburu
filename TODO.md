@@ -176,7 +176,7 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 6 — Índice persistente e incremental (P1)
 
-- [ ] Definir formato interno de documento indexado e versioná-lo.
+- [x] Definir formato interno de documento indexado e versioná-lo.
 - [ ] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
 - [ ] Implementar indexação inicial cancelável e progressiva.
 - [ ] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
@@ -336,6 +336,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Adicionar guia de troubleshooting para Qt, vcpkg, toolchains e runtime DLLs.
 - [ ] Registrar decisões arquiteturais importantes como ADRs.
 - [ ] Criar documentação para contribuidores e arquitetura de testes.
+- [ ] Disponibilizar documentação em português e em inglês.
 
 ## Evoluções avançadas (P3)
 

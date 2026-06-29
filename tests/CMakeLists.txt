@@ -5,6 +5,7 @@ add_executable(uburu_core_tests
   unit/direct-search-engine-tests.cpp
   unit/git-reconciliation-tests.cpp
   unit/git-ignore-rules-tests.cpp
+  unit/index-document-format-tests.cpp
   unit/libgit2-git-service-tests.cpp
   unit/path-normalization-tests.cpp
   unit/polling-file-watcher-tests.cpp

@@ -23,7 +23,9 @@ namespace uburu::storage
     constexpr int hashAlgorithmSchemaVersion = 2;
     constexpr int contentHashIdentitySchemaVersion = 3;
     constexpr int metadataSchemaVersion = 4;
-    constexpr int currentSchemaVersion = metadataSchemaVersion;
+    constexpr int documentFormatSchemaVersion = 5;
+    constexpr int currentSchemaVersion = documentFormatSchemaVersion;
+    constexpr int defaultDocumentFormatVersion = static_cast<int>(currentIndexDocumentFormatVersion);
     constexpr int sqliteOk = SQLITE_OK;
     constexpr int sqliteDone = SQLITE_DONE;
     constexpr int sqliteRow = SQLITE_ROW;
@@ -603,6 +605,33 @@ namespace uburu::storage
       }
     }
 
+    void applyDocumentFormatMigration(sqlite3* database)
+    {
+      execute(database, "BEGIN IMMEDIATE");
+      try {
+        const auto definition =
+          "format_version INTEGER NOT NULL DEFAULT " + std::to_string(defaultDocumentFormatVersion);
+
+        addColumnIfMissing(database, "documents", "format_version", definition);
+        addColumnIfMissing(database, "files", "format_version", definition);
+
+        Statement migrationStatement(database, R"sql(
+          INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
+          VALUES (?, ?);
+        )sql");
+
+        migrationStatement.bindInt64(1, documentFormatSchemaVersion);
+        migrationStatement.bindInt64(2, toUnixMilliseconds(std::chrono::system_clock::now()));
+        migrationStatement.executeDone();
+        execute(database, "PRAGMA user_version = " + std::to_string(documentFormatSchemaVersion));
+        execute(database, "COMMIT");
+      } catch (...) {
+        execute(database, "ROLLBACK");
+
+        throw;
+      }
+    }
+
     void applyMigrations(sqlite3* database)
     {
       if (schemaVersion(database) < hashAlgorithmSchemaVersion)
@@ -614,6 +643,9 @@ namespace uburu::storage
       if (schemaVersion(database) < metadataSchemaVersion)
         applyMetadataMigration(database);
 
+      if (schemaVersion(database) < documentFormatSchemaVersion)
+        applyDocumentFormatMigration(database);
+
       if (schemaVersion(database) != currentSchemaVersion)
         throw std::runtime_error("SQLite database schema version is newer than this build supports");
     }
@@ -622,10 +654,12 @@ namespace uburu::storage
     {
       Statement documentStatement(database, R"sql(
         INSERT INTO documents (
-          content_hash, content_hash_algorithm, git_blob_hash, git_blob_hash_algorithm, size, indexed_at_unix_ms
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          content_hash, content_hash_algorithm, format_version, git_blob_hash, git_blob_hash_algorithm, size,
+          indexed_at_unix_ms
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(content_hash_algorithm, content_hash) DO UPDATE SET
           content_hash_algorithm = excluded.content_hash_algorithm,
+          format_version = excluded.format_version,
           git_blob_hash = COALESCE(excluded.git_blob_hash, documents.git_blob_hash),
           git_blob_hash_algorithm = excluded.git_blob_hash_algorithm,
           size = excluded.size,
@@ -634,21 +668,23 @@ namespace uburu::storage
 
       documentStatement.bindText(1, document.contentHash);
       documentStatement.bindInt64(2, static_cast<std::int64_t>(document.contentHashAlgorithm));
-      documentStatement.bindOptionalText(3, document.gitBlobHash);
-      documentStatement.bindInt64(4, static_cast<std::int64_t>(document.gitBlobHashAlgorithm));
-      documentStatement.bindInt64(5, static_cast<std::int64_t>(document.size));
-      documentStatement.bindInt64(6, toUnixMilliseconds(document.indexedAt));
+      documentStatement.bindInt64(3, static_cast<std::int64_t>(document.formatVersion));
+      documentStatement.bindOptionalText(4, document.gitBlobHash);
+      documentStatement.bindInt64(5, static_cast<std::int64_t>(document.gitBlobHashAlgorithm));
+      documentStatement.bindInt64(6, static_cast<std::int64_t>(document.size));
+      documentStatement.bindInt64(7, toUnixMilliseconds(document.indexedAt));
       documentStatement.executeDone();
 
       Statement fileStatement(database, R"sql(
         INSERT INTO files (
-          worktree_id, relative_path, repository_id, content_hash, content_hash_algorithm, git_blob_hash,
+          worktree_id, relative_path, repository_id, content_hash, content_hash_algorithm, format_version, git_blob_hash,
           git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(worktree_id, relative_path) DO UPDATE SET
           repository_id = excluded.repository_id,
           content_hash = excluded.content_hash,
           content_hash_algorithm = excluded.content_hash_algorithm,
+          format_version = excluded.format_version,
           git_blob_hash = excluded.git_blob_hash,
           git_blob_hash_algorithm = excluded.git_blob_hash_algorithm,
           status = excluded.status,
@@ -662,12 +698,13 @@ namespace uburu::storage
       fileStatement.bindText(3, document.repositoryId);
       fileStatement.bindText(4, document.contentHash);
       fileStatement.bindInt64(5, static_cast<std::int64_t>(document.contentHashAlgorithm));
-      fileStatement.bindOptionalText(6, document.gitBlobHash);
-      fileStatement.bindInt64(7, static_cast<std::int64_t>(document.gitBlobHashAlgorithm));
-      fileStatement.bindInt64(8, static_cast<std::int64_t>(document.status));
-      fileStatement.bindInt64(9, static_cast<std::int64_t>(document.size));
-      fileStatement.bindInt64(10, toUnixMilliseconds(document.indexedAt));
-      fileStatement.bindBool(11, document.deleted);
+      fileStatement.bindInt64(6, static_cast<std::int64_t>(document.formatVersion));
+      fileStatement.bindOptionalText(7, document.gitBlobHash);
+      fileStatement.bindInt64(8, static_cast<std::int64_t>(document.gitBlobHashAlgorithm));
+      fileStatement.bindInt64(9, static_cast<std::int64_t>(document.status));
+      fileStatement.bindInt64(10, static_cast<std::int64_t>(document.size));
+      fileStatement.bindInt64(11, toUnixMilliseconds(document.indexedAt));
+      fileStatement.bindBool(12, document.deleted);
       fileStatement.executeDone();
     }
 
@@ -1207,8 +1244,8 @@ namespace uburu::storage
 #if defined(UBURU_HAS_SQLITE)
     auto* database = requireDatabase(databaseHandle);
     Statement statement(database, R"sql(
-      SELECT repository_id, worktree_id, relative_path, content_hash, content_hash_algorithm, git_blob_hash,
-             git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
+      SELECT repository_id, worktree_id, relative_path, content_hash, content_hash_algorithm, format_version,
+             git_blob_hash, git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
       FROM files
       WHERE worktree_id = ? AND relative_path = ?;
     )sql");
@@ -1220,17 +1257,18 @@ namespace uburu::storage
       return std::nullopt;
 
     auto* row = statement.get();
-    IndexDocument document{.repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
+    IndexDocument document{.formatVersion = static_cast<std::uint32_t>(sqlite3_column_int(row, 5)),
+                           .repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
                            .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
                            .relativePath = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
                            .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 3)),
                            .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 4)),
-                           .gitBlobHash = optionalText(row, 5),
-                           .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 6)),
-                           .status = toGitFileStatus(sqlite3_column_int(row, 7)),
-                           .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 8)),
-                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 9)),
-                           .deleted = sqlite3_column_int(row, 10) != 0};
+                           .gitBlobHash = optionalText(row, 6),
+                           .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 7)),
+                           .status = toGitFileStatus(sqlite3_column_int(row, 8)),
+                           .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 9)),
+                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 10)),
+                           .deleted = sqlite3_column_int(row, 11) != 0};
 
     return document;
 #else

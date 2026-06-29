@@ -21,7 +21,7 @@ Na inicialização, o backend configura e expõe por `pragmaSnapshot()`:
 - `PRAGMA journal_mode = WAL`;
 - `PRAGMA synchronous = NORMAL`;
 - `sqlite3_busy_timeout` com timeout inicial de 5 segundos;
-- `PRAGMA user_version = 4`;
+- `PRAGMA user_version = 5`;
 - tabela `schema_migrations` para registrar versões aplicadas.
 
 Esses pragmas são parte do contrato operacional do storage. Testes automatizados verificam que o banco
@@ -50,6 +50,7 @@ O schema evolui por migrations idempotentes:
 2. algoritmos explícitos para hash de conteúdo e blob Git;
 3. identidade persistente de documento por `(content_hash_algorithm, content_hash)`;
 4. metadados de produto: `preferences`, `search_history`, `saved_searches` e `indexing_metrics`.
+5. versão explícita do formato interno de documentos indexados em `documents` e `files`.
 
 Tabelas principais:
 
@@ -73,6 +74,10 @@ quando o indexador começar a preencher gerações reais.
 domínio usa `ContentHashAlgorithm`; para blob Git, usa `GitObjectHashAlgorithm`. A chave primária de
 `documents` inclui o algoritmo e o valor do hash, evitando colisões semânticas entre algoritmos
 diferentes que produzam a mesma representação textual.
+
+`documents` e `files` também armazenam `format_version`. Essa versão descreve o formato interno do
+documento indexado, não a versão do schema SQLite. Ela permite que versões futuras do Uburu migrem,
+reutilizem ou descartem documentos de cache com segurança sem depender apenas da estrutura das tabelas.
 
 ## Publicação de gerações
 

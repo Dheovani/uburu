@@ -51,12 +51,11 @@ namespace uburu::filesystem
   };
 
   WindowsFileWatcher::WindowsFileWatcher(std::filesystem::path root)
-    : root(std::move(root)), handle(std::make_unique<NativeHandle>()), buffer(changeBufferSize)
+      : root(std::move(root)), handle(std::make_unique<NativeHandle>()), buffer(changeBufferSize)
   {
-    handle->directory = CreateFileW(root.wstring().c_str(), FILE_LIST_DIRECTORY,
-                                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                                     OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-                                     nullptr);
+    handle->directory =
+        CreateFileW(root.wstring().c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
   }
 
   WindowsFileWatcher::~WindowsFileWatcher()
@@ -79,9 +78,8 @@ namespace uburu::filesystem
       return unavailableBatch();
 
     DWORD bytesReturned = 0;
-    const auto started = ReadDirectoryChangesW(handle->directory, buffer.data(),
-                                               static_cast<DWORD>(buffer.size()), TRUE,
-                                               watchedChanges(), nullptr, &overlapped, nullptr);
+    const auto started = ReadDirectoryChangesW(handle->directory, buffer.data(), static_cast<DWORD>(buffer.size()),
+                                               TRUE, watchedChanges(), nullptr, &overlapped, nullptr);
 
     if (started == FALSE) {
       CloseHandle(overlapped.hEvent);
@@ -139,10 +137,9 @@ namespace uburu::filesystem
       const auto absolutePath = root / std::filesystem::path(fileName);
       std::error_code error;
 
-      batch.events.push_back(FileChangeEvent{
-        .relativePath = relativeFromRoot(absolutePath),
-        .kind = mapAction(info->Action),
-        .directory = std::filesystem::is_directory(absolutePath, error)});
+      batch.events.push_back(FileChangeEvent{.relativePath = relativeFromRoot(absolutePath),
+                                             .kind = mapAction(info->Action),
+                                             .directory = std::filesystem::is_directory(absolutePath, error)});
 
       if (info->NextEntryOffset == 0)
         break;

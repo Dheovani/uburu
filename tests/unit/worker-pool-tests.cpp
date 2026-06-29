@@ -12,8 +12,7 @@ namespace
   constexpr auto asyncPollInterval = std::chrono::milliseconds{1};
   constexpr auto asyncTimeout = std::chrono::milliseconds{200};
 
-  template <typename Predicate>
-  bool eventually(Predicate predicate)
+  template <typename Predicate> bool eventually(Predicate predicate)
   {
     const auto deadline = std::chrono::steady_clock::now() + asyncTimeout;
 
@@ -36,12 +35,8 @@ TEST_CASE("worker pool executes submitted tasks")
   {
     uburu::concurrency::WorkerPool pool(2);
 
-    REQUIRE(pool.submit([&](std::stop_token) {
-      completed.fetch_add(1);
-    }));
-    REQUIRE(pool.submit([&](std::stop_token) {
-      completed.fetch_add(1);
-    }));
+    REQUIRE(pool.submit([&](std::stop_token) { completed.fetch_add(1); }));
+    REQUIRE(pool.submit([&](std::stop_token) { completed.fetch_add(1); }));
 
     pool.close();
   }
@@ -82,9 +77,7 @@ TEST_CASE("worker pool forwards stop tokens to tasks")
       sawStop = true;
     }));
 
-    REQUIRE(eventually([&] {
-      return taskStarted.load();
-    }));
+    REQUIRE(eventually([&] { return taskStarted.load(); }));
 
     pool.requestStop();
   }

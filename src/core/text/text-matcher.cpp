@@ -79,12 +79,9 @@ namespace uburu::text
 
     bool isLatinLetter(char32_t scalar)
     {
-      return (scalar >= latinUppercaseMin &&
-              scalar <= latinUppercaseBeforeMultiplicationSignMax) ||
-             (scalar >= latinUppercaseAfterMultiplicationSignMin &&
-              scalar <= latinUppercaseMax) ||
-             (scalar >= latinLowercaseMin &&
-              scalar <= latinLowercaseBeforeDivisionSignMax) ||
+      return (scalar >= latinUppercaseMin && scalar <= latinUppercaseBeforeMultiplicationSignMax) ||
+             (scalar >= latinUppercaseAfterMultiplicationSignMin && scalar <= latinUppercaseMax) ||
+             (scalar >= latinLowercaseMin && scalar <= latinLowercaseBeforeDivisionSignMax) ||
              (scalar >= latinLowercaseAfterDivisionSignMin && scalar <= latinLowercaseMax);
     }
 
@@ -95,8 +92,7 @@ namespace uburu::text
 
     bool isCodeIdentifierScalar(char32_t scalar)
     {
-      return isAsciiLetter(scalar) || isAsciiDigit(scalar) ||
-             scalar == asciiIdentifierConnector;
+      return isAsciiLetter(scalar) || isAsciiDigit(scalar) || scalar == asciiIdentifierConnector;
     }
 
     bool isContinuationByte(unsigned char byte)
@@ -124,8 +120,7 @@ namespace uburu::text
         if (!second)
           return DecodedScalar{first, singleByteLength};
         const char32_t value =
-            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) |
-            (*second & utf8ContinuationPayloadMask);
+            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) | (*second & utf8ContinuationPayloadMask);
         if (value < minimumTwoByteScalar)
           return DecodedScalar{first, singleByteLength};
         return DecodedScalar{value, twoByteLength};
@@ -136,10 +131,9 @@ namespace uburu::text
         const auto third = continuation(offset + 2);
         if (!second || !third)
           return DecodedScalar{first, singleByteLength};
-        const char32_t value =
-            ((first & utf8ThreeBytePayloadMask) << utf8ThreeByteLeadShift) |
-            ((*second & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
-            (*third & utf8ContinuationPayloadMask);
+        const char32_t value = ((first & utf8ThreeBytePayloadMask) << utf8ThreeByteLeadShift) |
+                               ((*second & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
+                               (*third & utf8ContinuationPayloadMask);
         if (value < minimumThreeByteScalar || (value >= surrogateMin && value <= surrogateMax))
           return DecodedScalar{first, singleByteLength};
         return DecodedScalar{value, threeByteLength};
@@ -151,11 +145,10 @@ namespace uburu::text
         const auto fourth = continuation(offset + 3);
         if (!second || !third || !fourth)
           return DecodedScalar{first, singleByteLength};
-        const char32_t value =
-            ((first & utf8FourBytePayloadMask) << utf8FourByteLeadShift) |
-            ((*second & utf8ContinuationPayloadMask) << utf8FourByteSecondShift) |
-            ((*third & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
-            (*fourth & utf8ContinuationPayloadMask);
+        const char32_t value = ((first & utf8FourBytePayloadMask) << utf8FourByteLeadShift) |
+                               ((*second & utf8ContinuationPayloadMask) << utf8FourByteSecondShift) |
+                               ((*third & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
+                               (*fourth & utf8ContinuationPayloadMask);
         if (value < minimumFourByteScalar || value > maximumUnicodeScalar)
           return DecodedScalar{first, singleByteLength};
         return DecodedScalar{value, fourByteLength};
@@ -170,8 +163,7 @@ namespace uburu::text
         return std::nullopt;
 
       std::size_t scalarOffset = offset - 1;
-      while (scalarOffset > 0 &&
-             isContinuationByte(static_cast<unsigned char>(text[scalarOffset]))) {
+      while (scalarOffset > 0 && isContinuationByte(static_cast<unsigned char>(text[scalarOffset]))) {
         --scalarOffset;
       }
 
@@ -186,7 +178,7 @@ namespace uburu::text
     }
 
     bool hasBoundaries(std::string_view text, std::size_t offset, std::size_t length,
-                        bool (*isInsideBoundary)(char32_t))
+                       bool (*isInsideBoundary)(char32_t))
     {
       const auto left = scalarBefore(text, offset);
       if (left && isInsideBoundary(left->value))
@@ -204,10 +196,8 @@ namespace uburu::text
       if (scalar >= asciiUppercaseMin && scalar <= asciiUppercaseMax)
         return scalar + lowercaseCodepointDelta;
 
-      if ((scalar >= latinUppercaseMin &&
-           scalar <= latinUppercaseBeforeMultiplicationSignMax) ||
-          (scalar >= latinUppercaseAfterMultiplicationSignMin &&
-           scalar <= latinUppercaseMax))
+      if ((scalar >= latinUppercaseMin && scalar <= latinUppercaseBeforeMultiplicationSignMax) ||
+          (scalar >= latinUppercaseAfterMultiplicationSignMin && scalar <= latinUppercaseMax))
         return scalar + lowercaseCodepointDelta;
 
       return scalar;
@@ -220,10 +210,8 @@ namespace uburu::text
       return simpleCaseFold(left.value) == simpleCaseFold(right.value);
     }
 
-    std::optional<std::size_t> literalMatchLengthAt(std::string_view text,
-                                                       std::string_view expression,
-                                                       std::size_t textOffset,
-                                                       const SearchOptions& options)
+    std::optional<std::size_t> literalMatchLengthAt(std::string_view text, std::string_view expression,
+                                                    std::size_t textOffset, const SearchOptions& options)
     {
       std::size_t textIndex = textOffset;
       std::size_t expressionIndex = 0;
@@ -247,7 +235,7 @@ namespace uburu::text
   } // namespace
 
   std::vector<MatchPosition> findAllLiterals(std::string_view text, std::string_view expression,
-                                               const SearchOptions& options)
+                                             const SearchOptions& options)
   {
     std::vector<MatchPosition> matches;
     if (expression.empty())
@@ -275,7 +263,7 @@ namespace uburu::text
   }
 
   std::optional<MatchPosition> findLiteral(std::string_view text, std::string_view expression,
-                                            const SearchOptions& options)
+                                           const SearchOptions& options)
   {
     const auto matches = findAllLiterals(text, expression, options);
     if (matches.empty())
@@ -283,13 +271,10 @@ namespace uburu::text
     return matches.front();
   }
 
-  bool matchesRequestedBoundaries(std::string_view text, MatchPosition match,
-                                    const SearchOptions& options)
+  bool matchesRequestedBoundaries(std::string_view text, MatchPosition match, const SearchOptions& options)
   {
-    return (!options.wholeWord ||
-            hasBoundaries(text, match.offset, match.length, isNaturalWordScalar)) &&
-           (!options.wholeIdentifier ||
-            hasBoundaries(text, match.offset, match.length, isCodeIdentifierScalar));
+    return (!options.wholeWord || hasBoundaries(text, match.offset, match.length, isNaturalWordScalar)) &&
+           (!options.wholeIdentifier || hasBoundaries(text, match.offset, match.length, isCodeIdentifierScalar));
   }
 
   bool looksBinary(std::string_view sample)

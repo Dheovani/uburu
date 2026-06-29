@@ -18,8 +18,7 @@ namespace uburu::concurrency
     std::uint64_t consumerWaits{0};
   };
 
-  template <typename T>
-  class BoundedQueue
+  template <typename T> class BoundedQueue
   {
   public:
     explicit BoundedQueue(std::size_t capacity) : capacityValue(capacity == 0 ? 1 : capacity) {}
@@ -34,9 +33,7 @@ namespace uburu::concurrency
       if (!closedValue && queue.size() >= capacityValue)
         ++metricsValue.producerWaits;
 
-      notFull.wait(lock, stop_token, [&] {
-        return closedValue || queue.size() < capacityValue;
-      });
+      notFull.wait(lock, stop_token, [&] { return closedValue || queue.size() < capacityValue; });
 
       if (closedValue || stop_token.stop_requested())
         return false;
@@ -54,9 +51,7 @@ namespace uburu::concurrency
       if (!closedValue && queue.empty())
         ++metricsValue.consumerWaits;
 
-      notEmpty.wait(lock, stop_token, [&] {
-        return closedValue || !queue.empty();
-      });
+      notEmpty.wait(lock, stop_token, [&] { return closedValue || !queue.empty(); });
 
       if (queue.empty())
         return std::nullopt;

@@ -41,8 +41,7 @@ namespace uburu::search
     return "search.error.unknown";
   }
 
-  SearchError makeSearchError(SearchErrorCode code, std::string context,
-                                std::optional<std::size_t> offset)
+  SearchError makeSearchError(SearchErrorCode code, std::string context, std::optional<std::size_t> offset)
   {
     return SearchError{code, translationKeyFor(code), std::move(context), offset};
   }

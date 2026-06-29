@@ -11,10 +11,9 @@ namespace uburu::search
     if (query.root.empty())
       return {};
 
-    return {SearchRoot{
-      .path = query.root,
-      .includedDirectories = query.options.includedDirectories,
-      .excludedDirectories = query.options.excludedDirectories}};
+    return {SearchRoot{.path = query.root,
+                       .includedDirectories = query.options.includedDirectories,
+                       .excludedDirectories = query.options.excludedDirectories}};
   }
 
   SearchOptions optionsForRoot(const SearchOptions& options, const SearchRoot& root)

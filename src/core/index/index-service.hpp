@@ -20,11 +20,10 @@ namespace uburu::index
   {
   public:
     virtual ~IndexService() = default;
-    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,
-                                                    std::span<const FileEntry> files,
+    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree, std::span<const FileEntry> files,
                                                     std::stop_token stop_token = {}) = 0;
-    [[nodiscard]] virtual std::vector<SearchResult>
-    search(const SearchQuery& query, std::stop_token stop_token = {}) const = 0;
+    [[nodiscard]] virtual std::vector<SearchResult> search(const SearchQuery& query,
+                                                           std::stop_token stop_token = {}) const = 0;
   };
 
 } // namespace uburu::index

@@ -30,27 +30,21 @@ namespace uburu::filesystem
 
       if (previous == entries.end()) {
         batch.events.push_back(FileChangeEvent{
-          .relativePath = entry.relativePath,
-          .kind = FileChangeKind::created,
-          .directory = entry.directory});
+            .relativePath = entry.relativePath, .kind = FileChangeKind::created, .directory = entry.directory});
 
         continue;
       }
 
       if (changed(previous->second, entry)) {
         batch.events.push_back(FileChangeEvent{
-          .relativePath = entry.relativePath,
-          .kind = FileChangeKind::modified,
-          .directory = entry.directory});
+            .relativePath = entry.relativePath, .kind = FileChangeKind::modified, .directory = entry.directory});
       }
     }
 
     for (const auto& [key, entry] : entries) {
       if (!current.entries.contains(key)) {
         batch.events.push_back(FileChangeEvent{
-          .relativePath = entry.relativePath,
-          .kind = FileChangeKind::deleted,
-          .directory = entry.directory});
+            .relativePath = entry.relativePath, .kind = FileChangeKind::deleted, .directory = entry.directory});
       }
     }
 
@@ -74,7 +68,7 @@ namespace uburu::filesystem
     Snapshot snapshot;
     std::error_code error;
     std::filesystem::recursive_directory_iterator iterator(
-      root, std::filesystem::directory_options::skip_permission_denied, error);
+        root, std::filesystem::directory_options::skip_permission_denied, error);
     const std::filesystem::recursive_directory_iterator end;
 
     while (!error && iterator != end) {

@@ -123,8 +123,7 @@ namespace uburu::text
         ++lineNumber;
         ++summary.linesRead;
 
-        const TextLine textLine{
-            .text = line, .lineNumber = lineNumber, .byteOffset = lineOffset, .ending = ending};
+        const TextLine textLine{.text = line, .lineNumber = lineNumber, .byteOffset = lineOffset, .ending = ending};
         if (!sink(textLine))
           return false;
 
@@ -151,26 +150,21 @@ namespace uburu::text
 
     bool isSupportedFallbackEncoding(TextEncoding encoding)
     {
-      return encoding == TextEncoding::utf16Le ||
-             encoding == TextEncoding::utf16Be ||
-             encoding == TextEncoding::latin1;
+      return encoding == TextEncoding::utf16Le || encoding == TextEncoding::utf16Be || encoding == TextEncoding::latin1;
     }
 
     EncodingDetection detectEncoding(std::string_view sample, TextEncoding fallbackEncoding)
     {
-      if (sample.size() >= utf8BomSize &&
-          static_cast<unsigned char>(sample[0]) == utf8BomFirst &&
+      if (sample.size() >= utf8BomSize && static_cast<unsigned char>(sample[0]) == utf8BomFirst &&
           static_cast<unsigned char>(sample[1]) == utf8BomSecond &&
           static_cast<unsigned char>(sample[2]) == utf8BomThird)
         return {TextEncoding::utf8, utf8BomSize, true};
 
-      if (sample.size() >= utf16BomSize &&
-          static_cast<unsigned char>(sample[0]) == utf16LeBomFirst &&
+      if (sample.size() >= utf16BomSize && static_cast<unsigned char>(sample[0]) == utf16LeBomFirst &&
           static_cast<unsigned char>(sample[1]) == utf16LeBomSecond)
         return {TextEncoding::utf16Le, utf16BomSize, true};
 
-      if (sample.size() >= utf16BomSize &&
-          static_cast<unsigned char>(sample[0]) == utf16BeBomFirst &&
+      if (sample.size() >= utf16BomSize && static_cast<unsigned char>(sample[0]) == utf16BeBomFirst &&
           static_cast<unsigned char>(sample[1]) == utf16BeBomSecond)
         return {TextEncoding::utf16Be, utf16BomSize, true};
 
@@ -209,36 +203,27 @@ namespace uburu::text
       }
 
       if (scalar <= utf8TwoByteScalarMax) {
-        output.push_back(
-            static_cast<char>(utf8TwoBytePrefix | (scalar >> utf8ContinuationPayloadBits)));
-        output.push_back(static_cast<char>(utf8ContinuationPrefix |
-                                          (scalar & utf8ContinuationPayloadMask)));
+        output.push_back(static_cast<char>(utf8TwoBytePrefix | (scalar >> utf8ContinuationPayloadBits)));
+        output.push_back(static_cast<char>(utf8ContinuationPrefix | (scalar & utf8ContinuationPayloadMask)));
 
         return;
       }
 
       if (scalar <= utf8ThreeByteScalarMax) {
-        output.push_back(
-            static_cast<char>(utf8ThreeBytePrefix | (scalar >> utf8ThreeByteLeadShift)));
-        output.push_back(static_cast<char>(
-            utf8ContinuationPrefix |
-            ((scalar >> utf8ContinuationPayloadBits) & utf8ContinuationPayloadMask)));
+        output.push_back(static_cast<char>(utf8ThreeBytePrefix | (scalar >> utf8ThreeByteLeadShift)));
         output.push_back(static_cast<char>(utf8ContinuationPrefix |
-                                           (scalar & utf8ContinuationPayloadMask)));
+                                           ((scalar >> utf8ContinuationPayloadBits) & utf8ContinuationPayloadMask)));
+        output.push_back(static_cast<char>(utf8ContinuationPrefix | (scalar & utf8ContinuationPayloadMask)));
 
         return;
       }
 
-      output.push_back(
-          static_cast<char>(utf8FourBytePrefix | (scalar >> utf8FourByteLeadShift)));
-      output.push_back(static_cast<char>(
-          utf8ContinuationPrefix |
-          ((scalar >> utf8FourByteSecondShift) & utf8ContinuationPayloadMask)));
-      output.push_back(static_cast<char>(
-          utf8ContinuationPrefix |
-          ((scalar >> utf8ContinuationPayloadBits) & utf8ContinuationPayloadMask)));
-      output.push_back(
-          static_cast<char>(utf8ContinuationPrefix | (scalar & utf8ContinuationPayloadMask)));
+      output.push_back(static_cast<char>(utf8FourBytePrefix | (scalar >> utf8FourByteLeadShift)));
+      output.push_back(static_cast<char>(utf8ContinuationPrefix |
+                                         ((scalar >> utf8FourByteSecondShift) & utf8ContinuationPayloadMask)));
+      output.push_back(static_cast<char>(utf8ContinuationPrefix |
+                                         ((scalar >> utf8ContinuationPayloadBits) & utf8ContinuationPayloadMask)));
+      output.push_back(static_cast<char>(utf8ContinuationPrefix | (scalar & utf8ContinuationPayloadMask)));
     }
 
     std::string utf8FromScalar(char32_t scalar)
@@ -257,45 +242,38 @@ namespace uburu::text
 
       const auto has = [&](std::size_t index) { return offset + index < text.size(); };
 
-      const auto byte = [&](std::size_t index) {
-        return static_cast<unsigned char>(text[offset + index]);
-      };
+      const auto byte = [&](std::size_t index) { return static_cast<unsigned char>(text[offset + index]); };
 
-      if (first >= utf8TwoByteMin && first <= utf8TwoByteMax && has(1) &&
-          isUtf8Continuation(byte(1))) {
+      if (first >= utf8TwoByteMin && first <= utf8TwoByteMax && has(1) && isUtf8Continuation(byte(1))) {
         const char32_t scalar =
-            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) |
-            (byte(1) & utf8ContinuationPayloadMask);
+            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) | (byte(1) & utf8ContinuationPayloadMask);
 
         return {.scalar = scalar, .bytesConsumed = 2, .valid = true};
       }
 
-      if (first >= utf8ThreeByteMin && first <= utf8ThreeByteMax && has(2) &&
-          isUtf8Continuation(byte(1)) && isUtf8Continuation(byte(2))) {
+      if (first >= utf8ThreeByteMin && first <= utf8ThreeByteMax && has(2) && isUtf8Continuation(byte(1)) &&
+          isUtf8Continuation(byte(2))) {
         if ((first == utf8ThreeByteMin && byte(1) < utf8SecondAfterE0Min) ||
             (first == utf8ThreeByteSurrogateLead && byte(1) > utf8SecondBeforeSurrogateMax))
           return {};
 
-        const char32_t scalar =
-            ((first & utf8ThreeBytePayloadMask) << utf8ThreeByteLeadShift) |
-            ((byte(1) & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
-            (byte(2) & utf8ContinuationPayloadMask);
+        const char32_t scalar = ((first & utf8ThreeBytePayloadMask) << utf8ThreeByteLeadShift) |
+                                ((byte(1) & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
+                                (byte(2) & utf8ContinuationPayloadMask);
 
         return {.scalar = scalar, .bytesConsumed = 3, .valid = true};
       }
 
-      if (first >= utf8FourByteMin && first <= utf8FourByteMax && has(3) &&
-          isUtf8Continuation(byte(1)) && isUtf8Continuation(byte(2)) &&
-          isUtf8Continuation(byte(3))) {
+      if (first >= utf8FourByteMin && first <= utf8FourByteMax && has(3) && isUtf8Continuation(byte(1)) &&
+          isUtf8Continuation(byte(2)) && isUtf8Continuation(byte(3))) {
         if ((first == utf8FourByteMin && byte(1) < utf8SecondAfterF0Min) ||
             (first == utf8FourByteMax && byte(1) > utf8SecondBeforeMaxScalarMax))
           return {};
 
-        const char32_t scalar =
-            ((first & utf8FourBytePayloadMask) << utf8FourByteLeadShift) |
-            ((byte(1) & utf8ContinuationPayloadMask) << utf8FourByteSecondShift) |
-            ((byte(2) & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
-            (byte(3) & utf8ContinuationPayloadMask);
+        const char32_t scalar = ((first & utf8FourBytePayloadMask) << utf8FourByteLeadShift) |
+                                ((byte(1) & utf8ContinuationPayloadMask) << utf8FourByteSecondShift) |
+                                ((byte(2) & utf8ContinuationPayloadMask) << utf8ContinuationPayloadBits) |
+                                (byte(3) & utf8ContinuationPayloadMask);
         if (scalar > unicodeMaximumScalar)
           return {};
 
@@ -305,8 +283,7 @@ namespace uburu::text
       return {};
     }
 
-    std::uint16_t readUtf16CodeUnit(std::string_view bytes, std::size_t offset,
-                                       TextEncoding encoding)
+    std::uint16_t readUtf16CodeUnit(std::string_view bytes, std::size_t offset, TextEncoding encoding)
     {
       const auto first = static_cast<unsigned char>(bytes[offset]);
       const auto second = static_cast<unsigned char>(bytes[offset + 1]);
@@ -317,8 +294,7 @@ namespace uburu::text
       return static_cast<std::uint16_t>((first << 8U) | second);
     }
 
-    bool processDecodedScalar(LineEmitter& emitter, char32_t scalar,
-                                std::uintmax_t originalByteWidth)
+    bool processDecodedScalar(LineEmitter& emitter, char32_t scalar, std::uintmax_t originalByteWidth)
     {
       if (scalar == U'\n')
         return emitter.emit(LineEnding::lf, originalByteWidth);
@@ -329,9 +305,8 @@ namespace uburu::text
       return emitter.appendUtf8(utf8FromScalar(scalar), originalByteWidth);
     }
 
-    TextReadStatus decodeUtf8Lines(std::ifstream& stream, const SearchOptions& options,
-                                     TextReadSummary& summary, const TextLineSink& sink,
-                                     std::stop_token stop_token, std::size_t bomSize)
+    TextReadStatus decodeUtf8Lines(std::ifstream& stream, const SearchOptions& options, TextReadSummary& summary,
+                                   const TextLineSink& sink, std::stop_token stop_token, std::size_t bomSize)
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
@@ -380,8 +355,7 @@ namespace uburu::text
             continue;
           }
 
-          if (decoded.scalar == U'\r' && offset + decoded.bytesConsumed >= pending.size() &&
-              !stream.eof())
+          if (decoded.scalar == U'\r' && offset + decoded.bytesConsumed >= pending.size() && !stream.eof())
             break;
 
           if (!processDecodedScalar(emitter, decoded.scalar, decoded.bytesConsumed))
@@ -402,9 +376,8 @@ namespace uburu::text
       return emitter.finish() ? TextReadStatus::completed : TextReadStatus::cancelled;
     }
 
-    TextReadStatus decodeLatin1Lines(std::ifstream& stream, const SearchOptions& options,
-                                       TextReadSummary& summary, const TextLineSink& sink,
-                                       std::stop_token stop_token)
+    TextReadStatus decodeLatin1Lines(std::ifstream& stream, const SearchOptions& options, TextReadSummary& summary,
+                                     const TextLineSink& sink, std::stop_token stop_token)
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
@@ -465,9 +438,8 @@ namespace uburu::text
             continue;
           }
 
-          const auto scalar = byte >= latin1ControlC1Min && byte <= latin1ControlC1Max
-                                  ? unicodeReplacementCharacter
-                                  : static_cast<char32_t>(byte);
+          const auto scalar = byte >= latin1ControlC1Min && byte <= latin1ControlC1Max ? unicodeReplacementCharacter
+                                                                                       : static_cast<char32_t>(byte);
           if (!emitter.appendUtf8(utf8FromScalar(scalar), 1))
             return TextReadStatus::lineTooLong;
         }
@@ -485,10 +457,9 @@ namespace uburu::text
       return emitter.finish() ? TextReadStatus::completed : TextReadStatus::cancelled;
     }
 
-    TextReadStatus decodeUtf16Lines(std::ifstream& stream, TextEncoding encoding,
-                                      const SearchOptions& options, TextReadSummary& summary,
-                                      const TextLineSink& sink, std::stop_token stop_token,
-                                      std::size_t bomSize)
+    TextReadStatus decodeUtf16Lines(std::ifstream& stream, TextEncoding encoding, const SearchOptions& options,
+                                    TextReadSummary& summary, const TextLineSink& sink, std::stop_token stop_token,
+                                    std::size_t bomSize)
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
@@ -524,16 +495,14 @@ namespace uburu::text
               summary.hadInvalidSequences = true;
               scalar = unicodeReplacementCharacter;
             } else {
-              const auto low =
-                  readUtf16CodeUnit(pending, offset + utf16CodeUnitSize, encoding);
+              const auto low = readUtf16CodeUnit(pending, offset + utf16CodeUnitSize, encoding);
               if (low < utf16LowSurrogateMin || low > utf16LowSurrogateMax) {
                 summary.hadInvalidSequences = true;
                 scalar = unicodeReplacementCharacter;
               } else {
                 const char32_t highPayload = unit - utf16HighSurrogateMin;
                 const char32_t lowPayload = low & utf16LowSurrogatePayloadMask;
-                scalar = utf16SurrogateBase + (highPayload << utf16HighSurrogateShift) +
-                         lowPayload;
+                scalar = utf16SurrogateBase + (highPayload << utf16HighSurrogateShift) + lowPayload;
                 byteWidth = utf16CodeUnitSize * 2;
               }
             }
@@ -546,8 +515,7 @@ namespace uburu::text
             break;
 
           if (scalar == U'\r' && offset + byteWidth + 1 < pending.size() &&
-              readUtf16CodeUnit(pending, offset + static_cast<std::size_t>(byteWidth),
-                                   encoding) == U'\n') {
+              readUtf16CodeUnit(pending, offset + static_cast<std::size_t>(byteWidth), encoding) == U'\n') {
             if (!emitter.emit(LineEnding::crlf, byteWidth + utf16CodeUnitSize))
               return TextReadStatus::cancelled;
 
@@ -602,13 +570,10 @@ namespace uburu::text
     if (sample.size() < binaryControlSampleMinimum)
       return false;
 
-    const auto controlCount =
-        static_cast<std::size_t>(std::ranges::count_if(sample, [](char value) {
-          return isBinaryControlByte(static_cast<unsigned char>(value));
-        }));
+    const auto controlCount = static_cast<std::size_t>(std::ranges::count_if(
+        sample, [](char value) { return isBinaryControlByte(static_cast<unsigned char>(value)); }));
 
-    return controlCount * binaryControlRatioDenominator >
-           sample.size() * binaryControlRatioNumerator;
+    return controlCount * binaryControlRatioDenominator > sample.size() * binaryControlRatioNumerator;
   }
 
   std::size_t visualColumnForByteOffset(std::string_view utf8Text, std::size_t byteOffset)
@@ -623,9 +588,8 @@ namespace uburu::text
     return column;
   }
 
-  TextReadSummary readTextFileLines(const std::filesystem::path& path,
-                                       const SearchOptions& options, const TextLineSink& sink,
-                                       std::stop_token stop_token)
+  TextReadSummary readTextFileLines(const std::filesystem::path& path, const SearchOptions& options,
+                                    const TextLineSink& sink, std::stop_token stop_token)
   {
     TextReadSummary summary;
     std::ifstream stream(path, std::ios::binary);
@@ -648,13 +612,12 @@ namespace uburu::text
 
     switch (detected.encoding) {
     case TextEncoding::utf8:
-      summary.status =
-          decodeUtf8Lines(stream, options, summary, sink, stop_token, detected.bomSize);
+      summary.status = decodeUtf8Lines(stream, options, summary, sink, stop_token, detected.bomSize);
       break;
     case TextEncoding::utf16Le:
     case TextEncoding::utf16Be:
-      summary.status = decodeUtf16Lines(stream, detected.encoding, options, summary, sink,
-                                          stop_token, detected.bomSize);
+      summary.status =
+          decodeUtf16Lines(stream, detected.encoding, options, summary, sink, stop_token, detected.bomSize);
       break;
     case TextEncoding::latin1:
       summary.status = decodeLatin1Lines(stream, options, summary, sink, stop_token);

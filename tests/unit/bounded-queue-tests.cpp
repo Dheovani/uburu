@@ -13,8 +13,7 @@ namespace
   constexpr auto asyncPollInterval = std::chrono::milliseconds{1};
   constexpr auto asyncTimeout = std::chrono::milliseconds{200};
 
-  template <typename Predicate>
-  bool eventually(Predicate predicate)
+  template <typename Predicate> bool eventually(Predicate predicate)
   {
     const auto deadline = std::chrono::steady_clock::now() + asyncTimeout;
 
@@ -48,9 +47,7 @@ TEST_CASE("bounded queue wakes blocked producer when an item is consumed")
 
   std::atomic_bool pushed{false};
 
-  std::jthread producer([&] {
-    pushed = queue.push(2);
-  });
+  std::jthread producer([&] { pushed = queue.push(2); });
 
   std::this_thread::sleep_for(std::chrono::milliseconds{10});
   CHECK_FALSE(pushed.load());
@@ -90,13 +87,9 @@ TEST_CASE("bounded queue tracks producer and consumer waits")
 
   std::atomic_bool producerResult{false};
 
-  std::jthread producer([&] {
-    producerResult = queue.push(2);
-  });
+  std::jthread producer([&] { producerResult = queue.push(2); });
 
-  REQUIRE(eventually([&] {
-    return queue.metrics().producerWaits == 1;
-  }));
+  REQUIRE(eventually([&] { return queue.metrics().producerWaits == 1; }));
 
   CHECK(queue.metrics().producerWaits == 1);
   CHECK(queue.pop() == std::optional<int>{1});
@@ -107,13 +100,9 @@ TEST_CASE("bounded queue tracks producer and consumer waits")
 
   std::atomic_bool consumerResult{false};
 
-  std::jthread consumer([&] {
-    consumerResult = queue.pop() == std::optional<int>{3};
-  });
+  std::jthread consumer([&] { consumerResult = queue.pop() == std::optional<int>{3}; });
 
-  REQUIRE(eventually([&] {
-    return queue.metrics().consumerWaits == 1;
-  }));
+  REQUIRE(eventually([&] { return queue.metrics().consumerWaits == 1; }));
 
   CHECK(queue.metrics().consumerWaits == 1);
   REQUIRE(queue.push(3));

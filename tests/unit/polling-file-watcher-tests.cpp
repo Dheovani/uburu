@@ -16,8 +16,7 @@ namespace
   class TemporaryDirectory
   {
   public:
-    explicit TemporaryDirectory(std::string name)
-        : pathValue(std::filesystem::temp_directory_path() / std::move(name))
+    explicit TemporaryDirectory(std::string name) : pathValue(std::filesystem::temp_directory_path() / std::move(name))
     {
       std::error_code error;
 

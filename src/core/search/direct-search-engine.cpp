@@ -51,22 +51,19 @@ namespace uburu::search
       return target == SearchTarget::fileName || target == SearchTarget::contentAndFileName;
     }
 
-    std::vector<text::MatchPosition> findLiteralMatches(std::string_view text,
-                                                          const SearchQuery& query)
+    std::vector<text::MatchPosition> findLiteralMatches(std::string_view text, const SearchQuery& query)
     {
       return text::findAllLiterals(text, query.expression, query.options);
     }
 
     std::optional<std::vector<text::MatchPosition>>
-    findRegexMatches(std::string_view text, const text::RegexMatcher& regexMatcher,
-                       SearchSummary& summary)
+    findRegexMatches(std::string_view text, const text::RegexMatcher& regexMatcher, SearchSummary& summary)
     {
       const auto regexResult = regexMatcher.findAll(text);
 
       if (regexResult.status != text::RegexMatchStatus::completed) {
-        summary.errors.push_back(
-            makeSearchError(errorCodeFromRegexStatus(regexResult.status),
-                              std::to_string(regexResult.backendErrorCode)));
+        summary.errors.push_back(makeSearchError(errorCodeFromRegexStatus(regexResult.status),
+                                                 std::to_string(regexResult.backendErrorCode)));
 
         return std::nullopt;
       }
@@ -74,9 +71,9 @@ namespace uburu::search
       return std::move(regexResult.matches);
     }
 
-    std::optional<std::vector<text::MatchPosition>>
-    findMatches(std::string_view text, const SearchQuery& query,
-                 const std::optional<text::RegexMatcher>& regexMatcher, SearchSummary& summary)
+    std::optional<std::vector<text::MatchPosition>> findMatches(std::string_view text, const SearchQuery& query,
+                                                                const std::optional<text::RegexMatcher>& regexMatcher,
+                                                                SearchSummary& summary)
     {
       if (regexMatcher)
         return findRegexMatches(text, *regexMatcher, summary);
@@ -106,9 +103,8 @@ namespace uburu::search
       if (readSummary.status == text::TextReadStatus::cancelled)
         return false;
 
-      const auto code = readSummary.status == text::TextReadStatus::openFailed
-        ? SearchErrorCode::fileOpenFailed
-        : SearchErrorCode::fileReadFailed;
+      const auto code = readSummary.status == text::TextReadStatus::openFailed ? SearchErrorCode::fileOpenFailed
+                                                                               : SearchErrorCode::fileReadFailed;
       reportPartialFailure(summary, code, entry);
 
       return true;
@@ -119,10 +115,9 @@ namespace uburu::search
       std::vector<MatchSpan> highlights;
       highlights.reserve(matches.size());
       for (const auto& highlightMatch : matches) {
-        highlights.push_back(MatchSpan{
-            .column = text::visualColumnForByteOffset(lineText, highlightMatch.offset),
-            .byteOffset = highlightMatch.offset,
-            .byteLength = highlightMatch.length});
+        highlights.push_back(MatchSpan{.column = text::visualColumnForByteOffset(lineText, highlightMatch.offset),
+                                       .byteOffset = highlightMatch.offset,
+                                       .byteLength = highlightMatch.length});
       }
 
       return highlights;
@@ -151,8 +146,7 @@ namespace uburu::search
       return true;
     }
 
-    bool addContextAfter(std::vector<PendingResult>& pending, std::string_view lineText,
-                           const ResultSink& sink)
+    bool addContextAfter(std::vector<PendingResult>& pending, std::string_view lineText, const ResultSink& sink)
     {
       for (auto& pendingResult : pending) {
         if (pendingResult.remainingContextLines == 0)
@@ -173,13 +167,11 @@ namespace uburu::search
       return publishReadyPending(pending, sink);
     }
 
-    PublishDecision publishMatches(const FileEntry& entry, SearchResultKind kind,
-                                    std::size_t lineNumber, std::string_view lineText,
-                                    const std::vector<text::MatchPosition>& matches,
-                                    const SearchQuery& query, SearchSummary& summary,
-                                    std::size_t& fileMatches,
-                                    const std::deque<std::string>& contextBefore,
-                                    std::vector<PendingResult>& pending, const ResultSink& sink)
+    PublishDecision publishMatches(const FileEntry& entry, SearchResultKind kind, std::size_t lineNumber,
+                                   std::string_view lineText, const std::vector<text::MatchPosition>& matches,
+                                   const SearchQuery& query, SearchSummary& summary, std::size_t& fileMatches,
+                                   const std::deque<std::string>& contextBefore, std::vector<PendingResult>& pending,
+                                   const ResultSink& sink)
     {
       for (const auto& match : matches) {
         if (summary.matches >= query.options.resultLimit) {
@@ -216,8 +208,7 @@ namespace uburu::search
         }
 
         pending.push_back(
-            PendingResult{.result = std::move(result),
-                          .remainingContextLines = query.options.contextAfterLines});
+            PendingResult{.result = std::move(result), .remainingContextLines = query.options.contextAfterLines});
       }
 
       return PublishDecision::continueSearch;
@@ -226,7 +217,7 @@ namespace uburu::search
   } // namespace
 
   DirectSearchEngine::DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner)
-    : scanner(std::move(scanner))
+      : scanner(std::move(scanner))
   {
     if (!this->scanner)
       throw std::invalid_argument("DirectSearchEngine requires a file scanner");
@@ -244,15 +235,14 @@ namespace uburu::search
       auto compiled = text::compileRegex(query.expression, query.options);
       if (!compiled.matcher) {
         const auto& error = compiled.error;
-        summary.errors.push_back(makeSearchError(
-            SearchErrorCode::regexCompileFailed, error ? error->message : std::string{},
-            error ? error->offset : std::optional<std::size_t>{}));
+        summary.errors.push_back(makeSearchError(SearchErrorCode::regexCompileFailed,
+                                                 error ? error->message : std::string{},
+                                                 error ? error->offset : std::optional<std::size_t>{}));
 
         return summary;
       }
-      summary.regexExecutionMode = compiled.matcher->jitEnabled()
-                                         ? RegexExecutionMode::jit
-                                         : RegexExecutionMode::interpretedFallback;
+      summary.regexExecutionMode =
+          compiled.matcher->jitEnabled() ? RegexExecutionMode::jit : RegexExecutionMode::interpretedFallback;
       regexMatcher = std::move(compiled.matcher);
     }
 
@@ -265,103 +255,102 @@ namespace uburu::search
       auto rootOptions = optionsForRoot(query.options, root);
 
       scanner->scan(
-        root.path, rootOptions,
-        [&](FileEntry entry) {
-          if (stop_token.stop_requested())
-            return false;
-
-          ++summary.filesScanned;
-          ++summary.metrics.filesProcessed;
-          summary.metrics.bytesProcessed += entry.size;
-
-          std::size_t fileMatches = 0;
-          std::deque<std::string> previousContext;
-          std::vector<PendingResult> pendingResults;
-
-          if (searchesFileName(query.options.target)) {
-            const auto pathText = entry.relativePath.generic_string();
-            const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
-
-            if (!pathMatches)
+          root.path, rootOptions,
+          [&](FileEntry entry) {
+            if (stop_token.stop_requested())
               return false;
 
-            const auto decision = publishMatches(entry, SearchResultKind::fileName, 0, pathText,
-                                                  *pathMatches, query, summary, fileMatches,
-                                                  previousContext, pendingResults, sink);
+            ++summary.filesScanned;
+            ++summary.metrics.filesProcessed;
+            summary.metrics.bytesProcessed += entry.size;
 
-            if (!flushPending(pendingResults, sink))
-              return false;
+            std::size_t fileMatches = 0;
+            std::deque<std::string> previousContext;
+            std::vector<PendingResult> pendingResults;
 
-            if (decision == PublishDecision::stopSearch)
-              return false;
+            if (searchesFileName(query.options.target)) {
+              const auto pathText = entry.relativePath.generic_string();
+              const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
 
-            if (decision == PublishDecision::stopCurrentFile)
+              if (!pathMatches)
+                return false;
+
+              const auto decision = publishMatches(entry, SearchResultKind::fileName, 0, pathText, *pathMatches, query,
+                                                   summary, fileMatches, previousContext, pendingResults, sink);
+
+              if (!flushPending(pendingResults, sink))
+                return false;
+
+              if (decision == PublishDecision::stopSearch)
+                return false;
+
+              if (decision == PublishDecision::stopCurrentFile)
+                return true;
+            }
+
+            if (!searchesContent(query.options.target))
               return true;
-          }
 
-          if (!searchesContent(query.options.target))
-            return true;
+            bool stopCurrentFile = false;
+            bool stopSearch = false;
+            const auto readSummary = text::readTextFileLines(
+                entry.absolutePath, query.options,
+                [&](const text::TextLine& line) {
+                  if (!addContextAfter(pendingResults, line.text, sink)) {
+                    stopSearch = true;
 
-          bool stopCurrentFile = false;
-          bool stopSearch = false;
-          const auto readSummary = text::readTextFileLines(
-              entry.absolutePath, query.options,
-              [&](const text::TextLine& line) {
-                if (!addContextAfter(pendingResults, line.text, sink)) {
-                  stopSearch = true;
+                    return false;
+                  }
 
-                  return false;
-                }
+                  const auto matches = findMatches(line.text, query, regexMatcher, summary);
 
-                const auto matches = findMatches(line.text, query, regexMatcher, summary);
+                  if (!matches)
+                    return false;
 
-                if (!matches)
-                  return false;
+                  if (matches->empty()) {
+                    previousContext.push_back(line.text);
+                    while (previousContext.size() > query.options.contextBeforeLines)
+                      previousContext.pop_front();
 
-                if (matches->empty()) {
+                    return true;
+                  }
+
+                  const auto decision =
+                      publishMatches(entry, SearchResultKind::content, line.lineNumber, line.text, *matches, query,
+                                     summary, fileMatches, previousContext, pendingResults, sink);
+
                   previousContext.push_back(line.text);
                   while (previousContext.size() > query.options.contextBeforeLines)
                     previousContext.pop_front();
 
+                  if (decision == PublishDecision::stopSearch) {
+                    stopSearch = true;
+
+                    return false;
+                  }
+
+                  if (decision == PublishDecision::stopCurrentFile) {
+                    stopCurrentFile = true;
+
+                    return false;
+                  }
+
                   return true;
-                }
+                },
+                stop_token);
 
-                const auto decision = publishMatches(
-                    entry, SearchResultKind::content, line.lineNumber, line.text, *matches, query,
-                    summary, fileMatches, previousContext, pendingResults, sink);
+            if (!flushPending(pendingResults, sink))
+              return false;
 
-                previousContext.push_back(line.text);
-                while (previousContext.size() > query.options.contextBeforeLines)
-                  previousContext.pop_front();
+            if (stopSearch)
+              return false;
 
-                if (decision == PublishDecision::stopSearch) {
-                  stopSearch = true;
+            if (stopCurrentFile)
+              return true;
 
-                  return false;
-                }
-
-                if (decision == PublishDecision::stopCurrentFile) {
-                  stopCurrentFile = true;
-
-                  return false;
-                }
-
-                return true;
-              },
-              stop_token);
-
-          if (!flushPending(pendingResults, sink))
-            return false;
-
-          if (stopSearch)
-            return false;
-
-          if (stopCurrentFile)
-            return true;
-
-          return reportTextReadSummary(summary, entry, readSummary);
-        },
-        stop_token, &summary.metrics);
+            return reportTextReadSummary(summary, entry, readSummary);
+          },
+          stop_token, &summary.metrics);
     }
 
     summary.cancelled = stop_token.stop_requested();

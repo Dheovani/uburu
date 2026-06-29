@@ -34,19 +34,14 @@ namespace uburu::filesystem
       if ((flags & kFSEventStreamEventFlagItemCreated) != 0U)
         return FileChangeKind::created;
 
-      if ((flags & kFSEventStreamEventFlagItemRemoved) != 0U ||
-          (flags & kFSEventStreamEventFlagItemRenamed) != 0U)
+      if ((flags & kFSEventStreamEventFlagItemRemoved) != 0U || (flags & kFSEventStreamEventFlagItemRenamed) != 0U)
         return FileChangeKind::deleted;
 
       return FileChangeKind::modified;
     }
 
-    void callback(ConstFSEventStreamRef,
-                  void* context,
-                  std::size_t eventCount,
-                  void* eventPaths,
-                  const FSEventStreamEventFlags eventFlags[],
-                  const FSEventStreamEventId[])
+    void callback(ConstFSEventStreamRef, void* context, std::size_t eventCount, void* eventPaths,
+                  const FSEventStreamEventFlags eventFlags[], const FSEventStreamEventId[])
     {
       auto* watcher = static_cast<MacosFileWatcher*>(context);
       auto** paths = static_cast<char**>(eventPaths);
@@ -61,9 +56,7 @@ namespace uburu::filesystem
         }
 
         batch.events.push_back(FileChangeEvent{
-          .relativePath = path,
-          .kind = mapFlags(eventFlags[index]),
-          .directory = is_directory(eventFlags[index])});
+            .relativePath = path, .kind = mapFlags(eventFlags[index]), .directory = is_directory(eventFlags[index])});
       }
 
       appendMacosEvents(*watcher, std::move(batch));
@@ -90,8 +83,7 @@ namespace uburu::filesystem
     context.info = this;
 
     stream->stream = FSEventStreamCreate(nullptr, callback, &context, paths, kFSEventStreamEventIdSinceNow,
-                                          fseventsLatencySeconds,
-                                          kFSEventStreamCreateFlagFileEvents);
+                                         fseventsLatencySeconds, kFSEventStreamCreateFlagFileEvents);
 
     if (stream->stream != nullptr) {
       FSEventStreamSetDispatchQueue(stream->stream, stream->queue);

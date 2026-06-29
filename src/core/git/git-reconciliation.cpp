@@ -29,14 +29,13 @@ namespace uburu::git
       plan.reasons.push_back(GitReconciliationReason::refsChanged);
     }
 
-    plan.structuralReconciliationRequired =
-      hasReason(plan, GitReconciliationReason::branchChanged) ||
-      hasReason(plan, GitReconciliationReason::headChanged) ||
-      hasReason(plan, GitReconciliationReason::detachedHeadChanged) ||
-      hasReason(plan, GitReconciliationReason::refsChanged);
+    plan.structuralReconciliationRequired = hasReason(plan, GitReconciliationReason::branchChanged) ||
+                                            hasReason(plan, GitReconciliationReason::headChanged) ||
+                                            hasReason(plan, GitReconciliationReason::detachedHeadChanged) ||
+                                            hasReason(plan, GitReconciliationReason::refsChanged);
 
     plan.overlayReconciliationRequired =
-      plan.structuralReconciliationRequired || hasReason(plan, GitReconciliationReason::indexChanged);
+        plan.structuralReconciliationRequired || hasReason(plan, GitReconciliationReason::indexChanged);
 
     plan.canReuseContentByBlob = plan.structuralReconciliationRequired;
 

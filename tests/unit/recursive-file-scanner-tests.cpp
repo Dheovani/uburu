@@ -24,8 +24,7 @@ namespace
   class TemporaryDirectory
   {
   public:
-    explicit TemporaryDirectory(std::string name)
-        : pathValue(std::filesystem::temp_directory_path() / std::move(name))
+    explicit TemporaryDirectory(std::string name) : pathValue(std::filesystem::temp_directory_path() / std::move(name))
     {
       std::error_code error;
 
@@ -63,15 +62,14 @@ namespace
 
     std::filesystem::create_directories(path.parent_path());
 
-    HANDLE file = CreateFileW(path.wstring().c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-                              FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE file =
+        CreateFileW(path.wstring().c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (file == INVALID_HANDLE_VALUE)
       return false;
 
     DWORD bytesReturned = 0;
-    const auto sparseEnabled =
-      DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &bytesReturned, nullptr);
+    const auto sparseEnabled = DeviceIoControl(file, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &bytesReturned, nullptr);
 
     LARGE_INTEGER distance;
     distance.QuadPart = sparseFileSize;
@@ -84,8 +82,7 @@ namespace
   }
 #endif
 
-  bool createDirectorySymlinkOrSkip(const std::filesystem::path& target,
-                                        const std::filesystem::path& link)
+  bool createDirectorySymlinkOrSkip(const std::filesystem::path& target, const std::filesystem::path& link)
   {
     std::error_code error;
     std::filesystem::create_directory_symlink(target, link, error);
@@ -93,8 +90,7 @@ namespace
     return !error;
   }
 
-  std::vector<uburu::FileEntry> scanEntries(const std::filesystem::path& root,
-                                             const uburu::SearchOptions& options)
+  std::vector<uburu::FileEntry> scanEntries(const std::filesystem::path& root, const uburu::SearchOptions& options)
   {
     uburu::filesystem::RecursiveFileScanner scanner;
     std::vector<uburu::FileEntry> entries;
@@ -107,8 +103,7 @@ namespace
     return entries;
   }
 
-  uburu::diagnostics::SearchMetrics scanMetrics(const std::filesystem::path& root,
-                                                 const uburu::SearchOptions& options)
+  uburu::diagnostics::SearchMetrics scanMetrics(const std::filesystem::path& root, const uburu::SearchOptions& options)
   {
     uburu::filesystem::RecursiveFileScanner scanner;
     uburu::diagnostics::SearchMetrics metrics;

@@ -18,16 +18,8 @@ namespace uburu::filesystem
     constexpr std::size_t bytesPerKibibyte = 1024U;
     constexpr std::size_t inotifyBufferKibibytes = 64U;
     constexpr std::size_t inotifyBufferSize = inotifyBufferKibibytes * bytesPerKibibyte;
-    constexpr std::uint32_t watchedEvents =
-      IN_CREATE |
-      IN_MODIFY |
-      IN_CLOSE_WRITE |
-      IN_ATTRIB |
-      IN_DELETE |
-      IN_MOVED_FROM |
-      IN_MOVED_TO |
-      IN_DELETE_SELF |
-      IN_MOVE_SELF;
+    constexpr std::uint32_t watchedEvents = IN_CREATE | IN_MODIFY | IN_CLOSE_WRITE | IN_ATTRIB | IN_DELETE |
+                                            IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE_SELF | IN_MOVE_SELF;
 
     [[nodiscard]] FileChangeKind mapMask(std::uint32_t mask)
     {
@@ -43,9 +35,7 @@ namespace uburu::filesystem
   } // namespace
 
   LinuxFileWatcher::LinuxFileWatcher(std::filesystem::path root)
-    : root(std::move(root)),
-      descriptor(inotify_init1(IN_NONBLOCK | IN_CLOEXEC)),
-      buffer(inotifyBufferSize)
+      : root(std::move(root)), descriptor(inotify_init1(IN_NONBLOCK | IN_CLOEXEC)), buffer(inotifyBufferSize)
   {
     if (available())
       addRecursiveWatches();
@@ -97,9 +87,7 @@ namespace uburu::filesystem
           const auto directory = (event->mask & IN_ISDIR) != 0U;
 
           batch.events.push_back(FileChangeEvent{
-            .relativePath = relativeFromRoot(absolutePath),
-            .kind = mapMask(event->mask),
-            .directory = directory});
+              .relativePath = relativeFromRoot(absolutePath), .kind = mapMask(event->mask), .directory = directory});
 
           if (directory && (event->mask & (IN_CREATE | IN_MOVED_TO)) != 0U)
             addDirectoryWatch(absolutePath);
@@ -156,7 +144,7 @@ namespace uburu::filesystem
 
     std::error_code error;
     std::filesystem::recursive_directory_iterator iterator(
-      root, std::filesystem::directory_options::skip_permission_denied, error);
+        root, std::filesystem::directory_options::skip_permission_denied, error);
     const std::filesystem::recursive_directory_iterator end;
 
     while (!error && iterator != end) {

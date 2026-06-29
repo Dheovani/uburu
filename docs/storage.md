@@ -1,8 +1,12 @@
 # Storage
 
-SQLite armazenará catálogos de repositórios, worktrees, caminhos e gerações do índice, além de preferências, histórico e métricas. Conteúdo indexado será referenciado por hash; caminhos apontam para documentos e não constituem sua identidade.
+SQLite armazena catálogos de repositórios, worktrees, caminhos e gerações do índice, além de
+preferências, histórico de buscas, buscas salvas e métricas operacionais. Conteúdo indexado é
+referenciado por hash; caminhos apontam para documentos e não constituem sua identidade.
 
-O backend deverá usar transações curtas, WAL, migrações versionadas e prepared statements. Escritas de uma nova geração serão atômicas. FTS5 pode acelerar partes da consulta, mas ficará atrás de uma interface substituível e não será a única representação do índice.
+O backend usa transações curtas, WAL, migrations versionadas e prepared statements. Escritas de uma nova
+geração são atômicas. FTS5 pode acelerar partes da consulta no futuro, mas deve permanecer atrás de uma
+interface substituível e não será a única representação do índice.
 
 ## Backend inicial
 
@@ -11,35 +15,62 @@ O backend deverá usar transações curtas, WAL, migrações versionadas e prepa
 antes de `initialize()`. A implementação usa prepared statements para escrita e leitura, além de
 transações curtas nas operações que precisam atualizar mais de uma tabela.
 
-Na inicialização, o backend configura:
+Na inicialização, o backend configura e expõe por `pragmaSnapshot()`:
 
 - `PRAGMA foreign_keys = ON`;
 - `PRAGMA journal_mode = WAL`;
 - `PRAGMA synchronous = NORMAL`;
 - `sqlite3_busy_timeout` com timeout inicial de 5 segundos;
-- `PRAGMA user_version = 3`;
+- `PRAGMA user_version = 4`;
 - tabela `schema_migrations` para registrar versões aplicadas.
+
+Esses pragmas são parte do contrato operacional do storage. Testes automatizados verificam que o banco
+abre com foreign keys habilitadas, WAL ativo, busy timeout configurado e integridade reportada como
+válida.
+
+## Localização do banco e migração
+
+`defaultStorageDatabasePath()` escolhe uma localização padrão por plataforma:
+
+- Windows: `%LOCALAPPDATA%/uburu/uburu.db`, com fallback para `%APPDATA%`, `%USERPROFILE%` e diretório
+  temporário;
+- macOS: `$HOME/Library/Application Support/uburu/uburu.db`;
+- Linux e outros Unix: `$XDG_DATA_HOME/uburu/uburu.db` ou `$HOME/.local/share/uburu/uburu.db`.
+
+`migrateStorageDatabase()` copia o banco de origem para o destino e preserva os sidecars `-wal` e `-shm`
+quando existirem. A migração é uma cópia segura: cria o diretório de destino, sobrescreve o destino
+quando solicitado pela aplicação e não apaga o banco de origem. A decisão de remover ou arquivar o banco
+antigo pertence à camada de aplicação/configuração, não ao helper de baixo nível.
 
 ## Schema
 
-O schema inicial cria as tabelas abaixo e evolui por migrations idempotentes. A versão 1 criou a base
-do catálogo; a versão 2 adicionou algoritmos explícitos para hash de conteúdo e blob Git; a versão 3
-tornou `(content_hash_algorithm, content_hash)` a identidade persistente do documento.
+O schema evolui por migrations idempotentes:
+
+1. `repositories`, `worktrees`, `generations`, `documents`, `files` e `overlays`;
+2. algoritmos explícitos para hash de conteúdo e blob Git;
+3. identidade persistente de documento por `(content_hash_algorithm, content_hash)`;
+4. metadados de produto: `preferences`, `search_history`, `saved_searches` e `indexing_metrics`.
+
+Tabelas principais:
 
 - `schema_migrations`: versões de migration já aplicadas;
 - `repositories`: repositórios Git lógicos;
 - `worktrees`: worktrees físicas, incluindo estados `locked`, `prunable` e motivo de lock;
-- `generations`: gerações futuras do índice, já separadas por repositório/worktree/HEAD/branch;
-- `documents`: documentos endereçados por `content_hash`;
+- `generations`: gerações do índice separadas por repositório, worktree, HEAD e branch;
+- `documents`: documentos endereçados por algoritmo e hash de conteúdo;
 - `files`: associação entre caminho relativo na worktree e documento indexado;
-- `overlays`: contrato persistente para overlay da working tree sobre conteúdo versionado.
+- `overlays`: contrato persistente para overlay da working tree sobre conteúdo versionado;
+- `preferences`: preferências globais e por repositório;
+- `search_history`: histórico recente de buscas com retenção limitada;
+- `saved_searches`: buscas nomeadas pelo usuário;
+- `indexing_metrics`: métricas recentes de indexação com retenção limitada.
 
-Mesmo nesta primeira versão, caminho e conteúdo não são a mesma identidade: `files` aponta para
-`documents` por `content_hash`. O mesmo documento poderá ser reutilizado por múltiplos caminhos,
-worktrees ou branches quando o indexador começar a preencher gerações reais.
+Mesmo nesta etapa, caminho e conteúdo não são a mesma identidade: `files` aponta para `documents` por
+`content_hash`. O mesmo documento poderá ser reutilizado por múltiplos caminhos, worktrees ou branches
+quando o indexador começar a preencher gerações reais.
 
-`documents` e `files` armazenam o algoritmo junto com o valor do hash. Para conteúdo próprio do Uburu,
-o domínio usa `ContentHashAlgorithm`; para blob Git, usa `GitObjectHashAlgorithm`. A chave primária de
+`documents` e `files` armazenam o algoritmo junto com o valor do hash. Para conteúdo próprio do Uburu, o
+domínio usa `ContentHashAlgorithm`; para blob Git, usa `GitObjectHashAlgorithm`. A chave primária de
 `documents` inclui o algoritmo e o valor do hash, evitando colisões semânticas entre algoritmos
 diferentes que produzam a mesma representação textual.
 
@@ -57,8 +88,10 @@ diferentes que produzam a mesma representação textual.
 
 Se qualquer documento pertencer a outro repositório ou worktree, ou se qualquer escrita falhar, a
 transação é revertida. Assim, o índice nunca deve observar metade da geração nova e metade da anterior.
+Testes cobrem publicação atômica, rollback de geração inválida e consistência entre conexão leitora e
+conexão escritora.
 
-## Recuperação e retenção
+## Recuperação, integridade e reconstrução
 
 As migrations rodam dentro de transações explícitas. Se uma migration falhar, a transação é revertida e
 o banco não deve avançar `user_version`. Durante `initialize()`, o backend também remove registros de
@@ -69,14 +102,54 @@ tornarem visíveis.
 indexador. O método remove somente metadados de gerações não publicadas; ele não remove documentos nem a
 visão publicada anterior.
 
+`StorageService::validateIntegrity()` executa `PRAGMA integrity_check` e retorna um relatório explícito.
+Quando a estrutura do índice precisar ser descartada sem apagar metadados de produto,
+`StorageService::rebuildIndexCatalog()` remove `overlays`, `files`, `documents` e `generations` em uma
+transação. Essa reconstrução preserva repositórios, worktrees, preferências, histórico, buscas salvas e
+métricas.
+
 `StorageService::collectOrphanDocuments()` remove documentos que não são mais referenciados por nenhum
 caminho em `files`, usando a identidade composta `(content_hash_algorithm, content_hash)`. Essa coleta é
 separada da publicação de geração para permitir políticas futuras de retenção, orçamento de disco e
 diagnóstico antes de apagar cache reaproveitável.
 
+## Preferências, histórico e métricas
+
+Preferências usam uma chave textual e um escopo:
+
+- escopo vazio: preferência global;
+- `RepositoryId`: preferência específica de repositório.
+
+Histórico de buscas e métricas de indexação recebem um limite de retenção no momento da escrita. O
+backend insere o novo registro e remove os mais antigos que excedam o orçamento, evitando crescimento
+ilimitado. Buscas salvas são identificadas por nome e podem ser atualizadas sem duplicar registros.
+
+Essas tabelas são deliberadamente simples nesta etapa. A validação semântica de chaves, tipos de
+preferência, privacidade do histórico e políticas de exportação/importação pertencem a marcos futuros de
+configuração e UX.
+
+## Avaliação inicial de FTS5
+
+O Marco 5 introduziu `uburu-storage-fts5-benchmark`, um benchmark de desenvolvedor desligado do build
+padrão. Ele cria um dataset determinístico em SQLite, compara uma consulta textual simples por `LIKE`
+contra uma consulta equivalente por FTS5 e valida que ambas retornam a mesma contagem.
+
+Resultado local inicial no preset `core-windows-mingw-benchmarks-debug`:
+
+- documentos: 20.000;
+- documentos correspondentes: 2.858;
+- repetições por estratégia: 30;
+- `LIKE`: 228.924 µs;
+- FTS5: 9.993 µs.
+
+Essa medição justifica manter FTS5 como candidato forte para aceleração de consultas textuais indexadas,
+mas não muda o contrato do storage: o índice persistente continua content-addressed e Git-aware, e FTS5
+deve ser tratado como backend/estrutura auxiliar substituível.
+
 ## Escopo desta etapa
 
 Esta etapa persiste e recupera `RepositoryInfo`, `WorktreeInfo` e `IndexDocument`, incluindo remoção
-lógica por caminho, publicação atômica de gerações, recuperação de publicações interrompidas e coleta de
-documentos órfãos. Ainda não implementa recuperação de banco corrompido, preferências, histórico de
-buscas ou métricas persistentes. Esses pontos permanecem no Marco 5.
+lógica por caminho, publicação atômica de gerações, recuperação de publicações interrompidas, coleta de
+documentos órfãos, pragmas medidos, relatório de integridade, reconstrução segura do catálogo,
+preferências, histórico, buscas salvas, métricas recentes, localização/migração básica do banco e
+avaliação inicial de FTS5 por benchmark.

@@ -7,6 +7,11 @@
     "catch2",
     "libgit2",
     "pcre2",
-    "sqlite3"
+    {
+      "name": "sqlite3",
+      "features": [
+        "fts5"
+      ]
+    }
   ]
 }

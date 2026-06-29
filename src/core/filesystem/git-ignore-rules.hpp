@@ -21,8 +21,7 @@ namespace uburu::filesystem
   class GitIgnoreRules
   {
   public:
-    void appendFile(const std::filesystem::path& ignoreFile,
-                     const std::filesystem::path& baseDirectory);
+    void appendFile(const std::filesystem::path& ignoreFile, const std::filesystem::path& baseDirectory);
 
     [[nodiscard]] bool ignores(const std::filesystem::path& relativePath, bool is_directory) const;
 
@@ -32,7 +31,7 @@ namespace uburu::filesystem
     std::vector<GitIgnoreRule> rules;
   };
 
-  [[nodiscard]] std::vector<GitIgnoreRule>
-  parseGitIgnore(std::string_view content, const std::filesystem::path& baseDirectory);
+  [[nodiscard]] std::vector<GitIgnoreRule> parseGitIgnore(std::string_view content,
+                                                          const std::filesystem::path& baseDirectory);
 
 } // namespace uburu::filesystem

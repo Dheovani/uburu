@@ -84,6 +84,16 @@
       }
     },
     {
+      "name": "core-windows-mingw-benchmarks-debug",
+      "displayName": "Core-only Windows MinGW Debug with benchmarks",
+      "description": "Developer benchmark build using MinGW without the Qt desktop application.",
+      "inherits": "core-windows-mingw-debug",
+      "binaryDir": "${sourceDir}/build/core-windows-mingw-benchmarks-debug",
+      "cacheVariables": {
+        "UBURU_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
       "name": "core-linux-debug",
       "displayName": "Core-only Linux Debug",
       "description": "Build only the UI-independent core and tests on Linux; does not require Qt.",
@@ -138,6 +148,10 @@
     {
       "name": "core-windows-mingw-werror-debug",
       "configurePreset": "core-windows-mingw-werror-debug"
+    },
+    {
+      "name": "core-windows-mingw-benchmarks-debug",
+      "configurePreset": "core-windows-mingw-benchmarks-debug"
     },
     {
       "name": "core-linux-debug",

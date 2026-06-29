@@ -23,6 +23,7 @@ function Add-RuntimePathForPreset {
     "windows-mingw-debug" { "build/windows-mingw-debug" }
     "core-windows-mingw-debug" { "build/core-windows-mingw-debug" }
     "core-windows-mingw-werror-debug" { "build/core-windows-mingw-werror-debug" }
+    "core-windows-mingw-benchmarks-debug" { "build/core-windows-mingw-benchmarks-debug" }
     default { "" }
   }
 

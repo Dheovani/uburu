@@ -242,4 +242,47 @@ namespace uburu
     std::vector<IndexDocument> documents;
   };
 
+  struct StoragePragmaSnapshot
+  {
+    bool foreignKeysEnabled{false};
+    std::string journalMode;
+    std::string synchronousMode;
+    std::chrono::milliseconds busyTimeout{0};
+  };
+
+  struct StorageIntegrityReport
+  {
+    bool ok{false};
+    std::string message;
+  };
+
+  struct SearchHistoryEntry
+  {
+    std::filesystem::path root;
+    std::string expression;
+    std::chrono::system_clock::time_point searchedAt{};
+  };
+
+  struct SavedSearch
+  {
+    std::string name;
+    std::filesystem::path root;
+    std::string expression;
+    std::chrono::system_clock::time_point savedAt{};
+  };
+
+  struct IndexingMetric
+  {
+    std::string name;
+    std::int64_t value{0};
+    std::chrono::system_clock::time_point recordedAt{};
+  };
+
+  struct StorageMigrationResult
+  {
+    bool copiedDatabase{false};
+    bool copiedWriteAheadLog{false};
+    bool copiedSharedMemory{false};
+  };
+
 } // namespace uburu

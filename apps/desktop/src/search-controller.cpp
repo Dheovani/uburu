@@ -34,8 +34,7 @@ namespace uburu::app
 
   QVariant SearchResultModel::data(const QModelIndex& index, int role) const
   {
-    if (!index.isValid() || index.row() < 0 ||
-        static_cast<std::size_t>(index.row()) >= results.size())
+    if (!index.isValid() || index.row() < 0 || static_cast<std::size_t>(index.row()) >= results.size())
       return {};
     const auto& result = results[static_cast<std::size_t>(index.row())];
     if (role == PathRole)
@@ -69,9 +68,8 @@ namespace uburu::app
 
   SearchController::SearchController(QObject* parent)
       : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
-        searchService(
-            std::make_shared<DefaultSearchService>(std::make_shared<search::DirectSearchEngine>(
-                std::make_shared<filesystem::RecursiveFileScanner>())))
+        searchService(std::make_shared<DefaultSearchService>(
+            std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
   {}
 
   SearchController::~SearchController()
@@ -107,8 +105,8 @@ namespace uburu::app
     emit directoryChanged();
   }
 
-  void SearchController::startSearch(const QString& expression, bool regex, bool caseSensitive,
-                                     bool wholeWord, bool respectGitignore)
+  void SearchController::startSearch(const QString& expression, bool regex, bool caseSensitive, bool wholeWord,
+                                     bool respectGitignore)
   {
     if (runningValue || directoryValue.isEmpty() || expression.isEmpty())
       return;
@@ -131,8 +129,7 @@ namespace uburu::app
     connect(activeWatcher, &QFutureWatcher<search::SearchSummary>::finished, this, [this] {
       const auto summary = activeWatcher->result();
       setStatus(summary.cancelled ? tr("Busca cancelada")
-                                   : tr("%n ocorrência(s) encontrada(s)", nullptr,
-                                        static_cast<int>(summary.matches)));
+                                  : tr("%n ocorrência(s) encontrada(s)", nullptr, static_cast<int>(summary.matches)));
       setRunning(false);
       activeWatcher->deleteLater();
       activeWatcher = nullptr;
@@ -142,10 +139,7 @@ namespace uburu::app
           query,
           [this](SearchResult result) {
             QMetaObject::invokeMethod(
-                this,
-                [this, result = std::move(result)]() mutable {
-                  resultsModel.append(std::move(result));
-                },
+                this, [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
                 Qt::QueuedConnection);
             return true;
           },

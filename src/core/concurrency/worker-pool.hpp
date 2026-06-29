@@ -17,16 +17,14 @@ namespace uburu::concurrency
     using Task = std::function<void(std::stop_token)>;
 
     explicit WorkerPool(std::size_t workerCount, std::size_t queueCapacity = 0)
-      : queue(normalizedQueueCapacity(workerCount, queueCapacity))
+        : queue(normalizedQueueCapacity(workerCount, queueCapacity))
     {
       workerCount = normalizedWorkerCount(workerCount);
 
       workers.reserve(workerCount);
 
       for (std::size_t index = 0; index < workerCount; ++index) {
-        workers.emplace_back([this](std::stop_token stop_token) {
-          run(stop_token);
-        });
+        workers.emplace_back([this](std::stop_token stop_token) { run(stop_token); });
       }
     }
 

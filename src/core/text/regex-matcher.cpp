@@ -59,9 +59,7 @@ namespace uburu::text
 
     RegexMatchStatus statusFromPcreError(int code)
     {
-      if (code == PCRE2_ERROR_MATCHLIMIT ||
-          code == PCRE2_ERROR_DEPTHLIMIT ||
-          code == PCRE2_ERROR_HEAPLIMIT)
+      if (code == PCRE2_ERROR_MATCHLIMIT || code == PCRE2_ERROR_DEPTHLIMIT || code == PCRE2_ERROR_HEAPLIMIT)
         return RegexMatchStatus::resourceLimitExceeded;
 
       if (code == PCRE2_ERROR_CALLOUT)
@@ -139,9 +137,8 @@ namespace uburu::text
 
     std::size_t startOffset = 0;
     while (startOffset <= text.size()) {
-      const auto matchResult =
-          pcre2_match(asPcreCode(code), reinterpret_cast<PCRE2_SPTR>(text.data()), text.size(),
-                      startOffset, 0, matchData, matchContext);
+      const auto matchResult = pcre2_match(asPcreCode(code), reinterpret_cast<PCRE2_SPTR>(text.data()), text.size(),
+                                           startOffset, 0, matchData, matchContext);
       if (matchResult == PCRE2_ERROR_NOMATCH)
         break;
       if (matchResult < 0) {
@@ -201,12 +198,11 @@ namespace uburu::text
     if (!options.caseSensitive)
       compileOptions |= PCRE2_CASELESS;
 
-    auto* code = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(expression.data()), expression.size(),
-                               compileOptions, &errorCode, &errorOffset, nullptr);
+    auto* code = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(expression.data()), expression.size(), compileOptions,
+                               &errorCode, &errorOffset, nullptr);
     if (code == nullptr) {
-      return RegexCompileResult{
-          .matcher = std::nullopt,
-          .error = RegexCompileError{errorCode, errorOffset, pcreErrorMessage(errorCode)}};
+      return RegexCompileResult{.matcher = std::nullopt,
+                                .error = RegexCompileError{errorCode, errorOffset, pcreErrorMessage(errorCode)}};
     }
 
     const bool jitWasEnabled = pcre2_jit_compile(code, PCRE2_JIT_COMPLETE) == 0;
@@ -217,9 +213,8 @@ namespace uburu::text
 #else
     (void)expression;
     (void)options;
-    return RegexCompileResult{
-        .matcher = std::nullopt,
-        .error = RegexCompileError{regexBackendUnavailableCode, 0, "PCRE2 unavailable"}};
+    return RegexCompileResult{.matcher = std::nullopt,
+                              .error = RegexCompileError{regexBackendUnavailableCode, 0, "PCRE2 unavailable"}};
 #endif
   }
 

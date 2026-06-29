@@ -25,16 +25,14 @@ namespace
       file.put(static_cast<char>(byte));
   }
 
-  std::vector<uburu::text::TextLine> readLines(const std::filesystem::path& path,
-                                                uburu::SearchOptions options = {})
+  std::vector<uburu::text::TextLine> readLines(const std::filesystem::path& path, uburu::SearchOptions options = {})
   {
     std::vector<uburu::text::TextLine> lines;
-    const auto summary =
-        uburu::text::readTextFileLines(path, options, [&](const uburu::text::TextLine& line) {
-          lines.push_back(line);
+    const auto summary = uburu::text::readTextFileLines(path, options, [&](const uburu::text::TextLine& line) {
+      lines.push_back(line);
 
-          return true;
-        });
+      return true;
+    });
 
     REQUIRE(summary.status == uburu::text::TextReadStatus::completed);
 
@@ -47,7 +45,7 @@ TEST_CASE("text reader strips UTF-8 BOM and supports LF, CRLF and CR endings")
 {
   const auto path = fixturePath("uburu-text-reader-utf8-bom.txt");
   writeBytes(path, {0xEFU, 0xBBU, 0xBFU, 'o', 'n', 'e', '\n', 't', 'w', 'o', '\r',
-                     '\n',  't',   'h',   'r', 'e', 'e', '\r', 'f', 'o', 'u', 'r'});
+                    '\n',  't',   'h',   'r', 'e', 'e', '\r', 'f', 'o', 'u', 'r'});
 
   const auto lines = readLines(path);
   std::filesystem::remove(path);
@@ -110,12 +108,11 @@ TEST_CASE("text reader replaces invalid UTF-8 when policy allows it")
   options.fallbackEncoding = uburu::TextEncoding::utf8;
   options.invalidUtf8Policy = uburu::InvalidUtf8Policy::replace;
   std::vector<uburu::text::TextLine> lines;
-  const auto summary =
-      uburu::text::readTextFileLines(path, options, [&](const uburu::text::TextLine& line) {
-        lines.push_back(line);
+  const auto summary = uburu::text::readTextFileLines(path, options, [&](const uburu::text::TextLine& line) {
+    lines.push_back(line);
 
-        return true;
-      });
+    return true;
+  });
   std::filesystem::remove(path);
 
   REQUIRE(summary.status == uburu::text::TextReadStatus::completed);
@@ -131,12 +128,11 @@ TEST_CASE("text reader skips binary files using a sample instead of per-line che
 
   uburu::SearchOptions options;
   options.includeBinary = false;
-  const auto summary =
-      uburu::text::readTextFileLines(path, options, [](const uburu::text::TextLine&) {
-        FAIL("binary files should not publish text lines");
+  const auto summary = uburu::text::readTextFileLines(path, options, [](const uburu::text::TextLine&) {
+    FAIL("binary files should not publish text lines");
 
-        return true;
-      });
+    return true;
+  });
   std::filesystem::remove(path);
 
   CHECK(summary.status == uburu::text::TextReadStatus::binarySkipped);
@@ -149,8 +145,7 @@ TEST_CASE("text reader reports extremely long lines")
 
   uburu::SearchOptions options;
   options.maximumLineLength = 3;
-  const auto summary = uburu::text::readTextFileLines(
-      path, options, [](const uburu::text::TextLine&) { return true; });
+  const auto summary = uburu::text::readTextFileLines(path, options, [](const uburu::text::TextLine&) { return true; });
   std::filesystem::remove(path);
 
   CHECK(summary.status == uburu::text::TextReadStatus::lineTooLong);

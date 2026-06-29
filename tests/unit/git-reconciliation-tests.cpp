@@ -9,13 +9,12 @@ namespace
 
   [[nodiscard]] uburu::git::GitChangeState cleanState()
   {
-    return uburu::git::GitChangeState{
-      .branch = "main",
-      .headOid = "head-a",
-      .detachedHead = false,
-      .headSignature = "head-file-a",
-      .indexSignature = "index-a",
-      .relevantRefsSignature = "refs-a"};
+    return uburu::git::GitChangeState{.branch = "main",
+                                      .headOid = "head-a",
+                                      .detachedHead = false,
+                                      .headSignature = "head-file-a",
+                                      .indexSignature = "index-a",
+                                      .relevantRefsSignature = "refs-a"};
   }
 
 } // namespace

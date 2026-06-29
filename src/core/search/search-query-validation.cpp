@@ -13,8 +13,7 @@ namespace uburu::search
   namespace
   {
 
-    void appendIf(bool condition, std::vector<SearchError>& errors, SearchErrorCode code,
-                   std::string context = {})
+    void appendIf(bool condition, std::vector<SearchError>& errors, SearchErrorCode code, std::string context = {})
     {
       if (condition)
         errors.push_back(makeSearchError(code, std::move(context)));
@@ -53,17 +52,14 @@ namespace uburu::search
 
     appendIf(query.expression.empty(), errors, SearchErrorCode::emptyExpression);
 #ifndef UBURU_HAS_PCRE2
-    appendIf(query.options.mode == SearchMode::regex, errors,
-              SearchErrorCode::unsupportedSearchMode, "regex");
+    appendIf(query.options.mode == SearchMode::regex, errors, SearchErrorCode::unsupportedSearchMode, "regex");
 #endif
     appendIf(query.options.resultLimit == 0, errors, SearchErrorCode::invalidResultLimit);
-    appendIf(query.options.perFileResultLimit == 0, errors,
-              SearchErrorCode::invalidPerFileResultLimit);
-    appendIf(query.options.maximumFileSize == 0, errors,
-              SearchErrorCode::invalidMaximumFileSize);
+    appendIf(query.options.perFileResultLimit == 0, errors, SearchErrorCode::invalidPerFileResultLimit);
+    appendIf(query.options.maximumFileSize == 0, errors, SearchErrorCode::invalidMaximumFileSize);
     appendIf(query.options.regexMatchLimit == 0 || query.options.regexDepthLimit == 0 ||
-                  query.options.regexHeapLimitKib == 0,
-              errors, SearchErrorCode::invalidRegexLimit);
+                 query.options.regexHeapLimitKib == 0,
+             errors, SearchErrorCode::invalidRegexLimit);
 
     return errors;
   }

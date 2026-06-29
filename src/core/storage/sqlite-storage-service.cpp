@@ -22,11 +22,16 @@ namespace uburu::storage
     constexpr int initialSchemaVersion = 1;
     constexpr int hashAlgorithmSchemaVersion = 2;
     constexpr int contentHashIdentitySchemaVersion = 3;
-    constexpr int currentSchemaVersion = contentHashIdentitySchemaVersion;
+    constexpr int metadataSchemaVersion = 4;
+    constexpr int currentSchemaVersion = metadataSchemaVersion;
     constexpr int sqliteOk = SQLITE_OK;
     constexpr int sqliteDone = SQLITE_DONE;
     constexpr int sqliteRow = SQLITE_ROW;
     constexpr int busyTimeoutMilliseconds = 5000;
+    constexpr int sqliteSynchronousOff = 0;
+    constexpr int sqliteSynchronousNormal = 1;
+    constexpr int sqliteSynchronousFull = 2;
+    constexpr int sqliteSynchronousExtra = 3;
 
     [[nodiscard]] sqlite3* asDatabase(void* handle)
     {
@@ -87,6 +92,11 @@ namespace uburu::storage
       return std::chrono::system_clock::time_point{std::chrono::milliseconds{value}};
     }
 
+    [[nodiscard]] std::int64_t nowUnixMilliseconds()
+    {
+      return toUnixMilliseconds(std::chrono::system_clock::now());
+    }
+
     [[nodiscard]] std::optional<std::string> optionalText(sqlite3_stmt* statement, int column)
     {
       if (sqlite3_column_type(statement, column) == SQLITE_NULL)
@@ -115,6 +125,27 @@ namespace uburu::storage
       return static_cast<GitObjectHashAlgorithm>(value);
     }
 
+    [[nodiscard]] std::string preferenceScope(std::optional<RepositoryId> repositoryId)
+    {
+      return repositoryId.value_or(std::string{});
+    }
+
+    [[nodiscard]] std::string synchronousModeName(int value)
+    {
+      switch (value) {
+      case sqliteSynchronousOff:
+        return "OFF";
+      case sqliteSynchronousNormal:
+        return "NORMAL";
+      case sqliteSynchronousFull:
+        return "FULL";
+      case sqliteSynchronousExtra:
+        return "EXTRA";
+      }
+
+      return "UNKNOWN";
+    }
+
     class Statement
     {
     public:
@@ -136,8 +167,8 @@ namespace uburu::storage
 
       void bindText(int index, std::string_view value)
       {
-        const auto result = sqlite3_bind_text(statement, index, value.data(), static_cast<int>(value.size()),
-                                             SQLITE_TRANSIENT);
+        const auto result =
+            sqlite3_bind_text(statement, index, value.data(), static_cast<int>(value.size()), SQLITE_TRANSIENT);
         requireSqlite(result, database, "failed to bind SQLite text");
       }
 
@@ -217,6 +248,75 @@ namespace uburu::storage
       sqlite3* database{nullptr};
       sqlite3_stmt* statement{nullptr};
     };
+
+    [[nodiscard]] int scalarInt(sqlite3* database, std::string_view sql)
+    {
+      Statement statement(database, sql);
+
+      if (!statement.stepRow())
+        return 0;
+
+      return sqlite3_column_int(statement.get(), 0);
+    }
+
+    [[nodiscard]] std::string scalarText(sqlite3* database, std::string_view sql)
+    {
+      Statement statement(database, sql);
+
+      if (!statement.stepRow())
+        return {};
+
+      const auto* text = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0));
+
+      return text == nullptr ? std::string{} : std::string{text};
+    }
+
+    void deleteRowsBeyondRetention(sqlite3* database, std::string_view tableName, std::string_view orderColumn,
+                                   std::size_t retentionLimit)
+    {
+      Statement statement(database, "DELETE FROM " + std::string(tableName) + " WHERE id NOT IN (SELECT id FROM " +
+                                        std::string(tableName) + " ORDER BY " + std::string(orderColumn) +
+                                        " DESC, id DESC LIMIT ?)");
+
+      statement.bindInt64(1, static_cast<std::int64_t>(retentionLimit));
+      statement.executeDone();
+    }
+
+    void deleteMetricRowsBeyondRetention(sqlite3* database, const std::string& name, std::size_t retentionLimit)
+    {
+      Statement statement(database, R"sql(
+        DELETE FROM indexing_metrics
+        WHERE name = ?
+          AND id NOT IN (
+            SELECT id
+            FROM indexing_metrics
+            WHERE name = ?
+            ORDER BY recorded_at_unix_ms DESC, id DESC
+            LIMIT ?
+          );
+      )sql");
+
+      statement.bindText(1, name);
+      statement.bindText(2, name);
+      statement.bindInt64(3, static_cast<std::int64_t>(retentionLimit));
+      statement.executeDone();
+    }
+
+    void deleteAllIndexCatalogRows(sqlite3* database)
+    {
+      execute(database, "BEGIN IMMEDIATE");
+      try {
+        execute(database, "DELETE FROM overlays");
+        execute(database, "DELETE FROM files");
+        execute(database, "DELETE FROM documents");
+        execute(database, "DELETE FROM generations");
+        execute(database, "COMMIT");
+      } catch (...) {
+        execute(database, "ROLLBACK");
+
+        throw;
+      }
+    }
 
     void applyInitialSchema(sqlite3* database)
     {
@@ -337,9 +437,7 @@ namespace uburu::storage
       return false;
     }
 
-    void addColumnIfMissing(sqlite3* database,
-                            std::string_view tableName,
-                            std::string_view columnName,
+    void addColumnIfMissing(sqlite3* database, std::string_view tableName, std::string_view columnName,
                             std::string_view definition)
     {
       if (columnExists(database, tableName, columnName))
@@ -450,6 +548,61 @@ namespace uburu::storage
       }
     }
 
+    void applyMetadataMigration(sqlite3* database)
+    {
+      execute(database, "BEGIN IMMEDIATE");
+      try {
+        execute(database, R"sql(
+          CREATE TABLE IF NOT EXISTS preferences (
+            scope_id TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            updated_at_unix_ms INTEGER NOT NULL,
+            PRIMARY KEY (scope_id, key)
+          );
+        )sql");
+        execute(database, R"sql(
+          CREATE TABLE IF NOT EXISTS search_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            root TEXT NOT NULL,
+            expression TEXT NOT NULL,
+            searched_at_unix_ms INTEGER NOT NULL
+          );
+        )sql");
+        execute(database, R"sql(
+          CREATE TABLE IF NOT EXISTS saved_searches (
+            name TEXT PRIMARY KEY,
+            root TEXT NOT NULL,
+            expression TEXT NOT NULL,
+            saved_at_unix_ms INTEGER NOT NULL
+          );
+        )sql");
+        execute(database, R"sql(
+          CREATE TABLE IF NOT EXISTS indexing_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            value INTEGER NOT NULL,
+            recorded_at_unix_ms INTEGER NOT NULL
+          );
+        )sql");
+
+        Statement migrationStatement(database, R"sql(
+          INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
+          VALUES (?, ?);
+        )sql");
+
+        migrationStatement.bindInt64(1, metadataSchemaVersion);
+        migrationStatement.bindInt64(2, nowUnixMilliseconds());
+        migrationStatement.executeDone();
+        execute(database, "PRAGMA user_version = " + std::to_string(metadataSchemaVersion));
+        execute(database, "COMMIT");
+      } catch (...) {
+        execute(database, "ROLLBACK");
+
+        throw;
+      }
+    }
+
     void applyMigrations(sqlite3* database)
     {
       if (schemaVersion(database) < hashAlgorithmSchemaVersion)
@@ -457,6 +610,9 @@ namespace uburu::storage
 
       if (schemaVersion(database) < contentHashIdentitySchemaVersion)
         applyContentHashIdentityMigration(database);
+
+      if (schemaVersion(database) < metadataSchemaVersion)
+        applyMetadataMigration(database);
 
       if (schemaVersion(database) != currentSchemaVersion)
         throw std::runtime_error("SQLite database schema version is newer than this build supports");
@@ -593,8 +749,7 @@ namespace uburu::storage
 
   } // namespace
 
-  SQLiteStorageService::SQLiteStorageService(std::filesystem::path databasePath)
-    : databasePath(std::move(databasePath))
+  SQLiteStorageService::SQLiteStorageService(std::filesystem::path databasePath) : databasePath(std::move(databasePath))
   {}
 
   SQLiteStorageService::~SQLiteStorageService()
@@ -614,8 +769,9 @@ namespace uburu::storage
       const auto result = sqlite3_open_v2(databasePath.string().c_str(), &openedDatabase, flags, nullptr);
 
       if (result != sqliteOk) {
-        const auto message = openedDatabase == nullptr ? std::string{"failed to open SQLite database"}
-                                                       : sqliteMessage(openedDatabase, "failed to open SQLite database");
+        const auto message = openedDatabase == nullptr
+                                 ? std::string{"failed to open SQLite database"}
+                                 : sqliteMessage(openedDatabase, "failed to open SQLite database");
         if (openedDatabase != nullptr)
           sqlite3_close(openedDatabase);
 
@@ -626,7 +782,8 @@ namespace uburu::storage
     }
 
     auto* database = requireDatabase(databaseHandle);
-    requireSqlite(sqlite3_busy_timeout(database, busyTimeoutMilliseconds), database, "failed to set SQLite busy timeout");
+    requireSqlite(sqlite3_busy_timeout(database, busyTimeoutMilliseconds), database,
+                  "failed to set SQLite busy timeout");
     execute(database, "PRAGMA foreign_keys = ON");
     execute(database, "PRAGMA journal_mode = WAL");
     execute(database, "PRAGMA synchronous = NORMAL");
@@ -770,6 +927,259 @@ namespace uburu::storage
 #endif
   }
 
+  StoragePragmaSnapshot SQLiteStorageService::pragmaSnapshot() const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+
+    return StoragePragmaSnapshot{.foreignKeysEnabled = scalarInt(database, "PRAGMA foreign_keys") != 0,
+                                 .journalMode = scalarText(database, "PRAGMA journal_mode"),
+                                 .synchronousMode = synchronousModeName(scalarInt(database, "PRAGMA synchronous")),
+                                 .busyTimeout = std::chrono::milliseconds{scalarInt(database, "PRAGMA busy_timeout")}};
+#else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  StorageIntegrityReport SQLiteStorageService::validateIntegrity() const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    const auto message = scalarText(database, "PRAGMA integrity_check");
+
+    return StorageIntegrityReport{.ok = message == "ok", .message = message};
+#else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  void SQLiteStorageService::rebuildIndexCatalog()
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    deleteAllIndexCatalogRows(database);
+#else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  void SQLiteStorageService::setPreference(std::optional<RepositoryId> repositoryId, const std::string& key,
+                                           const std::string& value)
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      INSERT INTO preferences (scope_id, key, value, updated_at_unix_ms)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(scope_id, key) DO UPDATE SET
+        value = excluded.value,
+        updated_at_unix_ms = excluded.updated_at_unix_ms;
+    )sql");
+
+    statement.bindText(1, preferenceScope(std::move(repositoryId)));
+    statement.bindText(2, key);
+    statement.bindText(3, value);
+    statement.bindInt64(4, nowUnixMilliseconds());
+    statement.executeDone();
+#else
+    static_cast<void>(repositoryId);
+    static_cast<void>(key);
+    static_cast<void>(value);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::optional<std::string> SQLiteStorageService::preference(std::optional<RepositoryId> repositoryId,
+                                                              const std::string& key) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT value
+      FROM preferences
+      WHERE scope_id = ? AND key = ?;
+    )sql");
+
+    statement.bindText(1, preferenceScope(std::move(repositoryId)));
+    statement.bindText(2, key);
+
+    if (!statement.stepRow())
+      return std::nullopt;
+
+    return optionalText(statement.get(), 0);
+#else
+    static_cast<void>(repositoryId);
+    static_cast<void>(key);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  void SQLiteStorageService::recordSearch(const SearchHistoryEntry& entry, std::size_t retentionLimit)
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    execute(database, "BEGIN IMMEDIATE");
+    try {
+      Statement statement(database, R"sql(
+        INSERT INTO search_history (root, expression, searched_at_unix_ms)
+        VALUES (?, ?, ?);
+      )sql");
+
+      statement.bindPath(1, entry.root);
+      statement.bindText(2, entry.expression);
+      statement.bindInt64(3, toUnixMilliseconds(entry.searchedAt));
+      statement.executeDone();
+      deleteRowsBeyondRetention(database, "search_history", "searched_at_unix_ms", retentionLimit);
+      execute(database, "COMMIT");
+    } catch (...) {
+      execute(database, "ROLLBACK");
+
+      throw;
+    }
+#else
+    static_cast<void>(entry);
+    static_cast<void>(retentionLimit);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::vector<SearchHistoryEntry> SQLiteStorageService::recentSearches(std::size_t limit) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT root, expression, searched_at_unix_ms
+      FROM search_history
+      ORDER BY searched_at_unix_ms DESC, id DESC
+      LIMIT ?;
+    )sql");
+
+    statement.bindInt64(1, static_cast<std::int64_t>(limit));
+    std::vector<SearchHistoryEntry> entries;
+
+    while (statement.stepRow()) {
+      entries.push_back(
+          SearchHistoryEntry{.root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
+                             .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
+                             .searchedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 2))});
+    }
+
+    return entries;
+#else
+    static_cast<void>(limit);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  void SQLiteStorageService::saveSearch(const SavedSearch& search)
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      INSERT INTO saved_searches (name, root, expression, saved_at_unix_ms)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(name) DO UPDATE SET
+        root = excluded.root,
+        expression = excluded.expression,
+        saved_at_unix_ms = excluded.saved_at_unix_ms;
+    )sql");
+
+    statement.bindText(1, search.name);
+    statement.bindPath(2, search.root);
+    statement.bindText(3, search.expression);
+    statement.bindInt64(4, toUnixMilliseconds(search.savedAt));
+    statement.executeDone();
+#else
+    static_cast<void>(search);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::vector<SavedSearch> SQLiteStorageService::savedSearches() const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT name, root, expression, saved_at_unix_ms
+      FROM saved_searches
+      ORDER BY name ASC;
+    )sql");
+    std::vector<SavedSearch> searches;
+
+    while (statement.stepRow()) {
+      searches.push_back(
+          SavedSearch{.name = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
+                      .root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
+                      .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 2)),
+                      .savedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 3))});
+    }
+
+    return searches;
+#else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  void SQLiteStorageService::recordIndexingMetric(const IndexingMetric& metric, std::size_t retentionLimit)
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    execute(database, "BEGIN IMMEDIATE");
+    try {
+      Statement statement(database, R"sql(
+        INSERT INTO indexing_metrics (name, value, recorded_at_unix_ms)
+        VALUES (?, ?, ?);
+      )sql");
+
+      statement.bindText(1, metric.name);
+      statement.bindInt64(2, metric.value);
+      statement.bindInt64(3, toUnixMilliseconds(metric.recordedAt));
+      statement.executeDone();
+      deleteMetricRowsBeyondRetention(database, metric.name, retentionLimit);
+      execute(database, "COMMIT");
+    } catch (...) {
+      execute(database, "ROLLBACK");
+
+      throw;
+    }
+#else
+    static_cast<void>(metric);
+    static_cast<void>(retentionLimit);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::vector<IndexingMetric> SQLiteStorageService::recentIndexingMetrics(const std::string& name,
+                                                                          std::size_t limit) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT name, value, recorded_at_unix_ms
+      FROM indexing_metrics
+      WHERE name = ?
+      ORDER BY recorded_at_unix_ms DESC, id DESC
+      LIMIT ?;
+    )sql");
+
+    statement.bindText(1, name);
+    statement.bindInt64(2, static_cast<std::int64_t>(limit));
+    std::vector<IndexingMetric> metrics;
+
+    while (statement.stepRow()) {
+      metrics.push_back(IndexingMetric{.name = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
+                                       .value = sqlite3_column_int64(statement.get(), 1),
+                                       .recordedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 2))});
+    }
+
+    return metrics;
+#else
+    static_cast<void>(name);
+    static_cast<void>(limit);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
   void SQLiteStorageService::removeDocument(const WorktreeId& worktreeId, const std::filesystem::path& relativePath)
   {
 #if defined(UBURU_HAS_SQLITE)
@@ -810,18 +1220,17 @@ namespace uburu::storage
       return std::nullopt;
 
     auto* row = statement.get();
-    IndexDocument document{
-      .repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
-      .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
-      .relativePath = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
-      .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 3)),
-      .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 4)),
-      .gitBlobHash = optionalText(row, 5),
-      .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 6)),
-      .status = toGitFileStatus(sqlite3_column_int(row, 7)),
-      .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 8)),
-      .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 9)),
-      .deleted = sqlite3_column_int(row, 10) != 0};
+    IndexDocument document{.repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
+                           .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
+                           .relativePath = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
+                           .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 3)),
+                           .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 4)),
+                           .gitBlobHash = optionalText(row, 5),
+                           .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 6)),
+                           .status = toGitFileStatus(sqlite3_column_int(row, 7)),
+                           .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 8)),
+                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 9)),
+                           .deleted = sqlite3_column_int(row, 10) != 0};
 
     return document;
 #else

@@ -39,11 +39,9 @@ namespace uburu::git
     std::string relevantRefsSignature;
   };
 
-  template <typename T>
-  using GitResult = std::variant<T, GitError>;
+  template <typename T> using GitResult = std::variant<T, GitError>;
 
-  template <typename T>
-  [[nodiscard]] bool succeeded(const GitResult<T>& result)
+  template <typename T> [[nodiscard]] bool succeeded(const GitResult<T>& result)
   {
     return std::holds_alternative<T>(result);
   }
@@ -52,12 +50,11 @@ namespace uburu::git
   {
   public:
     virtual ~GitService() = default;
-    [[nodiscard]] virtual GitResult<RepositoryInfo>
-    discoverRepository(const std::filesystem::path& path) const = 0;
+    [[nodiscard]] virtual GitResult<RepositoryInfo> discoverRepository(const std::filesystem::path& path) const = 0;
     [[nodiscard]] virtual GitResult<std::vector<WorktreeInfo>>
     listWorktrees(const RepositoryInfo& repository) const = 0;
-    [[nodiscard]] virtual GitResult<GitFileStatus>
-    fileStatus(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
+    [[nodiscard]] virtual GitResult<GitFileStatus> fileStatus(const WorktreeInfo& worktree,
+                                                              const std::filesystem::path& relativePath) const = 0;
     [[nodiscard]] virtual GitResult<std::optional<std::string>>
     blobHash(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
     [[nodiscard]] virtual GitResult<std::vector<GitOverlayEntry>>
@@ -66,8 +63,7 @@ namespace uburu::git
     repositoryBoundary(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const = 0;
     [[nodiscard]] virtual GitResult<GitObjectHashAlgorithm>
     objectHashAlgorithm(const RepositoryInfo& repository) const = 0;
-    [[nodiscard]] virtual GitResult<GitChangeState>
-    changeState(const WorktreeInfo& worktree) const = 0;
+    [[nodiscard]] virtual GitResult<GitChangeState> changeState(const WorktreeInfo& worktree) const = 0;
   };
 
 } // namespace uburu::git

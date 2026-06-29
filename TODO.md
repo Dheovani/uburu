@@ -161,18 +161,18 @@ e UI para avançarem mais rapidamente.
 - [x] Definir schema para repositories, worktrees, generations, files, documents e overlays.
 - [x] Separar identidade de caminho da identidade de conteúdo.
 - [x] Armazenar content hash e blob hash com algoritmo/versionamento explícitos.
-- [ ] Ativar WAL, foreign keys, busy timeout e pragmas medidos.
+- [x] Ativar WAL, foreign keys, busy timeout e pragmas medidos.
 - [x] Publicar gerações do índice em transação atômica.
 - [x] Recuperar de interrupção durante migration ou indexação.
-- [ ] Validar integridade e oferecer reconstrução segura do índice corrompido.
+- [x] Validar integridade e oferecer reconstrução segura do índice corrompido.
 - [x] Implementar retenção e coleta de documentos órfãos.
-- [ ] Persistir preferências globais e por repositório.
-- [ ] Persistir histórico de buscas e buscas salvas.
-- [ ] Persistir métricas de indexação sem crescimento ilimitado.
-- [ ] Definir localização padrão do banco por plataforma.
-- [ ] Permitir localização personalizada e migração do banco.
-- [ ] Testar concorrência entre leitura de busca e escrita de nova geração.
-- [ ] Avaliar FTS5 por benchmark, sem acoplar o contrato ao backend.
+- [x] Persistir preferências globais e por repositório.
+- [x] Persistir histórico de buscas e buscas salvas.
+- [x] Persistir métricas de indexação sem crescimento ilimitado.
+- [x] Definir localização padrão do banco por plataforma.
+- [x] Permitir localização personalizada e migração do banco.
+- [x] Testar concorrência entre leitura de busca e escrita de nova geração.
+- [x] Avaliar FTS5 por benchmark, sem acoplar o contrato ao backend.
 
 ## Marco 6 — Índice persistente e incremental (P1)
 
@@ -327,7 +327,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Criar `docs/search-semantics.md`.
 - [ ] Expandir `docs/architecture.md` com componentes e sequência de busca.
 - [ ] Documentar contratos de cancelamento, ownership e threading.
-- [ ] Documentar schema, migrations e recuperação em `docs/storage.md`.
+- [x] Documentar schema, migrations e recuperação em `docs/storage.md`.
 - [ ] Documentar formato, gerações e invalidação em `docs/indexing.md`.
 - [x] Documentar branch/worktree/overlay em `docs/git-awareness.md`.
 - [ ] Documentar métricas e metodologia em `docs/performance.md`.

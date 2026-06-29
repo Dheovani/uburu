@@ -8,8 +8,7 @@
 TEST_CASE("git ignore rules support comments, basename patterns and negation")
 {
   uburu::filesystem::GitIgnoreRules rules;
-  const auto parsed = uburu::filesystem::parseGitIgnore("# comment\n*.log\n!important.log\n",
-                                                          std::filesystem::path{});
+  const auto parsed = uburu::filesystem::parseGitIgnore("# comment\n*.log\n!important.log\n", std::filesystem::path{});
 
   REQUIRE(parsed.size() == 2);
   CHECK(parsed[0].pattern == "*.log");
@@ -22,8 +21,7 @@ TEST_CASE("git ignore rules apply the last matching rule")
 {
   uburu::filesystem::GitIgnoreRules rules;
 
-  const auto temporaryFile =
-      std::filesystem::temp_directory_path() / "uburu-git-ignore-rules-test.gitignore";
+  const auto temporaryFile = std::filesystem::temp_directory_path() / "uburu-git-ignore-rules-test.gitignore";
   {
     std::ofstream file(temporaryFile, std::ios::binary);
     file << "*.log\n!important.log\n";
@@ -38,8 +36,7 @@ TEST_CASE("git ignore rules apply the last matching rule")
 
 TEST_CASE("git ignore rules support nested base directories")
 {
-  const auto temporaryFile =
-      std::filesystem::temp_directory_path() / "uburu-git-ignore-nested-test.gitignore";
+  const auto temporaryFile = std::filesystem::temp_directory_path() / "uburu-git-ignore-nested-test.gitignore";
   {
     std::ofstream file(temporaryFile, std::ios::binary);
     file << "*.tmp\n";
@@ -55,8 +52,7 @@ TEST_CASE("git ignore rules support nested base directories")
 
 TEST_CASE("git ignore rules support directory-only patterns")
 {
-  const auto temporaryFile =
-      std::filesystem::temp_directory_path() / "uburu-git-ignore-directory-test.gitignore";
+  const auto temporaryFile = std::filesystem::temp_directory_path() / "uburu-git-ignore-directory-test.gitignore";
   {
     std::ofstream file(temporaryFile, std::ios::binary);
     file << "build/\n";

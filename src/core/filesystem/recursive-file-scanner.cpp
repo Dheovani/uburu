@@ -64,8 +64,8 @@ namespace uburu::filesystem
       constexpr auto posixStatBlockSize = 512ULL;
 
       return status.st_size > 0 && status.st_blocks >= 0 &&
-             static_cast<unsigned long long>(status.st_blocks) * posixStatBlockSize
-              < static_cast<unsigned long long>(status.st_size);
+             static_cast<unsigned long long>(status.st_blocks) * posixStatBlockSize <
+                 static_cast<unsigned long long>(status.st_size);
 #else
       static_cast<void>(path);
 
@@ -128,7 +128,7 @@ namespace uburu::filesystem
     }
 
     bool isIncludedDirectory(const std::filesystem::path& relativePath,
-                               const std::vector<std::filesystem::path>& includedDirectories)
+                             const std::vector<std::filesystem::path>& includedDirectories)
     {
       if (includedDirectories.empty())
         return true;
@@ -141,7 +141,7 @@ namespace uburu::filesystem
     }
 
     bool isExcludedDirectory(const std::filesystem::path& relativePath,
-                               const std::vector<std::filesystem::path>& excludedDirectories)
+                             const std::vector<std::filesystem::path>& excludedDirectories)
     {
       const auto relativeKey = normalizedPathKey(relativePath);
 
@@ -192,21 +192,18 @@ namespace uburu::filesystem
     bool passesGlobs(const std::filesystem::path& relativePath, const SearchOptions& options)
     {
       const auto text = normalizedPathKey(relativePath);
-      const auto matches = std::ranges::any_of(options.includedGlobs, [&](const std::string& glob) {
-        return globMatches(normalizedPathKey(glob), text);
-      });
+      const auto matches = std::ranges::any_of(
+          options.includedGlobs, [&](const std::string& glob) { return globMatches(normalizedPathKey(glob), text); });
 
       if (!options.includedGlobs.empty() && !matches)
         return false;
 
-      return !std::ranges::any_of(options.excludedGlobs, [&](const std::string& glob) {
-        return globMatches(normalizedPathKey(glob), text);
-      });
+      return !std::ranges::any_of(options.excludedGlobs,
+                                  [&](const std::string& glob) { return globMatches(normalizedPathKey(glob), text); });
     }
 
-    std::vector<std::filesystem::directory_entry>
-    sortedDirectoryEntries(const std::filesystem::path& directory,
-                             std::filesystem::directory_options options)
+    std::vector<std::filesystem::directory_entry> sortedDirectoryEntries(const std::filesystem::path& directory,
+                                                                         std::filesystem::directory_options options)
     {
       std::error_code error;
       std::filesystem::directory_iterator iterator(directory, options, error);
@@ -268,11 +265,8 @@ namespace uburu::filesystem
 
   } // namespace
 
-  void RecursiveFileScanner::scan(const std::filesystem::path& root,
-                                  const SearchOptions& options,
-                                  FileSink sink,
-                                  std::stop_token stop_token,
-                                  diagnostics::SearchMetrics* metrics) const
+  void RecursiveFileScanner::scan(const std::filesystem::path& root, const SearchOptions& options, FileSink sink,
+                                  std::stop_token stop_token, diagnostics::SearchMetrics* metrics) const
   {
     auto flags = std::filesystem::directory_options::skip_permission_denied;
 
@@ -311,8 +305,7 @@ namespace uburu::filesystem
           if (options.respectGitignore && ignoreRules.ignores(relativePath, true))
             continue;
 
-          if ((hidden && !options.includeHidden) ||
-              isExcludedDirectory(relativePath, options.excludedDirectories))
+          if ((hidden && !options.includeHidden) || isExcludedDirectory(relativePath, options.excludedDirectories))
             continue;
 
           if (!scanDirectory(path, ignoreRules))
@@ -340,8 +333,7 @@ namespace uburu::filesystem
 
         if (isExcludedDirectory(relativePath, options.excludedDirectories) ||
             !isIncludedDirectory(relativePath, options.includedDirectories) ||
-            !hasAllowedExtension(path, options.extensions) ||
-            !passesGlobs(relativePath, options))
+            !hasAllowedExtension(path, options.extensions) || !passesGlobs(relativePath, options))
           continue;
 
         const auto size = item.file_size(error);

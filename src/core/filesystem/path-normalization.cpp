@@ -50,8 +50,7 @@ namespace uburu::filesystem
       auto normalized = normalizePathSeparators(path.lexically_normal().generic_string());
 
 #ifdef _WIN32
-      if (startsWithWindowsNetworkPrefix(original) &&
-          !startsWithWindowsNetworkPrefix(normalized) &&
+      if (startsWithWindowsNetworkPrefix(original) && !startsWithWindowsNetworkPrefix(normalized) &&
           normalized.starts_with(genericPathSeparator))
         normalized.insert(normalized.begin(), genericPathSeparator);
 #endif
@@ -98,9 +97,7 @@ namespace uburu::filesystem
     if (path == base)
       return true;
 
-    return path.size() > base.size()
-        && path.starts_with(base)
-        && path[base.size()] == genericPathSeparator;
+    return path.size() > base.size() && path.starts_with(base) && path[base.size()] == genericPathSeparator;
   }
 
 } // namespace uburu::filesystem

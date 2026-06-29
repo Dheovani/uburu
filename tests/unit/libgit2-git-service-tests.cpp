@@ -163,8 +163,7 @@ namespace
     git_libgit2_shutdown();
   }
 
-  void addLinkedWorktree(const std::filesystem::path& repositoryRoot,
-                         const std::filesystem::path& worktreeRoot,
+  void addLinkedWorktree(const std::filesystem::path& repositoryRoot, const std::filesystem::path& worktreeRoot,
                          std::string_view name = "feature")
   {
     git_libgit2_init();
@@ -209,8 +208,7 @@ namespace
     git_libgit2_shutdown();
   }
 
-  void addSubmodule(const std::filesystem::path& repositoryRoot,
-                    const std::filesystem::path& submoduleRepositoryRoot,
+  void addSubmodule(const std::filesystem::path& repositoryRoot, const std::filesystem::path& submoduleRepositoryRoot,
                     std::string_view relativePath)
   {
     git_libgit2_init();
@@ -329,12 +327,10 @@ TEST_CASE("libgit2 git service enumerates linked worktrees")
 
   REQUIRE(worktrees.size() == 2);
 
-  const auto hasMainWorktree = std::ranges::any_of(worktrees, [&](const auto& worktree) {
-    return std::filesystem::equivalent(worktree.root, repositoryRoot);
-  });
-  const auto hasLinkedWorktree = std::ranges::any_of(worktrees, [&](const auto& worktree) {
-    return std::filesystem::equivalent(worktree.root, linkedRoot);
-  });
+  const auto hasMainWorktree = std::ranges::any_of(
+      worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, repositoryRoot); });
+  const auto hasLinkedWorktree = std::ranges::any_of(
+      worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, linkedRoot); });
 
   CHECK(hasMainWorktree);
   CHECK(hasLinkedWorktree);
@@ -362,9 +358,8 @@ TEST_CASE("libgit2 git service reports locked and prunable worktrees")
   const auto worktreesResult = service.listWorktrees(repository);
   const auto& worktrees = std::get<std::vector<uburu::WorktreeInfo>>(worktreesResult);
 
-  const auto locked = std::ranges::find_if(worktrees, [&](const auto& worktree) {
-    return std::filesystem::equivalent(worktree.root, linkedRoot);
-  });
+  const auto locked = std::ranges::find_if(
+      worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, linkedRoot); });
 
   REQUIRE(locked != worktrees.end());
   CHECK(locked->locked);
@@ -376,9 +371,8 @@ TEST_CASE("libgit2 git service reports locked and prunable worktrees")
 
   const auto refreshedResult = service.listWorktrees(repository);
   const auto& refreshed = std::get<std::vector<uburu::WorktreeInfo>>(refreshedResult);
-  const auto prunable = std::ranges::find_if(refreshed, [&](const auto& worktree) {
-    return worktree.root == removedRoot;
-  });
+  const auto prunable =
+      std::ranges::find_if(refreshed, [&](const auto& worktree) { return worktree.root == removedRoot; });
 
   REQUIRE(prunable != refreshed.end());
   CHECK(prunable->prunable);
@@ -492,15 +486,11 @@ TEST_CASE("libgit2 git service models working tree overlay and rename reuse")
   const auto overlayResult = service.workingTreeOverlay(worktree);
   const auto& overlay = std::get<std::vector<uburu::GitOverlayEntry>>(overlayResult);
 
-  const auto renamed = std::ranges::find_if(overlay, [](const auto& entry) {
-    return entry.relativePath == "renamed.txt";
-  });
-  const auto added = std::ranges::find_if(overlay, [](const auto& entry) {
-    return entry.relativePath == "new.txt";
-  });
-  const auto deleted = std::ranges::find_if(overlay, [](const auto& entry) {
-    return entry.relativePath == "delete-me.txt";
-  });
+  const auto renamed =
+      std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "renamed.txt"; });
+  const auto added = std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "new.txt"; });
+  const auto deleted =
+      std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "delete-me.txt"; });
 
   REQUIRE(renamed != overlay.end());
   CHECK(renamed->previousRelativePath == std::filesystem::path("tracked.txt"));

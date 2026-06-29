@@ -11,8 +11,7 @@ namespace uburu::app
   {
   public:
     virtual ~SearchService() = default;
-    [[nodiscard]] virtual search::SearchSummary search(const SearchQuery& query,
-                                                       search::ResultSink sink,
+    [[nodiscard]] virtual search::SearchSummary search(const SearchQuery& query, search::ResultSink sink,
                                                        std::stop_token stop_token = {}) const = 0;
   };
 

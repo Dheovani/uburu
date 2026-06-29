@@ -1,4 +1,5 @@
 #include "core/storage/sqlite-storage-service.hpp"
+#include "core/storage/storage-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -54,55 +55,51 @@ namespace
 
   [[nodiscard]] uburu::RepositoryInfo repositoryInfo(const std::filesystem::path& root)
   {
-    return uburu::RepositoryInfo{
-      .id = "repository-id",
-      .commonGitDirectory = root / ".git",
-      .worktreeRoot = root,
-      .currentBranch = "main",
-      .headOid = "abc123",
-      .detachedHead = false};
+    return uburu::RepositoryInfo{.id = "repository-id",
+                                 .commonGitDirectory = root / ".git",
+                                 .worktreeRoot = root,
+                                 .currentBranch = "main",
+                                 .headOid = "abc123",
+                                 .detachedHead = false};
   }
 
   [[nodiscard]] uburu::WorktreeInfo worktreeInfo(const std::filesystem::path& root)
   {
-    return uburu::WorktreeInfo{
-      .id = "worktree-id",
-      .repositoryId = "repository-id",
-      .root = root,
-      .gitDirectory = root / ".git",
-      .branch = "main",
-      .headOid = "abc123",
-      .locked = false,
-      .prunable = false,
-      .lockReason = {}};
+    return uburu::WorktreeInfo{.id = "worktree-id",
+                               .repositoryId = "repository-id",
+                               .root = root,
+                               .gitDirectory = root / ".git",
+                               .branch = "main",
+                               .headOid = "abc123",
+                               .locked = false,
+                               .prunable = false,
+                               .lockReason = {}};
   }
 
   [[nodiscard]] uburu::IndexDocument indexDocument(std::string contentHash,
                                                    std::filesystem::path relativePath = "src/main.cpp")
   {
-    return uburu::IndexDocument{
-      .repositoryId = "repository-id",
-      .worktreeId = "worktree-id",
-      .relativePath = std::move(relativePath),
-      .contentHash = std::move(contentHash),
-      .contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256,
-      .gitBlobHash = "blob123",
-      .gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1,
-      .status = uburu::GitFileStatus::clean,
-      .size = 42,
-      .indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}},
-      .deleted = false};
+    return uburu::IndexDocument{.repositoryId = "repository-id",
+                                .worktreeId = "worktree-id",
+                                .relativePath = std::move(relativePath),
+                                .contentHash = std::move(contentHash),
+                                .contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256,
+                                .gitBlobHash = "blob123",
+                                .gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1,
+                                .status = uburu::GitFileStatus::clean,
+                                .size = 42,
+                                .indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}},
+                                .deleted = false};
   }
 
   [[nodiscard]] uburu::IndexGeneration indexGeneration(std::vector<uburu::IndexDocument> documents)
   {
-    return uburu::IndexGeneration{
-      .repositoryId = "repository-id",
-      .worktreeId = "worktree-id",
-      .headOid = "abc123",
-      .branch = "main",
-      .createdAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{5678}},
-      .documents = std::move(documents)};
+    return uburu::IndexGeneration{.repositoryId = "repository-id",
+                                  .worktreeId = "worktree-id",
+                                  .headOid = "abc123",
+                                  .branch = "main",
+                                  .createdAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{5678}},
+                                  .documents = std::move(documents)};
   }
 
 #if defined(UBURU_HAS_SQLITE)
@@ -145,10 +142,7 @@ namespace
     REQUIRE(sqlite3_open_v2(databasePath.string().c_str(), &database, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK);
 
     sqlite3_stmt* statement = nullptr;
-    REQUIRE(sqlite3_prepare_v2(database,
-                               "SELECT COUNT(*) FROM generations WHERE published = 0",
-                               -1,
-                               &statement,
+    REQUIRE(sqlite3_prepare_v2(database, "SELECT COUNT(*) FROM generations WHERE published = 0", -1, &statement,
                                nullptr) == SQLITE_OK);
     REQUIRE(sqlite3_step(statement) == SQLITE_ROW);
 
@@ -204,6 +198,28 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
 #endif
 }
 
+TEST_CASE("sqlite storage reports configured pragmas and integrity")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-pragmas-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  const auto pragmas = storage.pragmaSnapshot();
+  const auto integrity = storage.validateIntegrity();
+
+  CHECK(pragmas.foreignKeysEnabled);
+  CHECK(pragmas.journalMode == "wal");
+  CHECK(pragmas.synchronousMode == "NORMAL");
+  CHECK(pragmas.busyTimeout == std::chrono::milliseconds{5000});
+  CHECK(integrity.ok);
+  CHECK(integrity.message == "ok");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("sqlite storage updates and logically removes indexed files")
 {
 #if defined(UBURU_HAS_SQLITE)
@@ -232,6 +248,31 @@ TEST_CASE("sqlite storage updates and logically removes indexed files")
 #endif
 }
 
+TEST_CASE("sqlite storage rebuilds index catalog without removing metadata")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-rebuild-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.setPreference(std::nullopt, "theme", "dark");
+  storage.publishGeneration(indexGeneration({
+      indexDocument("content-a", "src/a.cpp"),
+  }));
+
+  REQUIRE(storage.findDocument("worktree-id", "src/a.cpp").has_value());
+
+  storage.rebuildIndexCatalog();
+
+  CHECK_FALSE(storage.findDocument("worktree-id", "src/a.cpp").has_value());
+  CHECK(storage.preference(std::nullopt, "theme") == "dark");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("sqlite storage publishes generations atomically")
 {
 #if defined(UBURU_HAS_SQLITE)
@@ -243,15 +284,15 @@ TEST_CASE("sqlite storage publishes generations atomically")
   storage.upsertWorktree(worktreeInfo(directory.path()));
 
   storage.publishGeneration(indexGeneration({
-    indexDocument("content-a", "src/a.cpp"),
-    indexDocument("content-b", "src/b.cpp"),
+      indexDocument("content-a", "src/a.cpp"),
+      indexDocument("content-b", "src/b.cpp"),
   }));
 
   REQUIRE(storage.findDocument("worktree-id", "src/a.cpp").has_value());
   REQUIRE(storage.findDocument("worktree-id", "src/b.cpp").has_value());
 
   storage.publishGeneration(indexGeneration({
-    indexDocument("content-a-updated", "src/a.cpp"),
+      indexDocument("content-a-updated", "src/a.cpp"),
   }));
 
   const auto updated = storage.findDocument("worktree-id", "src/a.cpp");
@@ -260,6 +301,140 @@ TEST_CASE("sqlite storage publishes generations atomically")
   REQUIRE(updated.has_value());
   CHECK(updated->contentHash == "content-a-updated");
   CHECK_FALSE(removed.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage persists global and repository preferences")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-preferences-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+  storage.setPreference(std::nullopt, "language", "pt-BR");
+  storage.setPreference("repository-id", "language", "en-US");
+  storage.setPreference("repository-id", "language", "pt-BR");
+
+  CHECK(storage.preference(std::nullopt, "language") == "pt-BR");
+  CHECK(storage.preference("repository-id", "language") == "pt-BR");
+  CHECK_FALSE(storage.preference("other-repository", "language").has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage persists search history and saved searches")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-search-history-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+  storage.recordSearch(uburu::SearchHistoryEntry{.root = "repo", .expression = "first", .searchedAt = {}}, 2);
+  storage.recordSearch(
+      uburu::SearchHistoryEntry{.root = "repo",
+                                .expression = "second",
+                                .searchedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1}}},
+      2);
+  storage.recordSearch(
+      uburu::SearchHistoryEntry{.root = "repo",
+                                .expression = "third",
+                                .searchedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{2}}},
+      2);
+  storage.saveSearch(
+      uburu::SavedSearch{.name = "default",
+                         .root = "repo",
+                         .expression = "needle",
+                         .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{3}}});
+  storage.saveSearch(
+      uburu::SavedSearch{.name = "default",
+                         .root = "repo",
+                         .expression = "updated",
+                         .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{4}}});
+
+  const auto history = storage.recentSearches(10);
+  const auto saved = storage.savedSearches();
+
+  REQUIRE(history.size() == 2);
+  CHECK(history[0].expression == "third");
+  CHECK(history[1].expression == "second");
+  REQUIRE(saved.size() == 1);
+  CHECK(saved.front().name == "default");
+  CHECK(saved.front().expression == "updated");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage persists indexing metrics with retention")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-metrics-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+  storage.recordIndexingMetric(
+      uburu::IndexingMetric{.name = "files-indexed",
+                            .value = 1,
+                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1}}},
+      2);
+  storage.recordIndexingMetric(
+      uburu::IndexingMetric{.name = "files-indexed",
+                            .value = 2,
+                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{2}}},
+      2);
+  storage.recordIndexingMetric(
+      uburu::IndexingMetric{.name = "files-indexed",
+                            .value = 3,
+                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{3}}},
+      2);
+  storage.recordIndexingMetric(
+      uburu::IndexingMetric{.name = "bytes-indexed",
+                            .value = 99,
+                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{4}}},
+      2);
+
+  const auto fileMetrics = storage.recentIndexingMetrics("files-indexed", 10);
+  const auto byteMetrics = storage.recentIndexingMetrics("bytes-indexed", 10);
+
+  REQUIRE(fileMetrics.size() == 2);
+  CHECK(fileMetrics[0].value == 3);
+  CHECK(fileMetrics[1].value == 2);
+  REQUIRE(byteMetrics.size() == 1);
+  CHECK(byteMetrics.front().value == 99);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage keeps readers and writers on separate connections consistent")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-concurrency-test");
+  const auto databasePath = directory.path() / "uburu.db";
+  uburu::storage::SQLiteStorageService writer(databasePath);
+  uburu::storage::SQLiteStorageService reader(databasePath);
+
+  writer.initialize();
+  writer.upsertRepository(repositoryInfo(directory.path()));
+  writer.upsertWorktree(worktreeInfo(directory.path()));
+  writer.publishGeneration(indexGeneration({
+      indexDocument("content-before", "src/a.cpp"),
+  }));
+
+  reader.initialize();
+  REQUIRE(reader.findDocument("worktree-id", "src/a.cpp").has_value());
+
+  writer.publishGeneration(indexGeneration({
+      indexDocument("content-after", "src/a.cpp"),
+  }));
+
+  const auto document = reader.findDocument("worktree-id", "src/a.cpp");
+
+  REQUIRE(document.has_value());
+  CHECK(document->contentHash == "content-after");
 #else
   SUCCEED("SQLite is not available in this build");
 #endif
@@ -283,8 +458,8 @@ TEST_CASE("sqlite storage treats hash algorithm as part of document identity")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-    first,
-    second,
+      first,
+      second,
   }));
 
   const auto sha256Document = storage.findDocument("worktree-id", "src/sha256.cpp");
@@ -312,14 +487,14 @@ TEST_CASE("sqlite storage rolls back invalid generation publication")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-    indexDocument("content-before", "src/a.cpp"),
+      indexDocument("content-before", "src/a.cpp"),
   }));
 
   auto invalidDocument = indexDocument("content-invalid", "src/invalid.cpp");
   invalidDocument.worktreeId = "another-worktree";
 
   CHECK_THROWS(storage.publishGeneration(indexGeneration({
-    invalidDocument,
+      invalidDocument,
   })));
 
   const auto preserved = storage.findDocument("worktree-id", "src/a.cpp");
@@ -368,11 +543,11 @@ TEST_CASE("sqlite storage collects orphan documents")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-    indexDocument("orphan-a", "src/a.cpp"),
-    indexDocument("orphan-b", "src/b.cpp"),
+      indexDocument("orphan-a", "src/a.cpp"),
+      indexDocument("orphan-b", "src/b.cpp"),
   }));
   storage.publishGeneration(indexGeneration({
-    indexDocument("live-c", "src/c.cpp"),
+      indexDocument("live-c", "src/c.cpp"),
   }));
 
   CHECK(storage.collectOrphanDocuments() == 2);
@@ -409,4 +584,43 @@ TEST_CASE("sqlite storage reports use before initialization")
 #else
   SUCCEED("SQLite is not available in this build");
 #endif
+}
+
+TEST_CASE("storage paths provide default database location")
+{
+  const auto path = uburu::storage::defaultStorageDatabasePath();
+
+  CHECK_FALSE(path.empty());
+  CHECK(path.filename() == "uburu.db");
+}
+
+TEST_CASE("storage paths migrate database files without deleting the source")
+{
+  TemporaryDirectory directory("uburu-storage-paths-migration-test");
+  const auto source = directory.path() / "source" / "uburu.db";
+  const auto target = directory.path() / "target" / "custom.db";
+
+  std::filesystem::create_directories(source.parent_path());
+  {
+    std::ofstream database(source, std::ios::binary);
+    database << "database";
+  }
+  {
+    std::ofstream wal(source.string() + "-wal", std::ios::binary);
+    wal << "wal";
+  }
+  {
+    std::ofstream sharedMemory(source.string() + "-shm", std::ios::binary);
+    sharedMemory << "shm";
+  }
+
+  const auto result = uburu::storage::migrateStorageDatabase(source, target);
+
+  CHECK(result.copiedDatabase);
+  CHECK(result.copiedWriteAheadLog);
+  CHECK(result.copiedSharedMemory);
+  CHECK(std::filesystem::exists(source));
+  CHECK(std::filesystem::exists(target));
+  CHECK(std::filesystem::exists(target.string() + "-wal"));
+  CHECK(std::filesystem::exists(target.string() + "-shm"));
 }

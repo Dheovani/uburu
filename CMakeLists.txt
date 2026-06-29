@@ -15,6 +15,7 @@ option(UBURU_ENABLE_FORMAT_TARGET "Add the optional clang-format target" ON)
 option(UBURU_ENABLE_TIDY_TARGET "Add the optional clang-tidy target" ON)
 option(UBURU_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer where supported" OFF)
 option(UBURU_WARNINGS_AS_ERRORS "Treat compiler warnings as build errors for project targets" OFF)
+option(UBURU_BUILD_BENCHMARKS "Build developer benchmarks" OFF)
 
 add_library(uburu_project_options INTERFACE)
 add_library(Uburu::ProjectOptions ALIAS uburu_project_options)
@@ -64,6 +65,9 @@ if(UBURU_ENABLE_FORMAT_TARGET)
       "${PROJECT_SOURCE_DIR}/apps/*.cpp"
       "${PROJECT_SOURCE_DIR}/apps/*.h"
       "${PROJECT_SOURCE_DIR}/apps/*.hpp"
+      "${PROJECT_SOURCE_DIR}/benchmarks/*.cpp"
+      "${PROJECT_SOURCE_DIR}/benchmarks/*.h"
+      "${PROJECT_SOURCE_DIR}/benchmarks/*.hpp"
       "${PROJECT_SOURCE_DIR}/src/*.cpp"
       "${PROJECT_SOURCE_DIR}/src/*.h"
       "${PROJECT_SOURCE_DIR}/src/*.hpp"
@@ -102,6 +106,7 @@ if(UBURU_ENABLE_TIDY_TARGET)
 
   if(UBURU_CLANG_TIDY_EXECUTABLE)
     file(GLOB_RECURSE UBURU_TIDY_SOURCES CONFIGURE_DEPENDS
+      "${PROJECT_SOURCE_DIR}/benchmarks/*.cpp"
       "${PROJECT_SOURCE_DIR}/src/*.cpp"
       "${PROJECT_SOURCE_DIR}/tests/*.cpp"
     )
@@ -147,4 +152,8 @@ if(UBURU_BUILD_TESTS)
   include(CTest)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(UBURU_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()

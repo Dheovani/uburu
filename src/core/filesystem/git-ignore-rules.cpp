@@ -31,8 +31,7 @@ namespace uburu::filesystem
     {
       while (!text.empty() && isSpace(text.back())) {
         std::size_t slashCount = 0;
-        for (std::size_t index = text.size() - 1; index > 0 && text[index - 1] == escapeMarker;
-             --index)
+        for (std::size_t index = text.size() - 1; index > 0 && text[index - 1] == escapeMarker; --index)
           ++slashCount;
 
         if (slashCount % 2 != 0)
@@ -44,8 +43,7 @@ namespace uburu::filesystem
 
     std::string unescapeLeadingMarker(std::string text)
     {
-      if (text.size() >= 2 && text.front() == escapeMarker &&
-         (text[1] == commentMarker || text[1] == negationMarker))
+      if (text.size() >= 2 && text.front() == escapeMarker && (text[1] == commentMarker || text[1] == negationMarker))
         text.erase(0, 1);
 
       return text;
@@ -60,8 +58,7 @@ namespace uburu::filesystem
 
       while (textIndex < text.size()) {
         if (patternIndex < pattern.size() &&
-            (pattern[patternIndex] == wildcardSingleCharacter ||
-             pattern[patternIndex] == text[textIndex])) {
+            (pattern[patternIndex] == wildcardSingleCharacter || pattern[patternIndex] == text[textIndex])) {
           ++patternIndex;
           ++textIndex;
 
@@ -111,10 +108,9 @@ namespace uburu::filesystem
         std::size_t searchStart = 0;
         while (searchStart < relativeToBase.size()) {
           const auto separator = relativeToBase.find(pathSeparator, searchStart);
-          const auto component =
-            separator == std::string_view::npos
-              ? relativeToBase.substr(searchStart)
-              : relativeToBase.substr(searchStart, separator - searchStart);
+          const auto component = separator == std::string_view::npos
+                                     ? relativeToBase.substr(searchStart)
+                                     : relativeToBase.substr(searchStart, separator - searchStart);
 
           if (globMatches(rule.pattern, component))
             return true;
@@ -129,9 +125,7 @@ namespace uburu::filesystem
       }
 
       const auto separator = relativeToBase.find_last_of(pathSeparator);
-      const auto basename = separator == std::string_view::npos
-        ? relativeToBase
-        : relativeToBase.substr(separator + 1);
+      const auto basename = separator == std::string_view::npos ? relativeToBase : relativeToBase.substr(separator + 1);
 
       return globMatches(rule.pattern, basename);
     }
@@ -223,8 +217,7 @@ namespace uburu::filesystem
 
   } // namespace
 
-  std::vector<GitIgnoreRule> parseGitIgnore(std::string_view content,
-                                              const std::filesystem::path& baseDirectory)
+  std::vector<GitIgnoreRule> parseGitIgnore(std::string_view content, const std::filesystem::path& baseDirectory)
   {
     std::istringstream stream{std::string{content}};
     std::vector<GitIgnoreRule> rules;
@@ -239,18 +232,15 @@ namespace uburu::filesystem
     return rules;
   }
 
-  void GitIgnoreRules::appendFile(const std::filesystem::path& ignoreFile,
-                                   const std::filesystem::path& baseDirectory)
+  void GitIgnoreRules::appendFile(const std::filesystem::path& ignoreFile, const std::filesystem::path& baseDirectory)
   {
     std::ifstream stream(ignoreFile, std::ios::binary);
     if (!stream)
       return;
 
-    const std::string content{std::istreambuf_iterator<char>{stream},
-                              std::istreambuf_iterator<char>{}};
+    const std::string content{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
     auto parsedRules = parseGitIgnore(content, baseDirectory);
-    rules.insert(rules.end(), std::make_move_iterator(parsedRules.begin()),
-                  std::make_move_iterator(parsedRules.end()));
+    rules.insert(rules.end(), std::make_move_iterator(parsedRules.begin()), std::make_move_iterator(parsedRules.end()));
   }
 
   bool GitIgnoreRules::ignores(const std::filesystem::path& relativePath, bool is_directory) const

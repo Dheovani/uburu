@@ -7,8 +7,7 @@
 
 TEST_CASE("path normalization uses generic separators")
 {
-  CHECK(uburu::filesystem::normalizePathSeparators(R"(src\core\file.cpp)") ==
-        "src/core/file.cpp");
+  CHECK(uburu::filesystem::normalizePathSeparators(R"(src\core\file.cpp)") == "src/core/file.cpp");
 }
 
 TEST_CASE("relative path normalization removes lexical dot segments")
@@ -27,8 +26,7 @@ TEST_CASE("relative path normalization rejects absolute paths")
 TEST_CASE("path keys follow platform case rules")
 {
   const auto left = uburu::filesystem::normalizedPathKey(std::filesystem::path("SRC") / "File.TXT");
-  const auto right =
-    uburu::filesystem::normalizedPathKey(std::filesystem::path("src") / "file.txt");
+  const auto right = uburu::filesystem::normalizedPathKey(std::filesystem::path("src") / "file.txt");
 
 #ifdef _WIN32
   CHECK(left == right);
@@ -40,14 +38,12 @@ TEST_CASE("path keys follow platform case rules")
 #ifdef _WIN32
 TEST_CASE("windows path normalization preserves extended length prefixes")
 {
-  CHECK(uburu::filesystem::normalizedPathKey(R"(\\?\C:\Repo\Source\File.TXT)") ==
-        "//?/c:/repo/source/file.txt");
+  CHECK(uburu::filesystem::normalizedPathKey(R"(\\?\C:\Repo\Source\File.TXT)") == "//?/c:/repo/source/file.txt");
 }
 
 TEST_CASE("windows path normalization preserves UNC roots")
 {
-  CHECK(uburu::filesystem::normalizedPathKey(R"(\\Server\Share\Repo\File.TXT)") ==
-        "//server/share/repo/file.txt");
+  CHECK(uburu::filesystem::normalizedPathKey(R"(\\Server\Share\Repo\File.TXT)") == "//server/share/repo/file.txt");
 }
 #endif
 

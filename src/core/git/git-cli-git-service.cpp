@@ -7,9 +7,8 @@ namespace uburu::git
 
     [[nodiscard]] GitError unavailable()
     {
-      return GitError{
-        .code = GitErrorCode::backendUnavailable,
-        .message = "Git CLI fallback adapter is explicit but not enabled"};
+      return GitError{.code = GitErrorCode::backendUnavailable,
+                      .message = "Git CLI fallback adapter is explicit but not enabled"};
     }
 
   } // namespace
@@ -53,8 +52,8 @@ namespace uburu::git
     return unavailable();
   }
 
-  GitResult<GitRepositoryBoundary>
-  GitCliGitService::repositoryBoundary(const WorktreeInfo& worktree, const std::filesystem::path& relativePath) const
+  GitResult<GitRepositoryBoundary> GitCliGitService::repositoryBoundary(const WorktreeInfo& worktree,
+                                                                        const std::filesystem::path& relativePath) const
   {
     static_cast<void>(worktree);
     static_cast<void>(relativePath);

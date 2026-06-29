@@ -8,12 +8,14 @@ namespace uburu::filesystem
   namespace
   {
 
-    constexpr std::size_t windowsNetworkPrefixSize = 2;
     constexpr char windowsPathSeparator = '\\';
     constexpr char genericPathSeparator = '/';
     constexpr char asciiUppercaseFirst = 'A';
     constexpr char asciiUppercaseLast = 'Z';
     constexpr char asciiLowercaseOffset = 'a' - 'A';
+
+#ifdef _WIN32
+    constexpr std::size_t windowsNetworkPrefixSize = 2;
 
     bool startsWithWindowsNetworkPrefix(std::string_view text)
     {
@@ -26,6 +28,7 @@ namespace uburu::filesystem
       return (first == windowsPathSeparator || first == genericPathSeparator) &&
              (second == windowsPathSeparator || second == genericPathSeparator);
     }
+#endif
 
     char normalizedKeyCharacter(char value)
     {

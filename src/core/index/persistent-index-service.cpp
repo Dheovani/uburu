@@ -30,21 +30,15 @@ namespace uburu::index
     {
       const auto& file = candidate.file;
 
-      return !document.deleted &&
-             !document.contentHash.empty() &&
-              document.size == file.size &&
-              document.modifiedAt == file.modifiedAt &&
-              document.status == candidate.metadata.status &&
-              document.status == GitFileStatus::clean &&
-              document.contentHashAlgorithm != ContentHashAlgorithm::unknown;
+      return !document.deleted && !document.contentHash.empty() && document.size == file.size &&
+             document.modifiedAt == file.modifiedAt && document.status == candidate.metadata.status &&
+             document.status == GitFileStatus::clean && document.contentHashAlgorithm != ContentHashAlgorithm::unknown;
     }
 
     [[nodiscard]] bool canReuseBlobDocument(const IndexFileMetadata& metadata)
     {
-      return metadata.status == GitFileStatus::clean &&
-             metadata.gitBlob.has_value() &&
-             metadata.gitBlob->algorithm != GitObjectHashAlgorithm::unknown &&
-            !metadata.gitBlob->value.empty();
+      return metadata.status == GitFileStatus::clean && metadata.gitBlob.has_value() &&
+             metadata.gitBlob->algorithm != GitObjectHashAlgorithm::unknown && !metadata.gitBlob->value.empty();
     }
 
     [[nodiscard]] std::optional<std::string> gitBlobHash(const IndexFileMetadata& metadata)

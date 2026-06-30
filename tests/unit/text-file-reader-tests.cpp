@@ -128,14 +128,16 @@ TEST_CASE("text reader skips binary files using a sample instead of per-line che
 
   uburu::SearchOptions options;
   options.includeBinary = false;
-  const auto summary = uburu::text::readTextFileLines(path, options, [](const uburu::text::TextLine&) {
-    FAIL("binary files should not publish text lines");
+  bool publishedLine = false;
+  const auto summary = uburu::text::readTextFileLines(path, options, [&](const uburu::text::TextLine&) {
+    publishedLine = true;
 
     return true;
   });
   std::filesystem::remove(path);
 
   CHECK(summary.status == uburu::text::TextReadStatus::binarySkipped);
+  CHECK_FALSE(publishedLine);
 }
 
 TEST_CASE("text reader reports extremely long lines")

@@ -11,8 +11,8 @@ env:
   VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite
 
 jobs:
-  windows-mingw-core:
-    name: Windows MinGW core
+  windows-msvc-core:
+    name: Windows MSVC core
     runs-on: windows-latest
 
     steps:
@@ -27,33 +27,23 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .vcpkg-cache
-          key: vcpkg-windows-mingw-${{ hashFiles('vcpkg.json') }}
-          restore-keys: vcpkg-windows-mingw-
-
-      - name: Install MSYS2 MinGW toolchain
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-ninja
+          key: vcpkg-windows-msvc-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-windows-msvc-
 
       - name: Configure
         shell: pwsh
         env:
           VCPKG_ROOT: C:\vcpkg
-          MINGW_ROOT: C:\mingw64
-        run: cmake --preset core-windows-mingw-werror-debug
+        run: cmake --preset core-windows-msvc-werror-debug
 
       - name: Build
-        run: cmake --build --preset core-windows-mingw-werror-debug
+        run: cmake --build --preset core-windows-msvc-werror-debug
 
       - name: Test
-        run: ctest --preset core-windows-mingw-werror-debug
+        run: ctest --preset core-windows-msvc-werror-debug
 
       - name: Format check
-        run: cmake --build build/core-windows-mingw-werror-debug --target format-check
+        run: cmake --build build/core-windows-msvc-werror-debug --config Debug --target format-check
 
   linux-core:
     name: Linux core

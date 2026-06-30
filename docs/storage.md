@@ -144,7 +144,7 @@ O Marco 5 introduziu `uburu-storage-fts5-benchmark`, um benchmark de desenvolved
 padrão. Ele cria um dataset determinístico em SQLite, compara uma consulta textual simples por `LIKE`
 contra uma consulta equivalente por FTS5 e valida que ambas retornam a mesma contagem.
 
-Resultado local inicial no preset `core-windows-mingw-benchmarks-debug`:
+Resultado local inicial no preset `core-windows-msvc-debug`:
 
 - documentos: 20.000;
 - documentos correspondentes: 2.858;

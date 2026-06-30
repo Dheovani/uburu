@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace uburu::storage
 {
@@ -17,12 +19,29 @@ namespace uburu::storage
 
     [[nodiscard]] std::optional<std::filesystem::path> environmentPath(const char* name)
     {
+#if defined(_WIN32)
+      std::size_t requiredSize = 0;
+      if (getenv_s(&requiredSize, nullptr, 0, name) != 0 || requiredSize == 0)
+        return std::nullopt;
+
+      std::vector<char> value(requiredSize);
+      if (getenv_s(&requiredSize, value.data(), value.size(), name) != 0 || requiredSize == 0)
+        return std::nullopt;
+
+      const std::string_view text{value.data()};
+#else
       const auto* value = std::getenv(name);
 
       if (value == nullptr || std::string_view{value}.empty())
         return std::nullopt;
 
-      return std::filesystem::path{value};
+      const std::string_view text{value};
+#endif
+
+      if (text.empty())
+        return std::nullopt;
+
+      return std::filesystem::path{text};
     }
 
     [[nodiscard]] std::filesystem::path fallbackStorageRoot()

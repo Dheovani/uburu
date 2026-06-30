@@ -1,7 +1,7 @@
 param(
   [ValidateSet("configure", "build", "test", "format", "format-check", "tidy")]
   [string]$Command = "build",
-  [string]$Preset = "windows-mingw-debug",
+  [string]$Preset = "local-windows-msvc-debug",
   [switch]$Fresh
 )
 
@@ -33,23 +33,17 @@ function Test-RequiredPath {
   }
 }
 
-function Test-MingwPresetEnvironment {
+function Test-MsvcPresetEnvironment {
   param([string]$RuntimePreset)
 
-  if ($RuntimePreset -notlike "*mingw*") {
+  if ($RuntimePreset -notlike "*msvc*") {
     return
   }
 
-  Test-RequiredPath "MINGW_ROOT" $env:MINGW_ROOT "C:\Qt\Tools\mingw1310_64"
   Test-RequiredPath "VCPKG_ROOT" $env:VCPKG_ROOT "C:\Users\your-user\vcpkg"
 
   if ($RuntimePreset -notlike "core-*") {
-    Test-RequiredPath "QT_ROOT" $env:QT_ROOT "C:\Qt\6.11.1\mingw_64"
-  }
-
-  $compiler = Join-Path $env:MINGW_ROOT "bin/g++.exe"
-  if (-not (Test-Path -LiteralPath $compiler)) {
-    throw "MinGW compiler was not found at '$compiler'. Check MINGW_ROOT in .env."
+    Test-RequiredPath "QT_ROOT" $env:QT_ROOT "C:\Qt\6.11.1\msvc2022_64"
   }
 }
 
@@ -57,10 +51,10 @@ function Add-RuntimePathForPreset {
   param([string]$RuntimePreset)
 
   $buildDirectory = switch ($RuntimePreset) {
-    "windows-mingw-debug" { "build/windows-mingw-debug" }
-    "core-windows-mingw-debug" { "build/core-windows-mingw-debug" }
-    "core-windows-mingw-werror-debug" { "build/core-windows-mingw-werror-debug" }
-    "core-windows-mingw-benchmarks-debug" { "build/core-windows-mingw-benchmarks-debug" }
+    "local-windows-msvc-debug" { "build/windows-msvc-debug" }
+    "windows-msvc-debug" { "build/windows-msvc-debug" }
+    "core-windows-msvc-debug" { "build/core-windows-msvc-debug" }
+    "core-windows-msvc-werror-debug" { "build/core-windows-msvc-werror-debug" }
     default { "" }
   }
 
@@ -71,16 +65,20 @@ function Add-RuntimePathForPreset {
   $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
   $buildPath = Join-Path $root $buildDirectory
 
-  Add-PathEntry (Join-Path $buildPath "vcpkg_installed/x64-mingw-dynamic/debug/bin")
-  Add-PathEntry (Join-Path $env:QT_ROOT "bin")
-  Add-PathEntry (Join-Path $env:MINGW_ROOT "bin")
+  Add-PathEntry (Join-Path $buildPath "vcpkg_installed/x64-windows/debug/bin")
+
+  if ($env:QT_ROOT) {
+    Add-PathEntry (Join-Path $env:QT_ROOT "bin")
+  }
 }
 
-Add-PathEntry (Join-Path $env:MINGW_ROOT "bin")
-Add-PathEntry (Join-Path $env:QT_ROOT "bin")
+if ($env:QT_ROOT) {
+  Add-PathEntry (Join-Path $env:QT_ROOT "bin")
+}
+
 Add-PathEntry $env:NINJA_ROOT
 
-Test-MingwPresetEnvironment $Preset
+Test-MsvcPresetEnvironment $Preset
 
 switch ($Command) {
   "configure" {

@@ -20,28 +20,14 @@
       }
     },
     {
-      "name": "windows-mingw-debug",
-      "displayName": "Windows MinGW Debug",
-      "description": "Qt desktop build using MinGW, Ninja, vcpkg and QT_ROOT/MINGW_ROOT.",
-      "inherits": "base",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/windows-mingw-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "$env{MINGW_ROOT}/bin/g++.exe",
-        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
-        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic"
-      }
-    },
-    {
       "name": "windows-msvc-debug",
       "displayName": "Windows MSVC Debug",
-      "description": "Qt desktop build using MSVC from a configured developer environment.",
+      "description": "Qt desktop build using Visual Studio/MSVC, vcpkg and QT_ROOT.",
       "inherits": "base",
-      "generator": "Ninja",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
       "binaryDir": "${sourceDir}/build/windows-msvc-debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
         "VCPKG_TARGET_TRIPLET": "x64-windows"
       }
@@ -60,37 +46,26 @@
       }
     },
     {
-      "name": "core-windows-mingw-debug",
-      "displayName": "Core-only Windows MinGW Debug",
-      "description": "Build only the UI-independent core and tests using MinGW; does not require Qt.",
+      "name": "core-windows-msvc-debug",
+      "displayName": "Core-only Windows MSVC Debug",
+      "description": "Build only the UI-independent core and tests using Visual Studio/MSVC; does not require Qt.",
       "inherits": "base",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/core-windows-mingw-debug",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/core-windows-msvc-debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "$env{MINGW_ROOT}/bin/g++.exe",
-        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
         "UBURU_BUILD_DESKTOP": "OFF"
       }
     },
     {
-      "name": "core-windows-mingw-werror-debug",
-      "displayName": "Core-only Windows MinGW Debug with warnings as errors",
-      "description": "CI-oriented core build using MinGW with project warnings promoted to errors.",
-      "inherits": "core-windows-mingw-debug",
-      "binaryDir": "${sourceDir}/build/core-windows-mingw-werror-debug",
+      "name": "core-windows-msvc-werror-debug",
+      "displayName": "Core-only Windows MSVC Debug with warnings as errors",
+      "description": "CI-oriented core build using Visual Studio/MSVC with project warnings promoted to errors.",
+      "inherits": "core-windows-msvc-debug",
+      "binaryDir": "${sourceDir}/build/core-windows-msvc-werror-debug",
       "cacheVariables": {
         "UBURU_WARNINGS_AS_ERRORS": "ON"
-      }
-    },
-    {
-      "name": "core-windows-mingw-benchmarks-debug",
-      "displayName": "Core-only Windows MinGW Debug with benchmarks",
-      "description": "Developer benchmark build using MinGW without the Qt desktop application.",
-      "inherits": "core-windows-mingw-debug",
-      "binaryDir": "${sourceDir}/build/core-windows-mingw-benchmarks-debug",
-      "cacheVariables": {
-        "UBURU_BUILD_BENCHMARKS": "ON"
       }
     },
     {
@@ -130,28 +105,23 @@
   ],
   "buildPresets": [
     {
-      "name": "windows-mingw-debug",
-      "configurePreset": "windows-mingw-debug"
-    },
-    {
       "name": "windows-msvc-debug",
-      "configurePreset": "windows-msvc-debug"
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug"
     },
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug"
     },
     {
-      "name": "core-windows-mingw-debug",
-      "configurePreset": "core-windows-mingw-debug"
+      "name": "core-windows-msvc-debug",
+      "configurePreset": "core-windows-msvc-debug",
+      "configuration": "Debug"
     },
     {
-      "name": "core-windows-mingw-werror-debug",
-      "configurePreset": "core-windows-mingw-werror-debug"
-    },
-    {
-      "name": "core-windows-mingw-benchmarks-debug",
-      "configurePreset": "core-windows-mingw-benchmarks-debug"
+      "name": "core-windows-msvc-werror-debug",
+      "configurePreset": "core-windows-msvc-werror-debug",
+      "configuration": "Debug"
     },
     {
       "name": "core-linux-debug",
@@ -167,31 +137,28 @@
     },
     {
       "name": "format",
-      "configurePreset": "core-windows-mingw-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug",
       "targets": ["format"]
     },
     {
       "name": "format-check",
-      "configurePreset": "core-windows-mingw-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug",
       "targets": ["format-check"]
     },
     {
       "name": "tidy",
-      "configurePreset": "core-windows-mingw-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug",
       "targets": ["tidy"]
     }
   ],
   "testPresets": [
     {
-      "name": "windows-mingw-debug",
-      "configurePreset": "windows-mingw-debug",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
       "name": "windows-msvc-debug",
       "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }
@@ -204,15 +171,17 @@
       }
     },
     {
-      "name": "core-windows-mingw-debug",
-      "configurePreset": "core-windows-mingw-debug",
+      "name": "core-windows-msvc-debug",
+      "configurePreset": "core-windows-msvc-debug",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }
     },
     {
-      "name": "core-windows-mingw-werror-debug",
-      "configurePreset": "core-windows-mingw-werror-debug",
+      "name": "core-windows-msvc-werror-debug",
+      "configurePreset": "core-windows-msvc-werror-debug",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }

@@ -300,6 +300,60 @@ TEST_CASE("persistent index service publishes deleted git overlay tombstones")
 #endif
 }
 
+TEST_CASE("persistent index service updates from scanned files and git overlay entries")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-overlay-update-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "previous.cpp", "old content");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector initialFiles{
+    fileEntry(root, "src/previous.cpp"),
+  };
+
+  const auto initialSummary = indexService.update(worktreeInfo(root), initialFiles);
+  const auto initialDocument = storage.findDocument("worktree-id", "src/previous.cpp");
+
+  writeFile(root / "src" / "current.cpp", "new content");
+  std::filesystem::remove(root / "src" / "previous.cpp");
+
+  const std::vector scannedFiles{
+    fileEntry(root, "src/current.cpp"),
+  };
+  const std::vector overlay{
+    uburu::GitOverlayEntry{.relativePath = "src/current.cpp",
+                           .previousRelativePath = std::filesystem::path("src/previous.cpp"),
+                           .status = uburu::GitFileStatus::modified,
+                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree},
+  };
+
+  const auto overlaySummary = indexService.update(worktreeInfo(root), scannedFiles, overlay);
+  const auto currentDocument = storage.findDocument("worktree-id", "src/current.cpp");
+  const auto previousDocument = storage.findDocument("worktree-id", "src/previous.cpp");
+
+  CHECK(initialSummary.indexed == 1);
+  REQUIRE(initialDocument.has_value());
+  CHECK(overlaySummary.indexed == 1);
+  CHECK(overlaySummary.removed == 1);
+  REQUIRE(currentDocument.has_value());
+  CHECK(currentDocument->status == uburu::GitFileStatus::modified);
+  CHECK_FALSE(currentDocument->deleted);
+  REQUIRE(previousDocument.has_value());
+  CHECK(previousDocument->status == uburu::GitFileStatus::deleted);
+  CHECK(previousDocument->deleted);
+  CHECK(previousDocument->contentHash == initialDocument->contentHash);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reuses git blob documents before reading files")
 {
 #if defined(UBURU_HAS_SQLITE)

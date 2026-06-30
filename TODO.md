@@ -189,7 +189,9 @@ e UI para avançarem mais rapidamente.
 - [ ] Aplicar overlay da working tree sobre a geração versionada.
   - [x] Tratar status Git `modified` como invalidação do reuso conservador por catálogo.
   - [x] Publicar lápides para arquivos deletados localmente quando houver documento anterior.
-  - [ ] Conectar overlay produzido pelo `GitService` ao pipeline incremental completo.
+  - [x] Traduzir entradas `GitOverlayEntry` em candidatos de indexação e tombstones testáveis.
+  - [x] Conectar overlay ao pipeline incremental do `IndexService`.
+  - [ ] Orquestrar chamada de `GitService::workingTreeOverlay()` no serviço de aplicação/indexação.
 - [ ] Ocultar deletados e substituir modificados sem resultados obsoletos.
 - [ ] Reconciliar eventos do watcher em batches transacionais.
 - [ ] Detectar staleness do índice e expor estado para a UI.

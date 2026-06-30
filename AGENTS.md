@@ -656,8 +656,9 @@ Para assinaturas de funções, chamadas e declarações com parâmetros:
 
 * Não quebre linhas se todos os parâmetros ainda couberem confortavelmente dentro do limite de 120
   colunas.
-* Quando a quebra for necessária, prefira colocar cada parâmetro em uma linha separada, alinhado em
-  bloco, em vez de deixar apenas o último parâmetro sozinho na linha seguinte.
+* Quando a quebra for necessária por ultrapassar o limite de 120 colunas, coloque cada parâmetro em uma
+  linha separada, alinhado em bloco. Não mantenha o primeiro parâmetro na linha da função apenas para
+  ocupar mais espaço horizontal.
 * Evite quebras causadas apenas por alinhamento automático excessivo quando a linha ainda estiver
   legível.
 

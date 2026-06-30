@@ -19,6 +19,11 @@ namespace uburu::index
     [[nodiscard]] IndexUpdateSummary update(const WorktreeInfo& worktree, std::span<const IndexFileCandidate> files,
                                             const IndexProgressCallback& onProgress = {},
                                             std::stop_token stopToken = {}) override;
+    [[nodiscard]] IndexUpdateSummary update(const WorktreeInfo& worktree,
+                                            std::span<const FileEntry> files,
+                                            std::span<const GitOverlayEntry> overlay,
+                                            const IndexProgressCallback& onProgress = {},
+                                            std::stop_token stopToken = {}) override;
     [[nodiscard]] std::vector<SearchResult> search(const SearchQuery& query,
                                                    std::stop_token stopToken = {}) const override;
 

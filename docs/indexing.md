@@ -65,6 +65,17 @@ Essa lápide mantém a identidade de conteúdo anterior apenas como referência 
 como `deleted` para que buscas indexadas futuras não retornem resultados obsoletos da geração versionada.
 Arquivos deletados sem entrada anterior são contabilizados como removidos, mas não criam documento novo.
 
+`buildOverlayIndexCandidates()` é a ponte pura entre o scanner e o overlay Git: ele recebe os
+`FileEntry` encontrados na working tree e as entradas `GitOverlayEntry`, devolvendo candidatos de
+indexação com status Git, blob reutilizável e tombstones para caminhos ocultados. Renames preservam o
+caminho atual como candidato da working tree e geram uma lápide para o caminho anterior, evitando que a
+busca indexada mantenha os dois caminhos visíveis depois da reconciliação.
+
+`IndexService::update(worktree, files, overlay)` usa essa tradução antes de publicar a geração
+incremental. Assim, o orquestrador futuro pode combinar o scan de filesystem com
+`GitService::workingTreeOverlay()` sem conhecer detalhes de tombstones, renames ou invalidação de reuso
+por status Git.
+
 ## Hash de conteúdo
 
 O algoritmo inicial de hash de conteúdo é SHA-256. A escolha privilegia correção, estabilidade e baixa

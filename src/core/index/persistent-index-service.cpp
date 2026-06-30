@@ -1,6 +1,7 @@
 #include "core/index/persistent-index-service.hpp"
 
 #include "core/index/content-hash.hpp"
+#include "core/index/index-overlay.hpp"
 
 #include <chrono>
 #include <exception>
@@ -278,6 +279,17 @@ namespace uburu::index
                                                       .documents = std::move(documents)});
 
     return summary;
+  }
+
+  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
+                                                    std::span<const FileEntry> files,
+                                                    std::span<const GitOverlayEntry> overlay,
+                                                    const IndexProgressCallback& onProgress,
+                                                    std::stop_token stopToken)
+  {
+    auto plan = buildOverlayIndexCandidates(worktree, files, overlay);
+
+    return update(worktree, plan.candidates, onProgress, stopToken);
   }
 
   std::vector<SearchResult> PersistentIndexService::search(const SearchQuery& query, std::stop_token stopToken) const

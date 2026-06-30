@@ -4,11 +4,14 @@
 #include <QLocale>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 #include <QTranslator>
 #include <QUrl>
 
 int main(int argc, char* argv[])
 {
+  QQuickStyle::setStyle(QStringLiteral("Basic"));
+
   QGuiApplication application(argc, argv);
   application.setOrganizationName(QStringLiteral("Uburu"));
   application.setApplicationName(QStringLiteral("Uburu"));

@@ -6,9 +6,9 @@ namespace uburu::app
 {
 
   DefaultSearchService::DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine)
-      : directEngine(std::move(directEngine))
+    : directEngine(std::move(directEngine))
   {
-    if (!directEngine)
+    if (!this->directEngine)
       throw std::invalid_argument("DefaultSearchService requires a direct engine");
   }
 

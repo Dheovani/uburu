@@ -14,13 +14,14 @@ add_executable(uburu_core_tests
   unit/recursive-file-scanner-tests.cpp
   unit/regex-matcher-tests.cpp
   unit/search-query-validation-tests.cpp
+  unit/search-service-tests.cpp
   unit/sqlite-storage-service-tests.cpp
   unit/text-file-reader-tests.cpp
   unit/text-matcher-tests.cpp
   unit/worker-pool-tests.cpp
 )
 
-target_link_libraries(uburu_core_tests PRIVATE Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)
+target_link_libraries(uburu_core_tests PRIVATE Uburu::App Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)
 
 if(WIN32)
   add_custom_command(TARGET uburu_core_tests POST_BUILD

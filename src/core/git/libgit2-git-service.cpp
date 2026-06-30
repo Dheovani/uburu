@@ -419,7 +419,7 @@ namespace uburu::git
         git_repository* rawWorktreeRepository = nullptr;
 
         const auto openResult =
-            git_repository_open_ext(&rawWorktreeRepository, info->worktreeRoot->string().c_str(), 0, nullptr);
+          git_repository_open_ext(&rawWorktreeRepository, info->worktreeRoot->string().c_str(), 0, nullptr);
 
         if (openResult == 0) {
           GitPointer<git_repository, git_repository_free> worktreeRepository(rawWorktreeRepository,

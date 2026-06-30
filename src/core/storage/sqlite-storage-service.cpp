@@ -181,7 +181,7 @@ namespace uburu::storage
       void bindText(int index, std::string_view value)
       {
         const auto result =
-            sqlite3_bind_text(statement, index, value.data(), static_cast<int>(value.size()), SQLITE_TRANSIENT);
+          sqlite3_bind_text(statement, index, value.data(), static_cast<int>(value.size()), SQLITE_TRANSIENT);
         requireSqlite(result, database, "failed to bind SQLite text");
       }
 
@@ -288,8 +288,8 @@ namespace uburu::storage
                                    std::size_t retentionLimit)
     {
       Statement statement(database, "DELETE FROM " + std::string(tableName) + " WHERE id NOT IN (SELECT id FROM " +
-                                        std::string(tableName) + " ORDER BY " + std::string(orderColumn) +
-                                        " DESC, id DESC LIMIT ?)");
+                                      std::string(tableName) + " ORDER BY " + std::string(orderColumn) +
+                                      " DESC, id DESC LIMIT ?)");
 
       statement.bindInt64(1, static_cast<std::int64_t>(retentionLimit));
       statement.executeDone();
@@ -621,7 +621,7 @@ namespace uburu::storage
       execute(database, "BEGIN IMMEDIATE");
       try {
         const auto definition =
-            "format_version INTEGER NOT NULL DEFAULT " + std::to_string(defaultDocumentFormatVersion);
+          "format_version INTEGER NOT NULL DEFAULT " + std::to_string(defaultDocumentFormatVersion);
 
         addColumnIfMissing(database, "documents", "format_version", definition);
         addColumnIfMissing(database, "files", "format_version", definition);
@@ -831,8 +831,8 @@ namespace uburu::storage
 
       if (result != sqliteOk) {
         const auto message = openedDatabase == nullptr
-                                 ? std::string{"failed to open SQLite database"}
-                                 : sqliteMessage(openedDatabase, "failed to open SQLite database");
+                               ? std::string{"failed to open SQLite database"}
+                               : sqliteMessage(openedDatabase, "failed to open SQLite database");
         if (openedDatabase != nullptr)
           sqlite3_close(openedDatabase);
 
@@ -1121,9 +1121,9 @@ namespace uburu::storage
 
     while (statement.stepRow()) {
       entries.push_back(
-          SearchHistoryEntry{.root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
-                             .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
-                             .searchedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 2))});
+        SearchHistoryEntry{.root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
+                           .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
+                           .searchedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 2))});
     }
 
     return entries;
@@ -1170,10 +1170,10 @@ namespace uburu::storage
 
     while (statement.stepRow()) {
       searches.push_back(
-          SavedSearch{.name = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
-                      .root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
-                      .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 2)),
-                      .savedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 3))});
+        SavedSearch{.name = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
+                    .root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
+                    .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 2)),
+                    .savedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 3))});
     }
 
     return searches;

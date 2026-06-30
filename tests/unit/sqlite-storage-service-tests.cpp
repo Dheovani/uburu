@@ -260,7 +260,7 @@ TEST_CASE("sqlite storage rebuilds index catalog without removing metadata")
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.setPreference(std::nullopt, "theme", "dark");
   storage.publishGeneration(indexGeneration({
-      indexDocument("content-a", "src/a.cpp"),
+    indexDocument("content-a", "src/a.cpp"),
   }));
 
   REQUIRE(storage.findDocument("worktree-id", "src/a.cpp").has_value());
@@ -285,15 +285,15 @@ TEST_CASE("sqlite storage publishes generations atomically")
   storage.upsertWorktree(worktreeInfo(directory.path()));
 
   storage.publishGeneration(indexGeneration({
-      indexDocument("content-a", "src/a.cpp"),
-      indexDocument("content-b", "src/b.cpp"),
+    indexDocument("content-a", "src/a.cpp"),
+    indexDocument("content-b", "src/b.cpp"),
   }));
 
   REQUIRE(storage.findDocument("worktree-id", "src/a.cpp").has_value());
   REQUIRE(storage.findDocument("worktree-id", "src/b.cpp").has_value());
 
   storage.publishGeneration(indexGeneration({
-      indexDocument("content-a-updated", "src/a.cpp"),
+    indexDocument("content-a-updated", "src/a.cpp"),
   }));
 
   const auto updated = storage.findDocument("worktree-id", "src/a.cpp");
@@ -335,25 +335,25 @@ TEST_CASE("sqlite storage persists search history and saved searches")
   storage.initialize();
   storage.recordSearch(uburu::SearchHistoryEntry{.root = "repo", .expression = "first", .searchedAt = {}}, 2);
   storage.recordSearch(
-      uburu::SearchHistoryEntry{.root = "repo",
-                                .expression = "second",
-                                .searchedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1}}},
-      2);
+    uburu::SearchHistoryEntry{.root = "repo",
+                              .expression = "second",
+                              .searchedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1}}},
+    2);
   storage.recordSearch(
-      uburu::SearchHistoryEntry{.root = "repo",
-                                .expression = "third",
-                                .searchedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{2}}},
-      2);
+    uburu::SearchHistoryEntry{.root = "repo",
+                              .expression = "third",
+                              .searchedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{2}}},
+    2);
   storage.saveSearch(
-      uburu::SavedSearch{.name = "default",
-                         .root = "repo",
-                         .expression = "needle",
-                         .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{3}}});
+    uburu::SavedSearch{.name = "default",
+                       .root = "repo",
+                       .expression = "needle",
+                       .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{3}}});
   storage.saveSearch(
-      uburu::SavedSearch{.name = "default",
-                         .root = "repo",
-                         .expression = "updated",
-                         .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{4}}});
+    uburu::SavedSearch{.name = "default",
+                       .root = "repo",
+                       .expression = "updated",
+                       .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{4}}});
 
   const auto history = storage.recentSearches(10);
   const auto saved = storage.savedSearches();
@@ -377,25 +377,25 @@ TEST_CASE("sqlite storage persists indexing metrics with retention")
 
   storage.initialize();
   storage.recordIndexingMetric(
-      uburu::IndexingMetric{.name = "files-indexed",
-                            .value = 1,
-                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1}}},
-      2);
+    uburu::IndexingMetric{.name = "files-indexed",
+                          .value = 1,
+                          .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1}}},
+    2);
   storage.recordIndexingMetric(
-      uburu::IndexingMetric{.name = "files-indexed",
-                            .value = 2,
-                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{2}}},
-      2);
+    uburu::IndexingMetric{.name = "files-indexed",
+                          .value = 2,
+                          .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{2}}},
+    2);
   storage.recordIndexingMetric(
-      uburu::IndexingMetric{.name = "files-indexed",
-                            .value = 3,
-                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{3}}},
-      2);
+    uburu::IndexingMetric{.name = "files-indexed",
+                          .value = 3,
+                          .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{3}}},
+    2);
   storage.recordIndexingMetric(
-      uburu::IndexingMetric{.name = "bytes-indexed",
-                            .value = 99,
-                            .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{4}}},
-      2);
+    uburu::IndexingMetric{.name = "bytes-indexed",
+                          .value = 99,
+                          .recordedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{4}}},
+    2);
 
   const auto fileMetrics = storage.recentIndexingMetrics("files-indexed", 10);
   const auto byteMetrics = storage.recentIndexingMetrics("bytes-indexed", 10);
@@ -422,14 +422,14 @@ TEST_CASE("sqlite storage keeps readers and writers on separate connections cons
   writer.upsertRepository(repositoryInfo(directory.path()));
   writer.upsertWorktree(worktreeInfo(directory.path()));
   writer.publishGeneration(indexGeneration({
-      indexDocument("content-before", "src/a.cpp"),
+    indexDocument("content-before", "src/a.cpp"),
   }));
 
   reader.initialize();
   REQUIRE(reader.findDocument("worktree-id", "src/a.cpp").has_value());
 
   writer.publishGeneration(indexGeneration({
-      indexDocument("content-after", "src/a.cpp"),
+    indexDocument("content-after", "src/a.cpp"),
   }));
 
   const auto document = reader.findDocument("worktree-id", "src/a.cpp");
@@ -459,8 +459,8 @@ TEST_CASE("sqlite storage treats hash algorithm as part of document identity")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-      first,
-      second,
+    first,
+    second,
   }));
 
   const auto sha256Document = storage.findDocument("worktree-id", "src/sha256.cpp");
@@ -492,13 +492,13 @@ TEST_CASE("sqlite storage finds reusable documents by content hash")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-      document,
+    document,
   }));
 
   const auto reusable =
-      storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::sha256, "reusable-content");
+    storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::sha256, "reusable-content");
   const auto wrongAlgorithm =
-      storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::unknown, "reusable-content");
+    storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::unknown, "reusable-content");
 
   REQUIRE(reusable.has_value());
   CHECK(reusable->formatVersion == uburu::latestIndexDocumentFormatVersion);
@@ -534,13 +534,13 @@ TEST_CASE("sqlite storage finds reusable documents by git blob hash")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-      older,
-      newer,
+    older,
+    newer,
   }));
 
   const auto reusable = storage.findReusableDocumentByGitBlobHash(uburu::GitObjectHashAlgorithm::sha1, "shared-blob");
   const auto wrongAlgorithm =
-      storage.findReusableDocumentByGitBlobHash(uburu::GitObjectHashAlgorithm::sha256, "shared-blob");
+    storage.findReusableDocumentByGitBlobHash(uburu::GitObjectHashAlgorithm::sha256, "shared-blob");
 
   REQUIRE(reusable.has_value());
   CHECK(reusable->contentHash == "newer-content");
@@ -565,14 +565,14 @@ TEST_CASE("sqlite storage rolls back invalid generation publication")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-      indexDocument("content-before", "src/a.cpp"),
+    indexDocument("content-before", "src/a.cpp"),
   }));
 
   auto invalidDocument = indexDocument("content-invalid", "src/invalid.cpp");
   invalidDocument.worktreeId = "another-worktree";
 
   CHECK_THROWS(storage.publishGeneration(indexGeneration({
-      invalidDocument,
+    invalidDocument,
   })));
 
   const auto preserved = storage.findDocument("worktree-id", "src/a.cpp");
@@ -621,11 +621,11 @@ TEST_CASE("sqlite storage collects orphan documents")
   storage.upsertRepository(repositoryInfo(directory.path()));
   storage.upsertWorktree(worktreeInfo(directory.path()));
   storage.publishGeneration(indexGeneration({
-      indexDocument("orphan-a", "src/a.cpp"),
-      indexDocument("orphan-b", "src/b.cpp"),
+    indexDocument("orphan-a", "src/a.cpp"),
+    indexDocument("orphan-b", "src/b.cpp"),
   }));
   storage.publishGeneration(indexGeneration({
-      indexDocument("live-c", "src/c.cpp"),
+    indexDocument("live-c", "src/c.cpp"),
   }));
 
   CHECK(storage.collectOrphanDocuments() == 2);

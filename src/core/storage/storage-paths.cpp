@@ -84,11 +84,11 @@ namespace uburu::storage
       throw std::runtime_error("source storage database does not exist");
 
     return StorageMigrationResult{
-        .copiedDatabase = copyIfExists(sourceDatabase, targetDatabase),
-        .copiedWriteAheadLog = copyIfExists(sourceDatabase.string() + std::string{writeAheadLogSuffix},
-                                            targetDatabase.string() + std::string{writeAheadLogSuffix}),
-        .copiedSharedMemory = copyIfExists(sourceDatabase.string() + std::string{sharedMemorySuffix},
-                                           targetDatabase.string() + std::string{sharedMemorySuffix})};
+      .copiedDatabase = copyIfExists(sourceDatabase, targetDatabase),
+      .copiedWriteAheadLog = copyIfExists(sourceDatabase.string() + std::string{writeAheadLogSuffix},
+                                          targetDatabase.string() + std::string{writeAheadLogSuffix}),
+      .copiedSharedMemory = copyIfExists(sourceDatabase.string() + std::string{sharedMemorySuffix},
+                                         targetDatabase.string() + std::string{sharedMemorySuffix})};
   }
 
 } // namespace uburu::storage

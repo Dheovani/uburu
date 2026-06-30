@@ -54,8 +54,8 @@ namespace uburu::filesystem
       : root(std::move(root)), handle(std::make_unique<NativeHandle>()), buffer(changeBufferSize)
   {
     handle->directory =
-        CreateFileW(root.wstring().c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
+      CreateFileW(root.wstring().c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                  nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
   }
 
   WindowsFileWatcher::~WindowsFileWatcher()

@@ -190,7 +190,7 @@ TEST_CASE("an invalid root does not start filesystem traversal")
   auto scanner = std::make_shared<EmptyScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
   uburu::SearchQuery query =
-      makeQuery(std::filesystem::temp_directory_path() / "uburu-direct-search-missing-root", "needle");
+    makeQuery(std::filesystem::temp_directory_path() / "uburu-direct-search-missing-root", "needle");
   std::error_code error;
   std::filesystem::remove_all(query.root, error);
 
@@ -213,15 +213,14 @@ TEST_CASE("direct search scans every root in the search scope")
   std::filesystem::create_directories(secondRoot);
 
   uburu::SearchQuery query{
-      .root = {},
-      .scope =
-          uburu::SearchScope{
-              .roots = {uburu::SearchRoot{
-                            .path = firstRoot, .includedDirectories = {}, .excludedDirectories = {"node_modules"}},
-                        uburu::SearchRoot{
-                            .path = secondRoot, .includedDirectories = {}, .excludedDirectories = {"node_modules"}}}},
-      .expression = "needle",
-      .options = {}};
+    .root = {},
+    .scope =
+      uburu::SearchScope{
+        .roots =
+          {uburu::SearchRoot{.path = firstRoot, .includedDirectories = {}, .excludedDirectories = {"node_modules"}},
+           uburu::SearchRoot{.path = secondRoot, .includedDirectories = {}, .excludedDirectories = {"node_modules"}}}},
+    .expression = "needle",
+    .options = {}};
 
   std::vector<uburu::SearchResult> results;
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {

@@ -62,8 +62,8 @@ namespace uburu::search
       const auto regexResult = regexMatcher.findAll(text);
 
       if (regexResult.status != text::RegexMatchStatus::completed) {
-        summary.errors.push_back(makeSearchError(errorCodeFromRegexStatus(regexResult.status),
-                                                 std::to_string(regexResult.backendErrorCode)));
+        summary.errors.push_back(
+          makeSearchError(errorCodeFromRegexStatus(regexResult.status), std::to_string(regexResult.backendErrorCode)));
 
         return std::nullopt;
       }
@@ -208,7 +208,7 @@ namespace uburu::search
         }
 
         pending.push_back(
-            PendingResult{.result = std::move(result), .remainingContextLines = query.options.contextAfterLines});
+          PendingResult{.result = std::move(result), .remainingContextLines = query.options.contextAfterLines});
       }
 
       return PublishDecision::continueSearch;
@@ -242,7 +242,7 @@ namespace uburu::search
         return summary;
       }
       summary.regexExecutionMode =
-          compiled.matcher->jitEnabled() ? RegexExecutionMode::jit : RegexExecutionMode::interpretedFallback;
+        compiled.matcher->jitEnabled() ? RegexExecutionMode::jit : RegexExecutionMode::interpretedFallback;
       regexMatcher = std::move(compiled.matcher);
     }
 
@@ -255,102 +255,102 @@ namespace uburu::search
       auto rootOptions = optionsForRoot(query.options, root);
 
       scanner->scan(
-          root.path, rootOptions,
-          [&](FileEntry entry) {
-            if (stop_token.stop_requested())
+        root.path, rootOptions,
+        [&](FileEntry entry) {
+          if (stop_token.stop_requested())
+            return false;
+
+          ++summary.filesScanned;
+          ++summary.metrics.filesProcessed;
+          summary.metrics.bytesProcessed += entry.size;
+
+          std::size_t fileMatches = 0;
+          std::deque<std::string> previousContext;
+          std::vector<PendingResult> pendingResults;
+
+          if (searchesFileName(query.options.target)) {
+            const auto pathText = entry.relativePath.generic_string();
+            const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
+
+            if (!pathMatches)
               return false;
 
-            ++summary.filesScanned;
-            ++summary.metrics.filesProcessed;
-            summary.metrics.bytesProcessed += entry.size;
-
-            std::size_t fileMatches = 0;
-            std::deque<std::string> previousContext;
-            std::vector<PendingResult> pendingResults;
-
-            if (searchesFileName(query.options.target)) {
-              const auto pathText = entry.relativePath.generic_string();
-              const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
-
-              if (!pathMatches)
-                return false;
-
-              const auto decision = publishMatches(entry, SearchResultKind::fileName, 0, pathText, *pathMatches, query,
-                                                   summary, fileMatches, previousContext, pendingResults, sink);
-
-              if (!flushPending(pendingResults, sink))
-                return false;
-
-              if (decision == PublishDecision::stopSearch)
-                return false;
-
-              if (decision == PublishDecision::stopCurrentFile)
-                return true;
-            }
-
-            if (!searchesContent(query.options.target))
-              return true;
-
-            bool stopCurrentFile = false;
-            bool stopSearch = false;
-            const auto readSummary = text::readTextFileLines(
-                entry.absolutePath, query.options,
-                [&](const text::TextLine& line) {
-                  if (!addContextAfter(pendingResults, line.text, sink)) {
-                    stopSearch = true;
-
-                    return false;
-                  }
-
-                  const auto matches = findMatches(line.text, query, regexMatcher, summary);
-
-                  if (!matches)
-                    return false;
-
-                  if (matches->empty()) {
-                    previousContext.push_back(line.text);
-                    while (previousContext.size() > query.options.contextBeforeLines)
-                      previousContext.pop_front();
-
-                    return true;
-                  }
-
-                  const auto decision =
-                      publishMatches(entry, SearchResultKind::content, line.lineNumber, line.text, *matches, query,
-                                     summary, fileMatches, previousContext, pendingResults, sink);
-
-                  previousContext.push_back(line.text);
-                  while (previousContext.size() > query.options.contextBeforeLines)
-                    previousContext.pop_front();
-
-                  if (decision == PublishDecision::stopSearch) {
-                    stopSearch = true;
-
-                    return false;
-                  }
-
-                  if (decision == PublishDecision::stopCurrentFile) {
-                    stopCurrentFile = true;
-
-                    return false;
-                  }
-
-                  return true;
-                },
-                stop_token);
+            const auto decision = publishMatches(entry, SearchResultKind::fileName, 0, pathText, *pathMatches, query,
+                                                 summary, fileMatches, previousContext, pendingResults, sink);
 
             if (!flushPending(pendingResults, sink))
               return false;
 
-            if (stopSearch)
+            if (decision == PublishDecision::stopSearch)
               return false;
 
-            if (stopCurrentFile)
+            if (decision == PublishDecision::stopCurrentFile)
               return true;
+          }
 
-            return reportTextReadSummary(summary, entry, readSummary);
-          },
-          stop_token, &summary.metrics);
+          if (!searchesContent(query.options.target))
+            return true;
+
+          bool stopCurrentFile = false;
+          bool stopSearch = false;
+          const auto readSummary = text::readTextFileLines(
+            entry.absolutePath, query.options,
+            [&](const text::TextLine& line) {
+              if (!addContextAfter(pendingResults, line.text, sink)) {
+                stopSearch = true;
+
+                return false;
+              }
+
+              const auto matches = findMatches(line.text, query, regexMatcher, summary);
+
+              if (!matches)
+                return false;
+
+              if (matches->empty()) {
+                previousContext.push_back(line.text);
+                while (previousContext.size() > query.options.contextBeforeLines)
+                  previousContext.pop_front();
+
+                return true;
+              }
+
+              const auto decision =
+                publishMatches(entry, SearchResultKind::content, line.lineNumber, line.text, *matches, query, summary,
+                               fileMatches, previousContext, pendingResults, sink);
+
+              previousContext.push_back(line.text);
+              while (previousContext.size() > query.options.contextBeforeLines)
+                previousContext.pop_front();
+
+              if (decision == PublishDecision::stopSearch) {
+                stopSearch = true;
+
+                return false;
+              }
+
+              if (decision == PublishDecision::stopCurrentFile) {
+                stopCurrentFile = true;
+
+                return false;
+              }
+
+              return true;
+            },
+            stop_token);
+
+          if (!flushPending(pendingResults, sink))
+            return false;
+
+          if (stopSearch)
+            return false;
+
+          if (stopCurrentFile)
+            return true;
+
+          return reportTextReadSummary(summary, entry, readSummary);
+        },
+        stop_token, &summary.metrics);
     }
 
     summary.cancelled = stop_token.stop_requested();

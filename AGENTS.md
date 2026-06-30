@@ -643,6 +643,8 @@ Todo código C++ novo ou alterado em `apps/`, `src/` e `tests/` deve respeitar i
 `.clang-format` da raiz, configurado para C++23. Antes de concluir uma alteração:
 
 * Use indentação de 2 espaços, nunca tabs.
+* Use indentação de continuação de 2 espaços; listas, inicializadores, chamadas quebradas e
+  expressões multilinha não devem ganhar recuo visual de 4 espaços.
 * Mantenha o limite de 120 colunas.
 * Use `Type* name` e `Type& name` para ponteiros e referências.
 * Preserve a ordenação case-sensitive de includes.

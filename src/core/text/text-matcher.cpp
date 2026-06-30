@@ -120,7 +120,7 @@ namespace uburu::text
         if (!second)
           return DecodedScalar{first, singleByteLength};
         const char32_t value =
-            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) | (*second & utf8ContinuationPayloadMask);
+          ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) | (*second & utf8ContinuationPayloadMask);
         if (value < minimumTwoByteScalar)
           return DecodedScalar{first, singleByteLength};
         return DecodedScalar{value, twoByteLength};

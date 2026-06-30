@@ -207,8 +207,8 @@ namespace uburu::text
 
     const bool jitWasEnabled = pcre2_jit_compile(code, PCRE2_JIT_COMPLETE) == 0;
     return RegexCompileResult{
-        .matcher = RegexMatcher{code, options, jitWasEnabled},
-        .error = std::nullopt,
+      .matcher = RegexMatcher{code, options, jitWasEnabled},
+      .error = std::nullopt,
     };
 #else
     (void)expression;

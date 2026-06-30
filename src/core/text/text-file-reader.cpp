@@ -246,7 +246,7 @@ namespace uburu::text
 
       if (first >= utf8TwoByteMin && first <= utf8TwoByteMax && has(1) && isUtf8Continuation(byte(1))) {
         const char32_t scalar =
-            ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) | (byte(1) & utf8ContinuationPayloadMask);
+          ((first & utf8TwoBytePayloadMask) << utf8ContinuationPayloadBits) | (byte(1) & utf8ContinuationPayloadMask);
 
         return {.scalar = scalar, .bytesConsumed = 2, .valid = true};
       }
@@ -570,8 +570,8 @@ namespace uburu::text
     if (sample.size() < binaryControlSampleMinimum)
       return false;
 
-    const auto controlCount = static_cast<std::size_t>(std::ranges::count_if(
-        sample, [](char value) { return isBinaryControlByte(static_cast<unsigned char>(value)); }));
+    const auto controlCount = static_cast<std::size_t>(
+      std::ranges::count_if(sample, [](char value) { return isBinaryControlByte(static_cast<unsigned char>(value)); }));
 
     return controlCount * binaryControlRatioDenominator > sample.size() * binaryControlRatioNumerator;
   }
@@ -617,7 +617,7 @@ namespace uburu::text
     case TextEncoding::utf16Le:
     case TextEncoding::utf16Be:
       summary.status =
-          decodeUtf16Lines(stream, detected.encoding, options, summary, sink, stop_token, detected.bomSize);
+        decodeUtf16Lines(stream, detected.encoding, options, summary, sink, stop_token, detected.bomSize);
       break;
     case TextEncoding::latin1:
       summary.status = decodeLatin1Lines(stream, options, summary, sink, stop_token);

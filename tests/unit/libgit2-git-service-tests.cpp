@@ -183,8 +183,8 @@ namespace
     options.ref = featureBranch;
 
     git_worktree* worktree = nullptr;
-    REQUIRE(git_worktree_add(&worktree, repository, std::string(name).c_str(), worktreeRoot.string().c_str(),
-                             &options) == 0);
+    REQUIRE(
+      git_worktree_add(&worktree, repository, std::string(name).c_str(), worktreeRoot.string().c_str(), &options) == 0);
 
     git_worktree_free(worktree);
     git_reference_free(featureBranch);
@@ -329,9 +329,9 @@ TEST_CASE("libgit2 git service enumerates linked worktrees")
   REQUIRE(worktrees.size() == 2);
 
   const auto hasMainWorktree = std::ranges::any_of(
-      worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, repositoryRoot); });
+    worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, repositoryRoot); });
   const auto hasLinkedWorktree = std::ranges::any_of(
-      worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, linkedRoot); });
+    worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, linkedRoot); });
 
   CHECK(hasMainWorktree);
   CHECK(hasLinkedWorktree);
@@ -360,7 +360,7 @@ TEST_CASE("libgit2 git service reports locked and prunable worktrees")
   const auto& worktrees = std::get<std::vector<uburu::WorktreeInfo>>(worktreesResult);
 
   const auto locked = std::ranges::find_if(
-      worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, linkedRoot); });
+    worktrees, [&](const auto& worktree) { return std::filesystem::equivalent(worktree.root, linkedRoot); });
 
   REQUIRE(locked != worktrees.end());
   CHECK(locked->locked);
@@ -490,10 +490,10 @@ TEST_CASE("libgit2 git service models working tree overlay and rename reuse")
   const auto& overlay = std::get<std::vector<uburu::GitOverlayEntry>>(overlayResult);
 
   const auto renamed =
-      std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "renamed.txt"; });
+    std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "renamed.txt"; });
   const auto added = std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "new.txt"; });
   const auto deleted =
-      std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "delete-me.txt"; });
+    std::ranges::find_if(overlay, [](const auto& entry) { return entry.relativePath == "delete-me.txt"; });
 
   REQUIRE(renamed != overlay.end());
   CHECK(renamed->previousRelativePath == std::filesystem::path("tracked.txt"));

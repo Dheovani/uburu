@@ -87,7 +87,7 @@ namespace uburu::filesystem
           const auto directory = (event->mask & IN_ISDIR) != 0U;
 
           batch.events.push_back(FileChangeEvent{
-              .relativePath = relativeFromRoot(absolutePath), .kind = mapMask(event->mask), .directory = directory});
+            .relativePath = relativeFromRoot(absolutePath), .kind = mapMask(event->mask), .directory = directory});
 
           if (directory && (event->mask & (IN_CREATE | IN_MOVED_TO)) != 0U)
             addDirectoryWatch(absolutePath);
@@ -144,7 +144,7 @@ namespace uburu::filesystem
 
     std::error_code error;
     std::filesystem::recursive_directory_iterator iterator(
-        root, std::filesystem::directory_options::skip_permission_denied, error);
+      root, std::filesystem::directory_options::skip_permission_denied, error);
     const std::filesystem::recursive_directory_iterator end;
 
     while (!error && iterator != end) {

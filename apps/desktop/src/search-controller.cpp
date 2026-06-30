@@ -69,7 +69,7 @@ namespace uburu::app
   SearchController::SearchController(QObject* parent)
       : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
         searchService(std::make_shared<DefaultSearchService>(
-            std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
+          std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
   {}
 
   SearchController::~SearchController()
@@ -115,10 +115,8 @@ namespace uburu::app
     stopSource = std::stop_source{};
     setRunning(true);
     setStatus(tr("Buscando…"));
-    SearchQuery query{.root = nativePath(directoryValue),
-                      .scope = {},
-                      .expression = expression.toUtf8().toStdString(),
-                      .options = {}};
+    SearchQuery query{
+      .root = nativePath(directoryValue), .scope = {}, .expression = expression.toUtf8().toStdString(), .options = {}};
     query.options.mode = regex ? SearchMode::regex : SearchMode::literal;
     query.options.caseSensitive = caseSensitive;
     query.options.wholeWord = wholeWord;
@@ -136,14 +134,14 @@ namespace uburu::app
     });
     activeWatcher->setFuture(QtConcurrent::run([this, query = std::move(query), token] {
       return searchService->search(
-          query,
-          [this](SearchResult result) {
-            QMetaObject::invokeMethod(
-                this, [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
-                Qt::QueuedConnection);
-            return true;
-          },
-          token);
+        query,
+        [this](SearchResult result) {
+          QMetaObject::invokeMethod(
+            this, [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
+            Qt::QueuedConnection);
+          return true;
+        },
+        token);
     }));
   }
 

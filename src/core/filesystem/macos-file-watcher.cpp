@@ -56,7 +56,7 @@ namespace uburu::filesystem
         }
 
         batch.events.push_back(FileChangeEvent{
-            .relativePath = path, .kind = mapFlags(eventFlags[index]), .directory = is_directory(eventFlags[index])});
+          .relativePath = path, .kind = mapFlags(eventFlags[index]), .directory = is_directory(eventFlags[index])});
       }
 
       appendMacosEvents(*watcher, std::move(batch));

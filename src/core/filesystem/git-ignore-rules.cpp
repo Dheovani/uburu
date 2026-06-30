@@ -109,8 +109,8 @@ namespace uburu::filesystem
         while (searchStart < relativeToBase.size()) {
           const auto separator = relativeToBase.find(pathSeparator, searchStart);
           const auto component = separator == std::string_view::npos
-                                     ? relativeToBase.substr(searchStart)
-                                     : relativeToBase.substr(searchStart, separator - searchStart);
+                                   ? relativeToBase.substr(searchStart)
+                                   : relativeToBase.substr(searchStart, separator - searchStart);
 
           if (globMatches(rule.pattern, component))
             return true;

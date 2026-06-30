@@ -65,7 +65,7 @@ namespace uburu::filesystem
 
       return status.st_size > 0 && status.st_blocks >= 0 &&
              static_cast<unsigned long long>(status.st_blocks) * posixStatBlockSize <
-                 static_cast<unsigned long long>(status.st_size);
+               static_cast<unsigned long long>(status.st_size);
 #else
       static_cast<void>(path);
 
@@ -193,7 +193,7 @@ namespace uburu::filesystem
     {
       const auto text = normalizedPathKey(relativePath);
       const auto matches = std::ranges::any_of(
-          options.includedGlobs, [&](const std::string& glob) { return globMatches(normalizedPathKey(glob), text); });
+        options.includedGlobs, [&](const std::string& glob) { return globMatches(normalizedPathKey(glob), text); });
 
       if (!options.includedGlobs.empty() && !matches)
         return false;

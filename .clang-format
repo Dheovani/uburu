@@ -3,6 +3,7 @@ Language: Cpp
 # clang-format does not expose a c++23 enum; Latest enables its newest C++ syntax rules.
 Standard: Latest
 IndentWidth: 2
+ContinuationIndentWidth: 2
 TabWidth: 2
 UseTab: Never
 ColumnLimit: 120

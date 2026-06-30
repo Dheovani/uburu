@@ -77,7 +77,7 @@ namespace
     Statement(sqlite3* database, std::string_view sql) : database(database)
     {
       const auto result =
-          sqlite3_prepare_v2(database, std::string{sql}.c_str(), sqliteReadUntilNullTerminator, &statement, nullptr);
+        sqlite3_prepare_v2(database, std::string{sql}.c_str(), sqliteReadUntilNullTerminator, &statement, nullptr);
       requireSqlite(result, database, "failed to prepare benchmark statement");
     }
 
@@ -100,7 +100,7 @@ namespace
     void bindText(int index, std::string_view value)
     {
       const auto result =
-          sqlite3_bind_text(statement, index, value.data(), static_cast<int>(value.size()), SQLITE_TRANSIENT);
+        sqlite3_bind_text(statement, index, value.data(), static_cast<int>(value.size()), SQLITE_TRANSIENT);
       requireSqlite(result, database, "failed to bind benchmark text");
     }
 

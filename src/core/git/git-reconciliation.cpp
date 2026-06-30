@@ -35,7 +35,7 @@ namespace uburu::git
                                             hasReason(plan, GitReconciliationReason::refsChanged);
 
     plan.overlayReconciliationRequired =
-        plan.structuralReconciliationRequired || hasReason(plan, GitReconciliationReason::indexChanged);
+      plan.structuralReconciliationRequired || hasReason(plan, GitReconciliationReason::indexChanged);
 
     plan.canReuseContentByBlob = plan.structuralReconciliationRequired;
 

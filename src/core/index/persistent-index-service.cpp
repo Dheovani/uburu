@@ -26,18 +26,45 @@ namespace uburu::index
       return !file.binary;
     }
 
-    [[nodiscard]] bool canReuseCatalogDocument(const IndexDocument& document, const FileEntry& file)
+    [[nodiscard]] bool canReuseCatalogDocument(const IndexDocument& document, const IndexFileCandidate& candidate)
     {
+      const auto& file = candidate.file;
+
       return !document.deleted &&
              !document.contentHash.empty() &&
               document.size == file.size &&
               document.modifiedAt == file.modifiedAt &&
+              document.status == candidate.metadata.status &&
               document.status == GitFileStatus::clean &&
               document.contentHashAlgorithm != ContentHashAlgorithm::unknown;
     }
 
+    [[nodiscard]] bool canReuseBlobDocument(const IndexFileMetadata& metadata)
+    {
+      return metadata.status == GitFileStatus::clean &&
+             metadata.gitBlob.has_value() &&
+             metadata.gitBlob->algorithm != GitObjectHashAlgorithm::unknown &&
+            !metadata.gitBlob->value.empty();
+    }
+
+    [[nodiscard]] std::optional<std::string> gitBlobHash(const IndexFileMetadata& metadata)
+    {
+      if (!metadata.gitBlob)
+        return std::nullopt;
+
+      return metadata.gitBlob->value;
+    }
+
+    [[nodiscard]] GitObjectHashAlgorithm gitBlobHashAlgorithm(const IndexFileMetadata& metadata)
+    {
+      if (!metadata.gitBlob)
+        return GitObjectHashAlgorithm::unknown;
+
+      return metadata.gitBlob->algorithm;
+    }
+
     [[nodiscard]] IndexDocument makeIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
-                                                  const ContentHash& contentHash)
+                                                  const IndexFileMetadata& metadata, const ContentHash& contentHash)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -45,9 +72,9 @@ namespace uburu::index
                            .relativePath = file.relativePath,
                            .contentHash = contentHash.value,
                            .contentHashAlgorithm = contentHash.algorithm,
-                           .gitBlobHash = std::nullopt,
-                           .gitBlobHashAlgorithm = GitObjectHashAlgorithm::unknown,
-                           .status = GitFileStatus::clean,
+                           .gitBlobHash = gitBlobHash(metadata),
+                           .gitBlobHashAlgorithm = gitBlobHashAlgorithm(metadata),
+                           .status = metadata.status,
                            .size = file.size,
                            .modifiedAt = file.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
@@ -55,7 +82,8 @@ namespace uburu::index
     }
 
     [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
-                                                        const IndexDocument& reusableDocument)
+                                                        const IndexFileMetadata& metadata,
+                                                        const IndexedDocumentIdentity& reusableDocument)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -63,13 +91,31 @@ namespace uburu::index
                            .relativePath = file.relativePath,
                            .contentHash = reusableDocument.contentHash,
                            .contentHashAlgorithm = reusableDocument.contentHashAlgorithm,
-                           .gitBlobHash = reusableDocument.gitBlobHash,
-                           .gitBlobHashAlgorithm = reusableDocument.gitBlobHashAlgorithm,
-                           .status = GitFileStatus::clean,
+                           .gitBlobHash = metadata.gitBlob ? std::optional<std::string>{metadata.gitBlob->value}
+                                                           : reusableDocument.gitBlobHash,
+                           .gitBlobHashAlgorithm =
+                             metadata.gitBlob ? metadata.gitBlob->algorithm : reusableDocument.gitBlobHashAlgorithm,
+                           .status = metadata.status,
                            .size = file.size,
                            .modifiedAt = file.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
                            .deleted = false};
+    }
+
+    [[nodiscard]] IndexedDocumentIdentity reusableIdentity(const IndexDocument& document)
+    {
+      return IndexedDocumentIdentity{.formatVersion = document.formatVersion,
+                                     .contentHash = document.contentHash,
+                                     .contentHashAlgorithm = document.contentHashAlgorithm,
+                                     .gitBlobHash = document.gitBlobHash,
+                                     .gitBlobHashAlgorithm = document.gitBlobHashAlgorithm,
+                                     .size = document.size,
+                                     .indexedAt = document.indexedAt};
+    }
+
+    [[nodiscard]] IndexFileCandidate defaultCandidate(const FileEntry& file)
+    {
+      return IndexFileCandidate{.file = file, .metadata = IndexFileMetadata{}};
     }
 
     void publishProgress(const IndexProgressCallback& onProgress, const IndexUpdateProgress& progress)
@@ -87,6 +133,20 @@ namespace uburu::index
   IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree, std::span<const FileEntry> files,
                                                     const IndexProgressCallback& onProgress, std::stop_token stopToken)
   {
+    std::vector<IndexFileCandidate> candidates;
+    candidates.reserve(files.size());
+
+    for (const auto& file : files) {
+      candidates.push_back(defaultCandidate(file));
+    }
+
+    return update(worktree, candidates, onProgress, stopToken);
+  }
+
+  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
+                                                    std::span<const IndexFileCandidate> files,
+                                                    const IndexProgressCallback& onProgress, std::stop_token stopToken)
+  {
     IndexUpdateSummary summary;
     IndexUpdateProgress progress;
     std::unordered_set<std::string> hashesSeenInUpdate;
@@ -95,13 +155,14 @@ namespace uburu::index
     progress.total = files.size();
     documents.reserve(files.size());
 
-    for (const auto& file : files) {
+    for (const auto& candidate : files) {
       if (stopToken.stop_requested()) {
         summary.cancelled = true;
 
         break;
       }
 
+      const auto& file = candidate.file;
       ++progress.processed;
       progress.currentPath = file.relativePath;
 
@@ -112,10 +173,33 @@ namespace uburu::index
       }
 
       const auto reusableCatalogDocument = storageService->findDocument(worktree.id, file.relativePath);
-      if (reusableCatalogDocument && canReuseCatalogDocument(*reusableCatalogDocument, file)) {
+      if (reusableCatalogDocument && canReuseCatalogDocument(*reusableCatalogDocument, candidate)) {
         ++summary.reusedByCatalog;
         ++progress.reusedByCatalog;
-        documents.push_back(makeReusedIndexDocument(worktree, file, *reusableCatalogDocument));
+        documents.push_back(
+          makeReusedIndexDocument(worktree, file, candidate.metadata, reusableIdentity(*reusableCatalogDocument)));
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
+      if (canReuseBlobDocument(candidate.metadata)) {
+        const auto reusableBlobDocument = storageService->findReusableDocumentByGitBlobHash(
+          candidate.metadata.gitBlob->algorithm, candidate.metadata.gitBlob->value);
+
+        if (reusableBlobDocument) {
+          ++summary.reusedByBlob;
+          ++progress.reusedByBlob;
+          documents.push_back(makeReusedIndexDocument(worktree, file, candidate.metadata, *reusableBlobDocument));
+          publishProgress(onProgress, progress);
+
+          continue;
+        }
+      }
+
+      if (candidate.metadata.status == GitFileStatus::deleted) {
+        ++summary.removed;
+        ++progress.removed;
         publishProgress(onProgress, progress);
 
         continue;
@@ -153,7 +237,7 @@ namespace uburu::index
       }
 
       hashesSeenInUpdate.insert(hashKey);
-      documents.push_back(makeIndexDocument(worktree, file, *contentHash));
+      documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash));
       publishProgress(onProgress, progress);
     }
 

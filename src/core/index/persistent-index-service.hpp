@@ -13,7 +13,12 @@ namespace uburu::index
   public:
     explicit PersistentIndexService(storage::StorageService& storage);
 
-    [[nodiscard]] IndexUpdateSummary update(const WorktreeInfo& worktree, std::span<const FileEntry> files,
+    [[nodiscard]] IndexUpdateSummary update(const WorktreeInfo& worktree,
+                                            std::span<const FileEntry> files,
+                                            const IndexProgressCallback& onProgress = {},
+                                            std::stop_token stopToken = {}) override;
+    [[nodiscard]] IndexUpdateSummary update(const WorktreeInfo& worktree,
+                                            std::span<const IndexFileCandidate> files,
                                             const IndexProgressCallback& onProgress = {},
                                             std::stop_token stopToken = {}) override;
     [[nodiscard]] std::vector<SearchResult> search(const SearchQuery& query,

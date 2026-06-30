@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <span>
 #include <stop_token>
 #include <vector>
@@ -17,7 +18,9 @@ namespace uburu::index
     std::size_t total{0};
     std::size_t indexed{0};
     std::size_t reusedByCatalog{0};
+    std::size_t reusedByBlob{0};
     std::size_t reusedByHash{0};
+    std::size_t removed{0};
     std::size_t failed{0};
     std::filesystem::path currentPath;
   };
@@ -26,10 +29,23 @@ namespace uburu::index
   {
     std::size_t indexed{0};
     std::size_t reusedByCatalog{0};
+    std::size_t reusedByBlob{0};
     std::size_t reusedByHash{0};
     std::size_t removed{0};
     std::size_t failed{0};
     bool cancelled{false};
+  };
+
+  struct IndexFileMetadata
+  {
+    GitFileStatus status{GitFileStatus::clean};
+    std::optional<GitObjectId> gitBlob;
+  };
+
+  struct IndexFileCandidate
+  {
+    FileEntry file;
+    IndexFileMetadata metadata;
   };
 
   using IndexProgressCallback = std::function<void(const IndexUpdateProgress&)>;
@@ -39,6 +55,10 @@ namespace uburu::index
   public:
     virtual ~IndexService() = default;
     [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree, std::span<const FileEntry> files,
+                                                    const IndexProgressCallback& onProgress = {},
+                                                    std::stop_token stopToken = {}) = 0;
+    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,
+                                                    std::span<const IndexFileCandidate> files,
                                                     const IndexProgressCallback& onProgress = {},
                                                     std::stop_token stopToken = {}) = 0;
     [[nodiscard]] virtual std::vector<SearchResult> search(const SearchQuery& query,

@@ -93,6 +93,33 @@ namespace
                             .searchRoot = root};
   }
 
+  [[nodiscard]] uburu::IndexDocument indexedDocument(std::string contentHash, std::string gitBlobHash,
+                                                     std::filesystem::path relativePath)
+  {
+    return uburu::IndexDocument{.repositoryId = "repository-id",
+                                .worktreeId = "worktree-id",
+                                .relativePath = std::move(relativePath),
+                                .contentHash = std::move(contentHash),
+                                .contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256,
+                                .gitBlobHash = std::move(gitBlobHash),
+                                .gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1,
+                                .status = uburu::GitFileStatus::clean,
+                                .size = 42,
+                                .modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{4}},
+                                .indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}},
+                                .deleted = false};
+  }
+
+  [[nodiscard]] uburu::IndexGeneration indexGeneration(std::vector<uburu::IndexDocument> documents)
+  {
+    return uburu::IndexGeneration{.repositoryId = "repository-id",
+                                  .worktreeId = "worktree-id",
+                                  .headOid = "abc123",
+                                  .branch = "main",
+                                  .createdAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{5678}},
+                                  .documents = std::move(documents)};
+  }
+
 } // namespace
 
 TEST_CASE("persistent index service publishes an initial generation with content hashes")
@@ -170,6 +197,54 @@ TEST_CASE("persistent index service reuses unchanged catalog entries without reh
   CHECK(incrementalSummary.reusedByHash == 0);
   REQUIRE(document.has_value());
   CHECK(document->modifiedAt == files.front().modifiedAt);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service reuses git blob documents before reading files")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-blob-reuse-test");
+  const auto root = directory.path() / "repo";
+  const auto missingFile = root / "src" / "renamed.txt";
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+  storage.publishGeneration(indexGeneration({
+    indexedDocument("content-from-blob", "tracked-blob", "src/original.txt"),
+  }));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const uburu::FileEntry missingEntry{.absolutePath = missingFile,
+                                      .relativePath = "src/renamed.txt",
+                                      .size = 42,
+                                      .modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{99}},
+                                      .searchRoot = root};
+  const std::vector candidates{
+    uburu::index::IndexFileCandidate{
+      .file = missingEntry,
+      .metadata =
+        uburu::index::IndexFileMetadata{
+          .status = uburu::GitFileStatus::clean,
+          .gitBlob = uburu::GitObjectId{.algorithm = uburu::GitObjectHashAlgorithm::sha1, .value = "tracked-blob"},
+        },
+    },
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), candidates);
+  const auto reused = storage.findDocument("worktree-id", "src/renamed.txt");
+
+  CHECK_FALSE(summary.cancelled);
+  CHECK(summary.indexed == 0);
+  CHECK(summary.reusedByBlob == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(reused.has_value());
+  CHECK(reused->contentHash == "content-from-blob");
+  CHECK(reused->gitBlobHash == "tracked-blob");
+  CHECK(reused->relativePath == std::filesystem::path("src/renamed.txt"));
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

@@ -184,7 +184,7 @@ e UI para avançarem mais rapidamente.
   - [ ] Integrar estado Git/overlay ao catálogo incremental antes de considerar o item completo.
 - [x] Deduplicar documentos por hash de conteúdo.
 - [x] Expor consultas de reuso por hash de conteúdo no storage.
-- [ ] Reutilizar documentos por blob hash antes de reler arquivos.
+- [x] Reutilizar documentos por blob hash antes de reler arquivos.
 - [x] Expor consultas de reuso por blob hash Git no storage.
 - [ ] Aplicar overlay da working tree sobre a geração versionada.
 - [ ] Ocultar deletados e substituir modificados sem resultados obsoletos.

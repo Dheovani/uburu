@@ -47,6 +47,12 @@ O catálogo de arquivos continua sendo o responsável por vincular uma identidad
 visível na worktree atual. Essa separação evita tratar `path` como identidade de conteúdo e prepara o
 indexador incremental para priorizar reuso por blob Git antes de reler arquivos da working tree.
 
+Quando o indexador recebe metadados Git confiáveis para um arquivo limpo, ele consulta primeiro o reuso
+por blob hash. Se o blob já está no storage, uma nova entrada de catálogo é criada apontando para o mesmo
+documento endereçado por conteúdo, sem abrir nem hashear o arquivo da working tree. Arquivos modificados,
+adicionados localmente ou sem blob confiável continuam passando pelo caminho de hash de conteúdo até o
+overlay Git completo ser aplicado.
+
 ## Hash de conteúdo
 
 O algoritmo inicial de hash de conteúdo é SHA-256. A escolha privilegia correção, estabilidade e baixa

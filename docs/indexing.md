@@ -40,3 +40,14 @@ mesmo conteúdo pode aparecer em múltiplos caminhos, branches ou worktrees.
 O catálogo de arquivos continua sendo o responsável por vincular uma identidade de documento ao caminho
 visível na worktree atual. Essa separação evita tratar `path` como identidade de conteúdo e prepara o
 indexador incremental para priorizar reuso por blob Git antes de reler arquivos da working tree.
+
+## Hash de conteúdo
+
+O algoritmo inicial de hash de conteúdo é SHA-256. A escolha privilegia correção, estabilidade e baixa
+probabilidade prática de colisão para deduplicação local, mesmo quando o mesmo conteúdo aparece em
+branches, worktrees ou caminhos diferentes.
+
+O cálculo é feito em streaming para arquivos, com cancelamento cooperativo entre blocos, evitando carregar
+arquivos grandes inteiros em memória. O benchmark `uburu-content-hash-benchmark` mede throughput em um
+dataset sintético determinístico e deve ser usado para comparar compiladores, flags e plataformas antes de
+trocar o algoritmo ou adicionar uma implementação acelerada.

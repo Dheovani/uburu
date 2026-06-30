@@ -6,6 +6,7 @@ add_library(uburu_core STATIC
   git/git-cli-git-service.cpp
   git/git-reconciliation.cpp
   git/libgit2-git-service.cpp
+  index/content-hash.cpp
   index/index-document-format.cpp
   search/direct-search-engine.cpp
   search/search-errors.cpp

@@ -28,3 +28,21 @@ $env:Path = "$benchmarkRuntime;$mingwRuntime;$env:Path"
 
 Cada benchmark deve registrar dataset, hardware, configuração, orçamento de memória e resultado observado
 antes de orientar uma decisão arquitetural.
+
+## Content hash
+
+`uburu-content-hash-benchmark` mede throughput do SHA-256 usado para endereçar documentos por conteúdo.
+O dataset sintético tem tamanho fixo e conteúdo determinístico para facilitar comparações entre
+compiladores, flags e plataformas.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 `
+  -Command configure `
+  -Preset core-windows-mingw-benchmarks-debug
+
+powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 `
+  -Command build `
+  -Preset core-windows-mingw-benchmarks-debug
+
+.\build\core-windows-mingw-benchmarks-debug\benchmarks\uburu-content-hash-benchmark.exe
+```

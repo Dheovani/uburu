@@ -177,7 +177,7 @@ e UI para avançarem mais rapidamente.
 ## Marco 6 — Índice persistente e incremental (P1)
   
 - [x] Definir formato interno de documento indexado e versioná-lo.
-- [ ] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
+- [x] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
 - [ ] Implementar indexação inicial cancelável e progressiva.
 - [ ] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
 - [ ] Deduplicar documentos por hash de conteúdo.

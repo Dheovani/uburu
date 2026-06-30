@@ -12,9 +12,8 @@ namespace uburu::app
       throw std::invalid_argument("DefaultSearchService requires a direct engine");
   }
 
-  search::SearchSummary DefaultSearchService::search(const SearchQuery& query,
-                                                     search::ResultSink sink,
-                                                     std::stop_token stop_token) const
+  search::SearchSummary
+  DefaultSearchService::search(const SearchQuery& query, search::ResultSink sink, std::stop_token stop_token) const
   {
     // Indexed-first refinement will be orchestrated here when IndexService is implemented.
     return directEngine->search(query, std::move(sink), stop_token);

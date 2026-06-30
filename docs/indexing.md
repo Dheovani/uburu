@@ -76,6 +76,11 @@ incremental. Assim, o orquestrador futuro pode combinar o scan de filesystem com
 `GitService::workingTreeOverlay()` sem conhecer detalhes de tombstones, renames ou invalidação de reuso
 por status Git.
 
+`DefaultIndexingService` é o primeiro orquestrador de aplicação para esse fluxo: ele escaneia a raiz da
+worktree, lê `GitService::workingTreeOverlay()` e só então chama o `IndexService`. Se o overlay Git não
+puder ser lido, a atualização retorna falha e não publica uma geração nova, evitando substituir um índice
+Git-aware por uma visão cega da árvore de arquivos.
+
 ## Hash de conteúdo
 
 O algoritmo inicial de hash de conteúdo é SHA-256. A escolha privilegia correção, estabilidade e baixa

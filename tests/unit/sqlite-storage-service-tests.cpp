@@ -144,8 +144,8 @@ namespace
     REQUIRE(sqlite3_open_v2(databasePath.string().c_str(), &database, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK);
 
     sqlite3_stmt* statement = nullptr;
-    REQUIRE(sqlite3_prepare_v2(database, "SELECT COUNT(*) FROM generations WHERE published = 0", -1, &statement,
-                               nullptr) == SQLITE_OK);
+    REQUIRE(sqlite3_prepare_v2(
+              database, "SELECT COUNT(*) FROM generations WHERE published = 0", -1, &statement, nullptr) == SQLITE_OK);
     REQUIRE(sqlite3_step(statement) == SQLITE_ROW);
 
     const auto count = sqlite3_column_int(statement, 0);

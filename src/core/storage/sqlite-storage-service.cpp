@@ -297,12 +297,15 @@ namespace uburu::storage
       return text == nullptr ? std::string{} : std::string{text};
     }
 
-    void deleteRowsBeyondRetention(sqlite3* database, std::string_view tableName, std::string_view orderColumn,
+    void deleteRowsBeyondRetention(sqlite3* database,
+                                   std::string_view tableName,
+                                   std::string_view orderColumn,
                                    std::size_t retentionLimit)
     {
-      Statement statement(database, "DELETE FROM " + std::string(tableName) + " WHERE id NOT IN (SELECT id FROM " +
-                                      std::string(tableName) + " ORDER BY " + std::string(orderColumn) +
-                                      " DESC, id DESC LIMIT ?)");
+      Statement statement(database,
+                          "DELETE FROM " + std::string(tableName) + " WHERE id NOT IN (SELECT id FROM " +
+                            std::string(tableName) + " ORDER BY " + std::string(orderColumn) +
+                            " DESC, id DESC LIMIT ?)");
 
       statement.bindInt64(1, static_cast<std::int64_t>(retentionLimit));
       statement.executeDone();
@@ -471,7 +474,9 @@ namespace uburu::storage
       return false;
     }
 
-    void addColumnIfMissing(sqlite3* database, std::string_view tableName, std::string_view columnName,
+    void addColumnIfMissing(sqlite3* database,
+                            std::string_view tableName,
+                            std::string_view columnName,
                             std::string_view definition)
     {
       if (columnExists(database, tableName, columnName))
@@ -484,14 +489,14 @@ namespace uburu::storage
     {
       execute(database, "BEGIN IMMEDIATE");
       try {
-        addColumnIfMissing(database, "documents", "content_hash_algorithm",
-                           "content_hash_algorithm INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(database, "documents", "git_blob_hash_algorithm",
-                           "git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(database, "files", "content_hash_algorithm",
-                           "content_hash_algorithm INTEGER NOT NULL DEFAULT 0");
-        addColumnIfMissing(database, "files", "git_blob_hash_algorithm",
-                           "git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+          database, "documents", "content_hash_algorithm", "content_hash_algorithm INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+          database, "documents", "git_blob_hash_algorithm", "git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+          database, "files", "content_hash_algorithm", "content_hash_algorithm INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+          database, "files", "git_blob_hash_algorithm", "git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0");
 
         Statement migrationStatement(database, R"sql(
           INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
@@ -669,8 +674,8 @@ namespace uburu::storage
     {
       execute(database, "BEGIN IMMEDIATE");
       try {
-        addColumnIfMissing(database, "files", "file_modified_at_ticks",
-                           "file_modified_at_ticks INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing(
+          database, "files", "file_modified_at_ticks", "file_modified_at_ticks INTEGER NOT NULL DEFAULT 0");
 
         Statement migrationStatement(database, R"sql(
           INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
@@ -894,8 +899,8 @@ namespace uburu::storage
     }
 
     auto* database = requireDatabase(databaseHandle);
-    requireSqlite(sqlite3_busy_timeout(database, busyTimeoutMilliseconds), database,
-                  "failed to set SQLite busy timeout");
+    requireSqlite(
+      sqlite3_busy_timeout(database, busyTimeoutMilliseconds), database, "failed to set SQLite busy timeout");
     execute(database, "PRAGMA foreign_keys = ON");
     execute(database, "PRAGMA journal_mode = WAL");
     execute(database, "PRAGMA synchronous = NORMAL");
@@ -1076,7 +1081,8 @@ namespace uburu::storage
 #endif
   }
 
-  void SQLiteStorageService::setPreference(std::optional<RepositoryId> repositoryId, const std::string& key,
+  void SQLiteStorageService::setPreference(std::optional<RepositoryId> repositoryId,
+                                           const std::string& key,
                                            const std::string& value)
   {
 #if defined(UBURU_HAS_SQLITE)

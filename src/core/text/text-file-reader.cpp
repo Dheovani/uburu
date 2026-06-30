@@ -305,8 +305,12 @@ namespace uburu::text
       return emitter.appendUtf8(utf8FromScalar(scalar), originalByteWidth);
     }
 
-    TextReadStatus decodeUtf8Lines(std::ifstream& stream, const SearchOptions& options, TextReadSummary& summary,
-                                   const TextLineSink& sink, std::stop_token stop_token, std::size_t bomSize)
+    TextReadStatus decodeUtf8Lines(std::ifstream& stream,
+                                   const SearchOptions& options,
+                                   TextReadSummary& summary,
+                                   const TextLineSink& sink,
+                                   std::stop_token stop_token,
+                                   std::size_t bomSize)
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
@@ -376,8 +380,11 @@ namespace uburu::text
       return emitter.finish() ? TextReadStatus::completed : TextReadStatus::cancelled;
     }
 
-    TextReadStatus decodeLatin1Lines(std::ifstream& stream, const SearchOptions& options, TextReadSummary& summary,
-                                     const TextLineSink& sink, std::stop_token stop_token)
+    TextReadStatus decodeLatin1Lines(std::ifstream& stream,
+                                     const SearchOptions& options,
+                                     TextReadSummary& summary,
+                                     const TextLineSink& sink,
+                                     std::stop_token stop_token)
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
@@ -457,8 +464,12 @@ namespace uburu::text
       return emitter.finish() ? TextReadStatus::completed : TextReadStatus::cancelled;
     }
 
-    TextReadStatus decodeUtf16Lines(std::ifstream& stream, TextEncoding encoding, const SearchOptions& options,
-                                    TextReadSummary& summary, const TextLineSink& sink, std::stop_token stop_token,
+    TextReadStatus decodeUtf16Lines(std::ifstream& stream,
+                                    TextEncoding encoding,
+                                    const SearchOptions& options,
+                                    TextReadSummary& summary,
+                                    const TextLineSink& sink,
+                                    std::stop_token stop_token,
                                     std::size_t bomSize)
     {
       LineEmitter emitter{.options = options,
@@ -588,8 +599,10 @@ namespace uburu::text
     return column;
   }
 
-  TextReadSummary readTextFileLines(const std::filesystem::path& path, const SearchOptions& options,
-                                    const TextLineSink& sink, std::stop_token stop_token)
+  TextReadSummary readTextFileLines(const std::filesystem::path& path,
+                                    const SearchOptions& options,
+                                    const TextLineSink& sink,
+                                    std::stop_token stop_token)
   {
     TextReadSummary summary;
     std::ifstream stream(path, std::ios::binary);

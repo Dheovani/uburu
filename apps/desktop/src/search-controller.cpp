@@ -105,8 +105,8 @@ namespace uburu::app
     emit directoryChanged();
   }
 
-  void SearchController::startSearch(const QString& expression, bool regex, bool caseSensitive, bool wholeWord,
-                                     bool respectGitignore)
+  void SearchController::startSearch(
+    const QString& expression, bool regex, bool caseSensitive, bool wholeWord, bool respectGitignore)
   {
     if (runningValue || directoryValue.isEmpty() || expression.isEmpty())
       return;
@@ -137,7 +137,8 @@ namespace uburu::app
         query,
         [this](SearchResult result) {
           QMetaObject::invokeMethod(
-            this, [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
+            this,
+            [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
             Qt::QueuedConnection);
           return true;
         },

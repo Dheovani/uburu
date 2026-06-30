@@ -11,8 +11,8 @@ namespace
   class FakeSearchEngine final : public uburu::search::SearchEngine
   {
   public:
-    [[nodiscard]] uburu::search::SearchSummary search(const uburu::SearchQuery&, uburu::search::ResultSink,
-                                                      std::stop_token = {}) const override
+    [[nodiscard]] uburu::search::SearchSummary
+    search(const uburu::SearchQuery&, uburu::search::ResultSink, std::stop_token = {}) const override
     {
       uburu::search::SearchSummary summary;
       summary.filesScanned = scannedFiles;

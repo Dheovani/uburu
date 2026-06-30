@@ -31,8 +31,8 @@ namespace uburu::storage
     [[nodiscard]] StoragePragmaSnapshot pragmaSnapshot() const override;
     [[nodiscard]] StorageIntegrityReport validateIntegrity() const override;
     void rebuildIndexCatalog() override;
-    void setPreference(std::optional<RepositoryId> repositoryId, const std::string& key,
-                       const std::string& value) override;
+    void
+    setPreference(std::optional<RepositoryId> repositoryId, const std::string& key, const std::string& value) override;
     [[nodiscard]] std::optional<std::string> preference(std::optional<RepositoryId> repositoryId,
                                                         const std::string& key) const override;
     void recordSearch(const SearchHistoryEntry& entry, std::size_t retentionLimit) override;

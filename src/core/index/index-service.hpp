@@ -54,7 +54,8 @@ namespace uburu::index
   {
   public:
     virtual ~IndexService() = default;
-    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree, std::span<const FileEntry> files,
+    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,
+                                                    std::span<const FileEntry> files,
                                                     const IndexProgressCallback& onProgress = {},
                                                     std::stop_token stopToken = {}) = 0;
     [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,

@@ -7,6 +7,8 @@ ContinuationIndentWidth: 2
 TabWidth: 2
 UseTab: Never
 ColumnLimit: 120
+BinPackArguments: false
+BinPackParameters: false
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true

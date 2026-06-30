@@ -93,8 +93,8 @@ namespace
                             .searchRoot = root};
   }
 
-  [[nodiscard]] uburu::IndexDocument indexedDocument(std::string contentHash, std::string gitBlobHash,
-                                                     std::filesystem::path relativePath)
+  [[nodiscard]] uburu::IndexDocument
+  indexedDocument(std::string contentHash, std::string gitBlobHash, std::filesystem::path relativePath)
   {
     return uburu::IndexDocument{.repositoryId = "repository-id",
                                 .worktreeId = "worktree-id",

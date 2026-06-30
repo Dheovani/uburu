@@ -42,10 +42,17 @@ namespace uburu::index
 
     [[nodiscard]] bool shouldUseWorkingTreeFile(GitOverlayDisposition disposition)
     {
-      return disposition == GitOverlayDisposition::useIndexedContent
-          || disposition == GitOverlayDisposition::replaceWithWorkingTree
-          || disposition == GitOverlayDisposition::addWorkingTreeFile
-          || disposition == GitOverlayDisposition::conflict;
+      switch (disposition) {
+      case GitOverlayDisposition::useIndexedContent:
+      case GitOverlayDisposition::replaceWithWorkingTree:
+      case GitOverlayDisposition::addWorkingTreeFile:
+      case GitOverlayDisposition::conflict:
+        return true;
+      case GitOverlayDisposition::hideIndexedContent:
+        return false;
+      }
+
+      return false;
     }
 
     void hideIndexedPath(OverlayCandidatePlan& plan,

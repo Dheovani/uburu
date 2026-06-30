@@ -52,8 +52,8 @@ namespace uburu::app
     [[nodiscard]] QAbstractItemModel* results();
 
     Q_INVOKABLE void selectDirectory(const QString& url);
-    Q_INVOKABLE void startSearch(const QString& expression, bool regex, bool caseSensitive, bool wholeWord,
-                                 bool respectGitignore);
+    Q_INVOKABLE void
+    startSearch(const QString& expression, bool regex, bool caseSensitive, bool wholeWord, bool respectGitignore);
     Q_INVOKABLE void cancel();
 
   signals:

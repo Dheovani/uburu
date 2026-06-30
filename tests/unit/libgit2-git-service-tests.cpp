@@ -96,8 +96,9 @@ namespace
     REQUIRE(git_signature_now(&signature, "Uburu Tests", "tests@uburu.local") == 0);
 
     git_oid commitOid{};
-    REQUIRE(git_commit_create_v(&commitOid, repository, "refs/heads/main", signature, signature, nullptr,
-                                "initial commit", tree, 0) == 0);
+    REQUIRE(git_commit_create_v(
+              &commitOid, repository, "refs/heads/main", signature, signature, nullptr, "initial commit", tree, 0) ==
+            0);
     REQUIRE(git_repository_set_head(repository, "refs/heads/main") == 0);
 
     git_signature_free(signature);
@@ -164,7 +165,8 @@ namespace
     git_libgit2_shutdown();
   }
 
-  void addLinkedWorktree(const std::filesystem::path& repositoryRoot, const std::filesystem::path& worktreeRoot,
+  void addLinkedWorktree(const std::filesystem::path& repositoryRoot,
+                         const std::filesystem::path& worktreeRoot,
                          std::string_view name = "feature")
   {
     git_libgit2_init();
@@ -176,8 +178,11 @@ namespace
     REQUIRE(git_revparse_single(&headCommit, repository, "HEAD^{commit}") == 0);
 
     git_reference* featureBranch = nullptr;
-    REQUIRE(git_branch_create(&featureBranch, repository, std::string(name).c_str(),
-                              reinterpret_cast<const git_commit*>(headCommit), false) == 0);
+    REQUIRE(git_branch_create(&featureBranch,
+                              repository,
+                              std::string(name).c_str(),
+                              reinterpret_cast<const git_commit*>(headCommit),
+                              false) == 0);
 
     git_worktree_add_options options = GIT_WORKTREE_ADD_OPTIONS_INIT;
     options.ref = featureBranch;
@@ -209,7 +214,8 @@ namespace
     git_libgit2_shutdown();
   }
 
-  void addSubmodule(const std::filesystem::path& repositoryRoot, const std::filesystem::path& submoduleRepositoryRoot,
+  void addSubmodule(const std::filesystem::path& repositoryRoot,
+                    const std::filesystem::path& submoduleRepositoryRoot,
                     std::string_view relativePath)
   {
     git_libgit2_init();
@@ -218,8 +224,10 @@ namespace
     REQUIRE(git_repository_open(&repository, (repositoryRoot / ".git").string().c_str()) == 0);
 
     git_submodule* submodule = nullptr;
-    REQUIRE(git_submodule_add_setup(&submodule, repository, submoduleRepositoryRoot.string().c_str(),
-                                    std::string(relativePath).c_str(), true) == 0);
+    REQUIRE(
+      git_submodule_add_setup(
+        &submodule, repository, submoduleRepositoryRoot.string().c_str(), std::string(relativePath).c_str(), true) ==
+      0);
 
     git_submodule_free(submodule);
     git_repository_free(repository);

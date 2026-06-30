@@ -40,8 +40,12 @@ namespace uburu::filesystem
       return FileChangeKind::modified;
     }
 
-    void callback(ConstFSEventStreamRef, void* context, std::size_t eventCount, void* eventPaths,
-                  const FSEventStreamEventFlags eventFlags[], const FSEventStreamEventId[])
+    void callback(ConstFSEventStreamRef,
+                  void* context,
+                  std::size_t eventCount,
+                  void* eventPaths,
+                  const FSEventStreamEventFlags eventFlags[],
+                  const FSEventStreamEventId[])
     {
       auto* watcher = static_cast<MacosFileWatcher*>(context);
       auto** paths = static_cast<char**>(eventPaths);
@@ -82,8 +86,13 @@ namespace uburu::filesystem
     FSEventStreamContext context{};
     context.info = this;
 
-    stream->stream = FSEventStreamCreate(nullptr, callback, &context, paths, kFSEventStreamEventIdSinceNow,
-                                         fseventsLatencySeconds, kFSEventStreamCreateFlagFileEvents);
+    stream->stream = FSEventStreamCreate(nullptr,
+                                         callback,
+                                         &context,
+                                         paths,
+                                         kFSEventStreamEventIdSinceNow,
+                                         fseventsLatencySeconds,
+                                         kFSEventStreamCreateFlagFileEvents);
 
     if (stream->stream != nullptr) {
       FSEventStreamSetDispatchQueue(stream->stream, stream->queue);

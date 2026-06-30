@@ -27,7 +27,14 @@ namespace uburu::index
     constexpr std::uint32_t byteMask = 0xFFU;
 
     constexpr std::array<std::uint32_t, sha256DigestWordCount> sha256InitialState{
-      0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU, 0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U,
+      0x6a09e667U,
+      0xbb67ae85U,
+      0x3c6ef372U,
+      0xa54ff53aU,
+      0x510e527fU,
+      0x9b05688cU,
+      0x1f83d9abU,
+      0x5be0cd19U,
     };
 
     constexpr std::array<std::uint32_t, sha256MessageScheduleWordCount> sha256RoundConstants{

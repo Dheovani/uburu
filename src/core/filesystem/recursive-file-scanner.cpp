@@ -265,8 +265,11 @@ namespace uburu::filesystem
 
   } // namespace
 
-  void RecursiveFileScanner::scan(const std::filesystem::path& root, const SearchOptions& options, FileSink sink,
-                                  std::stop_token stop_token, diagnostics::SearchMetrics* metrics) const
+  void RecursiveFileScanner::scan(const std::filesystem::path& root,
+                                  const SearchOptions& options,
+                                  FileSink sink,
+                                  std::stop_token stop_token,
+                                  diagnostics::SearchMetrics* metrics) const
   {
     auto flags = std::filesystem::directory_options::skip_permission_denied;
 

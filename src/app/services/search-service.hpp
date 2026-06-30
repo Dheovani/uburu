@@ -11,16 +11,16 @@ namespace uburu::app
   {
   public:
     virtual ~SearchService() = default;
-    [[nodiscard]] virtual search::SearchSummary search(const SearchQuery& query, search::ResultSink sink,
-                                                       std::stop_token stop_token = {}) const = 0;
+    [[nodiscard]] virtual search::SearchSummary
+    search(const SearchQuery& query, search::ResultSink sink, std::stop_token stop_token = {}) const = 0;
   };
 
   class DefaultSearchService final : public SearchService
   {
   public:
     explicit DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine);
-    [[nodiscard]] search::SearchSummary search(const SearchQuery& query, search::ResultSink sink,
-                                               std::stop_token stop_token = {}) const override;
+    [[nodiscard]] search::SearchSummary
+    search(const SearchQuery& query, search::ResultSink sink, std::stop_token stop_token = {}) const override;
 
   private:
     std::shared_ptr<const search::SearchEngine> directEngine;

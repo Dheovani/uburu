@@ -12,8 +12,8 @@ namespace uburu::search
   {
   public:
     explicit DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner);
-    [[nodiscard]] SearchSummary search(const SearchQuery& query, ResultSink sink,
-                                       std::stop_token stop_token = {}) const override;
+    [[nodiscard]] SearchSummary
+    search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token = {}) const override;
 
   private:
     std::shared_ptr<const filesystem::FileScanner> scanner;

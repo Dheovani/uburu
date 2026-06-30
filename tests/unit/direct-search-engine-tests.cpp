@@ -20,7 +20,10 @@ namespace
   class EmptyScanner final : public uburu::filesystem::FileScanner
   {
   public:
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink, std::stop_token,
+    void scan(const std::filesystem::path&,
+              const uburu::SearchOptions&,
+              uburu::filesystem::FileSink,
+              std::stop_token,
               uburu::diagnostics::SearchMetrics*) const override
     {
       ++calls;
@@ -37,8 +40,11 @@ namespace
       std::vector<std::filesystem::path> excludedDirectories;
     };
 
-    void scan(const std::filesystem::path& root, const uburu::SearchOptions& options, uburu::filesystem::FileSink sink,
-              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
+    void scan(const std::filesystem::path& root,
+              const uburu::SearchOptions& options,
+              uburu::filesystem::FileSink sink,
+              std::stop_token,
+              uburu::diagnostics::SearchMetrics*) const override
     {
       calls.push_back(Call{.root = root, .excludedDirectories = options.excludedDirectories});
 
@@ -67,8 +73,11 @@ namespace
   {
   public:
     explicit SingleFileScanner(std::filesystem::path path) : pathValue(std::move(path)) {}
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
-              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
+    void scan(const std::filesystem::path&,
+              const uburu::SearchOptions&,
+              uburu::filesystem::FileSink sink,
+              std::stop_token,
+              uburu::diagnostics::SearchMetrics*) const override
     {
       sink(uburu::FileEntry{.absolutePath = pathValue,
                             .relativePath = "source.cpp",
@@ -96,14 +105,18 @@ namespace
   class ObservingScanner final : public uburu::filesystem::FileScanner
   {
   public:
-    ObservingScanner(std::filesystem::path firstPath, std::filesystem::path secondPath,
+    ObservingScanner(std::filesystem::path firstPath,
+                     std::filesystem::path secondPath,
                      std::function<void()> afterFirstEntry)
         : firstPath(std::move(firstPath)), secondPath(std::move(secondPath)),
           afterFirstEntry(std::move(afterFirstEntry))
     {}
 
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
-              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
+    void scan(const std::filesystem::path&,
+              const uburu::SearchOptions&,
+              uburu::filesystem::FileSink sink,
+              std::stop_token,
+              uburu::diagnostics::SearchMetrics*) const override
     {
       sink(uburu::FileEntry{.absolutePath = firstPath,
                             .relativePath = "first.txt",
@@ -137,8 +150,11 @@ namespace
   public:
     explicit DeletingScanner(std::filesystem::path path) : pathValue(std::move(path)) {}
 
-    void scan(const std::filesystem::path&, const uburu::SearchOptions&, uburu::filesystem::FileSink sink,
-              std::stop_token, uburu::diagnostics::SearchMetrics*) const override
+    void scan(const std::filesystem::path&,
+              const uburu::SearchOptions&,
+              uburu::filesystem::FileSink sink,
+              std::stop_token,
+              uburu::diagnostics::SearchMetrics*) const override
     {
       std::filesystem::remove(pathValue);
       sink(uburu::FileEntry{.absolutePath = pathValue,

@@ -65,8 +65,8 @@ namespace uburu::search
   {
   public:
     virtual ~SearchEngine() = default;
-    [[nodiscard]] virtual SearchSummary search(const SearchQuery& query, ResultSink sink,
-                                               std::stop_token stop_token = {}) const = 0;
+    [[nodiscard]] virtual SearchSummary
+    search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token = {}) const = 0;
   };
 
 } // namespace uburu::search

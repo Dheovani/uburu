@@ -63,8 +63,10 @@ namespace uburu::index
       return metadata.gitBlob->algorithm;
     }
 
-    [[nodiscard]] IndexDocument makeIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
-                                                  const IndexFileMetadata& metadata, const ContentHash& contentHash)
+    [[nodiscard]] IndexDocument makeIndexDocument(const WorktreeInfo& worktree,
+                                                  const FileEntry& file,
+                                                  const IndexFileMetadata& metadata,
+                                                  const ContentHash& contentHash)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -103,7 +105,8 @@ namespace uburu::index
                            .deleted = true};
     }
 
-    [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
+    [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree,
+                                                        const FileEntry& file,
                                                         const IndexFileMetadata& metadata,
                                                         const IndexedDocumentIdentity& reusableDocument)
     {
@@ -152,8 +155,10 @@ namespace uburu::index
 
   PersistentIndexService::PersistentIndexService(storage::StorageService& storage) : storageService(&storage) {}
 
-  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree, std::span<const FileEntry> files,
-                                                    const IndexProgressCallback& onProgress, std::stop_token stopToken)
+  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
+                                                    std::span<const FileEntry> files,
+                                                    const IndexProgressCallback& onProgress,
+                                                    std::stop_token stopToken)
   {
     std::vector<IndexFileCandidate> candidates;
     candidates.reserve(files.size());
@@ -167,7 +172,8 @@ namespace uburu::index
 
   IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
                                                     std::span<const IndexFileCandidate> files,
-                                                    const IndexProgressCallback& onProgress, std::stop_token stopToken)
+                                                    const IndexProgressCallback& onProgress,
+                                                    std::stop_token stopToken)
   {
     IndexUpdateSummary summary;
     IndexUpdateProgress progress;

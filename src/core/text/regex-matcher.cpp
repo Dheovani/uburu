@@ -137,8 +137,13 @@ namespace uburu::text
 
     std::size_t startOffset = 0;
     while (startOffset <= text.size()) {
-      const auto matchResult = pcre2_match(asPcreCode(code), reinterpret_cast<PCRE2_SPTR>(text.data()), text.size(),
-                                           startOffset, 0, matchData, matchContext);
+      const auto matchResult = pcre2_match(asPcreCode(code),
+                                           reinterpret_cast<PCRE2_SPTR>(text.data()),
+                                           text.size(),
+                                           startOffset,
+                                           0,
+                                           matchData,
+                                           matchContext);
       if (matchResult == PCRE2_ERROR_NOMATCH)
         break;
       if (matchResult < 0) {
@@ -198,8 +203,12 @@ namespace uburu::text
     if (!options.caseSensitive)
       compileOptions |= PCRE2_CASELESS;
 
-    auto* code = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(expression.data()), expression.size(), compileOptions,
-                               &errorCode, &errorOffset, nullptr);
+    auto* code = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(expression.data()),
+                               expression.size(),
+                               compileOptions,
+                               &errorCode,
+                               &errorOffset,
+                               nullptr);
     if (code == nullptr) {
       return RegexCompileResult{.matcher = std::nullopt,
                                 .error = RegexCompileError{errorCode, errorOffset, pcreErrorMessage(errorCode)}};

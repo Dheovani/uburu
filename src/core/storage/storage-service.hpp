@@ -24,8 +24,8 @@ namespace uburu::storage
     [[nodiscard]] virtual StoragePragmaSnapshot pragmaSnapshot() const = 0;
     [[nodiscard]] virtual StorageIntegrityReport validateIntegrity() const = 0;
     virtual void rebuildIndexCatalog() = 0;
-    virtual void setPreference(std::optional<RepositoryId> repositoryId, const std::string& key,
-                               const std::string& value) = 0;
+    virtual void
+    setPreference(std::optional<RepositoryId> repositoryId, const std::string& key, const std::string& value) = 0;
     [[nodiscard]] virtual std::optional<std::string> preference(std::optional<RepositoryId> repositoryId,
                                                                 const std::string& key) const = 0;
     virtual void recordSearch(const SearchHistoryEntry& entry, std::size_t retentionLimit) = 0;

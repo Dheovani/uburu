@@ -187,8 +187,11 @@ namespace uburu::git
                             .detachedHead = git_repository_head_detached(repository) == 1};
     }
 
-    [[nodiscard]] WorktreeInfo worktreeInfo(git_repository* repository, const RepositoryInfo& info, bool locked = false,
-                                            bool prunable = false, std::string lockReason = {})
+    [[nodiscard]] WorktreeInfo worktreeInfo(git_repository* repository,
+                                            const RepositoryInfo& info,
+                                            bool locked = false,
+                                            bool prunable = false,
+                                            std::string lockReason = {})
     {
       const auto* workdir = git_repository_workdir(repository);
       const auto root = workdir == nullptr ? std::filesystem::path{} : std::filesystem::path(workdir);

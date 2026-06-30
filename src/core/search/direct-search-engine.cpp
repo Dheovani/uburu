@@ -71,7 +71,8 @@ namespace uburu::search
       return std::move(regexResult.matches);
     }
 
-    std::optional<std::vector<text::MatchPosition>> findMatches(std::string_view text, const SearchQuery& query,
+    std::optional<std::vector<text::MatchPosition>> findMatches(std::string_view text,
+                                                                const SearchQuery& query,
                                                                 const std::optional<text::RegexMatcher>& regexMatcher,
                                                                 SearchSummary& summary)
     {
@@ -167,10 +168,16 @@ namespace uburu::search
       return publishReadyPending(pending, sink);
     }
 
-    PublishDecision publishMatches(const FileEntry& entry, SearchResultKind kind, std::size_t lineNumber,
-                                   std::string_view lineText, const std::vector<text::MatchPosition>& matches,
-                                   const SearchQuery& query, SearchSummary& summary, std::size_t& fileMatches,
-                                   const std::deque<std::string>& contextBefore, std::vector<PendingResult>& pending,
+    PublishDecision publishMatches(const FileEntry& entry,
+                                   SearchResultKind kind,
+                                   std::size_t lineNumber,
+                                   std::string_view lineText,
+                                   const std::vector<text::MatchPosition>& matches,
+                                   const SearchQuery& query,
+                                   SearchSummary& summary,
+                                   std::size_t& fileMatches,
+                                   const std::deque<std::string>& contextBefore,
+                                   std::vector<PendingResult>& pending,
                                    const ResultSink& sink)
     {
       for (const auto& match : matches) {
@@ -255,7 +262,8 @@ namespace uburu::search
       auto rootOptions = optionsForRoot(query.options, root);
 
       scanner->scan(
-        root.path, rootOptions,
+        root.path,
+        rootOptions,
         [&](FileEntry entry) {
           if (stop_token.stop_requested())
             return false;
@@ -275,8 +283,17 @@ namespace uburu::search
             if (!pathMatches)
               return false;
 
-            const auto decision = publishMatches(entry, SearchResultKind::fileName, 0, pathText, *pathMatches, query,
-                                                 summary, fileMatches, previousContext, pendingResults, sink);
+            const auto decision = publishMatches(entry,
+                                                 SearchResultKind::fileName,
+                                                 0,
+                                                 pathText,
+                                                 *pathMatches,
+                                                 query,
+                                                 summary,
+                                                 fileMatches,
+                                                 previousContext,
+                                                 pendingResults,
+                                                 sink);
 
             if (!flushPending(pendingResults, sink))
               return false;
@@ -294,7 +311,8 @@ namespace uburu::search
           bool stopCurrentFile = false;
           bool stopSearch = false;
           const auto readSummary = text::readTextFileLines(
-            entry.absolutePath, query.options,
+            entry.absolutePath,
+            query.options,
             [&](const text::TextLine& line) {
               if (!addContextAfter(pendingResults, line.text, sink)) {
                 stopSearch = true;
@@ -315,9 +333,17 @@ namespace uburu::search
                 return true;
               }
 
-              const auto decision =
-                publishMatches(entry, SearchResultKind::content, line.lineNumber, line.text, *matches, query, summary,
-                               fileMatches, previousContext, pendingResults, sink);
+              const auto decision = publishMatches(entry,
+                                                   SearchResultKind::content,
+                                                   line.lineNumber,
+                                                   line.text,
+                                                   *matches,
+                                                   query,
+                                                   summary,
+                                                   fileMatches,
+                                                   previousContext,
+                                                   pendingResults,
+                                                   sink);
 
               previousContext.push_back(line.text);
               while (previousContext.size() > query.options.contextBeforeLines)
@@ -350,7 +376,8 @@ namespace uburu::search
 
           return reportTextReadSummary(summary, entry, readSummary);
         },
-        stop_token, &summary.metrics);
+        stop_token,
+        &summary.metrics);
     }
 
     summary.cancelled = stop_token.stop_requested();

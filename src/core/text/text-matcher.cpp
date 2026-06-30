@@ -177,8 +177,8 @@ namespace uburu::text
       return decodeUtf8At(text, offset);
     }
 
-    bool hasBoundaries(std::string_view text, std::size_t offset, std::size_t length,
-                       bool (*isInsideBoundary)(char32_t))
+    bool
+    hasBoundaries(std::string_view text, std::size_t offset, std::size_t length, bool (*isInsideBoundary)(char32_t))
     {
       const auto left = scalarBefore(text, offset);
       if (left && isInsideBoundary(left->value))
@@ -210,8 +210,10 @@ namespace uburu::text
       return simpleCaseFold(left.value) == simpleCaseFold(right.value);
     }
 
-    std::optional<std::size_t> literalMatchLengthAt(std::string_view text, std::string_view expression,
-                                                    std::size_t textOffset, const SearchOptions& options)
+    std::optional<std::size_t> literalMatchLengthAt(std::string_view text,
+                                                    std::string_view expression,
+                                                    std::size_t textOffset,
+                                                    const SearchOptions& options)
     {
       std::size_t textIndex = textOffset;
       std::size_t expressionIndex = 0;
@@ -234,8 +236,8 @@ namespace uburu::text
 
   } // namespace
 
-  std::vector<MatchPosition> findAllLiterals(std::string_view text, std::string_view expression,
-                                             const SearchOptions& options)
+  std::vector<MatchPosition>
+  findAllLiterals(std::string_view text, std::string_view expression, const SearchOptions& options)
   {
     std::vector<MatchPosition> matches;
     if (expression.empty())
@@ -262,8 +264,8 @@ namespace uburu::text
     return matches;
   }
 
-  std::optional<MatchPosition> findLiteral(std::string_view text, std::string_view expression,
-                                           const SearchOptions& options)
+  std::optional<MatchPosition>
+  findLiteral(std::string_view text, std::string_view expression, const SearchOptions& options)
   {
     const auto matches = findAllLiterals(text, expression, options);
     if (matches.empty())

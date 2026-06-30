@@ -51,6 +51,7 @@ O schema evolui por migrations idempotentes:
 3. identidade persistente de documento por `(content_hash_algorithm, content_hash)`;
 4. metadados de produto: `preferences`, `search_history`, `saved_searches` e `indexing_metrics`.
 5. versão explícita do formato interno de documentos indexados em `documents` e `files`.
+6. `mtime` persistido em `files` para permitir reuso incremental conservador por catálogo.
 
 Tabelas principais:
 
@@ -78,6 +79,10 @@ diferentes que produzam a mesma representação textual.
 `documents` e `files` também armazenam `format_version`. Essa versão descreve o formato interno do
 documento indexado, não a versão do schema SQLite. Ela permite que versões futuras do Uburu migrem,
 reutilizem ou descartem documentos de cache com segurança sem depender apenas da estrutura das tabelas.
+
+`files` armazena o `mtime` como ticks nativos de `std::filesystem::file_time_type`. Esse valor não é
+tratado como data de usuário nem como timestamp Unix; ele existe para round-trip local e comparação
+incremental entre o catálogo persistido e o próximo `FileEntry` observado pela varredura.
 
 ## Publicação de gerações
 

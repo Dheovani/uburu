@@ -232,6 +232,7 @@ namespace uburu
     GitObjectHashAlgorithm gitBlobHashAlgorithm{GitObjectHashAlgorithm::unknown};
     GitFileStatus status{GitFileStatus::clean};
     std::uintmax_t size{0};
+    std::filesystem::file_time_type modifiedAt{};
     std::chrono::system_clock::time_point indexedAt{};
     bool deleted{false};
   };

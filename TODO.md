@@ -180,6 +180,8 @@ e UI para avançarem mais rapidamente.
 - [x] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
 - [x] Implementar indexação inicial cancelável e progressiva.
 - [ ] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
+  - [x] Reutilizar entrada de catálogo quando tamanho, mtime, hash persistido e status limpo indicarem arquivo inalterado.
+  - [ ] Integrar estado Git/overlay ao catálogo incremental antes de considerar o item completo.
 - [x] Deduplicar documentos por hash de conteúdo.
 - [x] Expor consultas de reuso por hash de conteúdo no storage.
 - [ ] Reutilizar documentos por blob hash antes de reler arquivos.

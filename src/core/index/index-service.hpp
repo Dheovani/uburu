@@ -16,6 +16,7 @@ namespace uburu::index
     std::size_t processed{0};
     std::size_t total{0};
     std::size_t indexed{0};
+    std::size_t reusedByCatalog{0};
     std::size_t reusedByHash{0};
     std::size_t failed{0};
     std::filesystem::path currentPath;
@@ -24,6 +25,7 @@ namespace uburu::index
   struct IndexUpdateSummary
   {
     std::size_t indexed{0};
+    std::size_t reusedByCatalog{0};
     std::size_t reusedByHash{0};
     std::size_t removed{0};
     std::size_t failed{0};

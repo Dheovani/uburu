@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -88,6 +89,7 @@ namespace
                                 .gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1,
                                 .status = uburu::GitFileStatus::clean,
                                 .size = 42,
+                                .modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{4}},
                                 .indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}},
                                 .deleted = false};
   }
@@ -154,6 +156,22 @@ namespace
     return count;
   }
 
+  [[nodiscard]] std::int64_t integerScalar(const std::filesystem::path& databasePath, std::string_view sql)
+  {
+    sqlite3* database = nullptr;
+    sqlite3_stmt* statement = nullptr;
+    REQUIRE(sqlite3_open_v2(databasePath.string().c_str(), &database, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK);
+    REQUIRE(sqlite3_prepare_v2(database, std::string(sql).c_str(), -1, &statement, nullptr) == SQLITE_OK);
+    REQUIRE(sqlite3_step(statement) == SQLITE_ROW);
+
+    const auto value = sqlite3_column_int64(statement, 0);
+
+    sqlite3_finalize(statement);
+    sqlite3_close(database);
+
+    return value;
+  }
+
 #endif
 
 } // namespace
@@ -167,12 +185,20 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
   const auto worktree = worktreeInfo(directory.path());
 
   {
+    auto document = indexDocument("content123");
+    REQUIRE(document.modifiedAt == std::filesystem::file_time_type{std::chrono::seconds{4}});
+    REQUIRE(document.modifiedAt.time_since_epoch().count() != 0);
+
     uburu::storage::SQLiteStorageService storage(databasePath);
     storage.initialize();
     storage.initialize();
     storage.upsertRepository(repository);
     storage.upsertWorktree(worktree);
-    storage.upsertDocument(indexDocument("content123"));
+    storage.upsertDocument(document);
+
+    REQUIRE(
+      integerScalar(databasePath, "SELECT file_modified_at_ticks FROM files WHERE relative_path = 'src/main.cpp'") ==
+      document.modifiedAt.time_since_epoch().count());
   }
 
   uburu::storage::SQLiteStorageService reopened(databasePath);
@@ -192,6 +218,7 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
   CHECK(document->gitBlobHashAlgorithm == uburu::GitObjectHashAlgorithm::sha1);
   CHECK(document->status == uburu::GitFileStatus::clean);
   CHECK(document->size == 42);
+  CHECK(document->modifiedAt == std::filesystem::file_time_type{std::chrono::seconds{4}});
   CHECK(document->indexedAt == std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}});
   CHECK_FALSE(document->deleted);
 #else

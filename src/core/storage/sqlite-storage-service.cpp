@@ -24,7 +24,8 @@ namespace uburu::storage
     constexpr int contentHashIdentitySchemaVersion = 3;
     constexpr int metadataSchemaVersion = 4;
     constexpr int documentFormatSchemaVersion = 5;
-    constexpr int currentSchemaVersion = documentFormatSchemaVersion;
+    constexpr int fileModifiedAtSchemaVersion = 6;
+    constexpr int currentSchemaVersion = fileModifiedAtSchemaVersion;
     constexpr int defaultDocumentFormatVersion = static_cast<int>(latestIndexDocumentFormatVersion);
     constexpr int sqliteOk = SQLITE_OK;
     constexpr int sqliteDone = SQLITE_DONE;
@@ -92,6 +93,18 @@ namespace uburu::storage
     [[nodiscard]] std::chrono::system_clock::time_point fromUnixMilliseconds(std::int64_t value)
     {
       return std::chrono::system_clock::time_point{std::chrono::milliseconds{value}};
+    }
+
+    [[nodiscard]] std::int64_t toFileTimeTicks(std::filesystem::file_time_type value)
+    {
+      return value.time_since_epoch().count();
+    }
+
+    [[nodiscard]] std::filesystem::file_time_type fromFileTimeTicks(std::int64_t value)
+    {
+      const std::filesystem::file_time_type::duration duration{value};
+
+      return std::filesystem::file_time_type(duration);
     }
 
     [[nodiscard]] std::int64_t nowUnixMilliseconds()
@@ -331,8 +344,12 @@ namespace uburu::storage
       }
     }
 
+    [[nodiscard]] int schemaVersion(sqlite3* database);
+
     void applyInitialSchema(sqlite3* database)
     {
+      const auto versionBeforeInitialSchema = schemaVersion(database);
+
       execute(database, "BEGIN IMMEDIATE");
       try {
         execute(database, R"sql(
@@ -392,6 +409,7 @@ namespace uburu::storage
             git_blob_hash TEXT,
             status INTEGER NOT NULL,
             size INTEGER NOT NULL,
+            file_modified_at_ticks INTEGER NOT NULL DEFAULT 0,
             indexed_at_unix_ms INTEGER NOT NULL,
             deleted INTEGER NOT NULL,
             PRIMARY KEY (worktree_id, relative_path)
@@ -409,15 +427,18 @@ namespace uburu::storage
             PRIMARY KEY (worktree_id, relative_path)
           );
         )sql");
-        Statement migrationStatement(database, R"sql(
-          INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
-          VALUES (?, ?);
-        )sql");
+        if (versionBeforeInitialSchema == 0) {
+          Statement migrationStatement(database, R"sql(
+            INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
+            VALUES (?, ?);
+          )sql");
 
-        migrationStatement.bindInt64(1, initialSchemaVersion);
-        migrationStatement.bindInt64(2, toUnixMilliseconds(std::chrono::system_clock::now()));
-        migrationStatement.executeDone();
-        execute(database, "PRAGMA user_version = " + std::to_string(initialSchemaVersion));
+          migrationStatement.bindInt64(1, initialSchemaVersion);
+          migrationStatement.bindInt64(2, toUnixMilliseconds(std::chrono::system_clock::now()));
+          migrationStatement.executeDone();
+          execute(database, "PRAGMA user_version = " + std::to_string(initialSchemaVersion));
+        }
+
         execute(database, "COMMIT");
       } catch (...) {
         execute(database, "ROLLBACK");
@@ -523,6 +544,7 @@ namespace uburu::storage
             git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0,
             status INTEGER NOT NULL,
             size INTEGER NOT NULL,
+            file_modified_at_ticks INTEGER NOT NULL DEFAULT 0,
             indexed_at_unix_ms INTEGER NOT NULL,
             deleted INTEGER NOT NULL,
             PRIMARY KEY (worktree_id, relative_path),
@@ -533,10 +555,10 @@ namespace uburu::storage
         execute(database, R"sql(
           INSERT INTO files_v3 (
             worktree_id, relative_path, repository_id, content_hash, content_hash_algorithm, git_blob_hash,
-            git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
+            git_blob_hash_algorithm, status, size, file_modified_at_ticks, indexed_at_unix_ms, deleted
           )
           SELECT worktree_id, relative_path, repository_id, content_hash, content_hash_algorithm, git_blob_hash,
-                 git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
+                 git_blob_hash_algorithm, status, size, 0, indexed_at_unix_ms, deleted
           FROM files;
         )sql");
         execute(database, "DROP TABLE files");
@@ -643,6 +665,30 @@ namespace uburu::storage
       }
     }
 
+    void applyFileModifiedAtMigration(sqlite3* database)
+    {
+      execute(database, "BEGIN IMMEDIATE");
+      try {
+        addColumnIfMissing(database, "files", "file_modified_at_ticks",
+                           "file_modified_at_ticks INTEGER NOT NULL DEFAULT 0");
+
+        Statement migrationStatement(database, R"sql(
+          INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
+          VALUES (?, ?);
+        )sql");
+
+        migrationStatement.bindInt64(1, fileModifiedAtSchemaVersion);
+        migrationStatement.bindInt64(2, toUnixMilliseconds(std::chrono::system_clock::now()));
+        migrationStatement.executeDone();
+        execute(database, "PRAGMA user_version = " + std::to_string(fileModifiedAtSchemaVersion));
+        execute(database, "COMMIT");
+      } catch (...) {
+        execute(database, "ROLLBACK");
+
+        throw;
+      }
+    }
+
     void applyMigrations(sqlite3* database)
     {
       if (schemaVersion(database) < hashAlgorithmSchemaVersion)
@@ -656,6 +702,9 @@ namespace uburu::storage
 
       if (schemaVersion(database) < documentFormatSchemaVersion)
         applyDocumentFormatMigration(database);
+
+      if (schemaVersion(database) < fileModifiedAtSchemaVersion)
+        applyFileModifiedAtMigration(database);
 
       if (schemaVersion(database) != currentSchemaVersion)
         throw std::runtime_error("SQLite database schema version is newer than this build supports");
@@ -702,8 +751,8 @@ namespace uburu::storage
       Statement fileStatement(database, R"sql(
         INSERT INTO files (
           worktree_id, relative_path, repository_id, content_hash, content_hash_algorithm, format_version, git_blob_hash,
-          git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          git_blob_hash_algorithm, status, size, file_modified_at_ticks, indexed_at_unix_ms, deleted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(worktree_id, relative_path) DO UPDATE SET
           repository_id = excluded.repository_id,
           content_hash = excluded.content_hash,
@@ -713,6 +762,7 @@ namespace uburu::storage
           git_blob_hash_algorithm = excluded.git_blob_hash_algorithm,
           status = excluded.status,
           size = excluded.size,
+          file_modified_at_ticks = excluded.file_modified_at_ticks,
           indexed_at_unix_ms = excluded.indexed_at_unix_ms,
           deleted = excluded.deleted;
       )sql");
@@ -727,8 +777,9 @@ namespace uburu::storage
       fileStatement.bindInt64(8, static_cast<std::int64_t>(document.gitBlobHashAlgorithm));
       fileStatement.bindInt64(9, static_cast<std::int64_t>(document.status));
       fileStatement.bindInt64(10, static_cast<std::int64_t>(document.size));
-      fileStatement.bindInt64(11, toUnixMilliseconds(document.indexedAt));
-      fileStatement.bindBool(12, document.deleted);
+      fileStatement.bindInt64(11, toFileTimeTicks(document.modifiedAt));
+      fileStatement.bindInt64(12, toUnixMilliseconds(document.indexedAt));
+      fileStatement.bindBool(13, document.deleted);
       fileStatement.executeDone();
     }
 
@@ -1270,7 +1321,7 @@ namespace uburu::storage
     auto* database = requireDatabase(databaseHandle);
     Statement statement(database, R"sql(
       SELECT repository_id, worktree_id, relative_path, content_hash, content_hash_algorithm, format_version,
-             git_blob_hash, git_blob_hash_algorithm, status, size, indexed_at_unix_ms, deleted
+             git_blob_hash, git_blob_hash_algorithm, status, size, file_modified_at_ticks, indexed_at_unix_ms, deleted
       FROM files
       WHERE worktree_id = ? AND relative_path = ?;
     )sql");
@@ -1292,8 +1343,9 @@ namespace uburu::storage
                            .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 7)),
                            .status = toGitFileStatus(sqlite3_column_int(row, 8)),
                            .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 9)),
-                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 10)),
-                           .deleted = sqlite3_column_int(row, 11) != 0};
+                           .modifiedAt = fromFileTimeTicks(sqlite3_column_int64(row, 10)),
+                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 11)),
+                           .deleted = sqlite3_column_int(row, 12) != 0};
 
     return document;
 #else

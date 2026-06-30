@@ -31,6 +31,12 @@ que o schema continue compatível.
 Uma troca de branch invalida o catálogo visível, não o armazenamento endereçado por conteúdo.
 Backpressure e orçamento de memória devem limitar parsing e filas de resultados.
 
+A primeira base incremental compara a entrada persistida do catálogo com o `FileEntry` atual. Quando o
+caminho da mesma worktree continua limpo, não deletado, com mesmo tamanho, mesmo `mtime` e hash persistido
+válido, o indexador reutiliza a identidade do documento sem reler o arquivo. Essa otimização é deliberadamente
+conservadora: arquivos modificados, deletados, com status desconhecido ou futuramente marcados por overlay Git
+voltam para o caminho de revalidação/reindexação.
+
 ## Reuso de documentos
 
 O storage expõe consultas separadas para reuso por `contentHash` e por `gitBlobHash`. Essas consultas

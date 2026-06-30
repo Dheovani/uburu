@@ -141,6 +141,40 @@ TEST_CASE("persistent index service publishes an initial generation with content
 #endif
 }
 
+TEST_CASE("persistent index service reuses unchanged catalog entries without rehashing")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-catalog-reuse-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "stable.txt", "stable content");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "src/stable.txt"),
+  };
+
+  const auto initialSummary = indexService.update(worktreeInfo(root), files);
+  const auto incrementalSummary = indexService.update(worktreeInfo(root), files);
+  const auto document = storage.findDocument("worktree-id", "src/stable.txt");
+
+  CHECK(initialSummary.indexed == 1);
+  CHECK(initialSummary.reusedByCatalog == 0);
+  CHECK(incrementalSummary.indexed == 0);
+  CHECK(incrementalSummary.reusedByCatalog == 1);
+  CHECK(incrementalSummary.reusedByHash == 0);
+  REQUIRE(document.has_value());
+  CHECK(document->modifiedAt == files.front().modifiedAt);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service observes cancellation before publishing")
 {
 #if defined(UBURU_HAS_SQLITE)

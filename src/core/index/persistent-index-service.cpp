@@ -26,6 +26,16 @@ namespace uburu::index
       return !file.binary;
     }
 
+    [[nodiscard]] bool canReuseCatalogDocument(const IndexDocument& document, const FileEntry& file)
+    {
+      return !document.deleted &&
+             !document.contentHash.empty() &&
+              document.size == file.size &&
+              document.modifiedAt == file.modifiedAt &&
+              document.status == GitFileStatus::clean &&
+              document.contentHashAlgorithm != ContentHashAlgorithm::unknown;
+    }
+
     [[nodiscard]] IndexDocument makeIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
                                                   const ContentHash& contentHash)
     {
@@ -39,6 +49,25 @@ namespace uburu::index
                            .gitBlobHashAlgorithm = GitObjectHashAlgorithm::unknown,
                            .status = GitFileStatus::clean,
                            .size = file.size,
+                           .modifiedAt = file.modifiedAt,
+                           .indexedAt = std::chrono::system_clock::now(),
+                           .deleted = false};
+    }
+
+    [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
+                                                        const IndexDocument& reusableDocument)
+    {
+      return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
+                           .repositoryId = worktree.repositoryId,
+                           .worktreeId = worktree.id,
+                           .relativePath = file.relativePath,
+                           .contentHash = reusableDocument.contentHash,
+                           .contentHashAlgorithm = reusableDocument.contentHashAlgorithm,
+                           .gitBlobHash = reusableDocument.gitBlobHash,
+                           .gitBlobHashAlgorithm = reusableDocument.gitBlobHashAlgorithm,
+                           .status = GitFileStatus::clean,
+                           .size = file.size,
+                           .modifiedAt = file.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
                            .deleted = false};
     }
@@ -77,6 +106,16 @@ namespace uburu::index
       progress.currentPath = file.relativePath;
 
       if (!shouldIndexFile(file)) {
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
+      const auto reusableCatalogDocument = storageService->findDocument(worktree.id, file.relativePath);
+      if (reusableCatalogDocument && canReuseCatalogDocument(*reusableCatalogDocument, file)) {
+        ++summary.reusedByCatalog;
+        ++progress.reusedByCatalog;
+        documents.push_back(makeReusedIndexDocument(worktree, file, *reusableCatalogDocument));
         publishProgress(onProgress, progress);
 
         continue;

@@ -202,6 +202,104 @@ TEST_CASE("persistent index service reuses unchanged catalog entries without reh
 #endif
 }
 
+TEST_CASE("persistent index service reindexes git modified files even when size and mtime match")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-modified-overlay-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "tracked.txt", "aaaa");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const auto cleanFile = fileEntry(root, "src/tracked.txt");
+  const std::vector cleanFiles{
+    cleanFile,
+  };
+
+  const auto initialSummary = indexService.update(worktreeInfo(root), cleanFiles);
+  const auto initialDocument = storage.findDocument("worktree-id", "src/tracked.txt");
+
+  writeFile(root / "src" / "tracked.txt", "bbbb");
+  std::filesystem::last_write_time(root / "src" / "tracked.txt", cleanFile.modifiedAt);
+
+  auto modifiedFile = fileEntry(root, "src/tracked.txt");
+  modifiedFile.modifiedAt = cleanFile.modifiedAt;
+
+  const std::vector modifiedCandidates{
+    uburu::index::IndexFileCandidate{
+      .file = modifiedFile,
+      .metadata = uburu::index::IndexFileMetadata{.status = uburu::GitFileStatus::modified},
+    },
+  };
+
+  const auto modifiedSummary = indexService.update(worktreeInfo(root), modifiedCandidates);
+  const auto modifiedDocument = storage.findDocument("worktree-id", "src/tracked.txt");
+
+  CHECK(initialSummary.indexed == 1);
+  REQUIRE(initialDocument.has_value());
+  CHECK(modifiedSummary.indexed == 1);
+  CHECK(modifiedSummary.reusedByCatalog == 0);
+  REQUIRE(modifiedDocument.has_value());
+  CHECK(modifiedDocument->status == uburu::GitFileStatus::modified);
+  CHECK(modifiedDocument->contentHash != initialDocument->contentHash);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service publishes deleted git overlay tombstones")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-deleted-overlay-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "deleted.txt", "indexed before deletion");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const auto trackedFile = fileEntry(root, "src/deleted.txt");
+  const std::vector trackedFiles{
+    trackedFile,
+  };
+
+  const auto initialSummary = indexService.update(worktreeInfo(root), trackedFiles);
+  const auto initialDocument = storage.findDocument("worktree-id", "src/deleted.txt");
+
+  std::filesystem::remove(root / "src" / "deleted.txt");
+
+  const std::vector deletedCandidates{
+    uburu::index::IndexFileCandidate{
+      .file = trackedFile,
+      .metadata = uburu::index::IndexFileMetadata{.status = uburu::GitFileStatus::deleted},
+    },
+  };
+
+  const auto deletedSummary = indexService.update(worktreeInfo(root), deletedCandidates);
+  const auto deletedDocument = storage.findDocument("worktree-id", "src/deleted.txt");
+
+  CHECK(initialSummary.indexed == 1);
+  REQUIRE(initialDocument.has_value());
+  CHECK(deletedSummary.removed == 1);
+  CHECK(deletedSummary.indexed == 0);
+  CHECK(deletedSummary.failed == 0);
+  REQUIRE(deletedDocument.has_value());
+  CHECK(deletedDocument->deleted);
+  CHECK(deletedDocument->status == uburu::GitFileStatus::deleted);
+  CHECK(deletedDocument->contentHash == initialDocument->contentHash);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reuses git blob documents before reading files")
 {
 #if defined(UBURU_HAS_SQLITE)

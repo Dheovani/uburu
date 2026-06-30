@@ -53,6 +53,18 @@ documento endereçado por conteúdo, sem abrir nem hashear o arquivo da working 
 adicionados localmente ou sem blob confiável continuam passando pelo caminho de hash de conteúdo até o
 overlay Git completo ser aplicado.
 
+## Overlay da working tree
+
+O estado Git participa da decisão incremental antes de qualquer reuso por tamanho e `mtime`. Entradas
+limpas podem reutilizar o catálogo persistido ou um documento conhecido por blob hash. Entradas modificadas
+localmente são sempre revalidadas pela leitura da working tree, mesmo quando tamanho e `mtime` ainda
+coincidem com o catálogo anterior, porque o Git já informou que o conteúdo visível ao usuário mudou.
+
+Entradas deletadas publicam uma lápide na nova geração quando havia documento anterior para o caminho.
+Essa lápide mantém a identidade de conteúdo anterior apenas como referência histórica, mas marca o arquivo
+como `deleted` para que buscas indexadas futuras não retornem resultados obsoletos da geração versionada.
+Arquivos deletados sem entrada anterior são contabilizados como removidos, mas não criam documento novo.
+
 ## Hash de conteúdo
 
 O algoritmo inicial de hash de conteúdo é SHA-256. A escolha privilegia correção, estabilidade e baixa

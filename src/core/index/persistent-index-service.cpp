@@ -26,6 +26,11 @@ namespace uburu::index
       return !file.binary;
     }
 
+    [[nodiscard]] bool isDeletedOverlay(const IndexFileMetadata& metadata)
+    {
+      return metadata.status == GitFileStatus::deleted;
+    }
+
     [[nodiscard]] bool canReuseCatalogDocument(const IndexDocument& document, const IndexFileCandidate& candidate)
     {
       const auto& file = candidate.file;
@@ -73,6 +78,28 @@ namespace uburu::index
                            .modifiedAt = file.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
                            .deleted = false};
+    }
+
+    [[nodiscard]] IndexDocument makeDeletedIndexDocument(const WorktreeInfo& worktree,
+                                                         const FileEntry& file,
+                                                         const IndexFileMetadata& metadata,
+                                                         const IndexDocument& previousDocument)
+    {
+      return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
+                           .repositoryId = worktree.repositoryId,
+                           .worktreeId = worktree.id,
+                           .relativePath = file.relativePath,
+                           .contentHash = previousDocument.contentHash,
+                           .contentHashAlgorithm = previousDocument.contentHashAlgorithm,
+                           .gitBlobHash = metadata.gitBlob ? std::optional<std::string>{metadata.gitBlob->value}
+                                                           : previousDocument.gitBlobHash,
+                           .gitBlobHashAlgorithm =
+                             metadata.gitBlob ? metadata.gitBlob->algorithm : previousDocument.gitBlobHashAlgorithm,
+                           .status = GitFileStatus::deleted,
+                           .size = previousDocument.size,
+                           .modifiedAt = previousDocument.modifiedAt,
+                           .indexedAt = std::chrono::system_clock::now(),
+                           .deleted = true};
     }
 
     [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree, const FileEntry& file,
@@ -160,13 +187,26 @@ namespace uburu::index
       ++progress.processed;
       progress.currentPath = file.relativePath;
 
+      const auto reusableCatalogDocument = storageService->findDocument(worktree.id, file.relativePath);
+
+      if (isDeletedOverlay(candidate.metadata)) {
+        ++summary.removed;
+        ++progress.removed;
+
+        if (reusableCatalogDocument && !reusableCatalogDocument->contentHash.empty())
+          documents.push_back(makeDeletedIndexDocument(worktree, file, candidate.metadata, *reusableCatalogDocument));
+
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
       if (!shouldIndexFile(file)) {
         publishProgress(onProgress, progress);
 
         continue;
       }
 
-      const auto reusableCatalogDocument = storageService->findDocument(worktree.id, file.relativePath);
       if (reusableCatalogDocument && canReuseCatalogDocument(*reusableCatalogDocument, candidate)) {
         ++summary.reusedByCatalog;
         ++progress.reusedByCatalog;
@@ -189,14 +229,6 @@ namespace uburu::index
 
           continue;
         }
-      }
-
-      if (candidate.metadata.status == GitFileStatus::deleted) {
-        ++summary.removed;
-        ++progress.removed;
-        publishProgress(onProgress, progress);
-
-        continue;
       }
 
       std::optional<ContentHash> contentHash;

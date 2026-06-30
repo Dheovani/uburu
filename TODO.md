@@ -179,14 +179,17 @@ e UI para avançarem mais rapidamente.
 - [x] Definir formato interno de documento indexado e versioná-lo.
 - [x] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
 - [x] Implementar indexação inicial cancelável e progressiva.
-- [ ] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
+- [x] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
   - [x] Reutilizar entrada de catálogo quando tamanho, mtime, hash persistido e status limpo indicarem arquivo inalterado.
-  - [ ] Integrar estado Git/overlay ao catálogo incremental antes de considerar o item completo.
+  - [x] Integrar estado Git/overlay ao catálogo incremental antes de considerar o item completo.
 - [x] Deduplicar documentos por hash de conteúdo.
 - [x] Expor consultas de reuso por hash de conteúdo no storage.
 - [x] Reutilizar documentos por blob hash antes de reler arquivos.
 - [x] Expor consultas de reuso por blob hash Git no storage.
 - [ ] Aplicar overlay da working tree sobre a geração versionada.
+  - [x] Tratar status Git `modified` como invalidação do reuso conservador por catálogo.
+  - [x] Publicar lápides para arquivos deletados localmente quando houver documento anterior.
+  - [ ] Conectar overlay produzido pelo `GitService` ao pipeline incremental completo.
 - [ ] Ocultar deletados e substituir modificados sem resultados obsoletos.
 - [ ] Reconciliar eventos do watcher em batches transacionais.
 - [ ] Detectar staleness do índice e expor estado para a UI.

@@ -178,9 +178,9 @@ e UI para avançarem mais rapidamente.
   
 - [x] Definir formato interno de documento indexado e versioná-lo.
 - [x] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
-- [ ] Implementar indexação inicial cancelável e progressiva.
+- [x] Implementar indexação inicial cancelável e progressiva.
 - [ ] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
-- [ ] Deduplicar documentos por hash de conteúdo.
+- [x] Deduplicar documentos por hash de conteúdo.
 - [x] Expor consultas de reuso por hash de conteúdo no storage.
 - [ ] Reutilizar documentos por blob hash antes de reler arquivos.
 - [x] Expor consultas de reuso por blob hash Git no storage.

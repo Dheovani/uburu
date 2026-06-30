@@ -51,3 +51,14 @@ O cálculo é feito em streaming para arquivos, com cancelamento cooperativo ent
 arquivos grandes inteiros em memória. O benchmark `uburu-content-hash-benchmark` mede throughput em um
 dataset sintético determinístico e deve ser usado para comparar compiladores, flags e plataformas antes de
 trocar o algoritmo ou adicionar uma implementação acelerada.
+
+## Indexação inicial
+
+`PersistentIndexService` implementa a primeira indexação persistente. Ele recebe uma lista de `FileEntry`,
+calcula SHA-256 em streaming para arquivos textuais, reutiliza documentos já conhecidos por hash de
+conteúdo e publica uma nova geração no storage.
+
+O progresso é reportado por callback, com total, processados, indexados, reutilizados e falhas. O
+cancelamento é cooperativo: se o token é sinalizado antes ou durante o cálculo de hash, a operação retorna
+`cancelled` e não publica uma geração parcial. Falhas isoladas de leitura são contabilizadas e não impedem
+a publicação dos documentos válidos restantes.

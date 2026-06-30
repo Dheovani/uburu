@@ -160,7 +160,7 @@ namespace uburu::index
         for (std::size_t index = 0; index < sha256LengthFieldByteCount; ++index) {
           const auto shift = static_cast<unsigned int>((sha256LengthFieldByteCount - index - 1U) * bitsPerByte);
           buffer[sha256BlockByteCount - sha256LengthFieldByteCount + index] =
-              static_cast<std::byte>((totalBitCount >> shift) & byteMask);
+            static_cast<std::byte>((totalBitCount >> shift) & byteMask);
         }
       }
 

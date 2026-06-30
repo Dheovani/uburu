@@ -8,6 +8,7 @@ add_library(uburu_core STATIC
   git/libgit2-git-service.cpp
   index/content-hash.cpp
   index/index-document-format.cpp
+  index/persistent-index-service.cpp
   search/direct-search-engine.cpp
   search/search-errors.cpp
   search/search-query-validation.cpp

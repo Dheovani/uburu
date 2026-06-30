@@ -478,6 +478,83 @@ TEST_CASE("sqlite storage treats hash algorithm as part of document identity")
 #endif
 }
 
+TEST_CASE("sqlite storage finds reusable documents by content hash")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-content-reuse-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  auto document = indexDocument("reusable-content", "src/reusable.cpp");
+  document.gitBlobHash = "blob-reusable";
+  document.size = 123;
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({
+      document,
+  }));
+
+  const auto reusable =
+      storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::sha256, "reusable-content");
+  const auto wrongAlgorithm =
+      storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::unknown, "reusable-content");
+
+  REQUIRE(reusable.has_value());
+  CHECK(reusable->formatVersion == uburu::latestIndexDocumentFormatVersion);
+  CHECK(reusable->contentHash == "reusable-content");
+  CHECK(reusable->contentHashAlgorithm == uburu::ContentHashAlgorithm::sha256);
+  REQUIRE(reusable->gitBlobHash.has_value());
+  CHECK(*reusable->gitBlobHash == "blob-reusable");
+  CHECK(reusable->gitBlobHashAlgorithm == uburu::GitObjectHashAlgorithm::sha1);
+  CHECK(reusable->size == 123);
+  CHECK_FALSE(wrongAlgorithm.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage finds reusable documents by git blob hash")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-blob-reuse-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  auto older = indexDocument("older-content", "src/older.cpp");
+  older.gitBlobHash = "shared-blob";
+  older.size = 10;
+  older.indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{10}};
+
+  auto newer = indexDocument("newer-content", "src/newer.cpp");
+  newer.gitBlobHash = "shared-blob";
+  newer.size = 20;
+  newer.indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{20}};
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({
+      older,
+      newer,
+  }));
+
+  const auto reusable = storage.findReusableDocumentByGitBlobHash(uburu::GitObjectHashAlgorithm::sha1, "shared-blob");
+  const auto wrongAlgorithm =
+      storage.findReusableDocumentByGitBlobHash(uburu::GitObjectHashAlgorithm::sha256, "shared-blob");
+
+  REQUIRE(reusable.has_value());
+  CHECK(reusable->contentHash == "newer-content");
+  CHECK(reusable->contentHashAlgorithm == uburu::ContentHashAlgorithm::sha256);
+  REQUIRE(reusable->gitBlobHash.has_value());
+  CHECK(*reusable->gitBlobHash == "shared-blob");
+  CHECK(reusable->gitBlobHashAlgorithm == uburu::GitObjectHashAlgorithm::sha1);
+  CHECK(reusable->size == 20);
+  CHECK_FALSE(wrongAlgorithm.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("sqlite storage rolls back invalid generation publication")
 {
 #if defined(UBURU_HAS_SQLITE)

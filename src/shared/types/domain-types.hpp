@@ -236,6 +236,17 @@ namespace uburu
     bool deleted{false};
   };
 
+  struct IndexedDocumentIdentity
+  {
+    std::uint32_t formatVersion{latestIndexDocumentFormatVersion};
+    std::string contentHash;
+    ContentHashAlgorithm contentHashAlgorithm{ContentHashAlgorithm::unknown};
+    std::optional<std::string> gitBlobHash;
+    GitObjectHashAlgorithm gitBlobHashAlgorithm{GitObjectHashAlgorithm::unknown};
+    std::uintmax_t size{0};
+    std::chrono::system_clock::time_point indexedAt{};
+  };
+
   struct IndexGeneration
   {
     RepositoryId repositoryId;

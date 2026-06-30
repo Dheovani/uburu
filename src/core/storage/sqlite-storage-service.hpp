@@ -45,6 +45,10 @@ namespace uburu::storage
     void removeDocument(const WorktreeId& worktreeId, const std::filesystem::path& relativePath) override;
     [[nodiscard]] std::optional<IndexDocument> findDocument(const WorktreeId& worktreeId,
                                                             const std::filesystem::path& relativePath) const override;
+    [[nodiscard]] std::optional<IndexedDocumentIdentity>
+    findReusableDocumentByContentHash(ContentHashAlgorithm algorithm, const std::string& contentHash) const override;
+    [[nodiscard]] std::optional<IndexedDocumentIdentity>
+    findReusableDocumentByGitBlobHash(GitObjectHashAlgorithm algorithm, const std::string& gitBlobHash) const override;
 
   private:
     std::filesystem::path databasePath;

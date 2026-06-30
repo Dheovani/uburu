@@ -175,13 +175,15 @@ e UI para avançarem mais rapidamente.
 - [x] Avaliar FTS5 por benchmark, sem acoplar o contrato ao backend.
 
 ## Marco 6 — Índice persistente e incremental (P1)
-
+  
 - [x] Definir formato interno de documento indexado e versioná-lo.
 - [ ] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
 - [ ] Implementar indexação inicial cancelável e progressiva.
 - [ ] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
 - [ ] Deduplicar documentos por hash de conteúdo.
+- [x] Expor consultas de reuso por hash de conteúdo no storage.
 - [ ] Reutilizar documentos por blob hash antes de reler arquivos.
+- [x] Expor consultas de reuso por blob hash Git no storage.
 - [ ] Aplicar overlay da working tree sobre a geração versionada.
 - [ ] Ocultar deletados e substituir modificados sem resultados obsoletos.
 - [ ] Reconciliar eventos do watcher em batches transacionais.

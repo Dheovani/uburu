@@ -20,5 +20,30 @@ add_executable(uburu_core_tests
 
 target_link_libraries(uburu_core_tests PRIVATE Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)
 
+if(WIN32)
+  add_custom_command(TARGET uburu_core_tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:uburu_core_tests> $<TARGET_RUNTIME_DLLS:uburu_core_tests>
+    COMMAND_EXPAND_LISTS
+  )
+
+  if(MINGW)
+    get_filename_component(uburu_mingw_runtime_directory "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    set(uburu_mingw_runtime_dlls)
+
+    foreach(uburu_mingw_runtime_dll IN ITEMS libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll)
+      if(EXISTS "${uburu_mingw_runtime_directory}/${uburu_mingw_runtime_dll}")
+        list(APPEND uburu_mingw_runtime_dlls "${uburu_mingw_runtime_directory}/${uburu_mingw_runtime_dll}")
+      endif()
+    endforeach()
+
+    if(uburu_mingw_runtime_dlls)
+      add_custom_command(TARGET uburu_core_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${uburu_mingw_runtime_dlls} $<TARGET_FILE_DIR:uburu_core_tests>
+        COMMAND_EXPAND_LISTS
+      )
+    endif()
+  endif()
+endif()
+
 include(Catch)
 catch_discover_tests(uburu_core_tests)

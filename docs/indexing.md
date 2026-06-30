@@ -1,8 +1,11 @@
 # Indexação
 
-O catálogo persistente será dividido entre metadados mutáveis da worktree e documentos endereçados por conteúdo.
+O catálogo persistente é dividido entre metadados mutáveis da worktree e documentos endereçados por
+conteúdo.
 
-Uma entrada lógica contém `repositoryId`, `worktreeId`, caminho relativo, tamanho, mtime, hash de conteúdo, blob Git opcional e status local. O documento de conteúdo pode ser reutilizado quando o mesmo hash reaparece em outra branch ou worktree.
+Uma entrada lógica contém `repositoryId`, `worktreeId`, caminho relativo, tamanho, mtime, hash de
+conteúdo, blob Git opcional e status local. O documento de conteúdo pode ser reutilizado quando o mesmo
+hash reaparece em outra branch ou worktree.
 
 ## Formato interno versionado
 
@@ -25,4 +28,15 @@ que o schema continue compatível.
 5. Aplicar o overlay da working tree para adicionados, modificados e deletados.
 6. Publicar uma nova geração do índice de forma atômica.
 
-Uma troca de branch invalida o catálogo visível, não o armazenamento endereçado por conteúdo. Backpressure e orçamento de memória devem limitar parsing e filas de resultados.
+Uma troca de branch invalida o catálogo visível, não o armazenamento endereçado por conteúdo.
+Backpressure e orçamento de memória devem limitar parsing e filas de resultados.
+
+## Reuso de documentos
+
+O storage expõe consultas separadas para reuso por `contentHash` e por `gitBlobHash`. Essas consultas
+retornam apenas a identidade reutilizável do documento, não uma entrada de arquivo completa, porque o
+mesmo conteúdo pode aparecer em múltiplos caminhos, branches ou worktrees.
+
+O catálogo de arquivos continua sendo o responsável por vincular uma identidade de documento ao caminho
+visível na worktree atual. Essa separação evita tratar `path` como identidade de conteúdo e prepara o
+indexador incremental para priorizar reuso por blob Git antes de reler arquivos da working tree.

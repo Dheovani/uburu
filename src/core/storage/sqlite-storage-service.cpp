@@ -127,6 +127,17 @@ namespace uburu::storage
       return static_cast<GitObjectHashAlgorithm>(value);
     }
 
+    [[nodiscard]] IndexedDocumentIdentity indexedDocumentIdentityFromRow(sqlite3_stmt* row)
+    {
+      return IndexedDocumentIdentity{.formatVersion = static_cast<std::uint32_t>(sqlite3_column_int(row, 0)),
+                                     .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
+                                     .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 2)),
+                                     .gitBlobHash = optionalText(row, 3),
+                                     .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 4)),
+                                     .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 5)),
+                                     .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 6))};
+    }
+
     [[nodiscard]] std::string preferenceScope(std::optional<RepositoryId> repositoryId)
     {
       return repositoryId.value_or(std::string{});
@@ -650,6 +661,19 @@ namespace uburu::storage
         throw std::runtime_error("SQLite database schema version is newer than this build supports");
     }
 
+    void ensureLookupIndexes(sqlite3* database)
+    {
+      execute(database, R"sql(
+        CREATE INDEX IF NOT EXISTS idx_documents_git_blob_identity
+        ON documents(git_blob_hash_algorithm, git_blob_hash)
+        WHERE git_blob_hash IS NOT NULL;
+      )sql");
+      execute(database, R"sql(
+        CREATE INDEX IF NOT EXISTS idx_files_content_identity
+        ON files(content_hash_algorithm, content_hash);
+      )sql");
+    }
+
     void upsertDocumentRecord(sqlite3* database, const IndexDocument& document)
     {
       Statement documentStatement(database, R"sql(
@@ -826,6 +850,7 @@ namespace uburu::storage
     execute(database, "PRAGMA synchronous = NORMAL");
     applyInitialSchema(database);
     applyMigrations(database);
+    ensureLookupIndexes(database);
     static_cast<void>(recoverIncompleteGenerationRecords(database));
 #else
     throw std::runtime_error("SQLite support is not available in this build");
@@ -1274,6 +1299,62 @@ namespace uburu::storage
 #else
     static_cast<void>(worktreeId);
     static_cast<void>(relativePath);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::optional<IndexedDocumentIdentity>
+  SQLiteStorageService::findReusableDocumentByContentHash(ContentHashAlgorithm algorithm,
+                                                          const std::string& contentHash) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT format_version, content_hash, content_hash_algorithm, git_blob_hash, git_blob_hash_algorithm, size,
+             indexed_at_unix_ms
+      FROM documents
+      WHERE content_hash_algorithm = ? AND content_hash = ?;
+    )sql");
+
+    statement.bindInt64(1, static_cast<std::int64_t>(algorithm));
+    statement.bindText(2, contentHash);
+
+    if (!statement.stepRow())
+      return std::nullopt;
+
+    return indexedDocumentIdentityFromRow(statement.get());
+#else
+    static_cast<void>(algorithm);
+    static_cast<void>(contentHash);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::optional<IndexedDocumentIdentity>
+  SQLiteStorageService::findReusableDocumentByGitBlobHash(GitObjectHashAlgorithm algorithm,
+                                                          const std::string& gitBlobHash) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT format_version, content_hash, content_hash_algorithm, git_blob_hash, git_blob_hash_algorithm, size,
+             indexed_at_unix_ms
+      FROM documents
+      WHERE git_blob_hash_algorithm = ? AND git_blob_hash = ?
+      ORDER BY indexed_at_unix_ms DESC, content_hash ASC
+      LIMIT 1;
+    )sql");
+
+    statement.bindInt64(1, static_cast<std::int64_t>(algorithm));
+    statement.bindText(2, gitBlobHash);
+
+    if (!statement.stepRow())
+      return std::nullopt;
+
+    return indexedDocumentIdentityFromRow(statement.get());
+#else
+    static_cast<void>(algorithm);
+    static_cast<void>(gitBlobHash);
     throw std::runtime_error("SQLite support is not available in this build");
 #endif
   }

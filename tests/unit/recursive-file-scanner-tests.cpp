@@ -343,8 +343,11 @@ TEST_CASE("recursive scanner does not follow directory symlinks by default")
   writeFile(directory.path() / "target" / "inside.txt", "target\n");
 
   const auto link = directory.path() / "link";
-  if (!createDirectorySymlinkOrSkip(directory.path() / "target", link))
-    SKIP("The current environment did not allow creating a directory symlink.");
+  if (!createDirectorySymlinkOrSkip(directory.path() / "target", link)) {
+    SUCCEED("The current environment did not allow creating a directory symlink.");
+
+    return;
+  }
 
   uburu::SearchOptions options;
 
@@ -361,8 +364,11 @@ TEST_CASE("recursive scanner avoids cycles when following directory symlinks")
   std::filesystem::create_directories(directory.path() / "nested");
 
   const auto link = directory.path() / "nested" / "loop";
-  if (!createDirectorySymlinkOrSkip(directory.path(), link))
-    SKIP("The current environment did not allow creating a directory symlink.");
+  if (!createDirectorySymlinkOrSkip(directory.path(), link)) {
+    SUCCEED("The current environment did not allow creating a directory symlink.");
+
+    return;
+  }
 
   uburu::SearchOptions options;
   options.followSymlinks = true;

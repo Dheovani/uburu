@@ -55,4 +55,16 @@ namespace uburu::app
     return indexService->update(worktree, files, *overlay, onProgress, stopToken);
   }
 
+  index::IndexUpdateSummary DefaultIndexingService::reconcile(const WorktreeInfo& worktree,
+                                                              const SearchOptions& options,
+                                                              const filesystem::FileChangeBatch& batch,
+                                                              const index::IndexProgressCallback& onProgress,
+                                                              std::stop_token stopToken)
+  {
+    if (batch.events.empty() && !batch.eventsMayBeIncomplete && !batch.requiresRescan)
+      return {};
+
+    return update(worktree, options, onProgress, stopToken);
+  }
+
 } // namespace uburu::app

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/filesystem/file-scanner.hpp"
+#include "core/filesystem/file-watcher.hpp"
 #include "core/git/git-service.hpp"
 #include "core/index/index-service.hpp"
 
@@ -17,6 +18,11 @@ namespace uburu::app
                                                            const SearchOptions& options,
                                                            const index::IndexProgressCallback& onProgress = {},
                                                            std::stop_token stopToken = {}) = 0;
+    [[nodiscard]] virtual index::IndexUpdateSummary reconcile(const WorktreeInfo& worktree,
+                                                              const SearchOptions& options,
+                                                              const filesystem::FileChangeBatch& batch,
+                                                              const index::IndexProgressCallback& onProgress = {},
+                                                              std::stop_token stopToken = {}) = 0;
   };
 
   class DefaultIndexingService final : public IndexingService
@@ -30,6 +36,11 @@ namespace uburu::app
                                                    const SearchOptions& options,
                                                    const index::IndexProgressCallback& onProgress = {},
                                                    std::stop_token stopToken = {}) override;
+    [[nodiscard]] index::IndexUpdateSummary reconcile(const WorktreeInfo& worktree,
+                                                      const SearchOptions& options,
+                                                      const filesystem::FileChangeBatch& batch,
+                                                      const index::IndexProgressCallback& onProgress = {},
+                                                      std::stop_token stopToken = {}) override;
 
   private:
     std::shared_ptr<const filesystem::FileScanner> scanner;

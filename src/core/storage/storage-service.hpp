@@ -38,6 +38,10 @@ namespace uburu::storage
     virtual void removeDocument(const WorktreeId& worktreeId, const std::filesystem::path& relativePath) = 0;
     [[nodiscard]] virtual std::optional<IndexDocument>
     findDocument(const WorktreeId& worktreeId, const std::filesystem::path& relativePath) const = 0;
+    [[nodiscard]] virtual std::optional<IndexGenerationMetadata>
+    latestGenerationForRoot(const std::filesystem::path& worktreeRoot) const = 0;
+    [[nodiscard]] virtual std::vector<IndexDocument>
+    visibleDocumentsForRoot(const std::filesystem::path& worktreeRoot) const = 0;
     [[nodiscard]] virtual std::optional<IndexedDocumentIdentity>
     findReusableDocumentByContentHash(ContentHashAlgorithm algorithm, const std::string& contentHash) const = 0;
     [[nodiscard]] virtual std::optional<IndexedDocumentIdentity>

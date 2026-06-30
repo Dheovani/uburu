@@ -334,6 +334,73 @@ TEST_CASE("sqlite storage publishes generations atomically")
 #endif
 }
 
+TEST_CASE("sqlite storage lists only visible indexed documents for a worktree root")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-visible-documents-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  auto deleted = indexDocument("deleted-content", "src/deleted.cpp");
+
+  deleted.deleted = true;
+  deleted.status = uburu::GitFileStatus::deleted;
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({
+    indexDocument("visible-content", "src/visible.cpp"),
+    deleted,
+  }));
+
+  const auto documents = storage.visibleDocumentsForRoot(directory.path());
+
+  REQUIRE(documents.size() == 1);
+  CHECK(documents.front().relativePath == std::filesystem::path("src/visible.cpp"));
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage returns the latest published generation for a worktree root")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-latest-generation-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+
+  auto first = indexGeneration({
+    indexDocument("content-a", "src/a.cpp"),
+  });
+  first.headOid = "head-a";
+  first.createdAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{10}};
+
+  auto second = indexGeneration({
+    indexDocument("content-b", "src/b.cpp"),
+  });
+  second.headOid = "head-b";
+  second.branch = "feature";
+  second.createdAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{20}};
+
+  storage.publishGeneration(first);
+  storage.publishGeneration(second);
+
+  const auto latest = storage.latestGenerationForRoot(directory.path());
+  const auto missing = storage.latestGenerationForRoot(directory.path() / "missing");
+
+  REQUIRE(latest.has_value());
+  CHECK(latest->repositoryId == "repository-id");
+  CHECK(latest->worktreeId == "worktree-id");
+  CHECK(latest->headOid == "head-b");
+  CHECK(latest->branch == "feature");
+  CHECK_FALSE(missing.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("sqlite storage persists global and repository preferences")
 {
 #if defined(UBURU_HAS_SQLITE)

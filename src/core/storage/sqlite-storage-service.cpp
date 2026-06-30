@@ -151,6 +151,23 @@ namespace uburu::storage
                                      .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 6))};
     }
 
+    [[nodiscard]] IndexDocument indexDocumentFromRow(sqlite3_stmt* row)
+    {
+      return IndexDocument{.formatVersion = static_cast<std::uint32_t>(sqlite3_column_int(row, 5)),
+                           .repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
+                           .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
+                           .relativePath = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
+                           .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 3)),
+                           .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 4)),
+                           .gitBlobHash = optionalText(row, 6),
+                           .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 7)),
+                           .status = toGitFileStatus(sqlite3_column_int(row, 8)),
+                           .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 9)),
+                           .modifiedAt = fromFileTimeTicks(sqlite3_column_int64(row, 10)),
+                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 11)),
+                           .deleted = sqlite3_column_int(row, 12) != 0};
+    }
+
     [[nodiscard]] std::string preferenceScope(std::optional<RepositoryId> repositoryId)
     {
       return repositoryId.value_or(std::string{});
@@ -1338,25 +1355,72 @@ namespace uburu::storage
     if (!statement.stepRow())
       return std::nullopt;
 
-    auto* row = statement.get();
-    IndexDocument document{.formatVersion = static_cast<std::uint32_t>(sqlite3_column_int(row, 5)),
-                           .repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
-                           .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
-                           .relativePath = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
-                           .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 3)),
-                           .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 4)),
-                           .gitBlobHash = optionalText(row, 6),
-                           .gitBlobHashAlgorithm = toGitObjectHashAlgorithm(sqlite3_column_int(row, 7)),
-                           .status = toGitFileStatus(sqlite3_column_int(row, 8)),
-                           .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 9)),
-                           .modifiedAt = fromFileTimeTicks(sqlite3_column_int64(row, 10)),
-                           .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 11)),
-                           .deleted = sqlite3_column_int(row, 12) != 0};
-
-    return document;
+    return indexDocumentFromRow(statement.get());
 #else
     static_cast<void>(worktreeId);
     static_cast<void>(relativePath);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::vector<IndexDocument>
+  SQLiteStorageService::visibleDocumentsForRoot(const std::filesystem::path& worktreeRoot) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT files.repository_id, files.worktree_id, files.relative_path, files.content_hash,
+             files.content_hash_algorithm, files.format_version, files.git_blob_hash, files.git_blob_hash_algorithm,
+             files.status, files.size, files.file_modified_at_ticks, files.indexed_at_unix_ms, files.deleted
+      FROM files
+      INNER JOIN worktrees ON worktrees.id = files.worktree_id
+      WHERE worktrees.root = ? AND files.deleted = 0
+      ORDER BY files.relative_path ASC;
+    )sql");
+    std::vector<IndexDocument> documents;
+
+    statement.bindPath(1, worktreeRoot);
+
+    while (statement.stepRow()) {
+      documents.push_back(indexDocumentFromRow(statement.get()));
+    }
+
+    return documents;
+#else
+    static_cast<void>(worktreeRoot);
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  std::optional<IndexGenerationMetadata>
+  SQLiteStorageService::latestGenerationForRoot(const std::filesystem::path& worktreeRoot) const
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    Statement statement(database, R"sql(
+      SELECT generations.repository_id, generations.worktree_id, generations.head_oid, generations.branch,
+             generations.created_at_unix_ms
+      FROM generations
+      INNER JOIN worktrees ON worktrees.id = generations.worktree_id
+      WHERE worktrees.root = ? AND generations.published = 1
+      ORDER BY generations.created_at_unix_ms DESC, generations.id DESC
+      LIMIT 1;
+    )sql");
+
+    statement.bindPath(1, worktreeRoot);
+
+    if (!statement.stepRow())
+      return std::nullopt;
+
+    auto* row = statement.get();
+
+    return IndexGenerationMetadata{.repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
+                                   .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
+                                   .headOid = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
+                                   .branch = optionalText(row, 3),
+                                   .createdAt = fromUnixMilliseconds(sqlite3_column_int64(row, 4))};
+#else
+    static_cast<void>(worktreeRoot);
     throw std::runtime_error("SQLite support is not available in this build");
 #endif
   }

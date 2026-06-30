@@ -48,6 +48,21 @@ namespace uburu::index
     IndexFileMetadata metadata;
   };
 
+  enum class IndexStalenessState
+  {
+    missing,
+    fresh,
+    stale
+  };
+
+  struct IndexStalenessReport
+  {
+    IndexStalenessState state{IndexStalenessState::missing};
+    bool headChanged{false};
+    bool branchChanged{false};
+    std::optional<IndexGenerationMetadata> latestGeneration;
+  };
+
   using IndexProgressCallback = std::function<void(const IndexUpdateProgress&)>;
 
   class IndexService
@@ -67,6 +82,7 @@ namespace uburu::index
                                                     std::span<const GitOverlayEntry> overlay,
                                                     const IndexProgressCallback& onProgress = {},
                                                     std::stop_token stopToken = {}) = 0;
+    [[nodiscard]] virtual IndexStalenessReport staleness(const WorktreeInfo& worktree) const = 0;
     [[nodiscard]] virtual std::vector<SearchResult> search(const SearchQuery& query,
                                                            std::stop_token stopToken = {}) const = 0;
   };

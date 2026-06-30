@@ -258,6 +258,15 @@ namespace uburu
     std::vector<IndexDocument> documents;
   };
 
+  struct IndexGenerationMetadata
+  {
+    RepositoryId repositoryId;
+    WorktreeId worktreeId;
+    std::string headOid;
+    std::optional<std::string> branch;
+    std::chrono::system_clock::time_point createdAt{};
+  };
+
   struct StoragePragmaSnapshot
   {
     bool foreignKeysEnabled{false};

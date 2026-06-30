@@ -2,6 +2,8 @@
 
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
+#include "core/text/regex-matcher.hpp"
+#include "core/text/text-matcher.hpp"
 
 #include <chrono>
 #include <exception>
@@ -151,6 +153,33 @@ namespace uburu::index
       onProgress(progress);
     }
 
+    [[nodiscard]] bool searchesFileName(const SearchQuery& query)
+    {
+      return query.options.target == SearchTarget::fileName || query.options.target == SearchTarget::contentAndFileName;
+    }
+
+    [[nodiscard]] std::vector<text::MatchPosition> indexedPathMatches(std::string_view pathText,
+                                                                      const SearchQuery& query,
+                                                                      const std::optional<text::RegexMatcher>& regex)
+    {
+      if (regex)
+        return regex->findAll(pathText).matches;
+
+      return text::findAllLiterals(pathText, query.expression, query.options);
+    }
+
+    [[nodiscard]] std::optional<text::RegexMatcher> compileIndexedRegex(const SearchQuery& query)
+    {
+      if (query.options.mode != SearchMode::regex)
+        return std::nullopt;
+
+      auto compiled = text::compileRegex(query.expression, query.options);
+      if (!compiled.matcher)
+        return std::nullopt;
+
+      return std::move(compiled.matcher);
+    }
+
   } // namespace
 
   PersistentIndexService::PersistentIndexService(storage::StorageService& storage) : storageService(&storage) {}
@@ -298,12 +327,65 @@ namespace uburu::index
     return update(worktree, plan.candidates, onProgress, stopToken);
   }
 
+  IndexStalenessReport PersistentIndexService::staleness(const WorktreeInfo& worktree) const
+  {
+    auto latestGeneration = storageService->latestGenerationForRoot(worktree.root);
+
+    if (!latestGeneration)
+      return IndexStalenessReport{.state = IndexStalenessState::missing};
+
+    const auto headChanged = latestGeneration->headOid != worktree.headOid;
+    const auto branchChanged = latestGeneration->branch != worktree.branch;
+    const auto state = headChanged || branchChanged ? IndexStalenessState::stale : IndexStalenessState::fresh;
+
+    return IndexStalenessReport{.state = state,
+                                .headChanged = headChanged,
+                                .branchChanged = branchChanged,
+                                .latestGeneration = std::move(latestGeneration)};
+  }
+
   std::vector<SearchResult> PersistentIndexService::search(const SearchQuery& query, std::stop_token stopToken) const
   {
-    static_cast<void>(query);
-    static_cast<void>(stopToken);
+    if (query.expression.empty() || !searchesFileName(query))
+      return {};
 
-    return {};
+    auto regex = compileIndexedRegex(query);
+
+    if (query.options.mode == SearchMode::regex && !regex)
+      return {};
+
+    std::vector<SearchResult> results;
+    const auto documents = storageService->visibleDocumentsForRoot(query.root);
+
+    for (const auto& document : documents) {
+      if (stopToken.stop_requested())
+        break;
+
+      const auto pathText = document.relativePath.generic_string();
+      const auto matches = indexedPathMatches(pathText, query, regex);
+
+      if (matches.empty())
+        continue;
+
+      for (const auto& match : matches) {
+        if (results.size() >= query.options.resultLimit)
+          return results;
+
+        results.push_back(SearchResult{
+          .kind = SearchResultKind::fileName,
+          .path = document.relativePath,
+          .line = 0,
+          .column = match.offset + 1,
+          .matchLength = match.length,
+          .lineText = pathText,
+          .highlights = {MatchSpan{.column = match.offset + 1, .byteOffset = match.offset, .byteLength = match.length}},
+          .contextBefore = {},
+          .contextAfter = {},
+          .searchRoot = query.root});
+      }
+    }
+
+    return results;
   }
 
 } // namespace uburu::index

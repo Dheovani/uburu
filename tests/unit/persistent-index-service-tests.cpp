@@ -354,6 +354,137 @@ TEST_CASE("persistent index service updates from scanned files and git overlay e
 #endif
 }
 
+TEST_CASE("persistent index search hides deleted paths and returns modified replacements")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-search-overlay-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "previous.cpp", "old content");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector initialFiles{
+    fileEntry(root, "src/previous.cpp"),
+  };
+
+  const auto initialSummary = indexService.update(worktreeInfo(root), initialFiles);
+
+  writeFile(root / "src" / "current.cpp", "new content");
+  std::filesystem::remove(root / "src" / "previous.cpp");
+
+  const std::vector scannedFiles{
+    fileEntry(root, "src/current.cpp"),
+  };
+  const std::vector overlay{
+    uburu::GitOverlayEntry{.relativePath = "src/current.cpp",
+                           .previousRelativePath = std::filesystem::path("src/previous.cpp"),
+                           .status = uburu::GitFileStatus::modified,
+                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree},
+  };
+
+  const auto overlaySummary = indexService.update(worktreeInfo(root), scannedFiles, overlay);
+
+  uburu::SearchQuery query{.root = root, .expression = "cpp", .options = {}};
+  query.options.target = uburu::SearchTarget::fileName;
+
+  const auto results = indexService.search(query);
+
+  CHECK(initialSummary.indexed == 1);
+  CHECK(overlaySummary.indexed == 1);
+  CHECK(overlaySummary.removed == 1);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().kind == uburu::SearchResultKind::fileName);
+  CHECK(results.front().path == std::filesystem::path("src/current.cpp"));
+  CHECK(results.front().lineText == "src/current.cpp");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index search does not pretend to support indexed content before content storage")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-search-content-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "main.cpp", "needle\n");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "src/main.cpp"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery query{.root = root, .expression = "needle", .options = {}};
+  query.options.target = uburu::SearchTarget::content;
+
+  CHECK(summary.indexed == 1);
+  CHECK(indexService.search(query).empty());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service reports missing fresh and stale generations")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-staleness-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "main.cpp", "content\n");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  auto currentWorktree = worktreeInfo(root);
+
+  const auto missing = indexService.staleness(currentWorktree);
+
+  const std::vector files{
+    fileEntry(root, "src/main.cpp"),
+  };
+  const auto updateSummary = indexService.update(currentWorktree, files);
+  const auto fresh = indexService.staleness(currentWorktree);
+
+  auto changedHead = currentWorktree;
+  changedHead.headOid = "def456";
+
+  auto changedBranch = currentWorktree;
+  changedBranch.branch = "feature";
+
+  const auto staleHead = indexService.staleness(changedHead);
+  const auto staleBranch = indexService.staleness(changedBranch);
+
+  CHECK(missing.state == uburu::index::IndexStalenessState::missing);
+  CHECK(updateSummary.indexed == 1);
+  CHECK(fresh.state == uburu::index::IndexStalenessState::fresh);
+  REQUIRE(fresh.latestGeneration.has_value());
+  CHECK(fresh.latestGeneration->headOid == currentWorktree.headOid);
+  CHECK(staleHead.state == uburu::index::IndexStalenessState::stale);
+  CHECK(staleHead.headChanged);
+  CHECK_FALSE(staleHead.branchChanged);
+  CHECK(staleBranch.state == uburu::index::IndexStalenessState::stale);
+  CHECK_FALSE(staleBranch.headChanged);
+  CHECK(staleBranch.branchChanged);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reuses git blob documents before reading files")
 {
 #if defined(UBURU_HAS_SQLITE)

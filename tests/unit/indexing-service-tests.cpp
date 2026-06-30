@@ -51,6 +51,7 @@ namespace
       static_cast<void>(metrics);
 
       scannedRoot = root;
+      ++scanCount;
 
       for (const auto& file : files) {
         if (stopToken.stop_requested())
@@ -62,6 +63,7 @@ namespace
     }
 
     mutable std::filesystem::path scannedRoot;
+    mutable std::size_t scanCount{0};
     std::vector<uburu::FileEntry> files;
   };
 
@@ -204,6 +206,13 @@ namespace
       return {};
     }
 
+    [[nodiscard]] uburu::index::IndexStalenessReport staleness(const uburu::WorktreeInfo& worktree) const override
+    {
+      static_cast<void>(worktree);
+
+      return uburu::index::IndexStalenessReport{.state = uburu::index::IndexStalenessState::fresh};
+    }
+
     std::optional<uburu::WorktreeInfo> requestedWorktree;
     std::vector<uburu::FileEntry> receivedFiles;
     std::vector<uburu::GitOverlayEntry> receivedOverlay;
@@ -274,6 +283,49 @@ TEST_CASE("default indexing service observes cancellation before git overlay")
   CHECK(summary.cancelled);
   CHECK_FALSE(gitService->requestedWorktree.has_value());
   CHECK_FALSE(indexService->requestedWorktree.has_value());
+}
+
+TEST_CASE("default indexing service ignores empty watcher reconciliation batches")
+{
+  const auto worktree = worktreeInfo();
+  auto scanner = std::make_shared<FakeScanner>();
+  auto gitService = std::make_shared<FakeGitService>();
+  auto indexService = std::make_shared<FakeIndexService>();
+
+  uburu::app::DefaultIndexingService service(scanner, gitService, indexService);
+  const auto summary = service.reconcile(worktree, uburu::SearchOptions{}, uburu::filesystem::FileChangeBatch{});
+
+  CHECK(summary.indexed == 0);
+  CHECK(scanner->scanCount == 0);
+  CHECK_FALSE(gitService->requestedWorktree.has_value());
+  CHECK_FALSE(indexService->requestedWorktree.has_value());
+}
+
+TEST_CASE("default indexing service reconciles watcher batches as a single index update")
+{
+  const auto worktree = worktreeInfo();
+  auto scanner = std::make_shared<FakeScanner>();
+  auto gitService = std::make_shared<FakeGitService>();
+  auto indexService = std::make_shared<FakeIndexService>();
+  const uburu::filesystem::FileChangeBatch batch{
+    .events = {uburu::filesystem::FileChangeEvent{
+      .relativePath = "src/main.cpp",
+      .kind = uburu::filesystem::FileChangeKind::modified,
+      .directory = false,
+    }},
+    .eventsMayBeIncomplete = false,
+    .requiresRescan = false,
+  };
+
+  scanner->files.push_back(fileEntry(worktree, "src/main.cpp"));
+
+  uburu::app::DefaultIndexingService service(scanner, gitService, indexService);
+  const auto summary = service.reconcile(worktree, uburu::SearchOptions{}, batch);
+
+  CHECK(summary.indexed == 1);
+  CHECK(scanner->scanCount == 1);
+  REQUIRE(indexService->requestedWorktree.has_value());
+  CHECK(indexService->requestedWorktree->id == worktree.id);
 }
 
 TEST_CASE("default indexing service rejects missing dependencies")

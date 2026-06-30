@@ -26,6 +26,7 @@ namespace uburu::index
                                             std::span<const GitOverlayEntry> overlay,
                                             const IndexProgressCallback& onProgress = {},
                                             std::stop_token stopToken = {}) override;
+    [[nodiscard]] IndexStalenessReport staleness(const WorktreeInfo& worktree) const override;
     [[nodiscard]] std::vector<SearchResult> search(const SearchQuery& query,
                                                    std::stop_token stopToken = {}) const override;
 

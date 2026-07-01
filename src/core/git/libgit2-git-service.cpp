@@ -1,5 +1,7 @@
 #include "core/git/libgit2-git-service.hpp"
 
+#include "core/filesystem/path-normalization.hpp"
+
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -332,6 +334,102 @@ namespace uburu::git
       return git_worktree_is_prunable(worktree, &options) == 1;
     }
 
+    [[nodiscard]] std::string readFirstLine(const std::filesystem::path& path)
+    {
+      std::ifstream stream(path, std::ios::binary);
+      std::string line;
+
+      std::getline(stream, line);
+
+      while (!line.empty() && (line.back() == '\r' || line.back() == '\n'))
+        line.pop_back();
+
+      return line;
+    }
+
+    [[nodiscard]] std::optional<std::filesystem::path>
+    metadataWorktreeRoot(const std::filesystem::path& metadataDirectory)
+    {
+      auto gitdir = std::filesystem::path(readFirstLine(metadataDirectory / "gitdir"));
+
+      if (gitdir.empty())
+        return std::nullopt;
+
+      if (gitdir.is_relative())
+        gitdir = metadataDirectory / gitdir;
+
+      return gitdir.lexically_normal().parent_path();
+    }
+
+    [[nodiscard]] bool containsWorktreeRoot(
+      const std::vector<WorktreeInfo>& worktrees,
+      const std::filesystem::path& root)
+    {
+      const auto rootKey = filesystem::normalizedPathKey(root);
+
+      return std::ranges::any_of(worktrees, [&](const auto& worktree) {
+        return filesystem::normalizedPathKey(worktree.root) == rootKey;
+      });
+    }
+
+    void appendMetadataOnlyWorktrees(const RepositoryInfo& repository, std::vector<WorktreeInfo>& worktrees)
+    {
+      const auto metadataRoot = repository.commonGitDirectory / "worktrees";
+      std::error_code error;
+
+      if (!std::filesystem::is_directory(metadataRoot, error))
+        return;
+
+      const auto entries = std::filesystem::directory_iterator(metadataRoot, error);
+
+      if (error)
+        return;
+
+      for (const auto& entry : entries) {
+        if (error)
+          return;
+
+        const auto isDirectory = entry.is_directory(error);
+
+        if (error) {
+          error.clear();
+          continue;
+        }
+
+        if (!isDirectory)
+          continue;
+
+        auto root = metadataWorktreeRoot(entry.path());
+
+        if (!root || containsWorktreeRoot(worktrees, *root))
+          continue;
+
+        const auto lockedPath = entry.path() / "locked";
+        error.clear();
+
+        const auto locked = std::filesystem::exists(lockedPath, error);
+        error.clear();
+
+        const auto prunable = !std::filesystem::exists(*root, error);
+        error.clear();
+
+        auto lockReason = locked ? readFirstLine(lockedPath) : std::string{};
+
+        if (!locked && !prunable)
+          continue;
+
+        worktrees.push_back(WorktreeInfo{.id = stableId("worktree", *root),
+                                         .repositoryId = repository.id,
+                                         .root = *root,
+                                         .gitDirectory = entry.path(),
+                                         .branch = std::nullopt,
+                                         .headOid = {},
+                                         .locked = locked,
+                                         .prunable = prunable,
+                                         .lockReason = std::move(lockReason)});
+      }
+    }
+
 #endif
 
   } // namespace
@@ -443,6 +541,7 @@ namespace uburu::git
     }
 
     git_strarray_dispose(&names);
+    appendMetadataOnlyWorktrees(repository, worktrees);
 
     return worktrees;
 #else

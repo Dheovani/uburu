@@ -93,8 +93,8 @@ TEST_CASE("file structured logger writes sanitized json lines")
 
   std::getline(stream, line);
 
-  CHECK(line.find("\"level\":\"warning\"") != std::string::npos);
-  CHECK(line.find("\"category\":\"diagnostics\"") != std::string::npos);
+  CHECK(line.find("\"level\":\"[WARNING]\"") != std::string::npos);
+  CHECK(line.find("\"category\":\"<diagnostics>\"") != std::string::npos);
   CHECK(line.find("hello \\\"logger\\\"") != std::string::npos);
   CHECK(line.find("<redacted>") != std::string::npos);
 

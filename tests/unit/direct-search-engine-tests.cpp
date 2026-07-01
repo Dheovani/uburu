@@ -1,4 +1,5 @@
 #include "core/filesystem/file-scanner.hpp"
+#include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/search/direct-search-engine.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -320,6 +321,36 @@ TEST_CASE("direct search streams a match with one-based line and column")
   CHECK(results.front().path == std::filesystem::path("source.cpp"));
   CHECK(results.front().line == 2);
   CHECK(results.front().column == 10);
+  CHECK(summary.matches == 1);
+}
+
+TEST_CASE("direct search finds text through the recursive scanner")
+{
+  const auto root = std::filesystem::temp_directory_path() / "uburu-direct-search-real-scanner-test";
+  const auto path = root / "nested" / "sample.txt";
+  std::filesystem::remove_all(root);
+  std::filesystem::create_directories(path.parent_path());
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "first line\nselected fragment here\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove_all(root); };
+
+  auto scanner = std::make_shared<uburu::filesystem::RecursiveFileScanner>();
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(root, "selected fragment");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == std::filesystem::path("nested") / "sample.txt");
+  CHECK(summary.errors.empty());
+  CHECK(summary.filesScanned == 1);
   CHECK(summary.matches == 1);
 }
 

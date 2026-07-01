@@ -60,6 +60,15 @@
     <message><source>Erro ao pesquisar: %1</source><translation>Search failed: %1</translation></message>
     <message><source>Busca cancelada</source><translation>Search cancelled</translation></message>
     <message numerus="yes">
+      <source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source>
+      <translation><numerusform>%n match found in %1 file(s)</numerusform><numerusform>%n matches found in %1 file(s)</numerusform></translation>
+    </message>
+    <message><source>%1 ignorado(s)</source><translation>%1 ignored</translation></message>
+    <message><source>%1 oculto(s)</source><translation>%1 hidden</translation></message>
+    <message><source>%1 binário(s)</source><translation>%1 binary</translation></message>
+    <message><source> — pulados: %1</source><translation> — skipped: %1</translation></message>
+    <message><source>, </source><translation>, </translation></message>
+    <message numerus="yes">
       <source>%n ocorrência(s) encontrada(s)</source>
       <translation><numerusform>%n match found</numerusform><numerusform>%n matches found</numerusform></translation>
     </message>

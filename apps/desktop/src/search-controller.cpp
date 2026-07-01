@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QMetaObject>
+#include <QStringList>
 #include <QUrl>
 #include <QtConcurrentRun>
 
@@ -43,6 +44,29 @@ namespace uburu::app
         search::makeSearchError(search::SearchErrorCode::fileReadFailed, context.toUtf8().toStdString()));
 
       return summary;
+    }
+
+    QString completedSearchStatus(const search::SearchSummary& summary, QObject* receiver)
+    {
+      auto status =
+        receiver->tr("%n ocorrência(s) encontrada(s) em %1 arquivo(s)", nullptr, static_cast<int>(summary.matches))
+          .arg(summary.filesScanned);
+
+      QStringList skipped;
+
+      if (summary.metrics.ignoredFiles > 0)
+        skipped.push_back(receiver->tr("%1 ignorado(s)").arg(summary.metrics.ignoredFiles));
+
+      if (summary.metrics.hiddenFiles > 0)
+        skipped.push_back(receiver->tr("%1 oculto(s)").arg(summary.metrics.hiddenFiles));
+
+      if (summary.metrics.binaryFilesSkipped > 0)
+        skipped.push_back(receiver->tr("%1 binário(s)").arg(summary.metrics.binaryFilesSkipped));
+
+      if (!skipped.empty())
+        status += receiver->tr(" — pulados: %1").arg(skipped.join(receiver->tr(", ")));
+
+      return status;
     }
 
   } // namespace
@@ -163,9 +187,7 @@ namespace uburu::app
         const auto context = QString::fromUtf8(summary.errors.front().context);
         setStatus(context.isEmpty() ? tr("Erro ao pesquisar") : tr("Erro ao pesquisar: %1").arg(context));
       } else {
-        setStatus(summary.cancelled
-                    ? tr("Busca cancelada")
-                    : tr("%n ocorrência(s) encontrada(s)", nullptr, static_cast<int>(summary.matches)));
+        setStatus(summary.cancelled ? tr("Busca cancelada") : completedSearchStatus(summary, this));
       }
 
       setRunning(false);

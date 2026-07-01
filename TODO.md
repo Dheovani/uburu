@@ -198,12 +198,12 @@ e UI para avançarem mais rapidamente.
 - [x] Implementar busca indexada por conteúdo e metadados.
   - [x] Implementar busca indexada inicial por metadados de caminho.
   - [x] Persistir e consultar conteúdo indexado sem depender apenas de hash.
-- [ ] Combinar resultado rápido do índice com validação direta.
-- [ ] Atualizar, confirmar ou remover resultados durante refinamento.
+- [x] Combinar resultado rápido do índice com validação direta.
+- [x] Atualizar, confirmar ou remover resultados durante refinamento.
 - [x] Definir ranking e merge determinísticos entre fontes.
 - [x] Implementar orçamento de disco e política de eviction.
-- [ ] Versionar schema e formato para upgrades sem perda desnecessária do cache.
-- [ ] Implementar pausa, retomada e reindexação manual.
+- [x] Versionar schema e formato para upgrades sem perda desnecessária do cache.
+- [x] Implementar pausa, retomada e reindexação manual.
 
 ## Marco 7 — Serviço de busca e observabilidade (P1)
 

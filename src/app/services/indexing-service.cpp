@@ -23,11 +23,37 @@ namespace uburu::app
       throw std::invalid_argument("DefaultIndexingService requires an index service");
   }
 
+  void DefaultIndexingService::pause()
+  {
+    currentState = IndexingServiceState::paused;
+  }
+
+  void DefaultIndexingService::resume()
+  {
+    currentState = IndexingServiceState::running;
+  }
+
+  IndexingServiceState DefaultIndexingService::state() const
+  {
+    return currentState;
+  }
+
+  index::IndexUpdateSummary DefaultIndexingService::requestManualReindex(const WorktreeInfo& worktree,
+                                                                         const SearchOptions& options,
+                                                                         const index::IndexProgressCallback& onProgress,
+                                                                         std::stop_token stopToken)
+  {
+    return update(worktree, options, onProgress, stopToken);
+  }
+
   index::IndexUpdateSummary DefaultIndexingService::update(const WorktreeInfo& worktree,
                                                            const SearchOptions& options,
                                                            const index::IndexProgressCallback& onProgress,
                                                            std::stop_token stopToken)
   {
+    if (currentState == IndexingServiceState::paused)
+      return index::IndexUpdateSummary{.cancelled = true};
+
     std::vector<FileEntry> files;
 
     scanner->scan(
@@ -61,6 +87,9 @@ namespace uburu::app
                                                               const index::IndexProgressCallback& onProgress,
                                                               std::stop_token stopToken)
   {
+    if (currentState == IndexingServiceState::paused)
+      return index::IndexUpdateSummary{.cancelled = true};
+
     if (batch.events.empty() && !batch.eventsMayBeIncomplete && !batch.requiresRescan)
       return {};
 

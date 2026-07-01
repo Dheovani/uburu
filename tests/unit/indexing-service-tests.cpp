@@ -328,6 +328,53 @@ TEST_CASE("default indexing service reconciles watcher batches as a single index
   CHECK(indexService->requestedWorktree->id == worktree.id);
 }
 
+TEST_CASE("default indexing service pauses and resumes indexing work")
+{
+  const auto worktree = worktreeInfo();
+  auto scanner = std::make_shared<FakeScanner>();
+  auto gitService = std::make_shared<FakeGitService>();
+  auto indexService = std::make_shared<FakeIndexService>();
+
+  scanner->files.push_back(fileEntry(worktree, "src/main.cpp"));
+
+  uburu::app::DefaultIndexingService service(scanner, gitService, indexService);
+
+  service.pause();
+  const auto pausedSummary = service.update(worktree, uburu::SearchOptions{});
+
+  CHECK(service.state() == uburu::app::IndexingServiceState::paused);
+  CHECK(pausedSummary.cancelled);
+  CHECK(scanner->scanCount == 0);
+  CHECK_FALSE(indexService->requestedWorktree.has_value());
+
+  service.resume();
+  const auto resumedSummary = service.update(worktree, uburu::SearchOptions{});
+
+  CHECK(service.state() == uburu::app::IndexingServiceState::running);
+  CHECK(resumedSummary.indexed == 1);
+  CHECK(scanner->scanCount == 1);
+  REQUIRE(indexService->requestedWorktree.has_value());
+  CHECK(indexService->requestedWorktree->id == worktree.id);
+}
+
+TEST_CASE("default indexing service runs manual reindex through the update pipeline")
+{
+  const auto worktree = worktreeInfo();
+  auto scanner = std::make_shared<FakeScanner>();
+  auto gitService = std::make_shared<FakeGitService>();
+  auto indexService = std::make_shared<FakeIndexService>();
+
+  scanner->files.push_back(fileEntry(worktree, "src/manual.cpp"));
+
+  uburu::app::DefaultIndexingService service(scanner, gitService, indexService);
+  const auto summary = service.requestManualReindex(worktree, uburu::SearchOptions{});
+
+  CHECK(summary.indexed == 1);
+  CHECK(scanner->scanCount == 1);
+  REQUIRE(indexService->requestedWorktree.has_value());
+  CHECK(indexService->receivedFiles.front().relativePath == std::filesystem::path("src/manual.cpp"));
+}
+
 TEST_CASE("default indexing service rejects missing dependencies")
 {
   auto scanner = std::make_shared<FakeScanner>();

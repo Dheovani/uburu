@@ -10,10 +10,24 @@
 namespace uburu::app
 {
 
+  enum class IndexingServiceState
+  {
+    running,
+    paused
+  };
+
   class IndexingService
   {
   public:
     virtual ~IndexingService() = default;
+    virtual void pause() = 0;
+    virtual void resume() = 0;
+    [[nodiscard]] virtual IndexingServiceState state() const = 0;
+    [[nodiscard]] virtual index::IndexUpdateSummary
+    requestManualReindex(const WorktreeInfo& worktree,
+                         const SearchOptions& options,
+                         const index::IndexProgressCallback& onProgress = {},
+                         std::stop_token stopToken = {}) = 0;
     [[nodiscard]] virtual index::IndexUpdateSummary update(const WorktreeInfo& worktree,
                                                            const SearchOptions& options,
                                                            const index::IndexProgressCallback& onProgress = {},
@@ -32,6 +46,13 @@ namespace uburu::app
                            std::shared_ptr<const git::GitService> gitService,
                            std::shared_ptr<index::IndexService> indexService);
 
+    void pause() override;
+    void resume() override;
+    [[nodiscard]] IndexingServiceState state() const override;
+    [[nodiscard]] index::IndexUpdateSummary requestManualReindex(const WorktreeInfo& worktree,
+                                                                 const SearchOptions& options,
+                                                                 const index::IndexProgressCallback& onProgress = {},
+                                                                 std::stop_token stopToken = {}) override;
     [[nodiscard]] index::IndexUpdateSummary update(const WorktreeInfo& worktree,
                                                    const SearchOptions& options,
                                                    const index::IndexProgressCallback& onProgress = {},
@@ -46,6 +67,7 @@ namespace uburu::app
     std::shared_ptr<const filesystem::FileScanner> scanner;
     std::shared_ptr<const git::GitService> gitService;
     std::shared_ptr<index::IndexService> indexService;
+    IndexingServiceState currentState{IndexingServiceState::running};
   };
 
 } // namespace uburu::app

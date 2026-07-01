@@ -138,6 +138,148 @@ namespace
     sqlite3_close(database);
   }
 
+  void createLegacyVersionSixDatabase(const std::filesystem::path& databasePath)
+  {
+    sqlite3* database = nullptr;
+    REQUIRE(
+      sqlite3_open_v2(databasePath.string().c_str(), &database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) ==
+      SQLITE_OK);
+
+    executeSql(database, R"sql(
+      PRAGMA foreign_keys = ON;
+
+      CREATE TABLE schema_migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at_unix_ms INTEGER NOT NULL
+      );
+
+      CREATE TABLE repositories (
+        id TEXT PRIMARY KEY,
+        common_git_directory TEXT NOT NULL,
+        worktree_root TEXT,
+        current_branch TEXT,
+        head_oid TEXT NOT NULL,
+        detached_head INTEGER NOT NULL
+      );
+
+      CREATE TABLE worktrees (
+        id TEXT PRIMARY KEY,
+        repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+        root TEXT NOT NULL,
+        git_directory TEXT NOT NULL,
+        branch TEXT,
+        head_oid TEXT NOT NULL,
+        locked INTEGER NOT NULL,
+        prunable INTEGER NOT NULL,
+        lock_reason TEXT NOT NULL
+      );
+
+      CREATE TABLE generations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+        worktree_id TEXT NOT NULL REFERENCES worktrees(id) ON DELETE CASCADE,
+        head_oid TEXT NOT NULL,
+        branch TEXT,
+        created_at_unix_ms INTEGER NOT NULL,
+        published INTEGER NOT NULL
+      );
+
+      CREATE TABLE documents (
+        content_hash TEXT NOT NULL,
+        content_hash_algorithm INTEGER NOT NULL,
+        git_blob_hash TEXT,
+        git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0,
+        size INTEGER NOT NULL,
+        indexed_at_unix_ms INTEGER NOT NULL,
+        format_version INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (content_hash_algorithm, content_hash)
+      );
+
+      CREATE TABLE files (
+        worktree_id TEXT NOT NULL REFERENCES worktrees(id) ON DELETE CASCADE,
+        relative_path TEXT NOT NULL,
+        repository_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+        content_hash TEXT NOT NULL,
+        content_hash_algorithm INTEGER NOT NULL,
+        format_version INTEGER NOT NULL DEFAULT 1,
+        git_blob_hash TEXT,
+        git_blob_hash_algorithm INTEGER NOT NULL DEFAULT 0,
+        status INTEGER NOT NULL,
+        size INTEGER NOT NULL,
+        file_modified_at_ticks INTEGER NOT NULL DEFAULT 0,
+        indexed_at_unix_ms INTEGER NOT NULL,
+        deleted INTEGER NOT NULL,
+        PRIMARY KEY (worktree_id, relative_path),
+        FOREIGN KEY (content_hash_algorithm, content_hash)
+          REFERENCES documents(content_hash_algorithm, content_hash)
+      );
+
+      CREATE TABLE overlays (
+        worktree_id TEXT NOT NULL REFERENCES worktrees(id) ON DELETE CASCADE,
+        relative_path TEXT NOT NULL,
+        previous_relative_path TEXT,
+        status INTEGER NOT NULL,
+        disposition INTEGER NOT NULL,
+        reusable_blob_algorithm INTEGER,
+        reusable_blob_value TEXT,
+        PRIMARY KEY (worktree_id, relative_path)
+      );
+
+      CREATE TABLE preferences (
+        scope_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        updated_at_unix_ms INTEGER NOT NULL,
+        PRIMARY KEY (scope_id, key)
+      );
+
+      CREATE TABLE search_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        root TEXT NOT NULL,
+        expression TEXT NOT NULL,
+        searched_at_unix_ms INTEGER NOT NULL
+      );
+
+      CREATE TABLE saved_searches (
+        name TEXT PRIMARY KEY,
+        root TEXT NOT NULL,
+        expression TEXT NOT NULL,
+        saved_at_unix_ms INTEGER NOT NULL
+      );
+
+      CREATE TABLE indexing_metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        value INTEGER NOT NULL,
+        recorded_at_unix_ms INTEGER NOT NULL
+      );
+
+      INSERT INTO repositories (
+        id, common_git_directory, worktree_root, current_branch, head_oid, detached_head
+      ) VALUES ('repository-id', 'legacy-root/.git', 'legacy-root', 'main', 'abc123', 0);
+
+      INSERT INTO worktrees (
+        id, repository_id, root, git_directory, branch, head_oid, locked, prunable, lock_reason
+      ) VALUES ('worktree-id', 'repository-id', 'legacy-root', 'legacy-root/.git', 'main', 'abc123', 0, 0, '');
+
+      INSERT INTO documents (
+        content_hash, content_hash_algorithm, git_blob_hash, git_blob_hash_algorithm, size, indexed_at_unix_ms,
+        format_version
+      ) VALUES ('legacy-content', 1, 'legacy-blob', 1, 42, 1234, 1);
+
+      INSERT INTO files (
+        worktree_id, relative_path, repository_id, content_hash, content_hash_algorithm, format_version, git_blob_hash,
+        git_blob_hash_algorithm, status, size, file_modified_at_ticks, indexed_at_unix_ms, deleted
+      ) VALUES (
+        'worktree-id', 'src/legacy.cpp', 'repository-id', 'legacy-content', 1, 1, 'legacy-blob', 1, 0, 42, 4, 1234, 0
+      );
+
+      PRAGMA user_version = 6;
+    )sql");
+
+    sqlite3_close(database);
+  }
+
   [[nodiscard]] int unpublishedGenerationCount(const std::filesystem::path& databasePath)
   {
     sqlite3* database = nullptr;
@@ -224,6 +366,34 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
   CHECK_FALSE(document->deleted);
   REQUIRE(document->indexedText.has_value());
   CHECK(*document->indexedText == "indexed\ncontent");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage migrates v6 documents to indexed text schema without dropping catalog entries")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-v6-migration-test");
+  const auto databasePath = directory.path() / "uburu.db";
+
+  createLegacyVersionSixDatabase(databasePath);
+
+  {
+    uburu::storage::SQLiteStorageService storage(databasePath);
+    storage.initialize();
+
+    const auto document = storage.findDocument("worktree-id", "src/legacy.cpp");
+
+    REQUIRE(document.has_value());
+    CHECK(document->contentHash == "legacy-content");
+    CHECK(document->contentHashAlgorithm == uburu::ContentHashAlgorithm::sha256);
+    CHECK_FALSE(document->indexedText.has_value());
+  }
+
+  CHECK(integerScalar(databasePath, "PRAGMA user_version") == 7);
+  CHECK(integerScalar(databasePath,
+                      "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name = 'indexed_text'") == 1);
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

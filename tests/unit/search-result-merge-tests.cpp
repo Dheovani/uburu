@@ -66,6 +66,31 @@ TEST_CASE("search result merge removes duplicate indexed matches")
   CHECK(merged[1].path == std::filesystem::path("src/b.cpp"));
 }
 
+TEST_CASE("search result refinement classifies confirmed added and removed matches")
+{
+  const auto confirmed = result(uburu::SearchResultKind::content, "src/confirmed.cpp", 2, 1, "aaa");
+  const auto removed = result(uburu::SearchResultKind::content, "src/removed.cpp", 3, 1, "bbb");
+  const auto added = result(uburu::SearchResultKind::content, "src/added.cpp", 4, 1, "ccc");
+  const std::vector indexedResults{
+    removed,
+    confirmed,
+  };
+  const std::vector directResults{
+    added,
+    confirmed,
+  };
+
+  const auto refinement = uburu::search::refineSearchResults(indexedResults, directResults, generousResultLimit);
+
+  REQUIRE(refinement.confirmed.size() == 1);
+  REQUIRE(refinement.added.size() == 1);
+  REQUIRE(refinement.removed.size() == 1);
+  CHECK(refinement.confirmed.front().path == std::filesystem::path("src/confirmed.cpp"));
+  CHECK(refinement.added.front().path == std::filesystem::path("src/added.cpp"));
+  CHECK(refinement.removed.front().path == std::filesystem::path("src/removed.cpp"));
+  CHECK(refinement.merged.size() == 3);
+}
+
 TEST_CASE("search result merge respects the result limit after ordering")
 {
   const std::vector indexedResults{

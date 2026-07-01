@@ -24,6 +24,13 @@ namespace uburu::search
                         result.lineText};
     }
 
+    [[nodiscard]] bool containsSameMatch(std::span<const SearchResult> results, const SearchResult& candidate)
+    {
+      return std::ranges::any_of(results, [&](const auto& result) {
+        return searchResultSameMatch(result, candidate);
+      });
+    }
+
   } // namespace
 
   bool searchResultLess(const SearchResult& left, const SearchResult& right)
@@ -34,6 +41,35 @@ namespace uburu::search
   bool searchResultSameMatch(const SearchResult& left, const SearchResult& right)
   {
     return resultSortKey(left) == resultSortKey(right);
+  }
+
+  SearchResultRefinement refineSearchResults(std::span<const SearchResult> indexedResults,
+                                             std::span<const SearchResult> directResults,
+                                             std::size_t resultLimit)
+  {
+    SearchResultRefinement refinement;
+
+    for (const auto& indexedResult : indexedResults) {
+      if (containsSameMatch(directResults, indexedResult)) {
+        refinement.confirmed.push_back(indexedResult);
+
+        continue;
+      }
+
+      refinement.removed.push_back(indexedResult);
+    }
+
+    for (const auto& directResult : directResults) {
+      if (!containsSameMatch(indexedResults, directResult))
+        refinement.added.push_back(directResult);
+    }
+
+    std::ranges::sort(refinement.confirmed, searchResultLess);
+    std::ranges::sort(refinement.added, searchResultLess);
+    std::ranges::sort(refinement.removed, searchResultLess);
+    refinement.merged = mergeSearchResults(indexedResults, directResults, resultLimit);
+
+    return refinement;
   }
 
   std::vector<SearchResult> mergeSearchResults(std::span<const SearchResult> indexedResults,
@@ -48,10 +84,7 @@ namespace uburu::search
     }
 
     for (const auto& result : indexedResults) {
-      const auto duplicate =
-        std::ranges::any_of(merged, [&](const auto& existing) { return searchResultSameMatch(existing, result); });
-
-      if (!duplicate)
+      if (!containsSameMatch(merged, result))
         merged.push_back(result);
     }
 

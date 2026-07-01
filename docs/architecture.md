@@ -3,17 +3,37 @@
 ## Direção de dependências
 
 ```text
-QML -> SearchController -> SearchEngine
-                           |-> FileScanner
-                           |-> TextFileReader
-                           |-> Text matcher
+QML
+  -> SearchController
+    -> SearchService
+      -> SearchEngine
+      -> IndexService
 
+SearchEngine -> FileScanner -> TextFileReader -> Text matcher
 IndexService -> GitService / StorageService / FileScanner
 ```
 
 `uburu_core` é uma biblioteca C++23 sem dependência de Qt. A aplicação desktop conhece o core por interfaces e converte resultados em um `QAbstractListModel`; QML nunca executa busca nem acessa arquivos diretamente.
 
 Os tipos compartilhados ficam em `src/shared/types`. Eles modelam identidade lógica de repositório e worktree, caminho relativo e identidade de conteúdo separadamente. Isso evita transformar caminho em identidade de documento.
+
+## Estratégias de busca
+
+`SearchService` é o ponto de orquestração entre busca direta, busca indexada e busca híbrida. A escolha
+não é inferida implicitamente pela presença de um índice: `SearchServiceOptions::strategy` define se a
+execução usa apenas `SearchEngine`, apenas `IndexService` ou a combinação híbrida.
+
+Na estratégia híbrida, o serviço valida a query uma vez, emite resultados rápidos vindos do índice e
+depois executa a busca direta para confirmar e refinar a visão. A reconciliação usa
+`search::refineSearchResults()`, que classifica resultados como confirmados, adicionados ou removidos e
+mantém uma ordenação determinística. A camada de UI ainda recebe somente resultados progressivos nesta
+fase; eventos explícitos de confirmação/remoção pertencem ao canal de eventos do Marco 7.
+
+`SearchService::searchWithEvents()` é o contrato inicial desse canal. Cada execução recebe um
+`SearchRunId`, emite um evento `started`, publica resultados em batches e finaliza com `completed`,
+`cancelled` ou `failed`. O `runId` permite que controllers descartem eventos atrasados de buscas antigas
+sem depender de estado global. O serviço mede `timeToFirstResult` e `totalTime` no nível da estratégia
+selecionada, cobrindo busca direta, indexada e híbrida.
 
 ## Concorrência
 

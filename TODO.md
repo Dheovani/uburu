@@ -207,15 +207,15 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 7 — Serviço de busca e observabilidade (P1)
 
-- [ ] Fazer `SearchService` selecionar busca direta, indexada ou híbrida por política explícita.
+- [x] Fazer `SearchService` selecionar busca direta, indexada ou híbrida por política explícita.
 - [ ] Separar DTOs de aplicação dos tipos de persistência e detalhes dos engines.
-- [ ] Criar canal de eventos para progresso, resultados, correções e erros.
-- [ ] Adicionar IDs de busca para descartar eventos atrasados de consultas canceladas.
+- [x] Criar canal de eventos para progresso, resultados, correções e erros.
+- [x] Adicionar IDs de busca para descartar eventos atrasados de consultas canceladas.
 - [ ] Implementar batching adaptativo de resultados para a UI.
-- [ ] Medir tempo até o primeiro resultado e tempo total em todas as estratégias.
-- [ ] Implementar `MetricsSink` concreto e logging estruturado.
+- [x] Medir tempo até o primeiro resultado e tempo total em todas as estratégias.
+- [x] Implementar `MetricsSink` concreto e logging estruturado.
 - [ ] Adicionar níveis, categorias e rotação de logs.
-- [ ] Remover ou mascarar conteúdo e caminhos sensíveis dos logs por padrão.
+- [x] Remover ou mascarar conteúdo e caminhos sensíveis dos logs por padrão.
 - [ ] Medir arquivos/bytes por segundo, filas, cache hit e reuso por hash.
 - [ ] Medir memória aproximada e detectar crescimento entre buscas.
 - [ ] Criar modo/tela de diagnóstico exportável.

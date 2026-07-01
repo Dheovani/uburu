@@ -1,4 +1,6 @@
 add_library(uburu_core STATIC
+  diagnostics/structured-logger.cpp
+  diagnostics/structured-metrics-sink.cpp
   filesystem/git-ignore-rules.cpp
   filesystem/path-normalization.cpp
   filesystem/polling-file-watcher.cpp

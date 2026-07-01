@@ -154,6 +154,71 @@ TEST_CASE("default search service rejects a missing direct engine")
   CHECK_THROWS_AS(uburu::app::DefaultSearchService(nullptr), std::invalid_argument);
 }
 
+TEST_CASE("default search service uses direct strategy explicitly")
+{
+  TemporaryDirectory directory("uburu-search-service-direct-policy-test");
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  auto indexService = std::make_shared<FakeIndexService>();
+
+  directEngine->results = {result(uburu::SearchResultKind::content, "src/direct.cpp", 1, "needle direct")};
+  indexService->results = {result(uburu::SearchResultKind::content, "src/indexed.cpp", 1, "needle indexed")};
+
+  const uburu::app::DefaultSearchService service(
+    directEngine, indexService, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::direct});
+  std::vector<uburu::SearchResult> emittedResults;
+  const auto summary = service.search(validQuery(directory.path()), [&](uburu::SearchResult searchResult) {
+    emittedResults.push_back(std::move(searchResult));
+
+    return true;
+  });
+
+  REQUIRE(emittedResults.size() == 1);
+  CHECK(emittedResults.front().path == std::filesystem::path("src/direct.cpp"));
+  CHECK(summary.filesScanned == directEngine->scannedFiles);
+  CHECK(directEngine->calls == 1);
+  CHECK(indexService->calls == 0);
+}
+
+TEST_CASE("default search service uses indexed strategy explicitly")
+{
+  TemporaryDirectory directory("uburu-search-service-indexed-policy-test");
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  auto indexService = std::make_shared<FakeIndexService>();
+
+  directEngine->results = {result(uburu::SearchResultKind::content, "src/direct.cpp", 1, "needle direct")};
+  indexService->results = {result(uburu::SearchResultKind::content, "src/indexed.cpp", 1, "needle indexed")};
+
+  const uburu::app::DefaultSearchService service(
+    directEngine, indexService, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::indexed});
+  std::vector<uburu::SearchResult> emittedResults;
+  const auto summary = service.search(validQuery(directory.path()), [&](uburu::SearchResult searchResult) {
+    emittedResults.push_back(std::move(searchResult));
+
+    return true;
+  });
+
+  REQUIRE(emittedResults.size() == 1);
+  CHECK(emittedResults.front().path == std::filesystem::path("src/indexed.cpp"));
+  CHECK(summary.matches == emittedResults.size());
+  CHECK(summary.metrics.resultsEmitted == emittedResults.size());
+  CHECK(directEngine->calls == 0);
+  CHECK(indexService->calls == 1);
+}
+
+TEST_CASE("default search service rejects indexed strategies without an index service")
+{
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+
+  CHECK_THROWS_AS(
+    uburu::app::DefaultSearchService(
+      directEngine, nullptr, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::indexed}),
+    std::invalid_argument);
+  CHECK_THROWS_AS(
+    uburu::app::DefaultSearchService(
+      directEngine, nullptr, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::hybrid}),
+    std::invalid_argument);
+}
+
 TEST_CASE("default search service emits indexed results before direct refinements")
 {
   TemporaryDirectory directory("uburu-search-service-hybrid-test");
@@ -194,6 +259,76 @@ TEST_CASE("default search service validates hybrid queries before consulting sou
   uburu::SearchQuery query{.root = "missing-root", .expression = "needle", .options = {}};
   const auto summary = service.search(query, [](uburu::SearchResult) { return true; });
 
+  CHECK_FALSE(summary.errors.empty());
+  CHECK(indexService->calls == 0);
+  CHECK(directEngine->calls == 0);
+}
+
+TEST_CASE("default search service emits run scoped result batches")
+{
+  constexpr uburu::app::SearchRunId runId = 42;
+  constexpr std::size_t batchSize = 2;
+
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  std::vector<uburu::app::SearchEvent> events;
+
+  directEngine->results = {
+    result(uburu::SearchResultKind::content, "src/a.cpp", 1, "needle a"),
+    result(uburu::SearchResultKind::content, "src/b.cpp", 2, "needle b"),
+    result(uburu::SearchResultKind::content, "src/c.cpp", 3, "needle c"),
+  };
+
+  const uburu::app::DefaultSearchService service(directEngine);
+  const auto summary = service.searchWithEvents(
+    uburu::SearchQuery{},
+    [&](const uburu::app::SearchEvent& event) {
+      events.push_back(event);
+
+      return true;
+    },
+    uburu::app::SearchExecutionOptions{.runId = runId, .resultBatchSize = batchSize});
+
+  REQUIRE(events.size() == 4);
+  CHECK(events[0].kind == uburu::app::SearchEventKind::started);
+  CHECK(events[1].kind == uburu::app::SearchEventKind::resultBatch);
+  CHECK(events[1].results.size() == batchSize);
+  CHECK(events[2].kind == uburu::app::SearchEventKind::resultBatch);
+  CHECK(events[2].results.size() == 1);
+  CHECK(events[3].kind == uburu::app::SearchEventKind::completed);
+
+  for (const auto& event : events) {
+    CHECK(event.runId == runId);
+  }
+
+  CHECK(summary.matches == directEngine->results.size());
+  CHECK(summary.metrics.resultsEmitted == directEngine->results.size());
+  CHECK(summary.metrics.totalTime.count() >= 0);
+}
+
+TEST_CASE("default search service emits failed events for invalid hybrid queries")
+{
+  constexpr uburu::app::SearchRunId runId = 13;
+
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  auto indexService = std::make_shared<FakeIndexService>();
+  std::vector<uburu::app::SearchEvent> events;
+  const uburu::app::DefaultSearchService service(
+    directEngine, indexService, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::hybrid});
+
+  uburu::SearchQuery query{.root = "missing-root", .expression = "needle", .options = {}};
+  const auto summary = service.searchWithEvents(
+    query,
+    [&](const uburu::app::SearchEvent& event) {
+      events.push_back(event);
+
+      return true;
+    },
+    uburu::app::SearchExecutionOptions{.runId = runId});
+
+  REQUIRE(events.size() == 2);
+  CHECK(events[0].kind == uburu::app::SearchEventKind::started);
+  CHECK(events[1].kind == uburu::app::SearchEventKind::failed);
+  CHECK(events[1].runId == runId);
   CHECK_FALSE(summary.errors.empty());
   CHECK(indexService->calls == 0);
   CHECK(directEngine->calls == 0);

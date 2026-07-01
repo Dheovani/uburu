@@ -25,7 +25,8 @@ namespace uburu::storage
     constexpr int metadataSchemaVersion = 4;
     constexpr int documentFormatSchemaVersion = 5;
     constexpr int fileModifiedAtSchemaVersion = 6;
-    constexpr int currentSchemaVersion = fileModifiedAtSchemaVersion;
+    constexpr int indexedTextSchemaVersion = 7;
+    constexpr int currentSchemaVersion = indexedTextSchemaVersion;
     constexpr int defaultDocumentFormatVersion = static_cast<int>(latestIndexDocumentFormatVersion);
     constexpr int sqliteOk = SQLITE_OK;
     constexpr int sqliteDone = SQLITE_DONE;
@@ -165,7 +166,8 @@ namespace uburu::storage
                            .size = static_cast<std::uintmax_t>(sqlite3_column_int64(row, 9)),
                            .modifiedAt = fromFileTimeTicks(sqlite3_column_int64(row, 10)),
                            .indexedAt = fromUnixMilliseconds(sqlite3_column_int64(row, 11)),
-                           .deleted = sqlite3_column_int(row, 12) != 0};
+                           .deleted = sqlite3_column_int(row, 12) != 0,
+                           .indexedText = optionalText(row, 13)};
     }
 
     [[nodiscard]] std::string preferenceScope(std::optional<RepositoryId> repositoryId)
@@ -427,7 +429,8 @@ namespace uburu::storage
             content_hash TEXT PRIMARY KEY,
             git_blob_hash TEXT,
             size INTEGER NOT NULL,
-            indexed_at_unix_ms INTEGER NOT NULL
+            indexed_at_unix_ms INTEGER NOT NULL,
+            indexed_text TEXT
           );
         )sql");
         execute(database, R"sql(
@@ -721,6 +724,29 @@ namespace uburu::storage
       }
     }
 
+    void applyIndexedTextMigration(sqlite3* database)
+    {
+      execute(database, "BEGIN IMMEDIATE");
+      try {
+        addColumnIfMissing(database, "documents", "indexed_text", "indexed_text TEXT");
+
+        Statement migrationStatement(database, R"sql(
+          INSERT OR IGNORE INTO schema_migrations (version, applied_at_unix_ms)
+          VALUES (?, ?);
+        )sql");
+
+        migrationStatement.bindInt64(1, indexedTextSchemaVersion);
+        migrationStatement.bindInt64(2, toUnixMilliseconds(std::chrono::system_clock::now()));
+        migrationStatement.executeDone();
+        execute(database, "PRAGMA user_version = " + std::to_string(indexedTextSchemaVersion));
+        execute(database, "COMMIT");
+      } catch (...) {
+        execute(database, "ROLLBACK");
+
+        throw;
+      }
+    }
+
     void applyMigrations(sqlite3* database)
     {
       if (schemaVersion(database) < hashAlgorithmSchemaVersion)
@@ -737,6 +763,9 @@ namespace uburu::storage
 
       if (schemaVersion(database) < fileModifiedAtSchemaVersion)
         applyFileModifiedAtMigration(database);
+
+      if (schemaVersion(database) < indexedTextSchemaVersion)
+        applyIndexedTextMigration(database);
 
       if (schemaVersion(database) != currentSchemaVersion)
         throw std::runtime_error("SQLite database schema version is newer than this build supports");
@@ -760,15 +789,16 @@ namespace uburu::storage
       Statement documentStatement(database, R"sql(
         INSERT INTO documents (
           content_hash, content_hash_algorithm, format_version, git_blob_hash, git_blob_hash_algorithm, size,
-          indexed_at_unix_ms
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          indexed_at_unix_ms, indexed_text
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(content_hash_algorithm, content_hash) DO UPDATE SET
           content_hash_algorithm = excluded.content_hash_algorithm,
           format_version = excluded.format_version,
           git_blob_hash = COALESCE(excluded.git_blob_hash, documents.git_blob_hash),
           git_blob_hash_algorithm = excluded.git_blob_hash_algorithm,
           size = excluded.size,
-          indexed_at_unix_ms = excluded.indexed_at_unix_ms;
+          indexed_at_unix_ms = excluded.indexed_at_unix_ms,
+          indexed_text = COALESCE(excluded.indexed_text, documents.indexed_text);
       )sql");
 
       documentStatement.bindText(1, document.contentHash);
@@ -778,6 +808,7 @@ namespace uburu::storage
       documentStatement.bindInt64(5, static_cast<std::int64_t>(document.gitBlobHashAlgorithm));
       documentStatement.bindInt64(6, static_cast<std::int64_t>(document.size));
       documentStatement.bindInt64(7, toUnixMilliseconds(document.indexedAt));
+      documentStatement.bindOptionalText(8, document.indexedText);
       documentStatement.executeDone();
 
       Statement fileStatement(database, R"sql(
@@ -1418,10 +1449,15 @@ namespace uburu::storage
 #if defined(UBURU_HAS_SQLITE)
     auto* database = requireDatabase(databaseHandle);
     Statement statement(database, R"sql(
-      SELECT repository_id, worktree_id, relative_path, content_hash, content_hash_algorithm, format_version,
-             git_blob_hash, git_blob_hash_algorithm, status, size, file_modified_at_ticks, indexed_at_unix_ms, deleted
+      SELECT files.repository_id, files.worktree_id, files.relative_path, files.content_hash,
+             files.content_hash_algorithm, files.format_version, files.git_blob_hash, files.git_blob_hash_algorithm,
+             files.status, files.size, files.file_modified_at_ticks, files.indexed_at_unix_ms, files.deleted,
+             documents.indexed_text
       FROM files
-      WHERE worktree_id = ? AND relative_path = ?;
+      INNER JOIN documents
+        ON documents.content_hash_algorithm = files.content_hash_algorithm
+       AND documents.content_hash = files.content_hash
+      WHERE files.worktree_id = ? AND files.relative_path = ?;
     )sql");
 
     statement.bindText(1, worktreeId);
@@ -1446,8 +1482,12 @@ namespace uburu::storage
     Statement statement(database, R"sql(
       SELECT files.repository_id, files.worktree_id, files.relative_path, files.content_hash,
              files.content_hash_algorithm, files.format_version, files.git_blob_hash, files.git_blob_hash_algorithm,
-             files.status, files.size, files.file_modified_at_ticks, files.indexed_at_unix_ms, files.deleted
+             files.status, files.size, files.file_modified_at_ticks, files.indexed_at_unix_ms, files.deleted,
+             documents.indexed_text
       FROM files
+      INNER JOIN documents
+        ON documents.content_hash_algorithm = files.content_hash_algorithm
+       AND documents.content_hash = files.content_hash
       INNER JOIN worktrees ON worktrees.id = files.worktree_id
       WHERE worktrees.root = ? AND files.deleted = 0
       ORDER BY files.relative_path ASC;

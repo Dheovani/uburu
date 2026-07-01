@@ -195,12 +195,12 @@ e UI para avançarem mais rapidamente.
 - [x] Ocultar deletados e substituir modificados sem resultados obsoletos.
 - [x] Reconciliar eventos do watcher em batches transacionais.
 - [x] Detectar staleness do índice e expor estado via `IndexService`.
-- [ ] Implementar busca indexada por conteúdo e metadados.
+- [x] Implementar busca indexada por conteúdo e metadados.
   - [x] Implementar busca indexada inicial por metadados de caminho.
-  - [ ] Persistir e consultar conteúdo indexado sem depender apenas de hash.
+  - [x] Persistir e consultar conteúdo indexado sem depender apenas de hash.
 - [ ] Combinar resultado rápido do índice com validação direta.
 - [ ] Atualizar, confirmar ou remover resultados durante refinamento.
-- [ ] Definir ranking e merge determinísticos entre fontes.
+- [x] Definir ranking e merge determinísticos entre fontes.
 - [x] Implementar orçamento de disco e política de eviction.
 - [ ] Versionar schema e formato para upgrades sem perda desnecessária do cache.
 - [ ] Implementar pausa, retomada e reindexação manual.

@@ -16,6 +16,7 @@ add_executable(uburu_core_tests
   unit/recursive-file-scanner-tests.cpp
   unit/regex-matcher-tests.cpp
   unit/search-query-validation-tests.cpp
+  unit/search-result-merge-tests.cpp
   unit/search-service-tests.cpp
   unit/sqlite-storage-service-tests.cpp
   unit/text-file-reader-tests.cpp

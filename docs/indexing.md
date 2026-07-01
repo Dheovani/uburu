@@ -81,11 +81,13 @@ worktree, lê `GitService::workingTreeOverlay()` e só então chama o `IndexServ
 puder ser lido, a atualização retorna falha e não publica uma geração nova, evitando substituir um índice
 Git-aware por uma visão cega da árvore de arquivos.
 
-A primeira busca indexada consulta documentos visíveis por raiz de worktree e suporta metadados de caminho
-para `fileName`/`contentAndFileName`. Ela ignora tombstones (`deleted = true`) e, portanto, não retorna o
-caminho antigo de um arquivo deletado ou renomeado localmente. Busca indexada por conteúdo permanece
-pendente até o storage persistir conteúdo tokenizado/FTS ou outro backend equivalente; até lá, consultas
-`content` não fabricam resultados a partir de hashes.
+A busca indexada consulta documentos visíveis por raiz de worktree e suporta metadados de caminho para
+`fileName`/`contentAndFileName`. Ela ignora tombstones (`deleted = true`) e, portanto, não retorna o
+caminho antigo de um arquivo deletado ou renomeado localmente. O primeiro suporte a conteúdo persistido
+armazena texto normalizado em `documents.indexed_text`, endereçado pelo hash de conteúdo. Isso permite
+consultas `content` reais sem reler a working tree e sem fabricar resultados a partir de hashes. Essa
+representação ainda não substitui um backend textual mais sofisticado: tokenização, FTS, compactação,
+ranking e highlights globais continuam evoluções futuras.
 
 `IndexService::staleness()` compara a última geração publicada para a raiz da worktree com o `HEAD` e a
 branch atuais. O estado resultante diferencia índice ausente, fresco e obsoleto, além de indicar se a

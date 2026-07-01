@@ -406,13 +406,13 @@ TEST_CASE("persistent index search hides deleted paths and returns modified repl
 #endif
 }
 
-TEST_CASE("persistent index search does not pretend to support indexed content before content storage")
+TEST_CASE("persistent index search returns indexed content matches")
 {
 #if defined(UBURU_HAS_SQLITE)
   TemporaryDirectory directory("uburu-persistent-index-search-content-test");
   const auto root = directory.path() / "repo";
 
-  writeFile(root / "src" / "main.cpp", "needle\n");
+  writeFile(root / "src" / "main.cpp", "before\nneedle here\nafter\n");
 
   uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
   storage.initialize();
@@ -429,8 +429,16 @@ TEST_CASE("persistent index search does not pretend to support indexed content b
   uburu::SearchQuery query{.root = root, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
+  const auto results = indexService.search(query);
+
   CHECK(summary.indexed == 1);
-  CHECK(indexService.search(query).empty());
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().kind == uburu::SearchResultKind::content);
+  CHECK(results.front().path == std::filesystem::path("src/main.cpp"));
+  CHECK(results.front().line == 2);
+  CHECK(results.front().lineText == "needle here");
+  CHECK(results.front().column == 1);
+  CHECK(results.front().matchLength == 6);
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

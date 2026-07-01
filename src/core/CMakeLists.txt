@@ -13,6 +13,7 @@ add_library(uburu_core STATIC
   search/direct-search-engine.cpp
   search/search-errors.cpp
   search/search-query-validation.cpp
+  search/search-result-merge.cpp
   search/search-scope.cpp
   storage/storage-paths.cpp
   storage/sqlite-storage-service.cpp

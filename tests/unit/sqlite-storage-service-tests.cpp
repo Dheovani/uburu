@@ -186,6 +186,7 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
 
   {
     auto document = indexDocument("content123");
+    document.indexedText = "indexed\ncontent";
     REQUIRE(document.modifiedAt == std::filesystem::file_time_type{std::chrono::seconds{4}});
     REQUIRE(document.modifiedAt.time_since_epoch().count() != 0);
 
@@ -221,6 +222,8 @@ TEST_CASE("sqlite storage persists repositories worktrees and documents")
   CHECK(document->modifiedAt == std::filesystem::file_time_type{std::chrono::seconds{4}});
   CHECK(document->indexedAt == std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}});
   CHECK_FALSE(document->deleted);
+  REQUIRE(document->indexedText.has_value());
+  CHECK(*document->indexedText == "indexed\ncontent");
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

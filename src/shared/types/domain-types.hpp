@@ -235,6 +235,7 @@ namespace uburu
     std::filesystem::file_time_type modifiedAt{};
     std::chrono::system_clock::time_point indexedAt{};
     bool deleted{false};
+    std::optional<std::string> indexedText;
   };
 
   struct IndexedDocumentIdentity

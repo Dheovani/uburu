@@ -3,9 +3,11 @@
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
 #include "core/text/regex-matcher.hpp"
+#include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
 
 #include <chrono>
+#include <deque>
 #include <exception>
 #include <optional>
 #include <string>
@@ -68,7 +70,8 @@ namespace uburu::index
     [[nodiscard]] IndexDocument makeIndexDocument(const WorktreeInfo& worktree,
                                                   const FileEntry& file,
                                                   const IndexFileMetadata& metadata,
-                                                  const ContentHash& contentHash)
+                                                  const ContentHash& contentHash,
+                                                  std::string indexedText)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -82,7 +85,8 @@ namespace uburu::index
                            .size = file.size,
                            .modifiedAt = file.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
-                           .deleted = false};
+                           .deleted = false,
+                           .indexedText = std::move(indexedText)};
     }
 
     [[nodiscard]] IndexDocument makeDeletedIndexDocument(const WorktreeInfo& worktree,
@@ -158,6 +162,37 @@ namespace uburu::index
       return query.options.target == SearchTarget::fileName || query.options.target == SearchTarget::contentAndFileName;
     }
 
+    [[nodiscard]] bool searchesContent(const SearchQuery& query)
+    {
+      return query.options.target == SearchTarget::content || query.options.target == SearchTarget::contentAndFileName;
+    }
+
+    [[nodiscard]] std::optional<std::string>
+    readIndexedText(const FileEntry& file, const SearchOptions& options, std::stop_token stopToken)
+    {
+      std::string indexedText;
+      bool firstLine = true;
+
+      const auto summary = text::readTextFileLines(
+        file.absolutePath,
+        options,
+        [&](const text::TextLine& line) {
+          if (!firstLine)
+            indexedText.push_back('\n');
+
+          indexedText += line.text;
+          firstLine = false;
+
+          return true;
+        },
+        stopToken);
+
+      if (summary.status != text::TextReadStatus::completed)
+        return std::nullopt;
+
+      return indexedText;
+    }
+
     [[nodiscard]] std::vector<text::MatchPosition> indexedPathMatches(std::string_view pathText,
                                                                       const SearchQuery& query,
                                                                       const std::optional<text::RegexMatcher>& regex)
@@ -166,6 +201,134 @@ namespace uburu::index
         return regex->findAll(pathText).matches;
 
       return text::findAllLiterals(pathText, query.expression, query.options);
+    }
+
+    [[nodiscard]] std::optional<std::vector<text::MatchPosition>>
+    indexedTextMatches(std::string_view text, const SearchQuery& query, const std::optional<text::RegexMatcher>& regex)
+    {
+      if (regex) {
+        const auto matchResult = regex->findAll(text);
+
+        if (matchResult.status != text::RegexMatchStatus::completed)
+          return std::nullopt;
+
+        return matchResult.matches;
+      }
+
+      return text::findAllLiterals(text, query.expression, query.options);
+    }
+
+    [[nodiscard]] std::vector<MatchSpan> makeHighlights(std::string_view lineText,
+                                                        const std::vector<text::MatchPosition>& matches)
+    {
+      std::vector<MatchSpan> highlights;
+      highlights.reserve(matches.size());
+
+      for (const auto& match : matches) {
+        highlights.push_back(MatchSpan{.column = text::visualColumnForByteOffset(lineText, match.offset),
+                                       .byteOffset = match.offset,
+                                       .byteLength = match.length});
+      }
+
+      return highlights;
+    }
+
+    [[nodiscard]] SearchResult makeIndexedResult(const IndexDocument& document,
+                                                 SearchResultKind kind,
+                                                 std::size_t line,
+                                                 std::string_view lineText,
+                                                 const text::MatchPosition& match,
+                                                 const std::vector<text::MatchPosition>& matches,
+                                                 const SearchQuery& query,
+                                                 const std::deque<std::string>& contextBefore)
+    {
+      return SearchResult{.kind = kind,
+                          .path = document.relativePath,
+                          .line = line,
+                          .column = text::visualColumnForByteOffset(lineText, match.offset),
+                          .matchLength = match.length,
+                          .lineText = std::string{lineText},
+                          .highlights = makeHighlights(lineText, matches),
+                          .contextBefore = {contextBefore.begin(), contextBefore.end()},
+                          .contextAfter = {},
+                          .searchRoot = query.root};
+    }
+
+    [[nodiscard]] bool appendIndexedResults(const IndexDocument& document,
+                                            SearchResultKind kind,
+                                            std::size_t line,
+                                            std::string_view lineText,
+                                            const std::vector<text::MatchPosition>& matches,
+                                            const SearchQuery& query,
+                                            std::size_t& fileMatches,
+                                            const std::deque<std::string>& contextBefore,
+                                            std::vector<SearchResult>& results)
+    {
+      for (const auto& match : matches) {
+        if (results.size() >= query.options.resultLimit)
+          return false;
+
+        if (fileMatches >= query.options.perFileResultLimit)
+          return true;
+
+        ++fileMatches;
+        results.push_back(makeIndexedResult(document, kind, line, lineText, match, matches, query, contextBefore));
+      }
+
+      return true;
+    }
+
+    void rememberContextLine(std::deque<std::string>& context, std::string_view lineText, const SearchQuery& query)
+    {
+      context.push_back(std::string{lineText});
+
+      while (context.size() > query.options.contextBeforeLines) {
+        context.pop_front();
+      }
+    }
+
+    bool appendIndexedContentResults(const IndexDocument& document,
+                                     std::string_view indexedText,
+                                     const SearchQuery& query,
+                                     const std::optional<text::RegexMatcher>& regex,
+                                     std::size_t& fileMatches,
+                                     std::vector<SearchResult>& results)
+    {
+      std::deque<std::string> contextBefore;
+      std::size_t lineNumber = 0;
+      std::size_t lineStart = 0;
+
+      while (lineStart < indexedText.size()) {
+        const auto lineEnd = indexedText.find('\n', lineStart);
+        const auto lineSize = lineEnd == std::string_view::npos ? indexedText.size() - lineStart : lineEnd - lineStart;
+        const auto lineText = indexedText.substr(lineStart, lineSize);
+        ++lineNumber;
+
+        const auto matches = indexedTextMatches(lineText, query, regex);
+
+        if (!matches)
+          return false;
+
+        if (!matches->empty() && !appendIndexedResults(document,
+                                                       SearchResultKind::content,
+                                                       lineNumber,
+                                                       lineText,
+                                                       *matches,
+                                                       query,
+                                                       fileMatches,
+                                                       contextBefore,
+                                                       results))
+          return false;
+
+        rememberContextLine(contextBefore, lineText, query);
+
+        if (lineEnd == std::string_view::npos)
+          break;
+
+        lineStart = lineEnd + 1;
+      }
+
+      return true;
     }
 
     [[nodiscard]] std::optional<text::RegexMatcher> compileIndexedRegex(const SearchQuery& query)
@@ -285,6 +448,22 @@ namespace uburu::index
         break;
       }
 
+      const auto indexedText = readIndexedText(file, SearchOptions{}, stopToken);
+
+      if (!indexedText) {
+        if (stopToken.stop_requested()) {
+          summary.cancelled = true;
+
+          break;
+        }
+
+        ++summary.failed;
+        ++progress.failed;
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
       const auto hashKey = reusableDocumentKey(contentHash->algorithm, contentHash->value);
       const auto alreadySeenInUpdate = hashesSeenInUpdate.contains(hashKey);
       const auto alreadyStored =
@@ -299,7 +478,7 @@ namespace uburu::index
       }
 
       hashesSeenInUpdate.insert(hashKey);
-      documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash));
+      documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, *indexedText));
       publishProgress(onProgress, progress);
     }
 
@@ -346,7 +525,7 @@ namespace uburu::index
 
   std::vector<SearchResult> PersistentIndexService::search(const SearchQuery& query, std::stop_token stopToken) const
   {
-    if (query.expression.empty() || !searchesFileName(query))
+    if (query.expression.empty() || (!searchesFileName(query) && !searchesContent(query)))
       return {};
 
     auto regex = compileIndexedRegex(query);
@@ -361,28 +540,20 @@ namespace uburu::index
       if (stopToken.stop_requested())
         break;
 
-      const auto pathText = document.relativePath.generic_string();
-      const auto matches = indexedPathMatches(pathText, query, regex);
+      std::size_t fileMatches = 0;
 
-      if (matches.empty())
-        continue;
+      if (searchesFileName(query)) {
+        const auto pathText = document.relativePath.generic_string();
+        const auto matches = indexedPathMatches(pathText, query, regex);
 
-      for (const auto& match : matches) {
-        if (results.size() >= query.options.resultLimit)
+        if (!appendIndexedResults(
+              document, SearchResultKind::fileName, 0, pathText, matches, query, fileMatches, {}, results))
           return results;
-
-        results.push_back(SearchResult{
-          .kind = SearchResultKind::fileName,
-          .path = document.relativePath,
-          .line = 0,
-          .column = match.offset + 1,
-          .matchLength = match.length,
-          .lineText = pathText,
-          .highlights = {MatchSpan{.column = match.offset + 1, .byteOffset = match.offset, .byteLength = match.length}},
-          .contextBefore = {},
-          .contextAfter = {},
-          .searchRoot = query.root});
       }
+
+      if (searchesContent(query) && document.indexedText &&
+          !appendIndexedContentResults(document, *document.indexedText, query, regex, fileMatches, results))
+        return results;
     }
 
     return results;

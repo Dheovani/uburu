@@ -21,7 +21,7 @@ Na inicialização, o backend configura e expõe por `pragmaSnapshot()`:
 - `PRAGMA journal_mode = WAL`;
 - `PRAGMA synchronous = NORMAL`;
 - `sqlite3_busy_timeout` com timeout inicial de 5 segundos;
-- `PRAGMA user_version = 5`;
+- `PRAGMA user_version = 7`;
 - tabela `schema_migrations` para registrar versões aplicadas.
 
 Esses pragmas são parte do contrato operacional do storage. Testes automatizados verificam que o banco
@@ -52,6 +52,7 @@ O schema evolui por migrations idempotentes:
 4. metadados de produto: `preferences`, `search_history`, `saved_searches` e `indexing_metrics`.
 5. versão explícita do formato interno de documentos indexados em `documents` e `files`.
 6. `mtime` persistido em `files` para permitir reuso incremental conservador por catálogo.
+7. texto indexado normalizado em `documents.indexed_text` para busca de conteúdo sem reler arquivos.
 
 Tabelas principais:
 
@@ -79,6 +80,11 @@ diferentes que produzam a mesma representação textual.
 `documents` e `files` também armazenam `format_version`. Essa versão descreve o formato interno do
 documento indexado, não a versão do schema SQLite. Ela permite que versões futuras do Uburu migrem,
 reutilizem ou descartem documentos de cache com segurança sem depender apenas da estrutura das tabelas.
+
+`documents.indexed_text` armazena a primeira representação textual persistida do conteúdo. O campo é
+endereçado pelo mesmo hash do documento, então múltiplos caminhos, branches ou worktrees podem reutilizar
+o mesmo texto indexado quando apontarem para conteúdo idêntico. A representação inicial é texto
+normalizado por linha e ainda não substitui tokenização, FTS ou compactação futuras.
 
 `files` armazena o `mtime` como ticks nativos de `std::filesystem::file_time_type`. Esse valor não é
 tratado como data de usuário nem como timestamp Unix; ele existe para round-trip local e comparação

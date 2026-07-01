@@ -1,0 +1,66 @@
+#include "core/search/search-result-merge.hpp"
+
+#include <algorithm>
+#include <tuple>
+
+namespace uburu::search
+{
+  namespace
+  {
+
+    [[nodiscard]] int resultKindRank(SearchResultKind kind)
+    {
+      return kind == SearchResultKind::fileName ? 0 : 1;
+    }
+
+    [[nodiscard]] auto resultSortKey(const SearchResult& result)
+    {
+      return std::tuple{result.searchRoot.generic_string(),
+                        result.path.generic_string(),
+                        resultKindRank(result.kind),
+                        result.line,
+                        result.column,
+                        result.matchLength,
+                        result.lineText};
+    }
+
+  } // namespace
+
+  bool searchResultLess(const SearchResult& left, const SearchResult& right)
+  {
+    return resultSortKey(left) < resultSortKey(right);
+  }
+
+  bool searchResultSameMatch(const SearchResult& left, const SearchResult& right)
+  {
+    return resultSortKey(left) == resultSortKey(right);
+  }
+
+  std::vector<SearchResult> mergeSearchResults(std::span<const SearchResult> indexedResults,
+                                               std::span<const SearchResult> directResults,
+                                               std::size_t resultLimit)
+  {
+    std::vector<SearchResult> merged;
+    merged.reserve(indexedResults.size() + directResults.size());
+
+    for (const auto& result : directResults) {
+      merged.push_back(result);
+    }
+
+    for (const auto& result : indexedResults) {
+      const auto duplicate =
+        std::ranges::any_of(merged, [&](const auto& existing) { return searchResultSameMatch(existing, result); });
+
+      if (!duplicate)
+        merged.push_back(result);
+    }
+
+    std::ranges::sort(merged, searchResultLess);
+
+    if (merged.size() > resultLimit)
+      merged.resize(resultLimit);
+
+    return merged;
+  }
+
+} // namespace uburu::search

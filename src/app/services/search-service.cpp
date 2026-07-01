@@ -30,27 +30,33 @@ namespace uburu::app
       return batchSize;
     }
 
-    [[nodiscard]] SearchEvent makeEvent(SearchRunId runId,
-                                        SearchEventKind kind,
-                                        search::SearchSummary summary,
-                                        std::chrono::steady_clock::time_point startedAt)
+    [[nodiscard]] SearchEventDto makeEvent(SearchRunId runId,
+                                           SearchEventKind kind,
+                                           search::SearchSummary summary,
+                                           std::chrono::steady_clock::time_point startedAt)
     {
-      return SearchEvent{.runId = runId,
-                         .kind = kind,
-                         .results = {},
-                         .summary = std::move(summary),
-                         .elapsed = std::chrono::steady_clock::now() - startedAt};
+      SearchEventDto event;
+
+      event.runId = runId;
+      event.kind = kind;
+      event.summary = toSearchSummaryDto(summary);
+      event.elapsed = std::chrono::steady_clock::now() - startedAt;
+
+      return event;
     }
 
-    [[nodiscard]] SearchEvent makeResultBatchEvent(SearchRunId runId,
-                                                   std::vector<SearchResult> results,
-                                                   std::chrono::steady_clock::time_point startedAt)
+    [[nodiscard]] SearchEventDto makeResultBatchEvent(SearchRunId runId,
+                                                      std::vector<SearchResultDto> results,
+                                                      std::chrono::steady_clock::time_point startedAt)
     {
-      return SearchEvent{.runId = runId,
-                         .kind = SearchEventKind::resultBatch,
-                         .results = std::move(results),
-                         .summary = {},
-                         .elapsed = std::chrono::steady_clock::now() - startedAt};
+      SearchEventDto event;
+
+      event.runId = runId;
+      event.kind = SearchEventKind::resultBatch;
+      event.results = std::move(results);
+      event.elapsed = std::chrono::steady_clock::now() - startedAt;
+
+      return event;
     }
 
     [[nodiscard]] SearchEventKind completionEventKind(const search::SearchSummary& summary)
@@ -192,7 +198,7 @@ namespace uburu::app
   {
     const auto startedAt = std::chrono::steady_clock::now();
     auto batchSize = normalizedBatchSize(executionOptions.resultBatchSize);
-    std::vector<SearchResult> pendingResults;
+    std::vector<SearchResultDto> pendingResults;
     bool abortedBySink = false;
     bool observedFirstResult = false;
     std::uint64_t emittedResultCount = 0;
@@ -222,7 +228,7 @@ namespace uburu::app
           timeToFirstResult = std::chrono::steady_clock::now() - startedAt;
         }
 
-        pendingResults.push_back(std::move(result));
+        pendingResults.push_back(toSearchResultDto(result));
         ++emittedResultCount;
 
         if (pendingResults.size() < batchSize)

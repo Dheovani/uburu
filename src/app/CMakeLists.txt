@@ -1,4 +1,5 @@
 add_library(uburu_app STATIC
+  dto/search-dto.cpp
   services/indexing-service.cpp
   services/search-service.cpp
 )

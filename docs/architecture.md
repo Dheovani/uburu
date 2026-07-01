@@ -35,6 +35,11 @@ fase; eventos explícitos de confirmação/remoção pertencem ao canal de event
 sem depender de estado global. O serviço mede `timeToFirstResult` e `totalTime` no nível da estratégia
 selecionada, cobrindo busca direta, indexada e híbrida.
 
+O canal de eventos publica DTOs da camada de aplicação (`SearchEventDto`, `SearchResultDto` e
+`SearchSummaryDto`). Isso impede que a UI dependa de detalhes dos engines, de enums internos de erro ou
+de formatos de persistência. A conversão fica em `src/app/dto`, mantendo o core reutilizável por CLI,
+testes e futuras interfaces sem Qt.
+
 ## Concorrência
 
 O `SearchController` agenda a busca no pool de `QtConcurrent`. Resultados são devolvidos progressivamente à thread da UI por eventos enfileirados. O core usa `std::stop_token`, permitindo que CLI, testes ou outras interfaces usem o mesmo cancelamento sem Qt.

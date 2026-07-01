@@ -208,7 +208,7 @@ e UI para avançarem mais rapidamente.
 ## Marco 7 — Serviço de busca e observabilidade (P1)
 
 - [x] Fazer `SearchService` selecionar busca direta, indexada ou híbrida por política explícita.
-- [ ] Separar DTOs de aplicação dos tipos de persistência e detalhes dos engines.
+- [x] Separar DTOs de aplicação dos tipos de persistência e detalhes dos engines.
 - [x] Criar canal de eventos para progresso, resultados, correções e erros.
 - [x] Adicionar IDs de busca para descartar eventos atrasados de consultas canceladas.
 - [ ] Implementar batching adaptativo de resultados para a UI.

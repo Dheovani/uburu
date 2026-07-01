@@ -270,7 +270,7 @@ TEST_CASE("default search service emits run scoped result batches")
   constexpr std::size_t batchSize = 2;
 
   auto directEngine = std::make_shared<FakeSearchEngine>();
-  std::vector<uburu::app::SearchEvent> events;
+  std::vector<uburu::app::SearchEventDto> events;
 
   directEngine->results = {
     result(uburu::SearchResultKind::content, "src/a.cpp", 1, "needle a"),
@@ -281,7 +281,7 @@ TEST_CASE("default search service emits run scoped result batches")
   const uburu::app::DefaultSearchService service(directEngine);
   const auto summary = service.searchWithEvents(
     uburu::SearchQuery{},
-    [&](const uburu::app::SearchEvent& event) {
+    [&](const uburu::app::SearchEventDto& event) {
       events.push_back(event);
 
       return true;
@@ -292,6 +292,8 @@ TEST_CASE("default search service emits run scoped result batches")
   CHECK(events[0].kind == uburu::app::SearchEventKind::started);
   CHECK(events[1].kind == uburu::app::SearchEventKind::resultBatch);
   CHECK(events[1].results.size() == batchSize);
+  CHECK(events[1].results.front().kind == uburu::app::SearchResultKindDto::content);
+  CHECK(events[1].results.front().path == std::filesystem::path("src/a.cpp"));
   CHECK(events[2].kind == uburu::app::SearchEventKind::resultBatch);
   CHECK(events[2].results.size() == 1);
   CHECK(events[3].kind == uburu::app::SearchEventKind::completed);
@@ -311,14 +313,14 @@ TEST_CASE("default search service emits failed events for invalid hybrid queries
 
   auto directEngine = std::make_shared<FakeSearchEngine>();
   auto indexService = std::make_shared<FakeIndexService>();
-  std::vector<uburu::app::SearchEvent> events;
+  std::vector<uburu::app::SearchEventDto> events;
   const uburu::app::DefaultSearchService service(
     directEngine, indexService, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::hybrid});
 
   uburu::SearchQuery query{.root = "missing-root", .expression = "needle", .options = {}};
   const auto summary = service.searchWithEvents(
     query,
-    [&](const uburu::app::SearchEvent& event) {
+    [&](const uburu::app::SearchEventDto& event) {
       events.push_back(event);
 
       return true;
@@ -329,6 +331,7 @@ TEST_CASE("default search service emits failed events for invalid hybrid queries
   CHECK(events[0].kind == uburu::app::SearchEventKind::started);
   CHECK(events[1].kind == uburu::app::SearchEventKind::failed);
   CHECK(events[1].runId == runId);
+  CHECK_FALSE(events[1].summary.errors.empty());
   CHECK_FALSE(summary.errors.empty());
   CHECK(indexService->calls == 0);
   CHECK(directEngine->calls == 0);

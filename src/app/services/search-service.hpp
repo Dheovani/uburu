@@ -1,14 +1,10 @@
 #pragma once
 
+#include "app/dto/search-dto.hpp"
 #include "core/index/index-service.hpp"
 #include "core/search/search-engine.hpp"
 
-#include <chrono>
-#include <cstddef>
-#include <cstdint>
-#include <functional>
 #include <memory>
-#include <vector>
 
 namespace uburu::app
 {
@@ -24,34 +20,6 @@ namespace uburu::app
   {
     SearchStrategy strategy{SearchStrategy::direct};
   };
-
-  using SearchRunId = std::uint64_t;
-
-  enum class SearchEventKind
-  {
-    started,
-    resultBatch,
-    completed,
-    cancelled,
-    failed
-  };
-
-  struct SearchExecutionOptions
-  {
-    SearchRunId runId{0};
-    std::size_t resultBatchSize{64};
-  };
-
-  struct SearchEvent
-  {
-    SearchRunId runId{0};
-    SearchEventKind kind{SearchEventKind::started};
-    std::vector<SearchResult> results;
-    search::SearchSummary summary;
-    std::chrono::nanoseconds elapsed{};
-  };
-
-  using SearchEventSink = std::function<bool(const SearchEvent&)>;
 
   class SearchService
   {

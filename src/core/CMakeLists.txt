@@ -1,5 +1,7 @@
 add_library(uburu_core STATIC
+  diagnostics/diagnostic-report.cpp
   diagnostics/file-structured-logger.cpp
+  diagnostics/search-tracing.cpp
   diagnostics/structured-logger.cpp
   diagnostics/structured-metrics-sink.cpp
   filesystem/git-ignore-rules.cpp

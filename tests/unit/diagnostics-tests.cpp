@@ -1,4 +1,6 @@
+#include "core/diagnostics/diagnostic-report.hpp"
 #include "core/diagnostics/file-structured-logger.hpp"
+#include "core/diagnostics/search-tracing.hpp"
 #include "core/diagnostics/structured-logger.hpp"
 #include "core/diagnostics/structured-metrics-sink.hpp"
 
@@ -119,6 +121,99 @@ TEST_CASE("file structured logger rotates files when size limit is reached")
 
   std::filesystem::remove(path, error);
   std::filesystem::remove(rotated, error);
+}
+
+TEST_CASE("search trace recorder stays empty when tracing is disabled")
+{
+  uburu::diagnostics::SearchTraceRecorder recorder;
+
+  recorder.record("search", uburu::diagnostics::LogCategory::search, std::chrono::nanoseconds{7});
+
+  {
+    [[maybe_unused]] auto scope = uburu::diagnostics::traceSearchScope(recorder, "disabled scope");
+  }
+
+  CHECK_FALSE(recorder.enabled());
+  CHECK(recorder.events().empty());
+}
+
+TEST_CASE("search trace recorder captures spans and masks sensitive fields")
+{
+  uburu::diagnostics::SearchTraceRecorder recorder(
+    uburu::diagnostics::SearchTracingOptions{.enabled = true, .maximumEvents = 2});
+
+  recorder.record("instant",
+                  uburu::diagnostics::LogCategory::search,
+                  std::chrono::nanoseconds{7},
+                  {uburu::diagnostics::LogField{.key = "path", .value = "C:/private/file.cpp", .sensitive = true}});
+
+  {
+    [[maybe_unused]] auto scope =
+      uburu::diagnostics::traceSearchScope(recorder, "scoped", uburu::diagnostics::LogCategory::storage);
+  }
+
+  recorder.record("ignored", uburu::diagnostics::LogCategory::git, std::chrono::nanoseconds{1});
+
+  REQUIRE(recorder.events().size() == 2);
+  CHECK(recorder.events()[0].name == "instant");
+  CHECK(recorder.events()[0].elapsed == std::chrono::nanoseconds{7});
+  REQUIRE(recorder.events()[0].fields.size() == 1);
+  CHECK(recorder.events()[0].fields.front().value == "<redacted>");
+  CHECK(recorder.events()[1].name == "scoped");
+  CHECK(recorder.events()[1].category == uburu::diagnostics::LogCategory::storage);
+}
+
+TEST_CASE("diagnostic report exports sanitized logs metrics and traces")
+{
+  uburu::diagnostics::DiagnosticReport report;
+  report.generatedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{42}};
+  report.logs.push_back(uburu::diagnostics::LogEvent{
+    .level = uburu::diagnostics::LogLevel::error,
+    .category = uburu::diagnostics::LogCategory::search,
+    .message = "failure",
+    .fields = {uburu::diagnostics::LogField{.key = "path", .value = "C:/private/file.cpp", .sensitive = true}},
+    .timestamp = std::chrono::system_clock::time_point{std::chrono::milliseconds{43}}});
+  report.searchMetrics.push_back(uburu::diagnostics::SearchMetrics{
+    .filesProcessed = 3, .bytesProcessed = 128, .resultsEmitted = 2, .cacheHits = 1, .memoryIncreased = true});
+  report.traceEvents.push_back(uburu::diagnostics::SearchTraceEvent{
+    .name = "search",
+    .category = uburu::diagnostics::LogCategory::search,
+    .elapsed = std::chrono::nanoseconds{9},
+    .fields = {uburu::diagnostics::LogField{.key = "expression", .value = "secret", .sensitive = true}}});
+
+  const auto json = uburu::diagnostics::diagnosticReportJson(report);
+
+  CHECK(json.find("\"product\":\"Uburu\"") != std::string::npos);
+  CHECK(json.find("\"logs\"") != std::string::npos);
+  CHECK(json.find("\"search_metrics\"") != std::string::npos);
+  CHECK(json.find("\"trace_events\"") != std::string::npos);
+  CHECK(json.find("\"files_processed\":3") != std::string::npos);
+  CHECK(json.find("\"elapsed_ns\":9") != std::string::npos);
+  CHECK(json.find("secret") == std::string::npos);
+  CHECK(json.find("<redacted>") != std::string::npos);
+}
+
+TEST_CASE("diagnostic report can be exported to a file")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-diagnostic-report-test.json";
+  std::error_code error;
+
+  std::filesystem::remove(path, error);
+
+  uburu::diagnostics::DiagnosticReport report;
+  report.productName = "Uburu Test";
+  report.generatedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{42}};
+
+  uburu::diagnostics::exportDiagnosticReport(report, path);
+
+  std::ifstream stream(path, std::ios::binary);
+  std::string content;
+
+  std::getline(stream, content);
+
+  CHECK(content.find("Uburu Test") != std::string::npos);
+
+  std::filesystem::remove(path, error);
 }
 
 TEST_CASE("structured metrics sink records search metrics as structured log fields")

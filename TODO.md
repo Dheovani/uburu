@@ -218,8 +218,8 @@ e UI para avançarem mais rapidamente.
 - [x] Remover ou mascarar conteúdo e caminhos sensíveis dos logs por padrão.
 - [x] Medir arquivos/bytes por segundo, filas, cache hit e reuso por hash.
 - [x] Medir memória aproximada e detectar crescimento entre buscas.
-- [ ] Criar modo/tela de diagnóstico exportável.
-- [ ] Adicionar tracing de uma busca sem penalidade relevante quando desabilitado.
+- [x] Criar modo/tela de diagnóstico exportável.
+- [x] Adicionar tracing de uma busca sem penalidade relevante quando desabilitado.
 
 ## Marco 8 — Experiência desktop produtiva (P1)
 

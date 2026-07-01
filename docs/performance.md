@@ -41,6 +41,16 @@ ocupada pelos resultados emitidos. A estimativa de memória não substitui um pr
 aproximado das estruturas de resultado e das capacidades observáveis de strings/vetores. O
 `SearchService` compara essa estimativa com a busca anterior para sinalizar crescimento entre execuções.
 
+`DiagnosticReport` define o formato exportável inicial para diagnósticos: logs estruturados, métricas de
+busca e eventos de tracing em JSON. Campos marcados como sensíveis continuam mascarados por padrão também
+no relatório exportado. A UI de diagnóstico do Marco 8 deve consumir esse contrato em vez de ler detalhes
+internos dos serviços diretamente.
+
+`SearchTraceRecorder` fornece tracing opt-in. Quando desabilitado, chamadas de `record()` retornam sem
+armazenar eventos e `SearchTraceScope` não publica spans ao sair do escopo. Quando habilitado, o recorder
+limita a quantidade de eventos, registra duração de spans e reutiliza `LogField` para manter a mesma
+política de mascaramento de dados sensíveis.
+
 O scanner futuro usará pool limitado, priorização de arquivos pequenos e backpressure. Otimizações deverão vir acompanhadas de benchmarks reproduzíveis para muitos arquivos pequenos, poucos arquivos grandes, literal, regex, indexação inicial e reconciliação incremental.
 
 ## Leitura de arquivos grandes

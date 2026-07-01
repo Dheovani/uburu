@@ -377,6 +377,8 @@ TEST_CASE("libgit2 git service reports locked and prunable worktrees")
   addLinkedWorktree(repositoryRoot, removedRoot, "removed");
   std::error_code error;
   std::filesystem::remove_all(removedRoot, error);
+  REQUIRE_FALSE(error);
+  REQUIRE_FALSE(std::filesystem::exists(removedRoot));
 
   const auto refreshedResult = service.listWorktrees(repository);
   const auto& refreshed = std::get<std::vector<uburu::WorktreeInfo>>(refreshedResult);

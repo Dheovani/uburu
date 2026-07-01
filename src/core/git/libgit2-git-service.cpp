@@ -2,6 +2,7 @@
 
 #include "core/filesystem/path-normalization.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -27,6 +28,7 @@ namespace uburu::git
     constexpr std::size_t signatureBufferKibibytes = 8U;
     constexpr std::size_t signatureBufferSize = signatureBufferKibibytes * bytesPerKibibyte;
     constexpr int gitOidSha256TypeValue = 2;
+    constexpr std::string_view gitdirPrefix = "gitdir:";
 
     [[nodiscard]] std::string hexHash(std::uint64_t hash)
     {
@@ -347,18 +349,43 @@ namespace uburu::git
       return line;
     }
 
-    [[nodiscard]] std::optional<std::filesystem::path>
-    metadataWorktreeRoot(const std::filesystem::path& metadataDirectory)
+    [[nodiscard]] std::filesystem::path normalizedGitdirPath(std::string gitdirLine,
+                                                             const std::filesystem::path& metadataDirectory)
     {
-      auto gitdir = std::filesystem::path(readFirstLine(metadataDirectory / "gitdir"));
+      if (gitdirLine.starts_with(gitdirPrefix))
+        gitdirLine.erase(0, gitdirPrefix.size());
 
-      if (gitdir.empty())
-        return std::nullopt;
+      while (!gitdirLine.empty() && gitdirLine.front() == ' ')
+        gitdirLine.erase(gitdirLine.begin());
+
+      auto gitdir = std::filesystem::path(gitdirLine);
 
       if (gitdir.is_relative())
         gitdir = metadataDirectory / gitdir;
 
-      return gitdir.lexically_normal().parent_path();
+      return gitdir.lexically_normal();
+    }
+
+    [[nodiscard]] std::optional<std::filesystem::path> metadataGitdirPath(
+      const std::filesystem::path& metadataDirectory)
+    {
+      auto gitdirLine = readFirstLine(metadataDirectory / "gitdir");
+
+      if (gitdirLine.empty())
+        return std::nullopt;
+
+      return normalizedGitdirPath(std::move(gitdirLine), metadataDirectory);
+    }
+
+    [[nodiscard]] std::optional<std::filesystem::path>
+    metadataWorktreeRoot(const std::filesystem::path& metadataDirectory)
+    {
+      auto gitdir = metadataGitdirPath(metadataDirectory);
+
+      if (!gitdir)
+        return std::nullopt;
+
+      return gitdir->parent_path();
     }
 
     [[nodiscard]] bool containsWorktreeRoot(
@@ -399,6 +426,7 @@ namespace uburu::git
         if (!isDirectory)
           continue;
 
+        auto gitdir = metadataGitdirPath(entry.path());
         auto root = metadataWorktreeRoot(entry.path());
 
         if (!root || containsWorktreeRoot(worktrees, *root))
@@ -410,9 +438,13 @@ namespace uburu::git
         const auto locked = std::filesystem::exists(lockedPath, error);
         error.clear();
 
-        const auto prunable = !std::filesystem::exists(*root, error);
+        const auto gitdirMissing = !gitdir || !std::filesystem::exists(*gitdir, error);
         error.clear();
 
+        const auto rootMissing = !std::filesystem::exists(*root, error);
+        error.clear();
+
+        const auto prunable = gitdirMissing || rootMissing;
         auto lockReason = locked ? readFirstLine(lockedPath) : std::string{};
 
         if (!locked && !prunable)

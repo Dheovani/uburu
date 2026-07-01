@@ -36,7 +36,9 @@ TEST_CASE("structured logger masks sensitive fields by default")
 TEST_CASE("structured logger can retain sensitive fields when explicitly enabled")
 {
   uburu::diagnostics::InMemoryStructuredLogger logger(
-    uburu::diagnostics::StructuredLogOptions{.includeSensitiveFields = true});
+    uburu::diagnostics::StructuredLogOptions{.includeSensitiveFields = true,
+                                             .minimumLevel = uburu::diagnostics::LogLevel::trace,
+                                             .enabledCategories = {}});
 
   logger.write(uburu::diagnostics::LogEvent{
     .level = uburu::diagnostics::LogLevel::debug,
@@ -59,13 +61,19 @@ TEST_CASE("structured logger filters entries by minimum level and category")
 
   logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::info,
                                             .category = uburu::diagnostics::LogCategory::search,
-                                            .message = "too low"});
+                                            .message = "too low",
+                                            .fields = {},
+                                            .timestamp = {}});
   logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::error,
                                             .category = uburu::diagnostics::LogCategory::git,
-                                            .message = "wrong category"});
+                                            .message = "wrong category",
+                                            .fields = {},
+                                            .timestamp = {}});
   logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::warning,
                                             .category = uburu::diagnostics::LogCategory::search,
-                                            .message = "accepted"});
+                                            .message = "accepted",
+                                            .fields = {},
+                                            .timestamp = {}});
 
   REQUIRE(logger.entries().size() == 1);
   CHECK(logger.entries().front().message == "accepted");
@@ -79,7 +87,10 @@ TEST_CASE("file structured logger writes sanitized json lines")
   std::filesystem::remove(path, error);
 
   uburu::diagnostics::FileStructuredLogger logger(
-    uburu::diagnostics::FileStructuredLogOptions{.path = path, .maximumFileSizeBytes = 1024});
+    uburu::diagnostics::FileStructuredLogOptions{.structuredOptions = {},
+                                                 .path = path,
+                                                 .maximumFileSizeBytes = 1024,
+                                                 .maximumRotatedFiles = 3});
 
   logger.write(uburu::diagnostics::LogEvent{
     .level = uburu::diagnostics::LogLevel::warning,
@@ -111,10 +122,21 @@ TEST_CASE("file structured logger rotates files when size limit is reached")
   std::filesystem::remove(rotated, error);
 
   uburu::diagnostics::FileStructuredLogger logger(
-    uburu::diagnostics::FileStructuredLogOptions{.path = path, .maximumFileSizeBytes = 1, .maximumRotatedFiles = 1});
+    uburu::diagnostics::FileStructuredLogOptions{.structuredOptions = {},
+                                                 .path = path,
+                                                 .maximumFileSizeBytes = 1,
+                                                 .maximumRotatedFiles = 1});
 
-  logger.write(uburu::diagnostics::LogEvent{.message = "first"});
-  logger.write(uburu::diagnostics::LogEvent{.message = "second"});
+  logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::info,
+                                            .category = uburu::diagnostics::LogCategory::diagnostics,
+                                            .message = "first",
+                                            .fields = {},
+                                            .timestamp = {}});
+  logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::info,
+                                            .category = uburu::diagnostics::LogCategory::diagnostics,
+                                            .message = "second",
+                                            .fields = {},
+                                            .timestamp = {}});
 
   CHECK(std::filesystem::exists(path));
   CHECK(std::filesystem::exists(rotated));
@@ -140,7 +162,7 @@ TEST_CASE("search trace recorder stays empty when tracing is disabled")
 TEST_CASE("search trace recorder captures spans and masks sensitive fields")
 {
   uburu::diagnostics::SearchTraceRecorder recorder(
-    uburu::diagnostics::SearchTracingOptions{.enabled = true, .maximumEvents = 2});
+    uburu::diagnostics::SearchTracingOptions{.enabled = true, .includeSensitiveFields = false, .maximumEvents = 2});
 
   recorder.record("instant",
                   uburu::diagnostics::LogCategory::search,
@@ -173,13 +195,20 @@ TEST_CASE("diagnostic report exports sanitized logs metrics and traces")
     .message = "failure",
     .fields = {uburu::diagnostics::LogField{.key = "path", .value = "C:/private/file.cpp", .sensitive = true}},
     .timestamp = std::chrono::system_clock::time_point{std::chrono::milliseconds{43}}});
-  report.searchMetrics.push_back(uburu::diagnostics::SearchMetrics{
-    .filesProcessed = 3, .bytesProcessed = 128, .resultsEmitted = 2, .cacheHits = 1, .memoryIncreased = true});
-  report.traceEvents.push_back(uburu::diagnostics::SearchTraceEvent{
-    .name = "search",
-    .category = uburu::diagnostics::LogCategory::search,
-    .elapsed = std::chrono::nanoseconds{9},
-    .fields = {uburu::diagnostics::LogField{.key = "expression", .value = "secret", .sensitive = true}}});
+  uburu::diagnostics::SearchMetrics metrics;
+  metrics.filesProcessed = 3;
+  metrics.bytesProcessed = 128;
+  metrics.resultsEmitted = 2;
+  metrics.cacheHits = 1;
+  metrics.memoryIncreased = true;
+  report.searchMetrics.push_back(metrics);
+
+  uburu::diagnostics::SearchTraceEvent traceEvent;
+  traceEvent.name = "search";
+  traceEvent.category = uburu::diagnostics::LogCategory::search;
+  traceEvent.elapsed = std::chrono::nanoseconds{9};
+  traceEvent.fields = {uburu::diagnostics::LogField{.key = "expression", .value = "secret", .sensitive = true}};
+  report.traceEvents.push_back(std::move(traceEvent));
 
   const auto json = uburu::diagnostics::diagnosticReportJson(report);
 
@@ -239,22 +268,25 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   auto logger = std::make_shared<uburu::diagnostics::InMemoryStructuredLogger>();
   uburu::diagnostics::StructuredMetricsSink sink(logger);
 
-  sink.record(uburu::diagnostics::SearchMetrics{.timeToFirstResult = timeToFirstResult,
-                                                .totalTime = totalTime,
-                                                .filesProcessed = filesProcessed,
-                                                .bytesProcessed = bytesProcessed,
-                                                .filesPerSecond = filesPerSecond,
-                                                .bytesPerSecond = bytesPerSecond,
-                                                .resultsEmitted = resultsEmitted,
-                                                .ignoredFiles = ignoredFiles,
-                                                .hiddenFiles = hiddenFiles,
-                                                .binaryFiles = binaryFiles,
-                                                .binaryFilesSkipped = binaryFilesSkipped,
-                                                .cacheHits = cacheHits,
-                                                .reusedByHash = reusedByHash,
-                                                .approximateMemoryBytes = approximateMemoryBytes,
-                                                .memoryGrowthBytes = memoryGrowthBytes,
-                                                .memoryIncreased = true});
+  uburu::diagnostics::SearchMetrics metrics;
+  metrics.timeToFirstResult = timeToFirstResult;
+  metrics.totalTime = totalTime;
+  metrics.filesProcessed = filesProcessed;
+  metrics.bytesProcessed = bytesProcessed;
+  metrics.filesPerSecond = filesPerSecond;
+  metrics.bytesPerSecond = bytesPerSecond;
+  metrics.resultsEmitted = resultsEmitted;
+  metrics.ignoredFiles = ignoredFiles;
+  metrics.hiddenFiles = hiddenFiles;
+  metrics.binaryFiles = binaryFiles;
+  metrics.binaryFilesSkipped = binaryFilesSkipped;
+  metrics.cacheHits = cacheHits;
+  metrics.reusedByHash = reusedByHash;
+  metrics.approximateMemoryBytes = approximateMemoryBytes;
+  metrics.memoryGrowthBytes = memoryGrowthBytes;
+  metrics.memoryIncreased = true;
+
+  sink.record(metrics);
 
   REQUIRE(logger->entries().size() == 1);
   const auto& event = logger->entries().front();

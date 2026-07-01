@@ -326,8 +326,12 @@ namespace uburu::app
       return delivered;
     };
 
-    if (!sink(makeEvent(executionOptions.runId, SearchEventKind::started, {}, startedAt)))
-      return search::SearchSummary{.cancelled = true};
+    if (!sink(makeEvent(executionOptions.runId, SearchEventKind::started, {}, startedAt))) {
+      search::SearchSummary cancelledSummary;
+      cancelledSummary.cancelled = true;
+
+      return cancelledSummary;
+    }
 
     auto summary = search(
       query,

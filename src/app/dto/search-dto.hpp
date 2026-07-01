@@ -15,6 +15,10 @@ namespace uburu::app
 {
 
   using SearchRunId = std::uint64_t;
+  inline constexpr std::size_t defaultResultBatchSize = 64;
+  inline constexpr std::size_t defaultMinimumResultBatchSize = 16;
+  inline constexpr std::size_t defaultMaximumResultBatchSize = 512;
+  inline constexpr std::chrono::milliseconds defaultTargetBatchDeliveryLatency{16};
 
   enum class SearchResultKindDto
   {
@@ -34,7 +38,11 @@ namespace uburu::app
   struct SearchExecutionOptions
   {
     SearchRunId runId{0};
-    std::size_t resultBatchSize{64};
+    std::size_t resultBatchSize{defaultResultBatchSize};
+    bool adaptiveBatching{true};
+    std::size_t minimumResultBatchSize{defaultMinimumResultBatchSize};
+    std::size_t maximumResultBatchSize{defaultMaximumResultBatchSize};
+    std::chrono::milliseconds targetBatchDeliveryLatency{defaultTargetBatchDeliveryLatency};
   };
 
   struct SearchMatchDto

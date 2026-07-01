@@ -286,7 +286,7 @@ TEST_CASE("default search service emits run scoped result batches")
 
       return true;
     },
-    uburu::app::SearchExecutionOptions{.runId = runId, .resultBatchSize = batchSize});
+    uburu::app::SearchExecutionOptions{.runId = runId, .resultBatchSize = batchSize, .adaptiveBatching = false});
 
   REQUIRE(events.size() == 4);
   CHECK(events[0].kind == uburu::app::SearchEventKind::started);
@@ -305,6 +305,49 @@ TEST_CASE("default search service emits run scoped result batches")
   CHECK(summary.matches == directEngine->results.size());
   CHECK(summary.metrics.resultsEmitted == directEngine->results.size());
   CHECK(summary.metrics.totalTime.count() >= 0);
+}
+
+TEST_CASE("default search service adapts result batches when event delivery is cheap")
+{
+  constexpr uburu::app::SearchRunId runId = 77;
+  constexpr std::size_t initialBatchSize = 2;
+  constexpr std::size_t maximumBatchSize = 8;
+
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  std::vector<std::size_t> batchSizes;
+
+  directEngine->results = {
+    result(uburu::SearchResultKind::content, "src/a.cpp", 1, "needle a"),
+    result(uburu::SearchResultKind::content, "src/b.cpp", 2, "needle b"),
+    result(uburu::SearchResultKind::content, "src/c.cpp", 3, "needle c"),
+    result(uburu::SearchResultKind::content, "src/d.cpp", 4, "needle d"),
+    result(uburu::SearchResultKind::content, "src/e.cpp", 5, "needle e"),
+    result(uburu::SearchResultKind::content, "src/f.cpp", 6, "needle f"),
+    result(uburu::SearchResultKind::content, "src/g.cpp", 7, "needle g"),
+    result(uburu::SearchResultKind::content, "src/h.cpp", 8, "needle h"),
+  };
+
+  const uburu::app::DefaultSearchService service(directEngine);
+  const auto summary = service.searchWithEvents(
+    uburu::SearchQuery{},
+    [&](const uburu::app::SearchEventDto& event) {
+      if (event.kind == uburu::app::SearchEventKind::resultBatch)
+        batchSizes.push_back(event.results.size());
+
+      return true;
+    },
+    uburu::app::SearchExecutionOptions{.runId = runId,
+                                       .resultBatchSize = initialBatchSize,
+                                       .adaptiveBatching = true,
+                                       .minimumResultBatchSize = initialBatchSize,
+                                       .maximumResultBatchSize = maximumBatchSize,
+                                       .targetBatchDeliveryLatency = std::chrono::seconds(1)});
+
+  REQUIRE(batchSizes.size() == 3);
+  CHECK(batchSizes[0] == 2);
+  CHECK(batchSizes[1] == 4);
+  CHECK(batchSizes[2] == 2);
+  CHECK(summary.matches == directEngine->results.size());
 }
 
 TEST_CASE("default search service emits failed events for invalid hybrid queries")

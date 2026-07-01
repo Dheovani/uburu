@@ -211,7 +211,7 @@ e UI para avançarem mais rapidamente.
 - [x] Separar DTOs de aplicação dos tipos de persistência e detalhes dos engines.
 - [x] Criar canal de eventos para progresso, resultados, correções e erros.
 - [x] Adicionar IDs de busca para descartar eventos atrasados de consultas canceladas.
-- [ ] Implementar batching adaptativo de resultados para a UI.
+- [x] Implementar batching adaptativo de resultados para a UI.
 - [x] Medir tempo até o primeiro resultado e tempo total em todas as estratégias.
 - [x] Implementar `MetricsSink` concreto e logging estruturado.
 - [ ] Adicionar níveis, categorias e rotação de logs.
@@ -348,6 +348,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Registrar decisões arquiteturais importantes como ADRs.
 - [ ] Criar documentação para contribuidores e arquitetura de testes.
 - [ ] Disponibilizar documentação em português e em inglês.
+- [ ] Eliminar quebras de linhas desnecessárias no meio de parágrafos.
 
 ## Evoluções avançadas (P3)
 

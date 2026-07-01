@@ -40,6 +40,11 @@ O canal de eventos publica DTOs da camada de aplicação (`SearchEventDto`, `Sea
 de formatos de persistência. A conversão fica em `src/app/dto`, mantendo o core reutilizável por CLI,
 testes e futuras interfaces sem Qt.
 
+O tamanho dos batches de resultado é controlado por `AdaptiveResultBatcher`. Cada execução começa com
+`SearchExecutionOptions::resultBatchSize`, respeita limites mínimo e máximo configuráveis e ajusta o
+próximo lote conforme a latência observada ao entregar o evento ao sink. Entregas baratas aumentam o
+lote para reduzir overhead; entregas caras reduzem o lote para preservar responsividade da UI.
+
 ## Concorrência
 
 O `SearchController` agenda a busca no pool de `QtConcurrent`. Resultados são devolvidos progressivamente à thread da UI por eventos enfileirados. O core usa `std::stop_token`, permitindo que CLI, testes ou outras interfaces usem o mesmo cancelamento sem Qt.

@@ -1,6 +1,7 @@
 find_package(Catch2 3 CONFIG REQUIRED)
 
 add_executable(uburu_core_tests
+  unit/adaptive-result-batcher-tests.cpp
   unit/bounded-queue-tests.cpp
   unit/content-hash-tests.cpp
   unit/diagnostics-tests.cpp

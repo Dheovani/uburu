@@ -1,6 +1,8 @@
 # Performance
 
-Tempo até o primeiro resultado é a métrica principal. A busca direta transmite resultados enquanto lê arquivos linha a linha e não espera a varredura terminar. O envio à UI deve evoluir para batches adaptativos para reduzir overhead sem piorar a latência inicial.
+Tempo até o primeiro resultado é a métrica principal. A busca direta transmite resultados enquanto lê
+arquivos linha a linha e não espera a varredura terminar. O envio à UI usa batches adaptativos para
+reduzir overhead sem piorar a latência inicial.
 
 ## Métricas mínimas
 
@@ -22,7 +24,9 @@ podem impedir a enumeração de descendentes; por isso os contadores representam
 diretamente durante a varredura, não uma estimativa recursiva de tudo que havia sob o diretório.
 
 `SearchService::searchWithEvents()` mede `timeToFirstResult` e `totalTime` no nível da estratégia de
-busca selecionada. `StructuredMetricsSink` é o primeiro `MetricsSink` concreto: ele grava métricas de
+busca selecionada. O serviço mede também a latência síncrona de entrega de cada batch ao sink e ajusta
+o próximo tamanho de lote dentro dos limites de `SearchExecutionOptions`. `StructuredMetricsSink` é o
+primeiro `MetricsSink` concreto: ele grava métricas de
 busca como evento estruturado de categoria `search`, com campos numéricos para tempos, arquivos, bytes e
 resultados. O logger estruturado mascara campos marcados como sensíveis por padrão; caminhos completos,
 conteúdo de linhas e expressões potencialmente privadas não devem ser adicionados como campos públicos sem

@@ -1,5 +1,6 @@
 #include "app/services/search-service.hpp"
 
+#include "app/services/adaptive-result-batcher.hpp"
 #include "core/search/search-query-validation.hpp"
 #include "core/search/search-result-merge.hpp"
 
@@ -20,14 +21,6 @@ namespace uburu::app
       summary.errors = std::move(errors);
 
       return summary;
-    }
-
-    [[nodiscard]] std::size_t normalizedBatchSize(std::size_t batchSize)
-    {
-      if (batchSize == 0)
-        return 1;
-
-      return batchSize;
     }
 
     [[nodiscard]] SearchEventDto makeEvent(SearchRunId runId,
@@ -197,24 +190,29 @@ namespace uburu::app
                                                                std::stop_token stopToken) const
   {
     const auto startedAt = std::chrono::steady_clock::now();
-    auto batchSize = normalizedBatchSize(executionOptions.resultBatchSize);
+    AdaptiveResultBatcher batcher(executionOptions);
     std::vector<SearchResultDto> pendingResults;
     bool abortedBySink = false;
     bool observedFirstResult = false;
     std::uint64_t emittedResultCount = 0;
     std::chrono::nanoseconds timeToFirstResult{};
 
-    pendingResults.reserve(batchSize);
+    pendingResults.reserve(batcher.currentBatchSize());
 
     const auto emitBatch = [&]() {
       if (pendingResults.empty())
         return true;
 
       auto event = makeResultBatchEvent(executionOptions.runId, std::move(pendingResults), startedAt);
-      pendingResults.clear();
-      pendingResults.reserve(batchSize);
+      const auto deliveryStartedAt = std::chrono::steady_clock::now();
+      const auto delivered = sink(event);
+      const auto deliveryElapsed = std::chrono::steady_clock::now() - deliveryStartedAt;
 
-      return sink(event);
+      batcher.recordDeliveryLatency(deliveryElapsed);
+      pendingResults.clear();
+      pendingResults.reserve(batcher.currentBatchSize());
+
+      return delivered;
     };
 
     if (!sink(makeEvent(executionOptions.runId, SearchEventKind::started, {}, startedAt)))
@@ -231,7 +229,7 @@ namespace uburu::app
         pendingResults.push_back(toSearchResultDto(result));
         ++emittedResultCount;
 
-        if (pendingResults.size() < batchSize)
+        if (pendingResults.size() < batcher.currentBatchSize())
           return true;
 
         if (emitBatch())

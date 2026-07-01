@@ -4,9 +4,13 @@
 #include "core/filesystem/path-normalization.hpp"
 
 #include <algorithm>
+#include <cstdlib>
+#include <fstream>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <unordered_set>
 #include <utility>
@@ -31,6 +35,66 @@ namespace uburu::filesystem
       const auto text = path.generic_u8string();
 
       return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
+    std::optional<std::string> environmentVariable(const char* name)
+    {
+#ifdef _WIN32
+      char* value = nullptr;
+      std::size_t size = 0;
+
+      if (_dupenv_s(&value, &size, name) != 0 || value == nullptr)
+        return std::nullopt;
+
+      std::string text(value);
+      std::free(value);
+
+      return text;
+#else
+      const auto* value = std::getenv(name);
+
+      if (value == nullptr)
+        return std::nullopt;
+
+      return std::string(value);
+#endif
+    }
+
+    bool searchDebugEnabled()
+    {
+      const auto value = environmentVariable("UBURU_SEARCH_DEBUG");
+
+      return value.has_value() && *value != "0";
+    }
+
+    std::filesystem::path searchDebugLogPath()
+    {
+      const auto value = environmentVariable("UBURU_SEARCH_DEBUG_FILE");
+
+      if (!value || value->empty())
+        return "uburu-search-debug.log";
+
+      return *value;
+    }
+
+    void appendSearchDebugLog(std::string_view source, std::string_view message)
+    {
+      if (!searchDebugEnabled())
+        return;
+
+      static std::mutex mutex;
+      std::lock_guard lock(mutex);
+      std::ofstream file(searchDebugLogPath(), std::ios::app);
+
+      if (!file)
+        return;
+
+      file << "[search][" << source << "] " << message << '\n';
+    }
+
+    void logScannerSkip(std::string_view reason, const std::filesystem::path& relativePath)
+    {
+      appendSearchDebugLog("scanner", "skip reason=" + std::string(reason) + " path=" + pathToUtf8(relativePath));
     }
 
     std::string normalizedExtension(std::filesystem::path path)
@@ -288,8 +352,13 @@ namespace uburu::filesystem
     scanDirectory = [&](const std::filesystem::path& directory, GitIgnoreRules ignoreRules) {
       const auto identity = directoryIdentity(directory);
 
-      if (!visitedDirectories.insert(identity).second)
+      if (!visitedDirectories.insert(identity).second) {
+        appendSearchDebugLog("scanner", "skip reason=directory-cycle path=" + pathToUtf8(directory));
+
         return true;
+      }
+
+      appendSearchDebugLog("scanner", "enter-directory path=" + pathToUtf8(directory));
 
       if (options.respectGitignore)
         ignoreRules.appendFile(directory / ".gitignore", relativeDirectory(directory, root));
@@ -303,23 +372,44 @@ namespace uburu::filesystem
         const bool hidden = isHidden(path);
         const auto relativePath = std::filesystem::relative(path, root, error);
 
-        if (error)
+        if (error) {
+          appendSearchDebugLog("scanner", "skip reason=relative-path-error path=" + pathToUtf8(path));
+
           continue;
+        }
 
         if (item.is_directory(error)) {
           const auto linkLikeDirectory = isLinkLikeDirectory(item);
 
-          if (!options.includeSubdirectories)
-            continue;
+          if (!options.includeSubdirectories) {
+            logScannerSkip("subdirectories-disabled", relativePath);
 
-          if (linkLikeDirectory && !options.followSymlinks)
             continue;
+          }
 
-          if (options.respectGitignore && ignoreRules.ignores(relativePath, true))
-            continue;
+          if (linkLikeDirectory && !options.followSymlinks) {
+            logScannerSkip("directory-symlink-disabled", relativePath);
 
-          if ((hidden && !options.includeHidden) || isExcludedDirectory(relativePath, options.excludedDirectories))
             continue;
+          }
+
+          if (options.respectGitignore && ignoreRules.ignores(relativePath, true)) {
+            logScannerSkip("gitignore-directory", relativePath);
+
+            continue;
+          }
+
+          if (hidden && !options.includeHidden) {
+            logScannerSkip("hidden-directory", relativePath);
+
+            continue;
+          }
+
+          if (isExcludedDirectory(relativePath, options.excludedDirectories)) {
+            logScannerSkip("excluded-directory", relativePath);
+
+            continue;
+          }
 
           if (!scanDirectory(path, ignoreRules))
             return false;
@@ -331,28 +421,63 @@ namespace uburu::filesystem
           if (metrics != nullptr)
             ++metrics->ignoredFiles;
 
+          logScannerSkip("gitignore-file", relativePath);
+
           continue;
         }
 
-        if (!item.is_regular_file(error))
+        if (!item.is_regular_file(error)) {
+          logScannerSkip("not-regular-file", relativePath);
+
           continue;
+        }
 
         if (hidden && !options.includeHidden) {
           if (metrics != nullptr)
             ++metrics->hiddenFiles;
 
+          logScannerSkip("hidden-file", relativePath);
+
           continue;
         }
 
-        if (isExcludedDirectory(relativePath, options.excludedDirectories) ||
-            !isIncludedDirectory(relativePath, options.includedDirectories) ||
-            !hasAllowedExtension(path, options.extensions) || !passesGlobs(relativePath, options))
+        if (isExcludedDirectory(relativePath, options.excludedDirectories)) {
+          logScannerSkip("excluded-path", relativePath);
+
           continue;
+        }
+
+        if (!isIncludedDirectory(relativePath, options.includedDirectories)) {
+          logScannerSkip("not-in-included-directory", relativePath);
+
+          continue;
+        }
+
+        if (!hasAllowedExtension(path, options.extensions)) {
+          logScannerSkip("extension-filter", relativePath);
+
+          continue;
+        }
+
+        if (!passesGlobs(relativePath, options)) {
+          logScannerSkip("glob-filter", relativePath);
+
+          continue;
+        }
 
         const auto size = item.file_size(error);
 
-        if (error || size > options.maximumFileSize)
+        if (error) {
+          logScannerSkip("file-size-error", relativePath);
+
           continue;
+        }
+
+        if (size > options.maximumFileSize) {
+          logScannerSkip("maximum-file-size", relativePath);
+
+          continue;
+        }
 
         FileEntry entry{.absolutePath = path,
                         .relativePath = relativePath,
@@ -363,6 +488,9 @@ namespace uburu::filesystem
                         .symlink = item.is_symlink(error),
                         .sparse = isSparseFile(path),
                         .searchRoot = root};
+
+        appendSearchDebugLog("scanner", "candidate path=" + pathToUtf8(relativePath) +
+                                          " size=" + std::to_string(size));
 
         if (!error && !sink(std::move(entry)))
           return false;

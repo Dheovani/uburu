@@ -354,6 +354,36 @@ TEST_CASE("direct search finds text through the recursive scanner")
   CHECK(summary.matches == 1);
 }
 
+TEST_CASE("direct search finds file names through the recursive scanner")
+{
+  const auto root = std::filesystem::temp_directory_path() / "uburu-direct-search-real-file-name-test";
+  const auto path = root / "docs" / "important-report.pdf";
+  std::filesystem::remove_all(root);
+  std::filesystem::create_directories(path.parent_path());
+  writeBytes(path, {0x25U, 0x50U, 0x44U, 0x46U, 0x00U});
+  const auto cleanup = [&] { std::filesystem::remove_all(root); };
+
+  auto scanner = std::make_shared<uburu::filesystem::RecursiveFileScanner>();
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(root, "important-report");
+  query.options.target = uburu::SearchTarget::contentAndFileName;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().kind == uburu::SearchResultKind::fileName);
+  CHECK(results.front().path == std::filesystem::path("docs") / "important-report.pdf");
+  CHECK(summary.errors.empty());
+  CHECK(summary.filesScanned == 1);
+  CHECK(summary.matches == 1);
+}
+
 TEST_CASE("direct search preserves unicode relative paths")
 {
   const auto path = std::filesystem::temp_directory_path() / "uburu-search-unicode-path-test.txt";

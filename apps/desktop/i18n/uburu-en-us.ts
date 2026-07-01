@@ -39,6 +39,7 @@
     <message><source>Incluir subdiretórios</source><translation>Include subdirectories</translation></message>
     <message><source>Tipos</source><translation>Types</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
+    <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX, and similar formats are still filtered by name; content search depends on future extractors.</translation></message>
     <message><source>Modo</source><translation>Mode</translation></message>
     <message><source>Progressivo</source><translation>Progressive</translation></message>
     <message><source>Resultados</source><translation>Results</translation></message>

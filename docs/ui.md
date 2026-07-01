@@ -35,3 +35,15 @@ UI e plataforma. O comportamento desejado para o Marco 8 é:
 - a UI QML deve acionar um serviço/adaptador de plataforma, não implementar regras de shell no QML;
 - quando o menu nativo não estiver disponível, o fallback deve expor ao menos abrir arquivo, abrir
   pasta, copiar caminho e copiar ocorrência.
+
+## Formatos com extração de conteúdo pendente
+
+A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos
+binários ou empacotados pelo nome quando o alvo combina conteúdo e nome de arquivo. Formatos como PDF,
+DOCX, ODT, RTF e EPUB não devem ser apresentados como conteúdo pesquisável enquanto não houver
+extratores dedicados.
+
+A UI deve deixar essa limitação clara quando o usuário filtrar por esses tipos: o filtro seleciona os
+arquivos pelo nome/extensão, mas a busca dentro do conteúdo depende de uma futura camada de extração.
+Essa camada deve viver abaixo da UI, no core/text ou em adaptadores específicos, com limites de
+memória, cancelamento cooperativo e tratamento de arquivos hostis.

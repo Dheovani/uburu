@@ -204,6 +204,7 @@ namespace uburu::app
     query.options.wholeWord = wholeWord;
     query.options.respectGitignore = respectGitignore;
     query.options.includeSubdirectories = includeSubdirectories;
+    query.options.target = SearchTarget::contentAndFileName;
     query.options.extensions = parseDocumentTypes(documentTypes);
     const auto token = stopSource.get_token();
 

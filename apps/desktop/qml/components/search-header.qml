@@ -11,6 +11,7 @@ Panel {
     property bool running: false
     property bool compact: false
     property int resultCount: 0
+    property bool hasDocumentContentExtractorGap: hasUnsupportedDocumentContentTypes(documentTypesField.text)
 
     signal selectDirectory()
     signal startSearch(string query,
@@ -23,8 +24,22 @@ Panel {
     signal cancelSearch()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: compact ? 238 : 198
+    Layout.preferredHeight: (compact ? 238 : 198) + (hasDocumentContentExtractorGap ? 30 : 0)
     color: Theme.surface
+
+    function hasUnsupportedDocumentContentTypes(text) {
+        const unsupportedDocumentTypes = ["pdf", "doc", "docx", "odt", "rtf", "epub"]
+        const documentTypes = text.toLowerCase().split(/[,;\s]+/)
+
+        for (const documentType of documentTypes) {
+            const normalizedDocumentType = documentType.replace(/^\.+/, "")
+
+            if (unsupportedDocumentTypes.indexOf(normalizedDocumentType) !== -1)
+                return true
+        }
+
+        return false
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -170,6 +185,36 @@ Panel {
                         border.color: documentTypesField.activeFocus ? Theme.primary : Theme.border
                         border.width: 1
                     }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                visible: root.hasDocumentContentExtractorGap
+                spacing: 8
+
+                Rectangle {
+                    Layout.preferredWidth: 18
+                    Layout.preferredHeight: 18
+                    radius: 9
+                    color: Theme.surfaceRaised
+                    border.color: Theme.warning
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "i"
+                        color: Theme.warning
+                        font.pixelSize: Theme.fontSizeTiny
+                        font.bold: true
+                    }
+                }
+
+                MutedLabel {
+                    Layout.fillWidth: true
+                    text: qsTr("PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.")
+                    color: Theme.warning
+                    wrapMode: Text.WordWrap
                 }
             }
 

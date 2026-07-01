@@ -7,8 +7,12 @@
 #include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
 
+#include <cstdlib>
 #include <deque>
+#include <fstream>
+#include <mutex>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -33,6 +37,144 @@ namespace uburu::search
       std::size_t remainingContextLines{0};
     };
 
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
+    std::optional<std::string> environmentVariable(const char* name)
+    {
+#ifdef _WIN32
+      char* value = nullptr;
+      std::size_t size = 0;
+
+      if (_dupenv_s(&value, &size, name) != 0 || value == nullptr)
+        return std::nullopt;
+
+      std::string text(value);
+      std::free(value);
+
+      return text;
+#else
+      const auto* value = std::getenv(name);
+
+      if (value == nullptr)
+        return std::nullopt;
+
+      return std::string(value);
+#endif
+    }
+
+    bool searchDebugEnabled()
+    {
+      const auto value = environmentVariable("UBURU_SEARCH_DEBUG");
+
+      return value.has_value() && *value != "0";
+    }
+
+    std::filesystem::path searchDebugLogPath()
+    {
+      const auto value = environmentVariable("UBURU_SEARCH_DEBUG_FILE");
+
+      if (!value || value->empty())
+        return "uburu-search-debug.log";
+
+      return *value;
+    }
+
+    void appendSearchDebugLog(std::string_view source, std::string_view message)
+    {
+      if (!searchDebugEnabled())
+        return;
+
+      static std::mutex mutex;
+      std::lock_guard lock(mutex);
+      std::ofstream file(searchDebugLogPath(), std::ios::app);
+
+      if (!file)
+        return;
+
+      file << "[search][" << source << "] " << message << '\n';
+    }
+
+    std::string searchTargetName(SearchTarget target)
+    {
+      switch (target) {
+      case SearchTarget::content:
+        return "content";
+      case SearchTarget::fileName:
+        return "fileName";
+      case SearchTarget::contentAndFileName:
+        return "contentAndFileName";
+      }
+
+      return "unknown";
+    }
+
+    std::string searchModeName(SearchMode mode)
+    {
+      switch (mode) {
+      case SearchMode::literal:
+        return "literal";
+      case SearchMode::regex:
+        return "regex";
+      }
+
+      return "unknown";
+    }
+
+    std::string textReadStatusName(text::TextReadStatus status)
+    {
+      switch (status) {
+      case text::TextReadStatus::completed:
+        return "completed";
+      case text::TextReadStatus::openFailed:
+        return "openFailed";
+      case text::TextReadStatus::readFailed:
+        return "readFailed";
+      case text::TextReadStatus::binarySkipped:
+        return "binarySkipped";
+      case text::TextReadStatus::invalidEncoding:
+        return "invalidEncoding";
+      case text::TextReadStatus::lineTooLong:
+        return "lineTooLong";
+      case text::TextReadStatus::cancelled:
+        return "cancelled";
+      }
+
+      return "unknown";
+    }
+
+    std::string joinExtensions(const std::vector<std::string>& extensions)
+    {
+      std::string text;
+
+      for (const auto& extension : extensions) {
+        if (!text.empty())
+          text += ",";
+
+        text += extension;
+      }
+
+      return text.empty() ? "<none>" : text;
+    }
+
+    void logSearchStart(const SearchQuery& query)
+    {
+      std::ostringstream message;
+      message << "start root=" << pathToUtf8(query.root) << " expression=\"" << query.expression << "\""
+              << " mode=" << searchModeName(query.options.mode) << " target=" << searchTargetName(query.options.target)
+              << " extensions=" << joinExtensions(query.options.extensions)
+              << " includeSubdirectories=" << query.options.includeSubdirectories
+              << " respectGitignore=" << query.options.respectGitignore
+              << " includeHidden=" << query.options.includeHidden
+              << " maximumFileSize=" << query.options.maximumFileSize;
+
+      appendSearchDebugLog("engine", message.str());
+    }
+
     SearchErrorCode errorCodeFromRegexStatus(text::RegexMatchStatus status)
     {
       if (status == text::RegexMatchStatus::timedOut)
@@ -49,13 +191,6 @@ namespace uburu::search
     bool searchesFileName(SearchTarget target)
     {
       return target == SearchTarget::fileName || target == SearchTarget::contentAndFileName;
-    }
-
-    std::string pathToUtf8(const std::filesystem::path& path)
-    {
-      const auto text = path.generic_u8string();
-
-      return {reinterpret_cast<const char*>(text.data()), text.size()};
     }
 
     std::vector<text::MatchPosition> findLiteralMatches(std::string_view text, const SearchQuery& query)
@@ -239,10 +374,15 @@ namespace uburu::search
 
   SearchSummary DirectSearchEngine::search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token) const
   {
+    logSearchStart(query);
+
     SearchSummary summary;
     summary.errors = validateSearchQuery(query);
-    if (!summary.errors.empty())
+    if (!summary.errors.empty()) {
+      appendSearchDebugLog("engine", "validation failed errors=" + std::to_string(summary.errors.size()));
+
       return summary;
+    }
 
     std::optional<text::RegexMatcher> regexMatcher;
     if (query.options.mode == SearchMode::regex) {
@@ -252,6 +392,8 @@ namespace uburu::search
         summary.errors.push_back(makeSearchError(SearchErrorCode::regexCompileFailed,
                                                  error ? error->message : std::string{},
                                                  error ? error->offset : std::optional<std::size_t>{}));
+
+        appendSearchDebugLog("engine", "regex compile failed");
 
         return summary;
       }
@@ -267,6 +409,7 @@ namespace uburu::search
         break;
 
       auto rootOptions = optionsForRoot(query.options, root);
+      appendSearchDebugLog("engine", "scan-root path=" + pathToUtf8(root.path));
 
       scanner->scan(
         root.path,
@@ -278,6 +421,8 @@ namespace uburu::search
           ++summary.filesScanned;
           ++summary.metrics.filesProcessed;
           summary.metrics.bytesProcessed += entry.size;
+          appendSearchDebugLog("engine", "read-candidate path=" + pathToUtf8(entry.relativePath) +
+                                           " size=" + std::to_string(entry.size));
 
           std::size_t fileMatches = 0;
           std::deque<std::string> previousContext;
@@ -289,6 +434,9 @@ namespace uburu::search
 
             if (!pathMatches)
               return false;
+
+            appendSearchDebugLog("engine", "file-name-check path=" + pathText +
+                                             " matches=" + std::to_string(pathMatches->size()));
 
             const auto decision = publishMatches(entry,
                                                  SearchResultKind::fileName,
@@ -340,6 +488,10 @@ namespace uburu::search
                 return true;
               }
 
+              appendSearchDebugLog("engine", "content-match path=" + pathToUtf8(entry.relativePath) +
+                                               " line=" + std::to_string(line.lineNumber) +
+                                               " matches=" + std::to_string(matches->size()));
+
               const auto decision = publishMatches(entry,
                                                    SearchResultKind::content,
                                                    line.lineNumber,
@@ -381,6 +533,10 @@ namespace uburu::search
           if (stopCurrentFile)
             return true;
 
+          appendSearchDebugLog("engine", "read-summary path=" + pathToUtf8(entry.relativePath) +
+                                           " status=" + textReadStatusName(readSummary.status) +
+                                           " lines=" + std::to_string(readSummary.linesRead));
+
           return reportTextReadSummary(summary, entry, readSummary);
         },
         stop_token,
@@ -389,6 +545,9 @@ namespace uburu::search
 
     summary.cancelled = stop_token.stop_requested();
     summary.metrics.resultsEmitted = summary.matches;
+    appendSearchDebugLog("engine", "finish filesScanned=" + std::to_string(summary.filesScanned) +
+                                     " matches=" + std::to_string(summary.matches) +
+                                     " errors=" + std::to_string(summary.errors.size()));
 
     return summary;
   }

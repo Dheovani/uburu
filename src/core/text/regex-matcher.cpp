@@ -81,12 +81,13 @@ namespace uburu::text
   } // namespace
 
   RegexMatcher::RegexMatcher(void* code, SearchOptions options, bool jitWasEnabled)
-      : code(code), options(std::move(options)), jitWasEnabled(jitWasEnabled)
+    : code(code), options(std::move(options)), jitWasEnabled(jitWasEnabled)
   {}
 
   RegexMatcher::RegexMatcher(RegexMatcher&& other) noexcept
-      : code(std::exchange(other.code, nullptr)), options(std::move(other.options)),
-        jitWasEnabled(std::exchange(other.jitWasEnabled, false))
+    : code(std::exchange(other.code, nullptr)),
+      options(std::move(other.options)),
+      jitWasEnabled(std::exchange(other.jitWasEnabled, false))
   {}
 
   RegexMatcher& RegexMatcher::operator=(RegexMatcher&& other) noexcept

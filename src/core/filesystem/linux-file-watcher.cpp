@@ -35,7 +35,7 @@ namespace uburu::filesystem
   } // namespace
 
   LinuxFileWatcher::LinuxFileWatcher(std::filesystem::path root)
-      : root(std::move(root)), descriptor(inotify_init1(IN_NONBLOCK | IN_CLOEXEC)), buffer(inotifyBufferSize)
+    : root(std::move(root)), descriptor(inotify_init1(IN_NONBLOCK | IN_CLOEXEC)), buffer(inotifyBufferSize)
   {
     if (available())
       addRecursiveWatches();

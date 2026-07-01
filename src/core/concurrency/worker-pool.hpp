@@ -17,7 +17,7 @@ namespace uburu::concurrency
     using Task = std::function<void(std::stop_token)>;
 
     explicit WorkerPool(std::size_t workerCount, std::size_t queueCapacity = 0)
-        : queue(normalizedQueueCapacity(workerCount, queueCapacity))
+      : queue(normalizedQueueCapacity(workerCount, queueCapacity))
     {
       workerCount = normalizedWorkerCount(workerCount);
 

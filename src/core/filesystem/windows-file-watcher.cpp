@@ -51,7 +51,7 @@ namespace uburu::filesystem
   };
 
   WindowsFileWatcher::WindowsFileWatcher(std::filesystem::path root)
-      : root(std::move(root)), handle(std::make_unique<NativeHandle>()), buffer(changeBufferSize)
+    : root(std::move(root)), handle(std::make_unique<NativeHandle>()), buffer(changeBufferSize)
   {
     handle->directory = CreateFileW(root.wstring().c_str(),
                                     FILE_LIST_DIRECTORY,

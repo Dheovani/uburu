@@ -108,8 +108,7 @@ namespace
     ObservingScanner(std::filesystem::path firstPath,
                      std::filesystem::path secondPath,
                      std::function<void()> afterFirstEntry)
-        : firstPath(std::move(firstPath)), secondPath(std::move(secondPath)),
-          afterFirstEntry(std::move(afterFirstEntry))
+      : firstPath(std::move(firstPath)), secondPath(std::move(secondPath)), afterFirstEntry(std::move(afterFirstEntry))
     {}
 
     void scan(const std::filesystem::path&,

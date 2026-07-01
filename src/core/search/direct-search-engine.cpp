@@ -224,7 +224,7 @@ namespace uburu::search
   } // namespace
 
   DirectSearchEngine::DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner)
-      : scanner(std::move(scanner))
+    : scanner(std::move(scanner))
   {
     if (!this->scanner)
       throw std::invalid_argument("DirectSearchEngine requires a file scanner");

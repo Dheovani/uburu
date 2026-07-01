@@ -20,7 +20,7 @@ namespace
   {
   public:
     explicit TemporaryDirectory(std::string name)
-        : pathValue(std::filesystem::temp_directory_path() / uniqueName(std::move(name)))
+      : pathValue(std::filesystem::temp_directory_path() / uniqueName(std::move(name)))
     {
       std::error_code error;
 

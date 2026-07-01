@@ -67,9 +67,9 @@ namespace uburu::app
   }
 
   SearchController::SearchController(QObject* parent)
-      : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
-        searchService(std::make_shared<DefaultSearchService>(
-          std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
+    : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
+      searchService(std::make_shared<DefaultSearchService>(
+        std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
   {}
 
   SearchController::~SearchController()

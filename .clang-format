@@ -4,6 +4,7 @@ Language: Cpp
 Standard: Latest
 IndentWidth: 2
 ContinuationIndentWidth: 2
+ConstructorInitializerIndentWidth: 2
 TabWidth: 2
 UseTab: Never
 ColumnLimit: 120

@@ -5,7 +5,9 @@
 #include "core/search/search-result-merge.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -15,12 +17,72 @@ namespace uburu::app
   namespace
   {
 
+    constexpr std::uint64_t nanosecondsPerSecond = 1'000'000'000;
+
     [[nodiscard]] search::SearchSummary invalidQuerySummary(std::vector<search::SearchError> errors)
     {
       search::SearchSummary summary;
       summary.errors = std::move(errors);
 
       return summary;
+    }
+
+    [[nodiscard]] std::uint64_t ratePerSecond(std::uint64_t value, std::chrono::nanoseconds elapsed)
+    {
+      if (elapsed.count() <= 0)
+        return 0;
+
+      return value * nanosecondsPerSecond / static_cast<std::uint64_t>(elapsed.count());
+    }
+
+    void updateThroughputMetrics(diagnostics::SearchMetrics& metrics)
+    {
+      metrics.filesPerSecond = ratePerSecond(metrics.filesProcessed, metrics.totalTime);
+      metrics.bytesPerSecond = ratePerSecond(metrics.bytesProcessed, metrics.totalTime);
+    }
+
+    [[nodiscard]] std::uint64_t stringMemoryBytes(const std::string& value)
+    {
+      return static_cast<std::uint64_t>(value.capacity());
+    }
+
+    [[nodiscard]] std::uint64_t pathMemoryBytes(const std::filesystem::path& path)
+    {
+      return static_cast<std::uint64_t>(path.native().size() * sizeof(std::filesystem::path::value_type));
+    }
+
+    [[nodiscard]] std::uint64_t stringVectorMemoryBytes(const std::vector<std::string>& values)
+    {
+      std::uint64_t memoryBytes = static_cast<std::uint64_t>(values.capacity() * sizeof(std::string));
+
+      for (const auto& value : values)
+        memoryBytes += stringMemoryBytes(value);
+
+      return memoryBytes;
+    }
+
+    [[nodiscard]] std::uint64_t searchResultMemoryBytes(const SearchResult& result)
+    {
+      std::uint64_t memoryBytes = sizeof(SearchResult);
+
+      memoryBytes += pathMemoryBytes(result.path);
+      memoryBytes += pathMemoryBytes(result.searchRoot);
+      memoryBytes += stringMemoryBytes(result.lineText);
+      memoryBytes += static_cast<std::uint64_t>(result.highlights.capacity() * sizeof(MatchSpan));
+      memoryBytes += stringVectorMemoryBytes(result.contextBefore);
+      memoryBytes += stringVectorMemoryBytes(result.contextAfter);
+
+      return memoryBytes;
+    }
+
+    [[nodiscard]] std::uint64_t searchResultsMemoryBytes(const std::vector<SearchResult>& results)
+    {
+      std::uint64_t memoryBytes = static_cast<std::uint64_t>(results.capacity() * sizeof(SearchResult));
+
+      for (const auto& result : results)
+        memoryBytes += searchResultMemoryBytes(result);
+
+      return memoryBytes;
     }
 
     [[nodiscard]] SearchEventDto makeEvent(SearchRunId runId,
@@ -97,6 +159,7 @@ namespace uburu::app
       summary.cancelled = stopToken.stop_requested();
       summary.limitReached = emittedResults.size() >= query.options.resultLimit;
       summary.metrics.resultsEmitted = emittedResults.size();
+      summary.metrics.cacheHits = emittedResults.size();
 
       return summary;
     }
@@ -141,29 +204,73 @@ namespace uburu::app
       throw std::invalid_argument("DefaultSearchService requires an index service for indexed strategies");
   }
 
+  void DefaultSearchService::finalizeRuntimeMetrics(search::SearchSummary& summary,
+                                                    std::chrono::steady_clock::time_point startedAt,
+                                                    std::uint64_t approximateMemoryBytes) const
+  {
+    summary.metrics.totalTime = std::chrono::steady_clock::now() - startedAt;
+    summary.metrics.approximateMemoryBytes = approximateMemoryBytes;
+    updateThroughputMetrics(summary.metrics);
+
+    std::lock_guard lock(metricsMutex);
+
+    if (approximateMemoryBytes > previousApproximateMemoryBytes) {
+      summary.metrics.memoryGrowthBytes = approximateMemoryBytes - previousApproximateMemoryBytes;
+      summary.metrics.memoryIncreased = previousApproximateMemoryBytes > 0;
+    }
+
+    previousApproximateMemoryBytes = approximateMemoryBytes;
+  }
+
   search::SearchSummary
   DefaultSearchService::search(const SearchQuery& query, search::ResultSink sink, std::stop_token stopToken) const
   {
-    if (options.strategy == SearchStrategy::direct)
-      return directEngine->search(query, std::move(sink), stopToken);
+    const auto startedAt = std::chrono::steady_clock::now();
+
+    if (options.strategy == SearchStrategy::direct) {
+      std::uint64_t approximateMemoryBytes = 0;
+      auto summary = directEngine->search(
+        query,
+        [&](SearchResult result) {
+          approximateMemoryBytes += searchResultMemoryBytes(result);
+
+          return sink(std::move(result));
+        },
+        stopToken);
+
+      finalizeRuntimeMetrics(summary, startedAt, approximateMemoryBytes);
+
+      return summary;
+    }
 
     auto validationErrors = search::validateSearchQuery(query);
-    if (!validationErrors.empty())
-      return invalidQuerySummary(std::move(validationErrors));
+    if (!validationErrors.empty()) {
+      auto summary = invalidQuerySummary(std::move(validationErrors));
+      finalizeRuntimeMetrics(summary, startedAt, 0);
+
+      return summary;
+    }
 
     std::vector<SearchResult> emittedResults;
     const auto indexedResults = indexService->search(query, stopToken);
 
     if (options.strategy == SearchStrategy::indexed) {
       static_cast<void>(emitIndexedResults(indexedResults, query, sink, emittedResults));
+      auto summary = indexedSummary(emittedResults, query, stopToken);
 
-      return indexedSummary(emittedResults, query, stopToken);
+      finalizeRuntimeMetrics(summary, startedAt, searchResultsMemoryBytes(emittedResults));
+
+      return summary;
     }
 
     if (!emitIndexedResults(indexedResults, query, sink, emittedResults)) {
-      return indexedSummary(emittedResults, query, stopToken);
+      auto summary = indexedSummary(emittedResults, query, stopToken);
+      finalizeRuntimeMetrics(summary, startedAt, searchResultsMemoryBytes(emittedResults));
+
+      return summary;
     }
 
+    const auto indexedHitCount = emittedResults.size();
     std::vector<SearchResult> directResults;
     auto summary = directEngine->search(
       query,
@@ -180,6 +287,10 @@ namespace uburu::app
     summary.matches = emittedResults.size();
     summary.limitReached = summary.limitReached || emittedResults.size() >= query.options.resultLimit;
     summary.metrics.resultsEmitted = emittedResults.size();
+    summary.metrics.cacheHits = indexedHitCount;
+    summary.metrics.cacheMisses = emittedResults.size() - indexedHitCount;
+
+    finalizeRuntimeMetrics(summary, startedAt, searchResultsMemoryBytes(emittedResults));
 
     return summary;
   }
@@ -250,6 +361,7 @@ namespace uburu::app
     summary.metrics.timeToFirstResult = timeToFirstResult;
     summary.metrics.totalTime = std::chrono::steady_clock::now() - startedAt;
     summary.metrics.resultsEmitted = emittedResultCount;
+    updateThroughputMetrics(summary.metrics);
     const auto completionKind = completionEventKind(summary);
 
     if (!sink(makeEvent(executionOptions.runId, completionKind, summary, startedAt)))

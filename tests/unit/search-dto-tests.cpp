@@ -49,8 +49,16 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   summary.filesWithReadErrors = 1;
   summary.partialFailure = true;
   summary.regexExecutionMode = uburu::search::RegexExecutionMode::jit;
+  summary.metrics.filesPerSecond = 17;
+  summary.metrics.bytesPerSecond = 255;
   summary.metrics.resultsEmitted = 4;
   summary.metrics.totalTime = std::chrono::milliseconds(9);
+  summary.metrics.cacheHits = 3;
+  summary.metrics.cacheMisses = 1;
+  summary.metrics.reusedByHash = 2;
+  summary.metrics.approximateMemoryBytes = 1024;
+  summary.metrics.memoryGrowthBytes = 64;
+  summary.metrics.memoryIncreased = true;
 
   uburu::search::SearchError error;
 
@@ -68,8 +76,16 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   CHECK(dto.filesWithReadErrors == 1);
   CHECK(dto.partialFailure);
   CHECK(dto.regexExecutionMode == "jit");
+  CHECK(dto.metrics.filesPerSecond == 17);
+  CHECK(dto.metrics.bytesPerSecond == 255);
   CHECK(dto.metrics.resultsEmitted == 4);
   CHECK(dto.metrics.totalTime == std::chrono::milliseconds(9));
+  CHECK(dto.metrics.cacheHits == 3);
+  CHECK(dto.metrics.cacheMisses == 1);
+  CHECK(dto.metrics.reusedByHash == 2);
+  CHECK(dto.metrics.approximateMemoryBytes == 1024);
+  CHECK(dto.metrics.memoryGrowthBytes == 64);
+  CHECK(dto.metrics.memoryIncreased);
   REQUIRE(dto.errors.size() == 1);
   CHECK(dto.errors.front().code == "regexCompileFailed");
   CHECK(dto.errors.front().translationKey == "search.error.regex.compile");

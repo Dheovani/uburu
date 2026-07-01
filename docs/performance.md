@@ -35,6 +35,12 @@ marcados como sensíveis são mascarados por padrão; caminhos completos, conte�
 potencialmente privadas não devem ser adicionados como campos públicos sem uma decisão explícita da camada
 de aplicação.
 
+As métricas de busca incluem throughput derivado (`filesPerSecond` e `bytesPerSecond`), contadores de
+espera de filas, hits/misses de cache do índice, reuso por catálogo/blob/hash e uma estimativa de memória
+ocupada pelos resultados emitidos. A estimativa de memória não substitui um profiler: ela soma o tamanho
+aproximado das estruturas de resultado e das capacidades observáveis de strings/vetores. O
+`SearchService` compara essa estimativa com a busca anterior para sinalizar crescimento entre execuções.
+
 O scanner futuro usará pool limitado, priorização de arquivos pequenos e backpressure. Otimizações deverão vir acompanhadas de benchmarks reproduzíveis para muitos arquivos pequenos, poucos arquivos grandes, literal, regex, indexação inicial e reconciliação incremental.
 
 ## Leitura de arquivos grandes

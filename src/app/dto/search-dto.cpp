@@ -126,11 +126,23 @@ namespace uburu::app
     dto.totalTime = metrics.totalTime;
     dto.filesProcessed = metrics.filesProcessed;
     dto.bytesProcessed = metrics.bytesProcessed;
+    dto.filesPerSecond = metrics.filesPerSecond;
+    dto.bytesPerSecond = metrics.bytesPerSecond;
     dto.resultsEmitted = metrics.resultsEmitted;
     dto.ignoredFiles = metrics.ignoredFiles;
     dto.hiddenFiles = metrics.hiddenFiles;
     dto.binaryFiles = metrics.binaryFiles;
     dto.binaryFilesSkipped = metrics.binaryFilesSkipped;
+    dto.queueProducerWaits = metrics.queueProducerWaits;
+    dto.queueConsumerWaits = metrics.queueConsumerWaits;
+    dto.cacheHits = metrics.cacheHits;
+    dto.cacheMisses = metrics.cacheMisses;
+    dto.reusedByCatalog = metrics.reusedByCatalog;
+    dto.reusedByBlob = metrics.reusedByBlob;
+    dto.reusedByHash = metrics.reusedByHash;
+    dto.approximateMemoryBytes = metrics.approximateMemoryBytes;
+    dto.memoryGrowthBytes = metrics.memoryGrowthBytes;
+    dto.memoryIncreased = metrics.memoryIncreased;
 
     return dto;
   }

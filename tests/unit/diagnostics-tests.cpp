@@ -129,11 +129,17 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   constexpr auto totalTime = 11ns;
   constexpr std::uint64_t filesProcessed = 3;
   constexpr std::uint64_t bytesProcessed = 128;
+  constexpr std::uint64_t filesPerSecond = 27;
+  constexpr std::uint64_t bytesPerSecond = 512;
   constexpr std::uint64_t resultsEmitted = 2;
   constexpr std::uint64_t ignoredFiles = 5;
   constexpr std::uint64_t hiddenFiles = 1;
   constexpr std::uint64_t binaryFiles = 4;
   constexpr std::uint64_t binaryFilesSkipped = 4;
+  constexpr std::uint64_t cacheHits = 8;
+  constexpr std::uint64_t reusedByHash = 6;
+  constexpr std::uint64_t approximateMemoryBytes = 4096;
+  constexpr std::uint64_t memoryGrowthBytes = 128;
 
   auto logger = std::make_shared<uburu::diagnostics::InMemoryStructuredLogger>();
   uburu::diagnostics::StructuredMetricsSink sink(logger);
@@ -142,11 +148,18 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
                                                 .totalTime = totalTime,
                                                 .filesProcessed = filesProcessed,
                                                 .bytesProcessed = bytesProcessed,
+                                                .filesPerSecond = filesPerSecond,
+                                                .bytesPerSecond = bytesPerSecond,
                                                 .resultsEmitted = resultsEmitted,
                                                 .ignoredFiles = ignoredFiles,
                                                 .hiddenFiles = hiddenFiles,
                                                 .binaryFiles = binaryFiles,
-                                                .binaryFilesSkipped = binaryFilesSkipped});
+                                                .binaryFilesSkipped = binaryFilesSkipped,
+                                                .cacheHits = cacheHits,
+                                                .reusedByHash = reusedByHash,
+                                                .approximateMemoryBytes = approximateMemoryBytes,
+                                                .memoryGrowthBytes = memoryGrowthBytes,
+                                                .memoryIncreased = true});
 
   REQUIRE(logger->entries().size() == 1);
   const auto& event = logger->entries().front();
@@ -154,13 +167,27 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   CHECK(event.level == uburu::diagnostics::LogLevel::info);
   CHECK(event.category == uburu::diagnostics::LogCategory::search);
   CHECK(event.message == "search metrics");
-  REQUIRE(event.fields.size() == 9);
+  REQUIRE(event.fields.size() == 21);
   CHECK(event.fields[0].key == "time_to_first_result_ns");
   CHECK(event.fields[0].value == "7");
   CHECK(event.fields[1].key == "total_time_ns");
   CHECK(event.fields[1].value == "11");
-  CHECK(event.fields[4].key == "results_emitted");
-  CHECK(event.fields[4].value == "2");
+  CHECK(event.fields[4].key == "files_per_second");
+  CHECK(event.fields[4].value == "27");
+  CHECK(event.fields[5].key == "bytes_per_second");
+  CHECK(event.fields[5].value == "512");
+  CHECK(event.fields[6].key == "results_emitted");
+  CHECK(event.fields[6].value == "2");
+  CHECK(event.fields[13].key == "cache_hits");
+  CHECK(event.fields[13].value == "8");
+  CHECK(event.fields[17].key == "reused_by_hash");
+  CHECK(event.fields[17].value == "6");
+  CHECK(event.fields[18].key == "approximate_memory_bytes");
+  CHECK(event.fields[18].value == "4096");
+  CHECK(event.fields[19].key == "memory_growth_bytes");
+  CHECK(event.fields[19].value == "128");
+  CHECK(event.fields[20].key == "memory_increased");
+  CHECK(event.fields[20].value == "true");
 }
 
 TEST_CASE("structured metrics sink rejects a missing logger")

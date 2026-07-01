@@ -12,11 +12,23 @@ namespace uburu::diagnostics
     std::chrono::nanoseconds totalTime{};
     std::uint64_t filesProcessed{0};
     std::uint64_t bytesProcessed{0};
+    std::uint64_t filesPerSecond{0};
+    std::uint64_t bytesPerSecond{0};
     std::uint64_t resultsEmitted{0};
     std::uint64_t ignoredFiles{0};
     std::uint64_t hiddenFiles{0};
     std::uint64_t binaryFiles{0};
     std::uint64_t binaryFilesSkipped{0};
+    std::uint64_t queueProducerWaits{0};
+    std::uint64_t queueConsumerWaits{0};
+    std::uint64_t cacheHits{0};
+    std::uint64_t cacheMisses{0};
+    std::uint64_t reusedByCatalog{0};
+    std::uint64_t reusedByBlob{0};
+    std::uint64_t reusedByHash{0};
+    std::uint64_t approximateMemoryBytes{0};
+    std::uint64_t memoryGrowthBytes{0};
+    bool memoryIncreased{false};
   };
 
   class MetricsSink

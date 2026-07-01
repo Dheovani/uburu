@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <span>
@@ -31,12 +32,15 @@ namespace
       uburu::search::SearchSummary summary;
       summary.filesScanned = scannedFiles;
       summary.matches = results.size();
+      summary.metrics.filesProcessed = scannedFiles;
+      summary.metrics.bytesProcessed = bytesProcessed;
 
       return summary;
     }
 
     mutable std::size_t calls{0};
     std::size_t scannedFiles{7};
+    std::uint64_t bytesProcessed{256};
     std::vector<uburu::SearchResult> results;
   };
 
@@ -201,6 +205,7 @@ TEST_CASE("default search service uses indexed strategy explicitly")
   CHECK(emittedResults.front().path == std::filesystem::path("src/indexed.cpp"));
   CHECK(summary.matches == emittedResults.size());
   CHECK(summary.metrics.resultsEmitted == emittedResults.size());
+  CHECK(summary.metrics.cacheHits == emittedResults.size());
   CHECK(directEngine->calls == 0);
   CHECK(indexService->calls == 1);
 }
@@ -246,8 +251,32 @@ TEST_CASE("default search service emits indexed results before direct refinement
   CHECK(emittedResults[2].path == std::filesystem::path("src/direct.cpp"));
   CHECK(summary.matches == emittedResults.size());
   CHECK(summary.metrics.resultsEmitted == emittedResults.size());
+  CHECK(summary.metrics.cacheHits == 2);
+  CHECK(summary.metrics.cacheMisses == 1);
   CHECK(indexService->calls == 1);
   CHECK(directEngine->calls == 1);
+}
+
+TEST_CASE("default search service detects approximate memory growth between searches")
+{
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  const uburu::app::DefaultSearchService service(directEngine);
+
+  directEngine->results = {result(uburu::SearchResultKind::content, "src/small.cpp", 1, "needle")};
+  const auto firstSummary = service.search(uburu::SearchQuery{}, [](uburu::SearchResult) { return true; });
+
+  directEngine->results = {
+    result(uburu::SearchResultKind::content, "src/large.cpp", 1, std::string(512, 'x')),
+    result(uburu::SearchResultKind::content, "src/other.cpp", 2, std::string(512, 'y')),
+  };
+  const auto secondSummary = service.search(uburu::SearchQuery{}, [](uburu::SearchResult) { return true; });
+
+  CHECK(firstSummary.metrics.approximateMemoryBytes > 0);
+  CHECK_FALSE(firstSummary.metrics.memoryIncreased);
+  CHECK(secondSummary.metrics.approximateMemoryBytes > firstSummary.metrics.approximateMemoryBytes);
+  CHECK(secondSummary.metrics.memoryIncreased);
+  CHECK(secondSummary.metrics.memoryGrowthBytes ==
+        secondSummary.metrics.approximateMemoryBytes - firstSummary.metrics.approximateMemoryBytes);
 }
 
 TEST_CASE("default search service validates hybrid queries before consulting sources")

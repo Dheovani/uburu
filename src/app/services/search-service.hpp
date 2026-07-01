@@ -4,7 +4,10 @@
 #include "core/index/index-service.hpp"
 #include "core/search/search-engine.hpp"
 
+#include <chrono>
+#include <cstdint>
 #include <memory>
+#include <mutex>
 
 namespace uburu::app
 {
@@ -51,9 +54,15 @@ namespace uburu::app
                                                          std::stop_token stopToken = {}) const override;
 
   private:
+    void finalizeRuntimeMetrics(search::SearchSummary& summary,
+                                std::chrono::steady_clock::time_point startedAt,
+                                std::uint64_t approximateMemoryBytes) const;
+
     std::shared_ptr<const search::SearchEngine> directEngine;
     std::shared_ptr<const index::IndexService> indexService;
     SearchServiceOptions options;
+    mutable std::mutex metricsMutex;
+    mutable std::uint64_t previousApproximateMemoryBytes{0};
   };
 
 } // namespace uburu::app

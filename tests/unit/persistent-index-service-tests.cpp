@@ -96,18 +96,20 @@ namespace
   [[nodiscard]] uburu::IndexDocument
   indexedDocument(std::string contentHash, std::string gitBlobHash, std::filesystem::path relativePath)
   {
-    return uburu::IndexDocument{.repositoryId = "repository-id",
-                                .worktreeId = "worktree-id",
-                                .relativePath = std::move(relativePath),
-                                .contentHash = std::move(contentHash),
-                                .contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256,
-                                .gitBlobHash = std::move(gitBlobHash),
-                                .gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1,
-                                .status = uburu::GitFileStatus::clean,
-                                .size = 42,
-                                .modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{4}},
-                                .indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}},
-                                .deleted = false};
+    uburu::IndexDocument document;
+    document.repositoryId = "repository-id";
+    document.worktreeId = "worktree-id";
+    document.relativePath = std::move(relativePath);
+    document.contentHash = std::move(contentHash);
+    document.contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256;
+    document.gitBlobHash = std::move(gitBlobHash);
+    document.gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1;
+    document.status = uburu::GitFileStatus::clean;
+    document.size = 42;
+    document.modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{4}};
+    document.indexedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{1234}};
+
+    return document;
   }
 
   [[nodiscard]] uburu::IndexGeneration indexGeneration(std::vector<uburu::IndexDocument> documents)

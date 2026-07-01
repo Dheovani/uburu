@@ -108,7 +108,8 @@ namespace uburu::index
                            .size = previousDocument.size,
                            .modifiedAt = previousDocument.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
-                           .deleted = true};
+                           .deleted = true,
+                           .indexedText = std::nullopt};
     }
 
     [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree,
@@ -130,7 +131,8 @@ namespace uburu::index
                            .size = file.size,
                            .modifiedAt = file.modifiedAt,
                            .indexedAt = std::chrono::system_clock::now(),
-                           .deleted = false};
+                           .deleted = false,
+                           .indexedText = std::nullopt};
     }
 
     [[nodiscard]] IndexedDocumentIdentity reusableIdentity(const IndexDocument& document)
@@ -511,7 +513,10 @@ namespace uburu::index
     auto latestGeneration = storageService->latestGenerationForRoot(worktree.root);
 
     if (!latestGeneration)
-      return IndexStalenessReport{.state = IndexStalenessState::missing};
+      return IndexStalenessReport{.state = IndexStalenessState::missing,
+                                  .headChanged = false,
+                                  .branchChanged = false,
+                                  .latestGeneration = std::nullopt};
 
     const auto headChanged = latestGeneration->headOid != worktree.headOid;
     const auto branchChanged = latestGeneration->branch != worktree.branch;

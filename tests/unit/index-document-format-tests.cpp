@@ -9,17 +9,19 @@ namespace
 
   [[nodiscard]] uburu::IndexDocument validDocument()
   {
-    return uburu::IndexDocument{.repositoryId = "repository-id",
-                                .worktreeId = "worktree-id",
-                                .relativePath = "src/main.cpp",
-                                .contentHash = "sha256-content",
-                                .contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256,
-                                .gitBlobHash = "blob",
-                                .gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1,
-                                .status = uburu::GitFileStatus::clean,
-                                .size = 42,
-                                .indexedAt = std::chrono::system_clock::now(),
-                                .deleted = false};
+    uburu::IndexDocument document;
+    document.repositoryId = "repository-id";
+    document.worktreeId = "worktree-id";
+    document.relativePath = "src/main.cpp";
+    document.contentHash = "sha256-content";
+    document.contentHashAlgorithm = uburu::ContentHashAlgorithm::sha256;
+    document.gitBlobHash = "blob";
+    document.gitBlobHashAlgorithm = uburu::GitObjectHashAlgorithm::sha1;
+    document.status = uburu::GitFileStatus::clean;
+    document.size = 42;
+    document.indexedAt = std::chrono::system_clock::now();
+
+    return document;
   }
 
 } // namespace

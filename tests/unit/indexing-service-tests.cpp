@@ -210,7 +210,10 @@ namespace
     {
       static_cast<void>(worktree);
 
-      return uburu::index::IndexStalenessReport{.state = uburu::index::IndexStalenessState::fresh};
+      uburu::index::IndexStalenessReport report;
+      report.state = uburu::index::IndexStalenessState::fresh;
+
+      return report;
     }
 
     std::optional<uburu::WorktreeInfo> requestedWorktree;

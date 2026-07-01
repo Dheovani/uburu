@@ -51,6 +51,13 @@ namespace uburu::search
       return target == SearchTarget::fileName || target == SearchTarget::contentAndFileName;
     }
 
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
     std::vector<text::MatchPosition> findLiteralMatches(std::string_view text, const SearchQuery& query)
     {
       return text::findAllLiterals(text, query.expression, query.options);
@@ -86,7 +93,7 @@ namespace uburu::search
     {
       ++summary.filesWithReadErrors;
       summary.partialFailure = true;
-      summary.errors.push_back(makeSearchError(code, entry.relativePath.generic_string()));
+      summary.errors.push_back(makeSearchError(code, pathToUtf8(entry.relativePath)));
     }
 
     bool reportTextReadSummary(SearchSummary& summary, const FileEntry& entry, text::TextReadSummary readSummary)
@@ -277,7 +284,7 @@ namespace uburu::search
           std::vector<PendingResult> pendingResults;
 
           if (searchesFileName(query.options.target)) {
-            const auto pathText = entry.relativePath.generic_string();
+            const auto pathText = pathToUtf8(entry.relativePath);
             const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
 
             if (!pathMatches)

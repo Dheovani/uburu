@@ -26,9 +26,16 @@ namespace uburu::filesystem
   namespace
   {
 
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
     std::string normalizedExtension(std::filesystem::path path)
     {
-      auto extension = path.extension().string();
+      auto extension = pathToUtf8(path.extension());
 
       if (extension.starts_with('.'))
         extension.erase(0, 1);
@@ -38,7 +45,7 @@ namespace uburu::filesystem
 
     bool isHidden(const std::filesystem::path& path)
     {
-      const auto name = path.filename().string();
+      const auto name = pathToUtf8(path.filename());
 
       return !name.empty() && name.front() == '.';
     }

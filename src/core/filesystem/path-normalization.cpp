@@ -47,10 +47,17 @@ namespace uburu::filesystem
       return text;
     }
 
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
     std::string genericNormalizedPath(const std::filesystem::path& path)
     {
-      const auto original = path.string();
-      auto normalized = normalizePathSeparators(path.lexically_normal().generic_string());
+      const auto original = pathToUtf8(path);
+      auto normalized = normalizePathSeparators(pathToUtf8(path.lexically_normal()));
 
 #ifdef _WIN32
       if (startsWithWindowsNetworkPrefix(original) && !startsWithWindowsNetworkPrefix(normalized) &&
@@ -79,7 +86,7 @@ namespace uburu::filesystem
     if (normalized == ".")
       return {};
 
-    return normalizePathSeparators(normalized.generic_string());
+    return normalizePathSeparators(pathToUtf8(normalized));
   }
 
   std::string normalizedAbsolutePath(const std::filesystem::path& path)

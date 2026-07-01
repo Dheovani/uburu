@@ -72,7 +72,10 @@ namespace
   class SingleFileScanner final : public uburu::filesystem::FileScanner
   {
   public:
-    explicit SingleFileScanner(std::filesystem::path path) : pathValue(std::move(path)) {}
+    explicit SingleFileScanner(std::filesystem::path path, std::filesystem::path relativePath = "source.cpp")
+      : pathValue(std::move(path)), relativePathValue(std::move(relativePath))
+    {}
+
     void scan(const std::filesystem::path&,
               const uburu::SearchOptions&,
               uburu::filesystem::FileSink sink,
@@ -80,7 +83,7 @@ namespace
               uburu::diagnostics::SearchMetrics*) const override
     {
       sink(uburu::FileEntry{.absolutePath = pathValue,
-                            .relativePath = "source.cpp",
+                            .relativePath = relativePathValue,
                             .size = file_size(pathValue),
                             .modifiedAt = {},
                             .hidden = false,
@@ -100,6 +103,7 @@ namespace
     }
 
     std::filesystem::path pathValue;
+    std::filesystem::path relativePathValue;
   };
 
   class ObservingScanner final : public uburu::filesystem::FileScanner
@@ -316,6 +320,32 @@ TEST_CASE("direct search streams a match with one-based line and column")
   CHECK(results.front().path == std::filesystem::path("source.cpp"));
   CHECK(results.front().line == 2);
   CHECK(results.front().column == 10);
+  CHECK(summary.matches == 1);
+}
+
+TEST_CASE("direct search preserves unicode relative paths")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-search-unicode-path-test.txt";
+  {
+    std::ofstream file(path, std::ios::binary);
+    file << "needle\n";
+  }
+  const auto cleanup = [&] { std::filesystem::remove(path); };
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, std::filesystem::path(L"código") / L"ação.cpp");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    return true;
+  });
+  cleanup();
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == std::filesystem::path(L"código") / L"ação.cpp");
+  CHECK(summary.errors.empty());
   CHECK(summary.matches == 1);
 }
 

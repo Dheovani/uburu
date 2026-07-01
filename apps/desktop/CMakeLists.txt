@@ -13,8 +13,18 @@ qt_add_resources(uburu_desktop "uburu_qml"
   BASE "${CMAKE_CURRENT_SOURCE_DIR}"
   FILES
     qml/main.qml
-    qml/components/PrimaryButton.qml
-    qml/components/SecondaryButton.qml
+    qml/components/eyebrow-label.qml
+    qml/components/filter-chip.qml
+    qml/components/metric-card.qml
+    qml/components/muted-label.qml
+    qml/components/panel.qml
+    qml/components/primary-button.qml
+    qml/components/preview-pane.qml
+    qml/components/qmldir
+    qml/components/results-pane.qml
+    qml/components/search-header.qml
+    qml/components/secondary-button.qml
+    qml/components/status-line.qml
     qml/theme/Theme.qml
     qml/theme/qmldir
 )

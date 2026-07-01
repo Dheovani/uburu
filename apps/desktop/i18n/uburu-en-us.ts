@@ -2,20 +2,48 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US" sourcelanguage="pt_BR">
   <context>
-    <name>Main</name>
+    <name>main</name>
     <message><source>Uburu — Busca avançada</source><translation>Uburu — Advanced search</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Select directory or repository</translation></message>
-    <message><source>Texto a pesquisar</source><translation>Search text</translation></message>
-    <message><source>Selecionar pasta</source><translation>Select folder</translation></message>
+  </context>
+  <context>
+    <name>preview-pane</name>
+    <message><source>PREVIEW</source><translation>PREVIEW</translation></message>
+    <message><source>Pré-visualização</source><translation>Preview</translation></message>
+    <message><source>Selecione um resultado para inspecionar o contexto.</source><translation>Select a result to inspect its context.</translation></message>
+    <message><source>O conteúdo do arquivo aparecerá aqui</source><translation>File content will appear here</translation></message>
+  </context>
+  <context>
+    <name>results-pane</name>
+    <message><source>OCORRÊNCIAS</source><translation>MATCHES</translation></message>
+    <message><source>Resultados</source><translation>Results</translation></message>
+    <message><source>%1</source><translation>%1</translation></message>
+    <message><source>Pronto para buscar</source><translation>Ready to search</translation></message>
+    <message><source>Escolha uma pasta e digite uma consulta para ver os resultados aqui.</source><translation>Choose a folder and type a query to see results here.</translation></message>
+  </context>
+  <context>
+    <name>search-header</name>
+    <message><source>BUSCA LOCAL</source><translation>LOCAL SEARCH</translation></message>
+    <message><source>Uburu</source><translation>Uburu</translation></message>
+    <message><source>Buscando</source><translation>Searching</translation></message>
+    <message><source>Pronto</source><translation>Ready</translation></message>
+    <message><source>Pesquisar em arquivos</source><translation>Search in files</translation></message>
+    <message><source>Pasta</source><translation>Folder</translation></message>
     <message><source>Buscar</source><translation>Search</translation></message>
     <message><source>Cancelar</source><translation>Cancel</translation></message>
-    <message><source>Nenhum diretório selecionado</source><translation>No directory selected</translation></message>
-    <message><source>Expressão regular</source><translation>Regular expression</translation></message>
-    <message><source>Diferenciar maiúsculas e minúsculas</source><translation>Case sensitive</translation></message>
+    <message><source>Regex</source><translation>Regex</translation></message>
+    <message><source>Case-sensitive</source><translation>Case-sensitive</translation></message>
     <message><source>Palavra inteira</source><translation>Whole word</translation></message>
     <message><source>Respeitar .gitignore</source><translation>Respect .gitignore</translation></message>
-    <message><source>Os resultados aparecerão aqui</source><translation>Results will appear here</translation></message>
-    <message><source>Pré-visualização do arquivo</source><translation>File preview</translation></message>
+    <message><source>Selecione um diretório ou repositório para começar</source><translation>Select a directory or repository to begin</translation></message>
+    <message><source>Modo</source><translation>Mode</translation></message>
+    <message><source>Progressivo</source><translation>Progressive</translation></message>
+    <message><source>Resultados</source><translation>Results</translation></message>
+    <message><source>%1 visíveis</source><translation>%1 visible</translation></message>
+  </context>
+  <context>
+    <name>status-line</name>
+    <message><source>Aguardando comando de busca</source><translation>Waiting for a search command</translation></message>
   </context>
   <context>
     <name>SearchController</name>

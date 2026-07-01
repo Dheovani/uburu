@@ -309,6 +309,9 @@ namespace uburu::filesystem
         if (item.is_directory(error)) {
           const auto linkLikeDirectory = isLinkLikeDirectory(item);
 
+          if (!options.includeSubdirectories)
+            continue;
+
           if (linkLikeDirectory && !options.followSymlinks)
             continue;
 

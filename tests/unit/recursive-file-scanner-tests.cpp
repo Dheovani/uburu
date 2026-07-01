@@ -134,6 +134,21 @@ TEST_CASE("recursive scanner filters by extension using platform case rules")
 #endif
 }
 
+TEST_CASE("recursive scanner can ignore subdirectories")
+{
+  TemporaryDirectory directory("uburu-recursive-scanner-subdirectories-test");
+  writeFile(directory.path() / "root.txt", "root\n");
+  writeFile(directory.path() / "nested" / "child.txt", "child\n");
+
+  uburu::SearchOptions options;
+  options.includeSubdirectories = false;
+
+  const auto entries = scanEntries(directory.path(), options);
+
+  REQUIRE(entries.size() == 1);
+  CHECK(entries.front().relativePath == std::filesystem::path("root.txt"));
+}
+
 TEST_CASE("recursive scanner applies directory includes and excludes with exclusion precedence")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-directory-filter-test");

@@ -13,11 +13,17 @@ Panel {
     property int resultCount: 0
 
     signal selectDirectory()
-    signal startSearch(string query, bool regex, bool caseSensitive, bool wholeWord, bool gitignore)
+    signal startSearch(string query,
+                       bool regex,
+                       bool caseSensitive,
+                       bool wholeWord,
+                       bool gitignore,
+                       bool includeSubdirectories,
+                       string documentTypes)
     signal cancelSearch()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: compact ? 196 : 164
+    Layout.preferredHeight: compact ? 238 : 198
     color: Theme.surface
 
     RowLayout {
@@ -120,7 +126,9 @@ Panel {
                         regex.checked,
                         caseSensitive.checked,
                         wholeWord.checked,
-                        gitignore.checked
+                        gitignore.checked,
+                        includeSubdirectories.checked,
+                        documentTypesField.text
                     )
                 }
 
@@ -128,6 +136,40 @@ Panel {
                     text: qsTr("Cancelar")
                     enabled: root.running
                     onClicked: root.cancelSearch()
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Layout.alignment: Qt.AlignVCenter
+
+                MutedLabel {
+                    text: qsTr("Tipos")
+                }
+
+                TextField {
+                    id: documentTypesField
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 34
+                    placeholderText: qsTr("Ex.: pdf, docx, txt")
+                    verticalAlignment: TextInput.AlignVCenter
+
+                    color: Theme.text
+                    placeholderTextColor: Theme.textMuted
+                    selectionColor: Theme.primary
+                    selectedTextColor: "white"
+                    font.pixelSize: Theme.fontSizeSmall
+                    leftPadding: 12
+                    rightPadding: 12
+
+                    background: Rectangle {
+                        radius: Theme.radius
+                        color: Theme.surfaceSunken
+                        border.color: documentTypesField.activeFocus ? Theme.primary : Theme.border
+                        border.width: 1
+                    }
                 }
             }
 
@@ -153,6 +195,12 @@ Panel {
                 FilterChip {
                     id: gitignore
                     text: qsTr("Respeitar .gitignore")
+                    checked: true
+                }
+
+                FilterChip {
+                    id: includeSubdirectories
+                    text: qsTr("Incluir subdiretórios")
                     checked: true
                 }
             }

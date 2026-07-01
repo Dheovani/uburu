@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QMetaObject>
+#include <QRegularExpression>
 #include <QStringList>
 #include <QUrl>
 #include <QtConcurrentRun>
@@ -67,6 +68,26 @@ namespace uburu::app
         status += receiver->tr(" — pulados: %1").arg(skipped.join(receiver->tr(", ")));
 
       return status;
+    }
+
+    std::vector<std::string> parseDocumentTypes(const QString& text)
+    {
+      std::vector<std::string> extensions;
+      const auto parts = text.split(QRegularExpression(QStringLiteral("[,;\\s]+")), Qt::SkipEmptyParts);
+
+      extensions.reserve(static_cast<std::size_t>(parts.size()));
+
+      for (auto part : parts) {
+        part = part.trimmed();
+
+        while (part.startsWith(QLatin1Char('.')))
+          part.remove(0, 1);
+
+        if (!part.isEmpty())
+          extensions.push_back(part.toUtf8().toStdString());
+      }
+
+      return extensions;
     }
 
   } // namespace
@@ -158,8 +179,13 @@ namespace uburu::app
     emit directoryChanged();
   }
 
-  void SearchController::startSearch(
-    const QString& expression, bool regex, bool caseSensitive, bool wholeWord, bool respectGitignore)
+  void SearchController::startSearch(const QString& expression,
+                                     bool regex,
+                                     bool caseSensitive,
+                                     bool wholeWord,
+                                     bool respectGitignore,
+                                     bool includeSubdirectories,
+                                     const QString& documentTypes)
   {
     if (runningValue || directoryValue.isEmpty() || expression.isEmpty())
       return;
@@ -177,6 +203,8 @@ namespace uburu::app
     query.options.caseSensitive = caseSensitive;
     query.options.wholeWord = wholeWord;
     query.options.respectGitignore = respectGitignore;
+    query.options.includeSubdirectories = includeSubdirectories;
+    query.options.extensions = parseDocumentTypes(documentTypes);
     const auto token = stopSource.get_token();
 
     activeWatcher = new QFutureWatcher<search::SearchSummary>(this);

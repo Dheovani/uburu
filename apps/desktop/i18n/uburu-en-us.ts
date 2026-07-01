@@ -36,6 +36,9 @@
     <message><source>Palavra inteira</source><translation>Whole word</translation></message>
     <message><source>Respeitar .gitignore</source><translation>Respect .gitignore</translation></message>
     <message><source>Selecione um diretório ou repositório para começar</source><translation>Select a directory or repository to begin</translation></message>
+    <message><source>Incluir subdiretórios</source><translation>Include subdirectories</translation></message>
+    <message><source>Tipos</source><translation>Types</translation></message>
+    <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>Modo</source><translation>Mode</translation></message>
     <message><source>Progressivo</source><translation>Progressive</translation></message>
     <message><source>Resultados</source><translation>Results</translation></message>

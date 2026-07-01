@@ -2,6 +2,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
+
 using uburu::SearchOptions;
 using uburu::text::findAllLiterals;
 using uburu::text::findLiteral;
@@ -49,6 +51,45 @@ TEST_CASE("literal matching is case insensitive for precomposed latin Unicode")
   REQUIRE(match.has_value());
   CHECK(match->offset == 18);
   CHECK(match->length == 6);
+}
+
+TEST_CASE("literal matching treats precomposed and decomposed Portuguese accents as equivalent")
+{
+  const std::string decomposedText =
+    "a gerac\xCC\xA7"
+    "a\xCC\x83"
+    "o e a corrupc\xCC\xA7"
+    "a\xCC\x83"
+    "o da mate\xCC\x81"
+    "ria";
+  const std::string precomposedExpression = "gera\xC3\xA7\xC3\xA3o e a corrup\xC3\xA7\xC3\xA3o da mat\xC3\xA9ria";
+
+  const auto match = findLiteral(decomposedText, precomposedExpression, SearchOptions{});
+
+  REQUIRE(match.has_value());
+  CHECK(match->offset == 2);
+}
+
+TEST_CASE("literal matching treats decomposed and precomposed Portuguese accents as equivalent")
+{
+  const std::string precomposedText = "a gera\xC3\xA7\xC3\xA3o e a corrup\xC3\xA7\xC3\xA3o da mat\xC3\xA9ria";
+  const std::string decomposedExpression =
+    "gerac\xCC\xA7"
+    "a\xCC\x83"
+    "o e a corrupc\xCC\xA7"
+    "a\xCC\x83"
+    "o da mate\xCC\x81"
+    "ria";
+
+  const auto match = findLiteral(precomposedText, decomposedExpression, SearchOptions{});
+
+  REQUIRE(match.has_value());
+  CHECK(match->offset == 2);
+}
+
+TEST_CASE("literal matching does not treat missing accents as canonical equivalents")
+{
+  CHECK_FALSE(findLiteral("geracao", "gera\xC3\xA7\xC3\xA3o", SearchOptions{}).has_value());
 }
 
 TEST_CASE("case sensitive literal matching keeps Unicode casing strict")

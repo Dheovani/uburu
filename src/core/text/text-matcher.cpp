@@ -1,7 +1,9 @@
 #include "core/text/text-matcher.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
+#include <optional>
 
 namespace uburu::text
 {
@@ -59,11 +61,27 @@ namespace uburu::text
     constexpr char32_t latinLowercaseAfterDivisionSignMin = 0x00F8U;
     constexpr char32_t latinLowercaseMax = 0x00FFU;
     constexpr char32_t lowercaseCodepointDelta = 32U;
+    constexpr char32_t combiningGraveAccent = 0x0300U;
+    constexpr char32_t combiningAcuteAccent = 0x0301U;
+    constexpr char32_t combiningCircumflexAccent = 0x0302U;
+    constexpr char32_t combiningTilde = 0x0303U;
+    constexpr char32_t combiningDiaeresis = 0x0308U;
+    constexpr char32_t combiningCedilla = 0x0327U;
+    constexpr char32_t combiningMarksMin = 0x0300U;
+    constexpr char32_t combiningMarksMax = 0x036FU;
+    constexpr std::size_t maximumCanonicalClusterScalars = 8;
 
     struct DecodedScalar
     {
       char32_t value{0};
       std::size_t byteLength{singleByteLength};
+    };
+
+    struct CanonicalCluster
+    {
+      std::array<char32_t, maximumCanonicalClusterScalars> scalars{};
+      std::size_t scalarCount{0};
+      std::size_t byteLength{0};
     };
 
     bool isAsciiLetter(char32_t scalar)
@@ -93,6 +111,11 @@ namespace uburu::text
     bool isCodeIdentifierScalar(char32_t scalar)
     {
       return isAsciiLetter(scalar) || isAsciiDigit(scalar) || scalar == asciiIdentifierConnector;
+    }
+
+    bool isCombiningMark(char32_t scalar)
+    {
+      return scalar >= combiningMarksMin && scalar <= combiningMarksMax;
     }
 
     bool isContinuationByte(unsigned char byte)
@@ -203,11 +226,133 @@ namespace uburu::text
       return scalar;
     }
 
-    bool sameScalar(DecodedScalar left, DecodedScalar right, const SearchOptions& options)
+    void appendCanonicalScalar(CanonicalCluster& cluster, char32_t scalar)
     {
-      if (options.caseSensitive)
-        return left.value == right.value;
-      return simpleCaseFold(left.value) == simpleCaseFold(right.value);
+      if (cluster.scalarCount >= cluster.scalars.size())
+        return;
+
+      cluster.scalars[cluster.scalarCount] = scalar;
+      ++cluster.scalarCount;
+    }
+
+    void appendFoldedScalar(CanonicalCluster& cluster, char32_t scalar, const SearchOptions& options)
+    {
+      appendCanonicalScalar(cluster, options.caseSensitive ? scalar : simpleCaseFold(scalar));
+    }
+
+    void appendDecomposedLatinScalar(CanonicalCluster& cluster, char32_t scalar, const SearchOptions& options)
+    {
+      switch (scalar) {
+      case U'À':
+      case U'à':
+        appendFoldedScalar(cluster, U'a', options);
+        appendCanonicalScalar(cluster, combiningGraveAccent);
+        return;
+      case U'Á':
+      case U'á':
+        appendFoldedScalar(cluster, U'a', options);
+        appendCanonicalScalar(cluster, combiningAcuteAccent);
+        return;
+      case U'Â':
+      case U'â':
+        appendFoldedScalar(cluster, U'a', options);
+        appendCanonicalScalar(cluster, combiningCircumflexAccent);
+        return;
+      case U'Ã':
+      case U'ã':
+        appendFoldedScalar(cluster, U'a', options);
+        appendCanonicalScalar(cluster, combiningTilde);
+        return;
+      case U'Ä':
+      case U'ä':
+        appendFoldedScalar(cluster, U'a', options);
+        appendCanonicalScalar(cluster, combiningDiaeresis);
+        return;
+      case U'Ç':
+      case U'ç':
+        appendFoldedScalar(cluster, U'c', options);
+        appendCanonicalScalar(cluster, combiningCedilla);
+        return;
+      case U'É':
+      case U'é':
+        appendFoldedScalar(cluster, U'e', options);
+        appendCanonicalScalar(cluster, combiningAcuteAccent);
+        return;
+      case U'Ê':
+      case U'ê':
+        appendFoldedScalar(cluster, U'e', options);
+        appendCanonicalScalar(cluster, combiningCircumflexAccent);
+        return;
+      case U'Í':
+      case U'í':
+        appendFoldedScalar(cluster, U'i', options);
+        appendCanonicalScalar(cluster, combiningAcuteAccent);
+        return;
+      case U'Ó':
+      case U'ó':
+        appendFoldedScalar(cluster, U'o', options);
+        appendCanonicalScalar(cluster, combiningAcuteAccent);
+        return;
+      case U'Ô':
+      case U'ô':
+        appendFoldedScalar(cluster, U'o', options);
+        appendCanonicalScalar(cluster, combiningCircumflexAccent);
+        return;
+      case U'Õ':
+      case U'õ':
+        appendFoldedScalar(cluster, U'o', options);
+        appendCanonicalScalar(cluster, combiningTilde);
+        return;
+      case U'Ú':
+      case U'ú':
+        appendFoldedScalar(cluster, U'u', options);
+        appendCanonicalScalar(cluster, combiningAcuteAccent);
+        return;
+      default:
+        appendFoldedScalar(cluster, scalar, options);
+        return;
+      }
+    }
+
+    CanonicalCluster canonicalClusterAt(std::string_view text, std::size_t offset, const SearchOptions& options)
+    {
+      CanonicalCluster cluster;
+      const auto first = decodeUtf8At(text, offset);
+      cluster.byteLength = first.byteLength;
+      appendDecomposedLatinScalar(cluster, first.value, options);
+
+      std::size_t nextOffset = offset + first.byteLength;
+      while (nextOffset < text.size()) {
+        const auto next = decodeUtf8At(text, nextOffset);
+
+        if (!isCombiningMark(next.value))
+          break;
+
+        appendCanonicalScalar(cluster, next.value);
+        cluster.byteLength += next.byteLength;
+        nextOffset += next.byteLength;
+      }
+
+      if (cluster.scalarCount > 2) {
+        const auto marksBegin = cluster.scalars.begin() + 1;
+        const auto marksEnd = cluster.scalars.begin() + static_cast<std::ptrdiff_t>(cluster.scalarCount);
+        std::sort(marksBegin, marksEnd);
+      }
+
+      return cluster;
+    }
+
+    bool sameCanonicalCluster(const CanonicalCluster& left, const CanonicalCluster& right)
+    {
+      if (left.scalarCount != right.scalarCount)
+        return false;
+
+      for (std::size_t index = 0; index < left.scalarCount; ++index) {
+        if (left.scalars[index] != right.scalars[index])
+          return false;
+      }
+
+      return true;
     }
 
     std::optional<std::size_t> literalMatchLengthAt(std::string_view text,
@@ -222,13 +367,13 @@ namespace uburu::text
         if (textIndex >= text.size())
           return std::nullopt;
 
-        const auto textScalar = decodeUtf8At(text, textIndex);
-        const auto expressionScalar = decodeUtf8At(expression, expressionIndex);
-        if (!sameScalar(textScalar, expressionScalar, options))
+        const auto textCluster = canonicalClusterAt(text, textIndex, options);
+        const auto expressionCluster = canonicalClusterAt(expression, expressionIndex, options);
+        if (!sameCanonicalCluster(textCluster, expressionCluster))
           return std::nullopt;
 
-        textIndex += textScalar.byteLength;
-        expressionIndex += expressionScalar.byteLength;
+        textIndex += textCluster.byteLength;
+        expressionIndex += expressionCluster.byteLength;
       }
 
       return textIndex - textOffset;

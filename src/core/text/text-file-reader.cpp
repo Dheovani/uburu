@@ -150,8 +150,12 @@ namespace uburu::text
 
     bool isSupportedFallbackEncoding(TextEncoding encoding)
     {
-      return encoding == TextEncoding::utf16Le || encoding == TextEncoding::utf16Be || encoding == TextEncoding::latin1;
+      return encoding == TextEncoding::utf16Le ||
+             encoding == TextEncoding::utf16Be ||
+             encoding == TextEncoding::latin1;
     }
+
+    bool sampleLooksValidUtf8(std::string_view sample);
 
     EncodingDetection detectEncoding(std::string_view sample, TextEncoding fallbackEncoding)
     {
@@ -167,6 +171,9 @@ namespace uburu::text
       if (sample.size() >= utf16BomSize && static_cast<unsigned char>(sample[0]) == utf16BeBomFirst &&
           static_cast<unsigned char>(sample[1]) == utf16BeBomSecond)
         return {TextEncoding::utf16Be, utf16BomSize, true};
+
+      if (sampleLooksValidUtf8(sample))
+        return {TextEncoding::utf8, 0, false};
 
       auto encoding = TextEncoding::utf8;
       if (isSupportedFallbackEncoding(fallbackEncoding))
@@ -281,6 +288,33 @@ namespace uburu::text
       }
 
       return {};
+    }
+
+    bool sampleLooksValidUtf8(std::string_view sample)
+    {
+      for (std::size_t offset = 0; offset < sample.size();) {
+        const auto decoded = decodeUtf8At(sample, offset);
+
+        if (!decoded.valid) {
+          const auto first = static_cast<unsigned char>(sample[offset]);
+          const auto remaining = sample.size() - offset;
+
+          if (first >= utf8TwoByteMin && first <= utf8TwoByteMax)
+            return remaining < 2;
+
+          if (first >= utf8ThreeByteMin && first <= utf8ThreeByteMax)
+            return remaining < 3;
+
+          if (first >= utf8FourByteMin && first <= utf8FourByteMax)
+            return remaining < 4;
+
+          return false;
+        }
+
+        offset += decoded.bytesConsumed;
+      }
+
+      return true;
     }
 
     std::uint16_t readUtf16CodeUnit(std::string_view bytes, std::size_t offset, TextEncoding encoding)

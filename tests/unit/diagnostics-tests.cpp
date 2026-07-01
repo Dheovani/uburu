@@ -1,3 +1,4 @@
+#include "core/diagnostics/file-structured-logger.hpp"
 #include "core/diagnostics/structured-logger.hpp"
 #include "core/diagnostics/structured-metrics-sink.hpp"
 
@@ -5,8 +6,12 @@
 
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <system_error>
 
 TEST_CASE("structured logger masks sensitive fields by default")
 {
@@ -41,6 +46,79 @@ TEST_CASE("structured logger can retain sensitive fields when explicitly enabled
   REQUIRE(logger.entries().size() == 1);
   REQUIRE(logger.entries().front().fields.size() == 1);
   CHECK(logger.entries().front().fields.front().value == "C:/private/file.cpp");
+}
+
+TEST_CASE("structured logger filters entries by minimum level and category")
+{
+  uburu::diagnostics::InMemoryStructuredLogger logger(
+    uburu::diagnostics::StructuredLogOptions{.includeSensitiveFields = false,
+                                             .minimumLevel = uburu::diagnostics::LogLevel::warning,
+                                             .enabledCategories = {uburu::diagnostics::LogCategory::search}});
+
+  logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::info,
+                                            .category = uburu::diagnostics::LogCategory::search,
+                                            .message = "too low"});
+  logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::error,
+                                            .category = uburu::diagnostics::LogCategory::git,
+                                            .message = "wrong category"});
+  logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::warning,
+                                            .category = uburu::diagnostics::LogCategory::search,
+                                            .message = "accepted"});
+
+  REQUIRE(logger.entries().size() == 1);
+  CHECK(logger.entries().front().message == "accepted");
+}
+
+TEST_CASE("file structured logger writes sanitized json lines")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-file-structured-logger-test.log";
+  std::error_code error;
+
+  std::filesystem::remove(path, error);
+
+  uburu::diagnostics::FileStructuredLogger logger(
+    uburu::diagnostics::FileStructuredLogOptions{.path = path, .maximumFileSizeBytes = 1024});
+
+  logger.write(uburu::diagnostics::LogEvent{
+    .level = uburu::diagnostics::LogLevel::warning,
+    .category = uburu::diagnostics::LogCategory::diagnostics,
+    .message = "hello \"logger\"",
+    .fields = {uburu::diagnostics::LogField{.key = "path", .value = "C:/private/file.cpp", .sensitive = true}},
+    .timestamp = std::chrono::system_clock::time_point{std::chrono::milliseconds{42}}});
+
+  std::ifstream stream(path, std::ios::binary);
+  std::string line;
+
+  std::getline(stream, line);
+
+  CHECK(line.find("\"level\":\"warning\"") != std::string::npos);
+  CHECK(line.find("\"category\":\"diagnostics\"") != std::string::npos);
+  CHECK(line.find("hello \\\"logger\\\"") != std::string::npos);
+  CHECK(line.find("<redacted>") != std::string::npos);
+
+  std::filesystem::remove(path, error);
+}
+
+TEST_CASE("file structured logger rotates files when size limit is reached")
+{
+  const auto path = std::filesystem::temp_directory_path() / "uburu-file-structured-logger-rotation-test.log";
+  const auto rotated = std::filesystem::path(path.string() + ".1");
+  std::error_code error;
+
+  std::filesystem::remove(path, error);
+  std::filesystem::remove(rotated, error);
+
+  uburu::diagnostics::FileStructuredLogger logger(
+    uburu::diagnostics::FileStructuredLogOptions{.path = path, .maximumFileSizeBytes = 1, .maximumRotatedFiles = 1});
+
+  logger.write(uburu::diagnostics::LogEvent{.message = "first"});
+  logger.write(uburu::diagnostics::LogEvent{.message = "second"});
+
+  CHECK(std::filesystem::exists(path));
+  CHECK(std::filesystem::exists(rotated));
+
+  std::filesystem::remove(path, error);
+  std::filesystem::remove(rotated, error);
 }
 
 TEST_CASE("structured metrics sink records search metrics as structured log fields")

@@ -214,7 +214,7 @@ e UI para avançarem mais rapidamente.
 - [x] Implementar batching adaptativo de resultados para a UI.
 - [x] Medir tempo até o primeiro resultado e tempo total em todas as estratégias.
 - [x] Implementar `MetricsSink` concreto e logging estruturado.
-- [ ] Adicionar níveis, categorias e rotação de logs.
+- [x] Adicionar níveis, categorias e rotação de logs.
 - [x] Remover ou mascarar conteúdo e caminhos sensíveis dos logs por padrão.
 - [ ] Medir arquivos/bytes por segundo, filas, cache hit e reuso por hash.
 - [ ] Medir memória aproximada e detectar crescimento entre buscas.

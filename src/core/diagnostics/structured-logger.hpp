@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -46,6 +47,8 @@ namespace uburu::diagnostics
   struct StructuredLogOptions
   {
     bool includeSensitiveFields{false};
+    LogLevel minimumLevel{LogLevel::trace};
+    std::vector<LogCategory> enabledCategories;
   };
 
   class StructuredLogger
@@ -71,5 +74,7 @@ namespace uburu::diagnostics
 
   [[nodiscard]] std::string_view logLevelName(LogLevel level);
   [[nodiscard]] std::string_view logCategoryName(LogCategory category);
+  [[nodiscard]] bool shouldRecordLogEvent(const LogEvent& event, const StructuredLogOptions& options);
+  void sanitizeLogEvent(LogEvent& event, const StructuredLogOptions& options);
 
 } // namespace uburu::diagnostics

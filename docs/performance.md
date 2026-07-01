@@ -25,12 +25,15 @@ diretamente durante a varredura, não uma estimativa recursiva de tudo que havia
 
 `SearchService::searchWithEvents()` mede `timeToFirstResult` e `totalTime` no nível da estratégia de
 busca selecionada. O serviço mede também a latência síncrona de entrega de cada batch ao sink e ajusta
-o próximo tamanho de lote dentro dos limites de `SearchExecutionOptions`. `StructuredMetricsSink` é o
-primeiro `MetricsSink` concreto: ele grava métricas de
-busca como evento estruturado de categoria `search`, com campos numéricos para tempos, arquivos, bytes e
-resultados. O logger estruturado mascara campos marcados como sensíveis por padrão; caminhos completos,
-conteúdo de linhas e expressões potencialmente privadas não devem ser adicionados como campos públicos sem
-uma decisão explícita da camada de aplicação.
+o próximo tamanho de lote dentro dos limites de `SearchExecutionOptions`. `StructuredMetricsSink` grava
+métricas de busca como evento estruturado de categoria `search`, com campos numéricos para tempos,
+arquivos, bytes e resultados.
+
+O logger estruturado suporta filtragem por nível mínimo e categorias habilitadas. `FileStructuredLogger`
+grava JSON Lines e aplica rotação por tamanho, mantendo um número configurável de arquivos antigos. Campos
+marcados como sensíveis são mascarados por padrão; caminhos completos, conteúdo de linhas e expressões
+potencialmente privadas não devem ser adicionados como campos públicos sem uma decisão explícita da camada
+de aplicação.
 
 O scanner futuro usará pool limitado, priorização de arquivos pequenos e backpressure. Otimizações deverão vir acompanhadas de benchmarks reproduzíveis para muitos arquivos pequenos, poucos arquivos grandes, literal, regex, indexação inicial e reconciliação incremental.
 

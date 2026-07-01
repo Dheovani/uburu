@@ -19,15 +19,22 @@ namespace uburu::search
         errors.push_back(makeSearchError(code, std::move(context)));
     }
 
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
     void validateRoot(const std::filesystem::path& root, std::vector<SearchError>& errors)
     {
       std::error_code error;
       const auto exists = std::filesystem::exists(root, error);
 
       if (error || !exists) {
-        errors.push_back(makeSearchError(SearchErrorCode::rootNotFound, root.string()));
+        errors.push_back(makeSearchError(SearchErrorCode::rootNotFound, pathToUtf8(root)));
       } else if (!std::filesystem::is_directory(root, error) || error) {
-        errors.push_back(makeSearchError(SearchErrorCode::rootNotDirectory, root.string()));
+        errors.push_back(makeSearchError(SearchErrorCode::rootNotDirectory, pathToUtf8(root)));
       }
     }
 

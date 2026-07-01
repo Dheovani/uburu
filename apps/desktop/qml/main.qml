@@ -26,7 +26,7 @@ ApplicationWindow {
         id: folderDialog
 
         title: qsTr("Selecionar diretório ou repositório")
-        onAccepted: searchController.selectDirectory(selectedFolder)
+        onAccepted: searchController.selectDirectory(selectedFolder.toString())
     }
 
     ColumnLayout {
@@ -44,6 +44,10 @@ ApplicationWindow {
             onStartSearch: (query, regex, caseSensitive, wholeWord, gitignore) => {
                 searchController.startSearch(query, regex, caseSensitive, wholeWord, gitignore)
             }
+        }
+
+        ScopeBar {
+            directory: searchController.directory
         }
 
         SplitView {

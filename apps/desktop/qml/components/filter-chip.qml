@@ -6,6 +6,10 @@ import "../theme"
 CheckBox {
     id: chip
 
+    HoverHandler {
+        cursorShape: chip.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+    }
+
     indicator: Rectangle {
         implicitWidth: 16
         implicitHeight: 16

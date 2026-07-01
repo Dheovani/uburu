@@ -22,6 +22,7 @@ qt_add_resources(uburu_desktop "uburu_qml"
     qml/components/preview-pane.qml
     qml/components/qmldir
     qml/components/results-pane.qml
+    qml/components/scope-bar.qml
     qml/components/search-header.qml
     qml/components/secondary-button.qml
     qml/components/status-line.qml

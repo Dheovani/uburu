@@ -11,6 +11,10 @@ Button {
     rightPadding: 14
     font.pixelSize: Theme.fontSize
 
+    HoverHandler {
+        cursorShape: control.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+    }
+
     contentItem: Text {
         text: control.text
         color: control.enabled ? Theme.text : Theme.textMuted

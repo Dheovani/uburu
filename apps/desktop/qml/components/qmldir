@@ -8,4 +8,5 @@ MetricCard 1.0 metric-card.qml
 SearchHeader 1.0 search-header.qml
 ResultsPane 1.0 results-pane.qml
 PreviewPane 1.0 preview-pane.qml
+ScopeBar 1.0 scope-bar.qml
 StatusLine 1.0 status-line.qml

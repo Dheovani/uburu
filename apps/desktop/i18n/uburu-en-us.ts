@@ -42,6 +42,11 @@
     <message><source>%1 visíveis</source><translation>%1 visible</translation></message>
   </context>
   <context>
+    <name>scope-bar</name>
+    <message><source>Escopo</source><translation>Scope</translation></message>
+    <message><source>Nenhum diretório selecionado</source><translation>No directory selected</translation></message>
+  </context>
+  <context>
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Waiting for a search command</translation></message>
   </context>
@@ -49,7 +54,10 @@
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Ready</translation></message>
     <message><source>A busca regex será habilitada pelo backend PCRE2.</source><translation>Regex search will be enabled by the PCRE2 backend.</translation></message>
+    <message><source>Buscando...</source><translation>Searching...</translation></message>
     <message><source>Buscando…</source><translation>Searching…</translation></message>
+    <message><source>Erro ao pesquisar</source><translation>Search failed</translation></message>
+    <message><source>Erro ao pesquisar: %1</source><translation>Search failed: %1</translation></message>
     <message><source>Busca cancelada</source><translation>Search cancelled</translation></message>
     <message numerus="yes">
       <source>%n ocorrência(s) encontrada(s)</source>

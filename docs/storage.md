@@ -123,6 +123,13 @@ caminho em `files`, usando a identidade composta `(content_hash_algorithm, conte
 separada da publicação de geração para permitir políticas futuras de retenção, orçamento de disco e
 diagnóstico antes de apagar cache reaproveitável.
 
+`StorageService::enforceDocumentBudget()` aplica a primeira política de orçamento de disco do índice. A
+política é conservadora: calcula o total de bytes armazenados em `documents` e remove apenas documentos
+órfãos, começando pelos mais antigos, até o total ficar dentro do limite solicitado. Documentos ainda
+referenciados por `files` nunca são removidos por essa rotina. Se o orçamento continuar excedido porque
+todo o conteúdo restante ainda está vivo, o método retorna `budgetExceeded = true` para que uma camada de
+aplicação decida entre reconfigurar o limite, pedir uma limpeza explícita ou reconstruir o índice.
+
 ## Preferências, histórico e métricas
 
 Preferências usam uma chave textual e um escopo:

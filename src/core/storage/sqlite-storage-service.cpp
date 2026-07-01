@@ -302,6 +302,16 @@ namespace uburu::storage
       return sqlite3_column_int(statement.get(), 0);
     }
 
+    [[nodiscard]] std::int64_t scalarInt64(sqlite3* database, std::string_view sql)
+    {
+      Statement statement(database, sql);
+
+      if (!statement.stepRow())
+        return 0;
+
+      return sqlite3_column_int64(statement.get(), 0);
+    }
+
     [[nodiscard]] std::string scalarText(sqlite3* database, std::string_view sql)
     {
       Statement statement(database, sql);
@@ -870,6 +880,34 @@ namespace uburu::storage
       return changedRowCount(database);
     }
 
+    [[nodiscard]] std::uintmax_t totalDocumentBytes(sqlite3* database)
+    {
+      return static_cast<std::uintmax_t>(scalarInt64(database, "SELECT COALESCE(SUM(size), 0) FROM documents"));
+    }
+
+    [[nodiscard]] std::size_t deleteOldestOrphanDocumentRecord(sqlite3* database)
+    {
+      Statement statement(database, R"sql(
+        DELETE FROM documents
+        WHERE rowid IN (
+          SELECT documents.rowid
+          FROM documents
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM files
+            WHERE files.content_hash_algorithm = documents.content_hash_algorithm
+              AND files.content_hash = documents.content_hash
+          )
+          ORDER BY indexed_at_unix_ms ASC, content_hash_algorithm ASC, content_hash ASC
+          LIMIT 1
+        );
+      )sql");
+
+      statement.executeDone();
+
+      return changedRowCount(database);
+    }
+
     void validateGenerationDocument(const IndexGeneration& generation, const IndexDocument& document)
     {
       if (document.repositoryId != generation.repositoryId)
@@ -1058,6 +1096,43 @@ namespace uburu::storage
 
     return collectOrphanDocumentRecords(database);
 #else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  StorageBudgetReport SQLiteStorageService::enforceDocumentBudget(std::uintmax_t maximumBytes)
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    execute(database, "BEGIN IMMEDIATE");
+    try {
+      const auto bytesBefore = totalDocumentBytes(database);
+      auto bytesAfter = bytesBefore;
+      std::size_t documentsRemoved = 0;
+
+      while (bytesAfter > maximumBytes) {
+        const auto removed = deleteOldestOrphanDocumentRecord(database);
+
+        if (removed == 0)
+          break;
+
+        documentsRemoved += removed;
+        bytesAfter = totalDocumentBytes(database);
+      }
+
+      execute(database, "COMMIT");
+
+      return StorageBudgetReport{.bytesBefore = bytesBefore,
+                                 .bytesAfter = bytesAfter,
+                                 .documentsRemoved = documentsRemoved,
+                                 .budgetExceeded = bytesAfter > maximumBytes};
+    } catch (...) {
+      execute(database, "ROLLBACK");
+
+      throw;
+    }
+#else
+    static_cast<void>(maximumBytes);
     throw std::runtime_error("SQLite support is not available in this build");
 #endif
   }

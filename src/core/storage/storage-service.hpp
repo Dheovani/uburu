@@ -3,12 +3,21 @@
 #include "shared/types/domain-types.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace uburu::storage
 {
+
+  struct StorageBudgetReport
+  {
+    std::uintmax_t bytesBefore{0};
+    std::uintmax_t bytesAfter{0};
+    std::size_t documentsRemoved{0};
+    bool budgetExceeded{false};
+  };
 
   class StorageService
   {
@@ -21,6 +30,7 @@ namespace uburu::storage
     virtual void publishGeneration(const IndexGeneration& generation) = 0;
     [[nodiscard]] virtual std::size_t recoverIncompleteGenerations() = 0;
     [[nodiscard]] virtual std::size_t collectOrphanDocuments() = 0;
+    [[nodiscard]] virtual StorageBudgetReport enforceDocumentBudget(std::uintmax_t maximumBytes) = 0;
     [[nodiscard]] virtual StoragePragmaSnapshot pragmaSnapshot() const = 0;
     [[nodiscard]] virtual StorageIntegrityReport validateIntegrity() const = 0;
     virtual void rebuildIndexCatalog() = 0;

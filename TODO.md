@@ -201,7 +201,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Combinar resultado rápido do índice com validação direta.
 - [ ] Atualizar, confirmar ou remover resultados durante refinamento.
 - [ ] Definir ranking e merge determinísticos entre fontes.
-- [ ] Implementar orçamento de disco e política de eviction.
+- [x] Implementar orçamento de disco e política de eviction.
 - [ ] Versionar schema e formato para upgrades sem perda desnecessária do cache.
 - [ ] Implementar pausa, retomada e reindexação manual.
 

@@ -28,6 +28,7 @@ namespace uburu::storage
     void publishGeneration(const IndexGeneration& generation) override;
     [[nodiscard]] std::size_t recoverIncompleteGenerations() override;
     [[nodiscard]] std::size_t collectOrphanDocuments() override;
+    [[nodiscard]] StorageBudgetReport enforceDocumentBudget(std::uintmax_t maximumBytes) override;
     [[nodiscard]] StoragePragmaSnapshot pragmaSnapshot() const override;
     [[nodiscard]] StorageIntegrityReport validateIntegrity() const override;
     void rebuildIndexCatalog() override;

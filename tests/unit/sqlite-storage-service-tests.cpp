@@ -23,7 +23,7 @@ namespace
   {
   public:
     explicit TemporaryDirectory(std::string name)
-        : pathValue(std::filesystem::temp_directory_path() / uniqueName(std::move(name)))
+      : pathValue(std::filesystem::temp_directory_path() / uniqueName(std::move(name)))
     {
       std::error_code error;
 
@@ -725,6 +725,76 @@ TEST_CASE("sqlite storage collects orphan documents")
   CHECK(storage.collectOrphanDocuments() == 2);
   CHECK(storage.collectOrphanDocuments() == 0);
   REQUIRE(storage.findDocument("worktree-id", "src/c.cpp").has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage evicts orphan documents to satisfy the document budget")
+{
+#if defined(UBURU_HAS_SQLITE)
+  constexpr std::uintmax_t orphanDocumentSize = 80;
+  constexpr std::uintmax_t liveDocumentSize = 60;
+  constexpr std::uintmax_t documentBudget = 70;
+
+  TemporaryDirectory directory("uburu-sqlite-storage-budget-eviction-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  auto orphanDocument = indexDocument("orphan-a", "src/a.cpp");
+  orphanDocument.size = orphanDocumentSize;
+
+  auto liveDocument = indexDocument("live-b", "src/b.cpp");
+  liveDocument.size = liveDocumentSize;
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({
+    orphanDocument,
+  }));
+  storage.publishGeneration(indexGeneration({
+    liveDocument,
+  }));
+
+  const auto report = storage.enforceDocumentBudget(documentBudget);
+
+  CHECK(report.bytesBefore == orphanDocumentSize + liveDocumentSize);
+  CHECK(report.bytesAfter == liveDocumentSize);
+  CHECK(report.documentsRemoved == 1);
+  CHECK_FALSE(report.budgetExceeded);
+  CHECK_FALSE(storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::sha256, "orphan-a").has_value());
+  CHECK(storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::sha256, "live-b").has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage preserves live documents when the document budget cannot be satisfied")
+{
+#if defined(UBURU_HAS_SQLITE)
+  constexpr std::uintmax_t liveDocumentSize = 100;
+  constexpr std::uintmax_t documentBudget = 10;
+
+  TemporaryDirectory directory("uburu-sqlite-storage-budget-preserves-live-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  auto liveDocument = indexDocument("live-a", "src/a.cpp");
+  liveDocument.size = liveDocumentSize;
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({
+    liveDocument,
+  }));
+
+  const auto report = storage.enforceDocumentBudget(documentBudget);
+
+  CHECK(report.bytesBefore == liveDocumentSize);
+  CHECK(report.bytesAfter == liveDocumentSize);
+  CHECK(report.documentsRemoved == 0);
+  CHECK(report.budgetExceeded);
+  CHECK(storage.findReusableDocumentByContentHash(uburu::ContentHashAlgorithm::sha256, "live-a").has_value());
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

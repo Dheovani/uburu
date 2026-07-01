@@ -388,13 +388,13 @@ namespace uburu::git
       return gitdir->parent_path();
     }
 
-    [[nodiscard]] bool containsWorktreeRoot(
-      const std::vector<WorktreeInfo>& worktrees,
+    [[nodiscard]] std::vector<WorktreeInfo>::iterator findWorktreeRoot(
+      std::vector<WorktreeInfo>& worktrees,
       const std::filesystem::path& root)
     {
       const auto rootKey = filesystem::normalizedPathKey(root);
 
-      return std::ranges::any_of(worktrees, [&](const auto& worktree) {
+      return std::ranges::find_if(worktrees, [&](const auto& worktree) {
         return filesystem::normalizedPathKey(worktree.root) == rootKey;
       });
     }
@@ -429,7 +429,7 @@ namespace uburu::git
         auto gitdir = metadataGitdirPath(entry.path());
         auto root = metadataWorktreeRoot(entry.path());
 
-        if (!root || containsWorktreeRoot(worktrees, *root))
+        if (!root)
           continue;
 
         const auto lockedPath = entry.path() / "locked";
@@ -449,6 +449,21 @@ namespace uburu::git
 
         if (!locked && !prunable)
           continue;
+
+        auto existingWorktree = findWorktreeRoot(worktrees, *root);
+
+        if (existingWorktree != worktrees.end()) {
+          existingWorktree->locked = existingWorktree->locked || locked;
+          existingWorktree->prunable = existingWorktree->prunable || prunable;
+
+          if (existingWorktree->gitDirectory.empty())
+            existingWorktree->gitDirectory = entry.path();
+
+          if (existingWorktree->lockReason.empty())
+            existingWorktree->lockReason = std::move(lockReason);
+
+          continue;
+        }
 
         worktrees.push_back(WorktreeInfo{.id = stableId("worktree", *root),
                                          .repositoryId = repository.id,

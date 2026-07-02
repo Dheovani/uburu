@@ -8,6 +8,7 @@ Panel 1.0 panel.qml
 EyebrowLabel 1.0 eyebrow-label.qml
 MutedLabel 1.0 muted-label.qml
 FilterChip 1.0 filter-chip.qml
+InfoIcon 1.0 info-icon.qml
 MetricCard 1.0 metric-card.qml
 SearchHeader 1.0 search-header.qml
 ResultsPane 1.0 results-pane.qml

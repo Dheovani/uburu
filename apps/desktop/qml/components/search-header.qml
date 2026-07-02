@@ -222,6 +222,10 @@ Panel {
                     text: qsTr("Tipos")
                 }
 
+                InfoIcon {
+                    text: qsTr("Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.")
+                }
+
                 TextField {
                     id: documentTypesField
 
@@ -285,18 +289,21 @@ Panel {
                 FilterChip {
                     id: regex
                     text: qsTr("Regex")
+                    toolTipText: qsTr("Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
 
                 FilterChip {
                     id: caseSensitive
                     text: qsTr("Case-sensitive")
+                    toolTipText: qsTr("Diferencia letras maiúsculas e minúsculas. Quando desligado, Verdade e verdade são tratados como equivalentes.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
 
                 FilterChip {
                     id: wholeWord
                     text: qsTr("Palavra inteira")
+                    toolTipText: qsTr("Retorna apenas ocorrências isoladas por limites de palavra, evitando correspondências dentro de outras palavras.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
 
@@ -304,6 +311,7 @@ Panel {
                     id: gitignore
                     text: qsTr("Respeitar .gitignore")
                     checked: true
+                    toolTipText: qsTr("Ignora arquivos e diretórios cobertos por regras .gitignore, como build, node_modules e outros artefatos do repositório.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
 
@@ -311,6 +319,7 @@ Panel {
                     id: includeSubdirectories
                     text: qsTr("Incluir subdiretórios")
                     checked: true
+                    toolTipText: qsTr("Pesquisa também dentro das subpastas do diretório selecionado. Desligue para limitar a busca apenas à pasta atual.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
             }

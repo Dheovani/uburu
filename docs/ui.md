@@ -113,6 +113,16 @@ O último diretório selecionado é restaurado pelo `SearchController`, junto do
 favoritos já persistidos com `QSettings`. O controller só restaura um diretório recente quando ele ainda
 existe no sistema de arquivos.
 
+## Ajuda contextual
+
+Controles potencialmente ambíguos devem expor ajuda curta e localizada por tooltip, sem transformar a
+tela principal em documentação longa. O Marco 8 usa `InfoIcon` para explicações de escopo e tipos de
+documento, além de tooltips diretos nos chips de filtro como regex, case-sensitive, palavra inteira,
+respeitar `.gitignore` e incluir subdiretórios.
+
+Essas mensagens são textos visíveis ao usuário e devem continuar passando por `qsTr`/catálogos de
+tradução.
+
 ## Formatos com extração de conteúdo pendente
 
 A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos

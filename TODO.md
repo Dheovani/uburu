@@ -249,7 +249,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Implementar tema claro, escuro e sistema.
 - [ ] Disponibilizar botões de configuração da janela para idioma, tema, preferências gerais e
   diagnósticos rápidos.
-- [ ] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
+- [x] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
   `.gitignore`, busca regex e demais controles potencialmente ambíguos.
 - [ ] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam
   em `pt-BR` ou `en-US` conforme o idioma ativo, sem mistura acidental.

@@ -83,8 +83,14 @@
     <message><source>Selecione um diretório ou repositório para começar</source><translation>Select a directory or repository to begin</translation></message>
     <message><source>Incluir subdiretórios</source><translation>Include subdirectories</translation></message>
     <message><source>Tipos</source><translation>Types</translation></message>
+    <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filter by extensions separated by comma or space, such as txt, cpp, or md. Formats like PDF and DOCX still depend on future extractors for content search.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX, and similar formats are still filtered by name; content search depends on future extractors.</translation></message>
+    <message><source>Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.</source><translation>Interprets the query as a regular expression. Use it when you need patterns; for plain text, leave it off to keep search more direct.</translation></message>
+    <message><source>Diferencia letras maiúsculas e minúsculas. Quando desligado, Verdade e verdade são tratados como equivalentes.</source><translation>Distinguishes uppercase and lowercase letters. When off, Verdade and verdade are treated as equivalent.</translation></message>
+    <message><source>Retorna apenas ocorrências isoladas por limites de palavra, evitando correspondências dentro de outras palavras.</source><translation>Returns only matches isolated by word boundaries, avoiding matches inside other words.</translation></message>
+    <message><source>Ignora arquivos e diretórios cobertos por regras .gitignore, como build, node_modules e outros artefatos do repositório.</source><translation>Ignores files and directories covered by .gitignore rules, such as build, node_modules, and other repository artifacts.</translation></message>
+    <message><source>Pesquisa também dentro das subpastas do diretório selecionado. Desligue para limitar a busca apenas à pasta atual.</source><translation>Also searches inside subfolders of the selected directory. Turn it off to limit search to the current folder only.</translation></message>
     <message><source>Modo</source><translation>Mode</translation></message>
     <message><source>Progressivo</source><translation>Progressive</translation></message>
     <message><source>Resultados</source><translation>Results</translation></message>
@@ -97,9 +103,12 @@
   <context>
     <name>scope-bar</name>
     <message><source>Escopo</source><translation>Scope</translation></message>
+    <message><source>Define o diretório ou repositório usado como raiz da busca. Favoritos e recentes ajudam a alternar rapidamente entre escopos frequentes.</source><translation>Defines the directory or repository used as the search root. Favorites and recent entries help switch quickly between frequent scopes.</translation></message>
     <message><source>Nenhum diretório selecionado</source><translation>No directory selected</translation></message>
     <message><source>★ Favorito</source><translation>★ Favorite</translation></message>
     <message><source>☆ Favoritar</source><translation>☆ Add favorite</translation></message>
+    <message><source>Remover este diretório dos favoritos.</source><translation>Remove this directory from favorites.</translation></message>
+    <message><source>Adicionar este diretório aos favoritos.</source><translation>Add this directory to favorites.</translation></message>
     <message><source>Favoritos</source><translation>Favorites</translation></message>
     <message><source>Recentes</source><translation>Recent</translation></message>
     <message><source>Nenhum favorito</source><translation>No favorites</translation></message>

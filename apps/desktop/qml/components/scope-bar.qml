@@ -54,6 +54,10 @@ Rectangle {
                 font.bold: true
             }
 
+            InfoIcon {
+                text: qsTr("Define o diretório ou repositório usado como raiz da busca. Favoritos e recentes ajudam a alternar rapidamente entre escopos frequentes.")
+            }
+
             Label {
                 Layout.fillWidth: true
                 text: root.directory.length > 0 ? root.directory : qsTr("Nenhum diretório selecionado")
@@ -84,6 +88,13 @@ Rectangle {
                 HoverHandler {
                     cursorShape: Qt.PointingHandCursor
                 }
+
+                ToolTip.visible: favoriteMouseArea.containsMouse
+                ToolTip.delay: 450
+                ToolTip.timeout: 7000
+                ToolTip.text: root.currentDirectoryFavorite
+                              ? qsTr("Remover este diretório dos favoritos.")
+                              : qsTr("Adicionar este diretório aos favoritos.")
 
                 MouseArea {
                     id: favoriteMouseArea

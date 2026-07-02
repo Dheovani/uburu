@@ -6,9 +6,18 @@ import "../theme"
 CheckBox {
     id: chip
 
+    property string toolTipText: ""
+
     HoverHandler {
+        id: hoverHandler
+
         cursorShape: chip.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
     }
+
+    ToolTip.visible: hoverHandler.hovered && chip.toolTipText.length > 0
+    ToolTip.delay: 450
+    ToolTip.timeout: 9000
+    ToolTip.text: chip.toolTipText
 
     indicator: Rectangle {
         implicitWidth: 16

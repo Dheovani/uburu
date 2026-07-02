@@ -155,6 +155,7 @@ ApplicationWindow {
 
             directory: searchController.directory
             running: searchController.running
+            cancelling: searchController.cancelling
             compact: root.compact
             resultCount: resultsPane.resultCount
             filesScanned: searchController.filesScanned
@@ -253,6 +254,7 @@ ApplicationWindow {
         StatusLine {
             status: searchController.status
             running: searchController.running
+            cancelling: searchController.cancelling
         }
     }
 

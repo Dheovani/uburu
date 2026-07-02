@@ -102,6 +102,16 @@ Atalhos essenciais disponíveis nesta fase:
 A paleta deve evoluir para incluir configurações, diagnósticos, histórico, buscas salvas e navegação
 entre ocorrências, sem mover regras de domínio para QML.
 
+## Cancelamento visual
+
+O cancelamento da busca deve responder imediatamente à ação do usuário. Ao acionar `Esc` ou o botão de
+cancelar, o `SearchController` entra em estado `cancelling`, atualiza o status para `Cancelando...` e
+desabilita novas tentativas de cancelamento até o worker confirmar o encerramento.
+
+Enquanto `cancelling` estiver ativo, `running` continua verdadeiro para impedir uma nova busca
+concorrente sobre o mesmo controller. O estado visual deve indicar que o pedido foi aceito, mas a lista
+de resultados já publicada permanece disponível até a busca finalizar ou uma nova busca limpar o modelo.
+
 ## Persistência de estado da janela
 
 O estado visual da janela principal é persistido em `Settings` no QML, pois pertence à camada de

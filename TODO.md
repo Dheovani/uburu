@@ -254,7 +254,7 @@ e UI para avançarem mais rapidamente.
 - [x] Persistir geometria, splitters, filtros e último repositório.
 - [x] Exibir erros parciais sem interromper resultados válidos.
 - [x] Impedir busca regex enquanto backend não estiver disponível ou remover o stub visual enganoso.
-- [ ] Tornar cancelamento imediato e visualmente confiável.
+- [x] Tornar cancelamento imediato e visualmente confiável.
 - [ ] Testar acessibilidade: foco, teclado, contraste, nomes acessíveis e leitores de tela.
 - [ ] Testar DPI alto, múltiplos monitores e escalas fracionárias.
 - [x] Completar e revisar traduções `pt-BR` e `en-US`.

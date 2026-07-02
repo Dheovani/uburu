@@ -9,6 +9,7 @@ Panel {
 
     property string directory: ""
     property bool running: false
+    property bool cancelling: false
     property bool compact: false
     property int resultCount: 0
     property int filesScanned: 0
@@ -155,8 +156,8 @@ Panel {
                         id: statusText
 
                         anchors.centerIn: parent
-                        text: root.running ? qsTr("Buscando") : qsTr("Pronto")
-                        color: Theme.textMuted
+                        text: root.cancelling ? qsTr("Cancelando") : root.running ? qsTr("Buscando") : qsTr("Pronto")
+                        color: root.cancelling ? Theme.warning : Theme.textMuted
                         font.pixelSize: Theme.fontSizeTiny
                         font.bold: true
                     }
@@ -208,8 +209,8 @@ Panel {
                 }
 
                 SecondaryButton {
-                    text: qsTr("Cancelar")
-                    enabled: root.running
+                    text: root.cancelling ? qsTr("Cancelando") : qsTr("Cancelar")
+                    enabled: root.running && !root.cancelling
                     onClicked: root.cancelSearch()
                 }
             }

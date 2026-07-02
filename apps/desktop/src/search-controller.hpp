@@ -68,6 +68,7 @@ namespace uburu::app
     Q_PROPERTY(QString directory READ directory NOTIFY directoryChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
+    Q_PROPERTY(bool cancelling READ cancelling NOTIFY cancellingChanged)
     Q_PROPERTY(QAbstractItemModel* results READ results CONSTANT)
     Q_PROPERTY(QStringList recentDirectories READ recentDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(QStringList favoriteDirectories READ favoriteDirectories NOTIFY scopeHistoryChanged)
@@ -89,6 +90,7 @@ namespace uburu::app
     [[nodiscard]] QString directory() const;
     [[nodiscard]] QString status() const;
     [[nodiscard]] bool running() const;
+    [[nodiscard]] bool cancelling() const;
     [[nodiscard]] QAbstractItemModel* results();
     [[nodiscard]] QStringList recentDirectories() const;
     [[nodiscard]] QStringList favoriteDirectories() const;
@@ -130,6 +132,7 @@ namespace uburu::app
     void directoryChanged();
     void statusChanged();
     void runningChanged();
+    void cancellingChanged();
     void scopeHistoryChanged();
     void searchMetricsChanged();
     void previewChanged();
@@ -142,6 +145,7 @@ namespace uburu::app
     void addRecentDirectory(const QString& directory);
     void setStatus(QString status);
     void setRunning(bool running);
+    void setCancelling(bool cancelling);
     void setPreviewLoading(bool loading);
     void setPreviewResult(const PreviewLoadResult& result);
     void resetSearchMetrics();
@@ -160,6 +164,7 @@ namespace uburu::app
     QString previewHtmlValue;
     bool previewLoadingValue{false};
     bool runningValue{false};
+    bool cancellingValue{false};
     SearchResultModel resultsModel;
     std::shared_ptr<const SearchService> searchService;
     std::stop_source stopSource;

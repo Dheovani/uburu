@@ -7,6 +7,7 @@ import "../theme"
 Rectangle {
     property string status: ""
     property bool running: false
+    property bool cancelling: false
 
     Layout.fillWidth: true
     Layout.preferredHeight: 34
@@ -24,7 +25,7 @@ Rectangle {
             Layout.preferredWidth: 7
             Layout.preferredHeight: 7
             radius: 4
-            color: running ? Theme.primary : Theme.accent
+            color: cancelling ? Theme.warning : running ? Theme.primary : Theme.accent
             opacity: 0.78
         }
 

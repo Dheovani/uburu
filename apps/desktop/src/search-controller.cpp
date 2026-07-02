@@ -510,6 +510,11 @@ namespace uburu::app
     return runningValue;
   }
 
+  bool SearchController::cancelling() const
+  {
+    return cancellingValue;
+  }
+
   QAbstractItemModel* SearchController::results()
   {
     return &resultsModel;
@@ -777,6 +782,7 @@ namespace uburu::app
     clearPreview();
     resetSearchMetrics();
     stopSource = std::stop_source{};
+    setCancelling(false);
     setRunning(true);
     setStatus(tr("Buscando..."));
 
@@ -811,6 +817,7 @@ namespace uburu::app
       else
         setStatus(completedSearchStatus(summary, this));
 
+      setCancelling(false);
       setRunning(false);
       activeWatcher->deleteLater();
       activeWatcher = nullptr;
@@ -853,6 +860,11 @@ namespace uburu::app
 
   void SearchController::cancel()
   {
+    if (!runningValue || cancellingValue)
+      return;
+
+    setCancelling(true);
+    setStatus(tr("Cancelando..."));
     stopSource.request_stop();
   }
 
@@ -910,8 +922,20 @@ namespace uburu::app
 
   void SearchController::setRunning(bool running)
   {
+    if (runningValue == running)
+      return;
+
     runningValue = running;
     emit runningChanged();
+  }
+
+  void SearchController::setCancelling(bool cancelling)
+  {
+    if (cancellingValue == cancelling)
+      return;
+
+    cancellingValue = cancelling;
+    emit cancellingChanged();
   }
 
   void SearchController::setPreviewLoading(bool loading)

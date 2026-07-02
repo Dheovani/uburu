@@ -84,6 +84,7 @@
     <name>search-header</name>
     <message><source>BUSCA LOCAL</source><translation>BUSCA LOCAL</translation></message>
     <message><source>Uburu</source><translation>Uburu</translation></message>
+    <message><source>Cancelando</source><translation>Cancelando</translation></message>
     <message><source>Buscando</source><translation>Buscando</translation></message>
     <message><source>Pronto</source><translation>Pronto</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Pesquisar em arquivos</translation></message>
@@ -135,6 +136,7 @@
     <message><source>Não foi possível abrir o local do arquivo</source><translation>Não foi possível abrir o local do arquivo</translation></message>
     <message><source>Copiado para a área de transferência</source><translation>Copiado para a área de transferência</translation></message>
     <message><source>Buscando...</source><translation>Buscando...</translation></message>
+    <message><source>Cancelando...</source><translation>Cancelando...</translation></message>
     <message><source>Erro ao pesquisar</source><translation>Erro ao pesquisar</translation></message>
     <message><source>Erro ao pesquisar: %1</source><translation>Erro ao pesquisar: %1</translation></message>
     <message><source>Busca cancelada</source><translation>Busca cancelada</translation></message>

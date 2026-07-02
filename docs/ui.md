@@ -22,6 +22,20 @@ A tela principal deve permanecer como composição de alto nível. Componentes r
 ficam em `apps/desktop/qml/components/`, preferencialmente com arquivos pequenos e responsabilidade
 única para evitar que `main.qml` concentre toda a evolução do Marco 8.
 
+## Métricas da busca na tela principal
+
+O cabeçalho da busca deve expor métricas operacionais leves para reforçar a percepção de velocidade
+sem transformar a tela em painel de diagnóstico. As métricas visíveis no Marco 8 são:
+
+- resultados visíveis;
+- arquivos lidos;
+- tempo até o primeiro resultado;
+- duração total da busca.
+
+Esses valores são calculados pelo controller a partir do resumo retornado pelo `SearchService`. O QML
+apenas apresenta propriedades observáveis; não deve medir busca, inferir progresso do core nem acessar
+threads de worker diretamente.
+
 ## Interações com arquivos encontrados
 
 Resultados devem permitir operações diretas sobre o arquivo encontrado sem quebrar a separação entre

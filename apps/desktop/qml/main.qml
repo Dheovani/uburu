@@ -39,6 +39,9 @@ ApplicationWindow {
             running: searchController.running
             compact: root.compact
             resultCount: resultsPane.resultCount
+            filesScanned: searchController.filesScanned
+            timeToFirstResult: searchController.timeToFirstResult
+            searchDuration: searchController.searchDuration
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
             onStartSearch: (

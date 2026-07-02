@@ -13,9 +13,12 @@
 #include <QUrl>
 #include <QtConcurrentRun>
 
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <exception>
 #include <limits>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -25,6 +28,7 @@ namespace uburu::app
   {
 
     constexpr int maximumRecentDirectories = 8;
+    constexpr std::int64_t missingFirstResultTime = -1;
     constexpr auto settingsScopeGroup = "scope";
     constexpr auto recentDirectoriesKey = "recentDirectories";
     constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
@@ -108,6 +112,21 @@ namespace uburu::app
       return status;
     }
 
+    QString formatDuration(std::chrono::nanoseconds duration)
+    {
+      if (duration.count() <= 0)
+        return QStringLiteral("—");
+
+      const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+      if (milliseconds < 1000)
+        return QStringLiteral("%1 ms").arg(milliseconds);
+
+      const auto seconds = static_cast<double>(milliseconds) / 1000.0;
+
+      return QStringLiteral("%1 s").arg(QString::number(seconds, 'f', 2));
+    }
+
     std::vector<std::string> parseDocumentTypes(const QString& text)
     {
       std::vector<std::string> extensions;
@@ -177,7 +196,8 @@ namespace uburu::app
   }
 
   SearchController::SearchController(QObject* parent)
-    : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
+    : QObject(parent), statusValue(tr("Pronto")), timeToFirstResultValue(QStringLiteral("—")),
+      searchDurationValue(QStringLiteral("—")), resultsModel(this),
       searchService(std::make_shared<DefaultSearchService>(
         std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
   {
@@ -225,6 +245,26 @@ namespace uburu::app
   bool SearchController::currentDirectoryFavorite() const
   {
     return !directoryValue.isEmpty() && favoriteDirectoryValues.contains(directoryValue);
+  }
+
+  qulonglong SearchController::filesScanned() const
+  {
+    return filesScannedValue;
+  }
+
+  qulonglong SearchController::matchesFound() const
+  {
+    return matchesFoundValue;
+  }
+
+  QString SearchController::timeToFirstResult() const
+  {
+    return timeToFirstResultValue;
+  }
+
+  QString SearchController::searchDuration() const
+  {
+    return searchDurationValue;
   }
 
   void SearchController::selectDirectory(const QString& url)
@@ -281,12 +321,15 @@ namespace uburu::app
       return;
 
     resultsModel.clear();
+    resetSearchMetrics();
     stopSource = std::stop_source{};
     setRunning(true);
     setStatus(tr("Buscando..."));
 
-    SearchQuery query{
-      .root = nativePath(directoryValue), .scope = {}, .expression = expression.toUtf8().toStdString(), .options = {}};
+    SearchQuery query{.root = nativePath(directoryValue),
+                      .scope = {},
+                      .expression = expression.toUtf8().toStdString(),
+                      .options = {}};
     query.options.mode = regex ? SearchMode::regex : SearchMode::literal;
     query.options.caseSensitive = caseSensitive;
     query.options.wholeWord = wholeWord;
@@ -297,10 +340,13 @@ namespace uburu::app
     query.options.extensions = parseDocumentTypes(documentTypes);
 
     const auto token = stopSource.get_token();
+    const auto startedAt = std::chrono::steady_clock::now();
+    const auto firstResultNanoseconds = std::make_shared<std::atomic<std::int64_t>>(missingFirstResultTime);
 
     activeWatcher = new QFutureWatcher<search::SearchSummary>(this);
     connect(activeWatcher, &QFutureWatcher<search::SearchSummary>::finished, this, [this] {
-      const auto summary = activeWatcher->result();
+      auto summary = activeWatcher->result();
+      updateSearchMetrics(summary);
 
       if (!summary.errors.empty()) {
         const auto context = QString::fromUtf8(summary.errors.front().context);
@@ -313,11 +359,20 @@ namespace uburu::app
       activeWatcher->deleteLater();
       activeWatcher = nullptr;
     });
-    activeWatcher->setFuture(QtConcurrent::run([this, query = std::move(query), token] {
+    activeWatcher->setFuture(QtConcurrent::run([this,
+                                                query = std::move(query),
+                                                token,
+                                                startedAt,
+                                                firstResultNanoseconds] {
       try {
-        return searchService->search(
+        auto summary = searchService->search(
           query,
-          [this](SearchResult result) {
+          [this, startedAt, firstResultNanoseconds](SearchResult result) {
+            auto expected = missingFirstResultTime;
+            const auto elapsed = std::chrono::steady_clock::now() - startedAt;
+            const auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count();
+            firstResultNanoseconds->compare_exchange_strong(expected, elapsedNanoseconds);
+
             QMetaObject::invokeMethod(
               this,
               [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
@@ -325,6 +380,13 @@ namespace uburu::app
             return true;
           },
           token);
+
+        const auto observedFirstResultNanoseconds = firstResultNanoseconds->load();
+
+        if (observedFirstResultNanoseconds != missingFirstResultTime)
+          summary.metrics.timeToFirstResult = std::chrono::nanoseconds(observedFirstResultNanoseconds);
+
+        return summary;
       } catch (const std::exception& exception) {
         return failedSearchSummary(QString::fromLocal8Bit(exception.what()));
       } catch (...) {
@@ -387,6 +449,24 @@ namespace uburu::app
   {
     runningValue = running;
     emit runningChanged();
+  }
+
+  void SearchController::resetSearchMetrics()
+  {
+    filesScannedValue = 0;
+    matchesFoundValue = 0;
+    timeToFirstResultValue = QStringLiteral("—");
+    searchDurationValue = QStringLiteral("—");
+    emit searchMetricsChanged();
+  }
+
+  void SearchController::updateSearchMetrics(const search::SearchSummary& summary)
+  {
+    filesScannedValue = static_cast<qulonglong>(summary.filesScanned);
+    matchesFoundValue = static_cast<qulonglong>(summary.matches);
+    timeToFirstResultValue = formatDuration(summary.metrics.timeToFirstResult);
+    searchDurationValue = formatDuration(summary.metrics.totalTime);
+    emit searchMetricsChanged();
   }
 
 } // namespace uburu::app

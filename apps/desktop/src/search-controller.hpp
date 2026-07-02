@@ -8,6 +8,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <chrono>
 #include <memory>
 #include <stop_token>
 
@@ -46,6 +47,10 @@ namespace uburu::app
     Q_PROPERTY(QStringList recentDirectories READ recentDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(QStringList favoriteDirectories READ favoriteDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(bool currentDirectoryFavorite READ currentDirectoryFavorite NOTIFY scopeHistoryChanged)
+    Q_PROPERTY(qulonglong filesScanned READ filesScanned NOTIFY searchMetricsChanged)
+    Q_PROPERTY(qulonglong matchesFound READ matchesFound NOTIFY searchMetricsChanged)
+    Q_PROPERTY(QString timeToFirstResult READ timeToFirstResult NOTIFY searchMetricsChanged)
+    Q_PROPERTY(QString searchDuration READ searchDuration NOTIFY searchMetricsChanged)
 
   public:
     explicit SearchController(QObject* parent = nullptr);
@@ -57,6 +62,10 @@ namespace uburu::app
     [[nodiscard]] QStringList recentDirectories() const;
     [[nodiscard]] QStringList favoriteDirectories() const;
     [[nodiscard]] bool currentDirectoryFavorite() const;
+    [[nodiscard]] qulonglong filesScanned() const;
+    [[nodiscard]] qulonglong matchesFound() const;
+    [[nodiscard]] QString timeToFirstResult() const;
+    [[nodiscard]] QString searchDuration() const;
 
     Q_INVOKABLE void selectDirectory(const QString& url);
     Q_INVOKABLE void selectSavedDirectory(const QString& path);
@@ -76,6 +85,7 @@ namespace uburu::app
     void statusChanged();
     void runningChanged();
     void scopeHistoryChanged();
+    void searchMetricsChanged();
 
   private:
     void loadScopeHistory();
@@ -84,10 +94,16 @@ namespace uburu::app
     void addRecentDirectory(const QString& directory);
     void setStatus(QString status);
     void setRunning(bool running);
+    void resetSearchMetrics();
+    void updateSearchMetrics(const search::SearchSummary& summary);
     QString directoryValue;
     QString statusValue;
     QStringList recentDirectoryValues;
     QStringList favoriteDirectoryValues;
+    qulonglong filesScannedValue{0};
+    qulonglong matchesFoundValue{0};
+    QString timeToFirstResultValue;
+    QString searchDurationValue;
     bool runningValue{false};
     SearchResultModel resultsModel;
     std::shared_ptr<const SearchService> searchService;

@@ -229,7 +229,7 @@ e UI para avançarem mais rapidamente.
   exclusão de subdiretórios por raiz.
 - [ ] Expor todos os filtros previstos sem hardcode de textos.
 - [x] Adicionar debounce configurável e busca ao digitar.
-- [ ] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.
+- [x] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.
 - [ ] Mostrar status e progresso da indexação.
 - [ ] Virtualizar a lista para centenas de milhares de resultados.
 - [ ] Preservar seleção durante batches e refinamento híbrido.

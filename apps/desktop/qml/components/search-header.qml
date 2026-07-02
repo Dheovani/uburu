@@ -11,6 +11,9 @@ Panel {
     property bool running: false
     property bool compact: false
     property int resultCount: 0
+    property int filesScanned: 0
+    property string timeToFirstResult: "—"
+    property string searchDuration: "—"
     property bool hasDocumentContentExtractorGap: hasUnsupportedDocumentContentTypes(documentTypesField.text)
     property bool autoSearchEnabled: true
     property int debounceIntervalMs: 450
@@ -311,22 +314,33 @@ Panel {
             Layout.alignment: Qt.AlignVCenter
             visible: !root.compact
 
-            ColumnLayout {
+            GridLayout {
                 id: metricsColumn
 
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width
                 height: implicitHeight
+                columns: 2
                 spacing: 8
-
-                MetricCard {
-                    title: qsTr("Modo")
-                    value: qsTr("Progressivo")
-                }
 
                 MetricCard {
                     title: qsTr("Resultados")
                     value: qsTr("%1 visíveis").arg(root.resultCount)
+                }
+
+                MetricCard {
+                    title: qsTr("Arquivos")
+                    value: qsTr("%1 lidos").arg(root.filesScanned)
+                }
+
+                MetricCard {
+                    title: qsTr("Primeiro")
+                    value: root.timeToFirstResult
+                }
+
+                MetricCard {
+                    title: qsTr("Duração")
+                    value: root.searchDuration
                 }
             }
         }

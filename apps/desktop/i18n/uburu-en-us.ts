@@ -44,6 +44,10 @@
     <message><source>Progressivo</source><translation>Progressive</translation></message>
     <message><source>Resultados</source><translation>Results</translation></message>
     <message><source>%1 visíveis</source><translation>%1 visible</translation></message>
+    <message><source>Arquivos</source><translation>Files</translation></message>
+    <message><source>%1 lidos</source><translation>%1 read</translation></message>
+    <message><source>Primeiro</source><translation>First</translation></message>
+    <message><source>Duração</source><translation>Duration</translation></message>
   </context>
   <context>
     <name>scope-bar</name>

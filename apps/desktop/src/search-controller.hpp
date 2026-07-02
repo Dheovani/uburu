@@ -107,6 +107,7 @@ namespace uburu::app
     Q_INVOKABLE void toggleCurrentDirectoryFavorite();
     Q_INVOKABLE void toggleFavoriteDirectory(const QString& path);
     Q_INVOKABLE void openFile(const QString& path);
+    Q_INVOKABLE void openWith(const QString& path);
     Q_INVOKABLE void openContainingFolder(const QString& path);
     Q_INVOKABLE void copyToClipboard(const QString& text);
     Q_INVOKABLE void loadPreview(const QString& path,

@@ -13,10 +13,40 @@ Panel {
     signal resultSelected(string filePath, string absolutePath, string location, string preview, var highlights)
     signal resultsCleared()
     signal openFileRequested(string filePath)
+    signal openWithRequested(string filePath)
     signal openFolderRequested(string filePath)
     signal copyTextRequested(string text)
 
     color: Theme.surface
+
+    function occurrenceText(filePath, location, preview) {
+        return filePath + ":" + location + "\n" + preview
+    }
+
+    function currentResult() {
+        return resultList.currentItem
+    }
+
+    function openCurrentResult() {
+        const result = currentResult()
+
+        if (result)
+            root.openFileRequested(result.absolutePath)
+    }
+
+    function copyCurrentPath() {
+        const result = currentResult()
+
+        if (result)
+            root.copyTextRequested(result.absolutePath)
+    }
+
+    function copyCurrentOccurrence() {
+        const result = currentResult()
+
+        if (result)
+            root.copyTextRequested(occurrenceText(result.absolutePath, result.location, result.preview))
+    }
 
     Menu {
         id: resultContextMenu
@@ -32,7 +62,12 @@ Panel {
         }
 
         MenuItem {
-            text: qsTr("Abrir pasta")
+            text: qsTr("Abrir com...")
+            onTriggered: root.openWithRequested(resultContextMenu.absolutePath)
+        }
+
+        MenuItem {
+            text: qsTr("Abrir local do arquivo")
             onTriggered: root.openFolderRequested(resultContextMenu.absolutePath)
         }
 
@@ -45,11 +80,13 @@ Panel {
 
         MenuItem {
             text: qsTr("Copiar ocorrência")
-            onTriggered: {
-                const occurrence = resultContextMenu.absolutePath + ":" + resultContextMenu.location
-                    + "\n" + resultContextMenu.preview
-                root.copyTextRequested(occurrence)
-            }
+            onTriggered: root.copyTextRequested(
+                root.occurrenceText(
+                    resultContextMenu.absolutePath,
+                    resultContextMenu.location,
+                    resultContextMenu.preview
+                )
+            )
         }
     }
 
@@ -109,6 +146,23 @@ Panel {
             cacheBuffer: 1600
             reuseItems: true
             boundsBehavior: Flickable.StopAtBounds
+            focus: true
+
+            Keys.onReturnPressed: root.openCurrentResult()
+            Keys.onEnterPressed: root.openCurrentResult()
+            Keys.onPressed: event => {
+                if (event.matches(StandardKey.Copy)) {
+                    root.copyCurrentPath()
+                    event.accepted = true
+                    return
+                }
+
+                if ((event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.ShiftModifier)
+                        && event.key === Qt.Key_C) {
+                    root.copyCurrentOccurrence()
+                    event.accepted = true
+                }
+            }
 
             ScrollBar.vertical: ScrollBar {
                 policy: ScrollBar.AsNeeded
@@ -133,13 +187,21 @@ Panel {
 
                 onClicked: {
                     resultList.currentIndex = index
+                    resultList.forceActiveFocus()
                     root.resultSelected(filePath, absolutePath, location, preview, highlights)
+                }
+
+                onDoubleClicked: {
+                    resultList.currentIndex = index
+                    resultList.forceActiveFocus()
+                    root.openFileRequested(absolutePath)
                 }
 
                 TapHandler {
                     acceptedButtons: Qt.RightButton
                     onTapped: {
                         resultList.currentIndex = index
+                        resultList.forceActiveFocus()
                         root.resultSelected(filePath, absolutePath, location, preview, highlights)
                         resultContextMenu.filePath = filePath
                         resultContextMenu.absolutePath = absolutePath
@@ -163,7 +225,7 @@ Panel {
                         color: Theme.text
                         font.pixelSize: Theme.fontSize
                         font.bold: true
-                        elide: Text.ElideMiddle
+                        elide: Text.ElideLeft
                     }
 
                     Text {

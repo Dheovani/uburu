@@ -237,11 +237,11 @@ e UI para avançarem mais rapidamente.
 - [x] Implementar preview de arquivo assíncrono, cancelável e limitado.
 - [x] Implementar highlight de múltiplas ocorrências e linhas de contexto.
 - [x] Adicionar números de linha, monospace e tab width configurável.
-- [ ] Abrir arquivo no editor configurado e copiar caminho/ocorrência.
-- [ ] Exibir menu de contexto nativo do sistema operacional ao clicar com botão direito em um
-  arquivo listado, equivalente ao menu do Explorer/Finder/gerenciador de arquivos.
-- [x] Oferecer fallback próprio para ações essenciais quando o menu nativo não estiver disponível:
-  abrir arquivo, abrir pasta, copiar caminho e copiar ocorrência.
+- [x] Abrir arquivo no editor configurado e copiar caminho/ocorrência.
+- [x] Exibir menu próprio de ações de arquivo ao clicar com botão direito em um arquivo listado,
+  com opções equivalentes às ações comuns do sistema: abrir arquivo, abrir com quando disponível,
+  abrir local do arquivo, copiar caminho e copiar ocorrência.
+- [ ] Customizar/aprimorar estilo visual do menu de ações.
 - [ ] Adicionar atalhos de teclado completos e command palette.
 - [ ] Implementar histórico, buscas salvas e favoritos.
 - [ ] Implementar tema claro, escuro e sistema.

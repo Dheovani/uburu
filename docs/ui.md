@@ -63,21 +63,19 @@ largura de tabulação para futura exposição em preferências sem reescrever o
 ## Interações com arquivos encontrados
 
 Resultados devem permitir operações diretas sobre o arquivo encontrado sem quebrar a separação entre
-UI e plataforma. O comportamento desejado para o Marco 8 é:
+UI e plataforma. O comportamento desejado para o Marco 8 é um menu próprio do Uburu com ações
+equivalentes às operações comuns do gerenciador de arquivos, não uma reprodução completa do menu
+nativo do Explorer/Finder/desktop Linux.
 
-- clique secundário sobre arquivo ou resultado abre o menu de contexto nativo do sistema
-  operacional, equivalente a clicar no arquivo pelo gerenciador de arquivos;
-- Windows deve usar integração Shell/Explorer;
-- macOS deve usar integração Finder;
-- Linux deve preferir integrações do desktop/portal quando disponíveis e oferecer fallback próprio;
-- a UI QML deve acionar um serviço/adaptador de plataforma, não implementar regras de shell no QML;
-- quando o menu nativo não estiver disponível, o fallback deve expor ao menos abrir arquivo, abrir
-  pasta, copiar caminho e copiar ocorrência.
+O menu de contexto da lista de resultados encaminha intenções ao `SearchController`, mantendo QML sem
+lógica de plataforma. As ações iniciais são abrir arquivo, abrir com quando a plataforma oferecer um
+seletor de aplicativo, abrir local do arquivo, copiar caminho e copiar ocorrência. No Windows, a ação
+`Abrir com...` usa o seletor do sistema operacional. Em outras plataformas, ela deve evoluir por
+adaptadores específicos de Finder, portal ou desktop environment.
 
-O fallback próprio inicial do Marco 8 é oferecido pelo menu de contexto da lista de resultados. Ele
-encaminha ações ao `SearchController`, que usa APIs Qt para abrir arquivos/pastas e copiar textos,
-mantendo QML sem lógica de plataforma. O menu nativo do sistema operacional continua sendo uma
-integração posterior, por adaptador específico.
+Na iteração inicial, abrir arquivo usa o aplicativo padrão configurado no sistema operacional. A lista
+também aceita duplo clique ou Enter para abrir o resultado selecionado, Ctrl+C para copiar o caminho
+absoluto e Ctrl+Shift+C para copiar a ocorrência com localização e trecho.
 
 ## Formatos com extração de conteúdo pendente
 

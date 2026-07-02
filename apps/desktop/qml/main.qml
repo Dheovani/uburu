@@ -104,6 +104,7 @@ ApplicationWindow {
                     highlights
                 )
                 onOpenFileRequested: filePath => searchController.openFile(filePath)
+                onOpenWithRequested: filePath => searchController.openWith(filePath)
                 onOpenFolderRequested: filePath => searchController.openContainingFolder(filePath)
                 onCopyTextRequested: text => searchController.copyToClipboard(text)
             }

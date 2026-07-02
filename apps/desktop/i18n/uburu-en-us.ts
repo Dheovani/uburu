@@ -22,7 +22,8 @@
     <message><source>Pronto para buscar</source><translation>Ready to search</translation></message>
     <message><source>Escolha uma pasta e digite uma consulta para ver os resultados aqui.</source><translation>Choose a folder and type a query to see results here.</translation></message>
     <message><source>Abrir arquivo</source><translation>Open file</translation></message>
-    <message><source>Abrir pasta</source><translation>Open folder</translation></message>
+    <message><source>Abrir com...</source><translation>Open with...</translation></message>
+    <message><source>Abrir local do arquivo</source><translation>Open file location</translation></message>
     <message><source>Copiar caminho</source><translation>Copy path</translation></message>
     <message><source>Copiar ocorrência</source><translation>Copy occurrence</translation></message>
   </context>
@@ -81,9 +82,11 @@
     <message><source>Arquivo não encontrado: %1</source><translation>File not found: %1</translation></message>
     <message><source>Arquivo aberto</source><translation>File opened</translation></message>
     <message><source>Não foi possível abrir o arquivo</source><translation>Could not open the file</translation></message>
-    <message><source>Pasta não encontrada: %1</source><translation>Folder not found: %1</translation></message>
-    <message><source>Pasta aberta</source><translation>Folder opened</translation></message>
-    <message><source>Não foi possível abrir a pasta</source><translation>Could not open the folder</translation></message>
+    <message><source>Seletor de aplicativo aberto</source><translation>Application chooser opened</translation></message>
+    <message><source>Não foi possível abrir o seletor de aplicativo</source><translation>Could not open the application chooser</translation></message>
+    <message><source>Local do arquivo não encontrado: %1</source><translation>File location not found: %1</translation></message>
+    <message><source>Local do arquivo aberto</source><translation>File location opened</translation></message>
+    <message><source>Não foi possível abrir o local do arquivo</source><translation>Could not open the file location</translation></message>
     <message><source>Copiado para a área de transferência</source><translation>Copied to clipboard</translation></message>
     <message><source>
 

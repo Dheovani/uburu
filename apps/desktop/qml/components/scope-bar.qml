@@ -59,7 +59,7 @@ Rectangle {
                 text: root.directory.length > 0 ? root.directory : qsTr("Nenhum diretório selecionado")
                 color: root.directory.length > 0 ? Theme.text : Theme.textMuted
                 font.pixelSize: Theme.fontSizeSmall
-                elide: Text.ElideMiddle
+                elide: Text.ElideLeft
             }
 
             Rectangle {
@@ -168,7 +168,7 @@ Rectangle {
                             text: root.shortPath(modelData)
                             color: Theme.text
                             font.pixelSize: Theme.fontSizeTiny
-                            elide: Text.ElideMiddle
+                            elide: Text.ElideLeft
                             horizontalAlignment: Text.AlignHCenter
                         }
 

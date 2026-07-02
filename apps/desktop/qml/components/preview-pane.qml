@@ -75,7 +75,7 @@ Panel {
                 color: Theme.text
                 font.pixelSize: 18
                 font.bold: true
-                elide: Text.ElideMiddle
+                elide: Text.ElideLeft
             }
 
             MutedLabel {

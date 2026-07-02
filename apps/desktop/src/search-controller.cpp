@@ -7,10 +7,12 @@
 
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QMetaObject>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStringList>
@@ -201,6 +203,19 @@ namespace uburu::app
         return std::nullopt;
 
       return static_cast<std::size_t>(line);
+    }
+
+    bool openWithApplicationChooser(const QString& filePath)
+    {
+#ifdef Q_OS_WIN
+      return QProcess::startDetached(
+        QStringLiteral("rundll32.exe"),
+        QStringList{QStringLiteral("shell32.dll,OpenAs_RunDLL"), QDir::toNativeSeparators(filePath)});
+#else
+      Q_UNUSED(filePath);
+
+      return false;
+#endif
     }
 
     QString formattedPreviewLine(const text::TextLine& line, bool selected)
@@ -589,6 +604,26 @@ namespace uburu::app
     setStatus(tr("Não foi possível abrir o arquivo"));
   }
 
+  void SearchController::openWith(const QString& path)
+  {
+    if (path.isEmpty())
+      return;
+
+    const QFileInfo file(path);
+
+    if (!file.exists()) {
+      setStatus(tr("Arquivo não encontrado: %1").arg(path));
+      return;
+    }
+
+    if (openWithApplicationChooser(file.absoluteFilePath())) {
+      setStatus(tr("Seletor de aplicativo aberto"));
+      return;
+    }
+
+    setStatus(tr("Não foi possível abrir o seletor de aplicativo"));
+  }
+
   void SearchController::openContainingFolder(const QString& path)
   {
     if (path.isEmpty())
@@ -598,16 +633,16 @@ namespace uburu::app
     const auto directory = file.exists() ? file.absolutePath() : QFileInfo(path).absolutePath();
 
     if (directory.isEmpty()) {
-      setStatus(tr("Pasta não encontrada: %1").arg(path));
+      setStatus(tr("Local do arquivo não encontrado: %1").arg(path));
       return;
     }
 
     if (QDesktopServices::openUrl(QUrl::fromLocalFile(directory))) {
-      setStatus(tr("Pasta aberta"));
+      setStatus(tr("Local do arquivo aberto"));
       return;
     }
 
-    setStatus(tr("Não foi possível abrir a pasta"));
+    setStatus(tr("Não foi possível abrir o local do arquivo"));
   }
 
   void SearchController::copyToClipboard(const QString& text)

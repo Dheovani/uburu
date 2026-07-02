@@ -112,6 +112,19 @@ Enquanto `cancelling` estiver ativo, `running` continua verdadeiro para impedir 
 concorrente sobre o mesmo controller. O estado visual deve indicar que o pedido foi aceito, mas a lista
 de resultados já publicada permanece disponível até a busca finalizar ou uma nova busca limpar o modelo.
 
+## Temas
+
+O Marco 8 introduz seleção de tema `system`, `dark` e `light` diretamente na tela principal. O modo é
+persistido em `Settings` na camada QML e aplicado pelo singleton `Theme`, mantendo os componentes
+desacoplados de paletas locais e reduzindo inconsistências visuais.
+
+O modo `system` segue a preferência de cores do sistema operacional quando disponível. A alternância
+pode ser feita pelo botão do cabeçalho, pela paleta de comandos ou pelo atalho `Ctrl+Alt+T`.
+
+A área de pré-visualização de conteúdo permanece em superfície escura mesmo no tema claro. Essa decisão
+preserva contraste para o HTML de highlight gerado pelo controller e evita alternar cores de código em
+duas camadas enquanto a renderização de preview ainda evolui.
+
 ## Persistência de estado da janela
 
 O estado visual da janela principal é persistido em `Settings` no QML, pois pertence à camada de

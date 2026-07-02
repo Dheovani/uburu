@@ -53,6 +53,12 @@ ApplicationWindow {
             available: searchController.directory.length > 0
         },
         {
+            title: qsTr("Alternar tema"),
+            description: qsTr("Alternar entre tema do sistema, claro e escuro"),
+            shortcut: qsTr("Ctrl+Alt+T"),
+            available: true
+        },
+        {
             title: qsTr("Abrir resultado selecionado"),
             description: qsTr("Abrir o arquivo do resultado atual"),
             shortcut: qsTr("Enter"),
@@ -90,17 +96,31 @@ ApplicationWindow {
             searchController.toggleCurrentDirectoryFavorite()
             return
         case 5:
-            resultsPane.openCurrentResult()
+            root.cycleThemeMode()
             return
         case 6:
-            resultsPane.copyCurrentPath()
+            resultsPane.openCurrentResult()
             return
         case 7:
+            resultsPane.copyCurrentPath()
+            return
+        case 8:
             resultsPane.copyCurrentOccurrence()
             return
         default:
             return
         }
+    }
+
+    function cycleThemeMode() {
+        const themeModes = ["system", "dark", "light"]
+        const currentIndex = themeModes.indexOf(Theme.mode)
+        const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % themeModes.length
+        Theme.mode = themeModes[nextIndex]
+    }
+
+    function normalizeThemeMode(mode) {
+        return mode === "system" || mode === "dark" || mode === "light" ? mode : "system"
     }
 
     FolderDialog {
@@ -132,6 +152,11 @@ ApplicationWindow {
     }
 
     Shortcut {
+        sequence: "Ctrl+Alt+T"
+        onActivated: root.cycleThemeMode()
+    }
+
+    Shortcut {
         sequence: "Esc"
         enabled: searchController.running
         onActivated: searchController.cancel()
@@ -156,6 +181,7 @@ ApplicationWindow {
             directory: searchController.directory
             running: searchController.running
             cancelling: searchController.cancelling
+            themeMode: Theme.mode
             compact: root.compact
             resultCount: resultsPane.resultCount
             filesScanned: searchController.filesScanned
@@ -164,6 +190,7 @@ ApplicationWindow {
             regexAvailable: searchController.regexAvailable
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
+            onCycleTheme: root.cycleThemeMode()
             onStartSearch: (
                 query,
                 regex,
@@ -259,7 +286,10 @@ ApplicationWindow {
     }
 
     Settings {
+        id: mainWindowSettings
+
         category: "main-window"
+        property string themeMode: "system"
         property alias windowX: root.x
         property alias windowY: root.y
         property alias windowWidth: root.width
@@ -272,5 +302,17 @@ ApplicationWindow {
         property alias wholeWordEnabled: searchHeader.wholeWordEnabled
         property alias respectGitignoreEnabled: searchHeader.respectGitignoreEnabled
         property alias includeSubdirectoriesEnabled: searchHeader.includeSubdirectoriesEnabled
+    }
+
+    Component.onCompleted: {
+        Theme.mode = root.normalizeThemeMode(mainWindowSettings.themeMode)
+    }
+
+    Connections {
+        target: Theme
+
+        function onModeChanged() {
+            mainWindowSettings.themeMode = Theme.mode
+        }
     }
 }

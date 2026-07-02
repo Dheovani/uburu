@@ -93,7 +93,7 @@ Panel {
             Layout.fillWidth: true
             Layout.fillHeight: true
             radius: Theme.radius
-            color: Theme.surfaceSunken
+            color: Theme.previewSurface
             border.color: Theme.border
             border.width: 1
             clip: true
@@ -122,7 +122,7 @@ Panel {
                     text: root.previewHtml.length > 0 ? root.previewHtml : root.preview
                     textFormat: root.previewHtml.length > 0 ? TextEdit.RichText : TextEdit.PlainText
 
-                    color: Theme.text
+                    color: Theme.previewText
                     placeholderTextColor: Theme.textFaint
                     selectionColor: Theme.primary
                     selectedTextColor: "white"

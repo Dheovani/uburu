@@ -19,6 +19,9 @@
     <message><source>Favoritar pasta atual</source><translation>Favorite current folder</translation></message>
     <message><source>Alternar favorito para o diretório selecionado</source><translation>Toggle favorite for the selected directory</translation></message>
     <message><source>Ctrl+D</source><translation>Ctrl+D</translation></message>
+    <message><source>Alternar tema</source><translation>Switch theme</translation></message>
+    <message><source>Alternar entre tema do sistema, claro e escuro</source><translation>Switch between system, light, and dark theme</translation></message>
+    <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
     <message><source>Abrir resultado selecionado</source><translation>Open selected result</translation></message>
     <message><source>Abrir o arquivo do resultado atual</source><translation>Open the file for the current result</translation></message>
     <message><source>Copiar caminho do resultado</source><translation>Copy result path</translation></message>
@@ -87,6 +90,9 @@
     <message><source>Cancelando</source><translation>Cancelling</translation></message>
     <message><source>Buscando</source><translation>Searching</translation></message>
     <message><source>Pronto</source><translation>Ready</translation></message>
+    <message><source>Tema: Claro</source><translation>Theme: Light</translation></message>
+    <message><source>Tema: Escuro</source><translation>Theme: Dark</translation></message>
+    <message><source>Tema: Sistema</source><translation>Theme: System</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Search in files</translation></message>
     <message><source>Pasta</source><translation>Folder</translation></message>
     <message><source>Buscar</source><translation>Search</translation></message>

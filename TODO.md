@@ -246,7 +246,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Completar command palette com ações de configuração, diagnóstico, histórico e navegação
   avançada.
 - [ ] Implementar histórico, buscas salvas e favoritos.
-- [ ] Implementar tema claro, escuro e sistema.
+- [x] Implementar tema claro, escuro e sistema.
 - [x] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
   `.gitignore`, busca regex e demais controles potencialmente ambíguos.
 - [x] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam

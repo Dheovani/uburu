@@ -19,6 +19,9 @@
     <message><source>Favoritar pasta atual</source><translation>Favoritar pasta atual</translation></message>
     <message><source>Alternar favorito para o diretório selecionado</source><translation>Alternar favorito para o diretório selecionado</translation></message>
     <message><source>Ctrl+D</source><translation>Ctrl+D</translation></message>
+    <message><source>Alternar tema</source><translation>Alternar tema</translation></message>
+    <message><source>Alternar entre tema do sistema, claro e escuro</source><translation>Alternar entre tema do sistema, claro e escuro</translation></message>
+    <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
     <message><source>Abrir resultado selecionado</source><translation>Abrir resultado selecionado</translation></message>
     <message><source>Abrir o arquivo do resultado atual</source><translation>Abrir o arquivo do resultado atual</translation></message>
     <message><source>Copiar caminho do resultado</source><translation>Copiar caminho do resultado</translation></message>
@@ -87,6 +90,9 @@
     <message><source>Cancelando</source><translation>Cancelando</translation></message>
     <message><source>Buscando</source><translation>Buscando</translation></message>
     <message><source>Pronto</source><translation>Pronto</translation></message>
+    <message><source>Tema: Claro</source><translation>Tema: Claro</translation></message>
+    <message><source>Tema: Escuro</source><translation>Tema: Escuro</translation></message>
+    <message><source>Tema: Sistema</source><translation>Tema: Sistema</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Pesquisar em arquivos</translation></message>
     <message><source>Pasta</source><translation>Pasta</translation></message>
     <message><source>Buscar</source><translation>Buscar</translation></message>

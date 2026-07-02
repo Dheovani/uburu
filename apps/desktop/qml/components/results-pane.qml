@@ -12,8 +12,45 @@ Panel {
 
     signal resultSelected(string filePath, string location, string preview)
     signal resultsCleared()
+    signal openFileRequested(string filePath)
+    signal openFolderRequested(string filePath)
+    signal copyTextRequested(string text)
 
     color: Theme.surface
+
+    Menu {
+        id: resultContextMenu
+
+        property string filePath: ""
+        property string location: ""
+        property string preview: ""
+
+        MenuItem {
+            text: qsTr("Abrir arquivo")
+            onTriggered: root.openFileRequested(resultContextMenu.filePath)
+        }
+
+        MenuItem {
+            text: qsTr("Abrir pasta")
+            onTriggered: root.openFolderRequested(resultContextMenu.filePath)
+        }
+
+        MenuSeparator {}
+
+        MenuItem {
+            text: qsTr("Copiar caminho")
+            onTriggered: root.copyTextRequested(resultContextMenu.filePath)
+        }
+
+        MenuItem {
+            text: qsTr("Copiar ocorrência")
+            onTriggered: {
+                const occurrence = resultContextMenu.filePath + ":" + resultContextMenu.location
+                    + "\n" + resultContextMenu.preview
+                root.copyTextRequested(occurrence)
+            }
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -68,7 +105,13 @@ Panel {
             Layout.fillHeight: true
             clip: true
             spacing: 6
+            cacheBuffer: 1600
+            reuseItems: true
             boundsBehavior: Flickable.StopAtBounds
+
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+            }
 
             onCountChanged: {
                 if (count === 0)
@@ -88,6 +131,18 @@ Panel {
                 onClicked: {
                     resultList.currentIndex = index
                     root.resultSelected(filePath, location, preview)
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: {
+                        resultList.currentIndex = index
+                        root.resultSelected(filePath, location, preview)
+                        resultContextMenu.filePath = filePath
+                        resultContextMenu.location = location
+                        resultContextMenu.preview = preview
+                        resultContextMenu.popup()
+                    }
                 }
 
                 contentItem: Column {

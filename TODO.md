@@ -231,7 +231,7 @@ e UI para avançarem mais rapidamente.
 - [x] Adicionar debounce configurável e busca ao digitar.
 - [x] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.
 - [ ] Mostrar status e progresso da indexação.
-- [ ] Virtualizar a lista para centenas de milhares de resultados.
+- [x] Virtualizar a lista para centenas de milhares de resultados.
 - [ ] Preservar seleção durante batches e refinamento híbrido.
 - [ ] Criar agrupamento por arquivo e navegação entre ocorrências.
 - [ ] Implementar preview de arquivo assíncrono, cancelável e limitado.
@@ -240,7 +240,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Abrir arquivo no editor configurado e copiar caminho/ocorrência.
 - [ ] Exibir menu de contexto nativo do sistema operacional ao clicar com botão direito em um
   arquivo listado, equivalente ao menu do Explorer/Finder/gerenciador de arquivos.
-- [ ] Oferecer fallback próprio para ações essenciais quando o menu nativo não estiver disponível:
+- [x] Oferecer fallback próprio para ações essenciais quando o menu nativo não estiver disponível:
   abrir arquivo, abrir pasta, copiar caminho e copiar ocorrência.
 - [ ] Adicionar atalhos de teclado completos e command palette.
 - [ ] Implementar histórico, buscas salvas e favoritos.

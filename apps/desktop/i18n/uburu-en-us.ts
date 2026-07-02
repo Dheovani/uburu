@@ -20,6 +20,10 @@
     <message><source>%1</source><translation>%1</translation></message>
     <message><source>Pronto para buscar</source><translation>Ready to search</translation></message>
     <message><source>Escolha uma pasta e digite uma consulta para ver os resultados aqui.</source><translation>Choose a folder and type a query to see results here.</translation></message>
+    <message><source>Abrir arquivo</source><translation>Open file</translation></message>
+    <message><source>Abrir pasta</source><translation>Open folder</translation></message>
+    <message><source>Copiar caminho</source><translation>Copy path</translation></message>
+    <message><source>Copiar ocorrência</source><translation>Copy occurrence</translation></message>
   </context>
   <context>
     <name>search-header</name>
@@ -73,6 +77,13 @@
     <message><source>Erro ao pesquisar</source><translation>Search failed</translation></message>
     <message><source>Erro ao pesquisar: %1</source><translation>Search failed: %1</translation></message>
     <message><source>Busca cancelada</source><translation>Search cancelled</translation></message>
+    <message><source>Arquivo não encontrado: %1</source><translation>File not found: %1</translation></message>
+    <message><source>Arquivo aberto</source><translation>File opened</translation></message>
+    <message><source>Não foi possível abrir o arquivo</source><translation>Could not open the file</translation></message>
+    <message><source>Pasta não encontrada: %1</source><translation>Folder not found: %1</translation></message>
+    <message><source>Pasta aberta</source><translation>Folder opened</translation></message>
+    <message><source>Não foi possível abrir a pasta</source><translation>Could not open the folder</translation></message>
+    <message><source>Copiado para a área de transferência</source><translation>Copied to clipboard</translation></message>
     <message numerus="yes">
       <source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source>
       <translation><numerusform>%n match found in %1 file(s)</numerusform><numerusform>%n matches found in %1 file(s)</numerusform></translation>

@@ -36,6 +36,15 @@ Esses valores são calculados pelo controller a partir do resumo retornado pelo 
 apenas apresenta propriedades observáveis; não deve medir busca, inferir progresso do core nem acessar
 threads de worker diretamente.
 
+## Lista de resultados
+
+A lista de resultados usa `ListView` com reutilização de delegates e cache visual limitado. Isso evita
+instanciar componentes QML para todos os resultados quando houver muitos itens, mantendo a renderização
+proporcional à área visível e a uma pequena margem de navegação.
+
+O modelo C++ ainda retém os resultados publicados pela busca. Otimizações futuras de memória devem
+evoluir o contrato do modelo, não substituir a virtualização visual por lógica manual em QML.
+
 ## Interações com arquivos encontrados
 
 Resultados devem permitir operações diretas sobre o arquivo encontrado sem quebrar a separação entre
@@ -49,6 +58,11 @@ UI e plataforma. O comportamento desejado para o Marco 8 é:
 - a UI QML deve acionar um serviço/adaptador de plataforma, não implementar regras de shell no QML;
 - quando o menu nativo não estiver disponível, o fallback deve expor ao menos abrir arquivo, abrir
   pasta, copiar caminho e copiar ocorrência.
+
+O fallback próprio inicial do Marco 8 é oferecido pelo menu de contexto da lista de resultados. Ele
+encaminha ações ao `SearchController`, que usa APIs Qt para abrir arquivos/pastas e copiar textos,
+mantendo QML sem lógica de plataforma. O menu nativo do sistema operacional continua sendo uma
+integração posterior, por adaptador específico.
 
 ## Formatos com extração de conteúdo pendente
 

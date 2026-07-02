@@ -4,8 +4,11 @@
 #include "core/search/direct-search-engine.hpp"
 #include "core/search/search-errors.hpp"
 
+#include <QClipboard>
+#include <QDesktopServices>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QGuiApplication>
 #include <QMetaObject>
 #include <QRegularExpression>
 #include <QSettings>
@@ -307,6 +310,58 @@ namespace uburu::app
 
     saveScopeHistory();
     emit scopeHistoryChanged();
+  }
+
+  void SearchController::openFile(const QString& path)
+  {
+    if (path.isEmpty())
+      return;
+
+    const QFileInfo file(path);
+
+    if (!file.exists()) {
+      setStatus(tr("Arquivo não encontrado: %1").arg(path));
+      return;
+    }
+
+    if (QDesktopServices::openUrl(QUrl::fromLocalFile(file.absoluteFilePath()))) {
+      setStatus(tr("Arquivo aberto"));
+      return;
+    }
+
+    setStatus(tr("Não foi possível abrir o arquivo"));
+  }
+
+  void SearchController::openContainingFolder(const QString& path)
+  {
+    if (path.isEmpty())
+      return;
+
+    const QFileInfo file(path);
+    const auto directory = file.exists() ? file.absolutePath() : QFileInfo(path).absolutePath();
+
+    if (directory.isEmpty()) {
+      setStatus(tr("Pasta não encontrada: %1").arg(path));
+      return;
+    }
+
+    if (QDesktopServices::openUrl(QUrl::fromLocalFile(directory))) {
+      setStatus(tr("Pasta aberta"));
+      return;
+    }
+
+    setStatus(tr("Não foi possível abrir a pasta"));
+  }
+
+  void SearchController::copyToClipboard(const QString& text)
+  {
+    auto* clipboard = QGuiApplication::clipboard();
+
+    if (clipboard == nullptr)
+      return;
+
+    clipboard->setText(text);
+    setStatus(tr("Copiado para a área de transferência"));
   }
 
   void SearchController::startSearch(const QString& expression,

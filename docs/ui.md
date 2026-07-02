@@ -127,6 +127,17 @@ O chip de regex só fica habilitado quando o build expõe suporte a PCRE2 pelo `
 assim, o core continua sendo a autoridade final e valida `SearchQuery` para impedir regex em builds sem
 backend compatível.
 
+## Erros parciais de busca
+
+Falhas isoladas de leitura, permissão ou arquivo removido durante a busca não devem interromper a
+entrega de resultados válidos. Quando o core marcar `SearchSummary::partialFailure`, a UI preserva a
+lista de ocorrências e transforma os erros em aviso no status da busca, mostrando a primeira ocorrência
+de erro como contexto curto.
+
+Erros que impedem a busca inteira, como validação da consulta ou backend indisponível, continuam sendo
+exibidos como erro final. O cancelamento explícito do usuário tem prioridade visual sobre avisos
+parciais para evitar feedback ambíguo.
+
 ## Formatos com extração de conteúdo pendente
 
 A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos

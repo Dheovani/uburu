@@ -180,6 +180,39 @@ namespace uburu::app
       return status;
     }
 
+    QString firstSearchErrorContext(const search::SearchSummary& summary)
+    {
+      if (summary.errors.empty())
+        return {};
+
+      return QString::fromUtf8(summary.errors.front().context);
+    }
+
+    QString failedSearchStatus(const search::SearchSummary& summary, QObject* receiver)
+    {
+      const auto context = firstSearchErrorContext(summary);
+
+      return context.isEmpty() ? receiver->tr("Erro ao pesquisar")
+                               : receiver->tr("Erro ao pesquisar: %1").arg(context);
+    }
+
+    QString partialSearchStatus(const search::SearchSummary& summary, QObject* receiver)
+    {
+      auto status = completedSearchStatus(summary, receiver);
+      const auto errorCount = static_cast<int>(summary.errors.size());
+      const auto context = firstSearchErrorContext(summary);
+
+      if (errorCount == 0)
+        return status;
+
+      const auto warning =
+        context.isEmpty()
+          ? receiver->tr("%n erro(s) parcial(is)", nullptr, errorCount)
+          : receiver->tr("%n erro(s) parcial(is), primeiro: %1", nullptr, errorCount).arg(context);
+
+      return receiver->tr("%1 — avisos: %2").arg(status, warning);
+    }
+
     QString formatDuration(std::chrono::nanoseconds duration)
     {
       if (duration.count() <= 0)
@@ -769,12 +802,14 @@ namespace uburu::app
       auto summary = activeWatcher->result();
       updateSearchMetrics(summary);
 
-      if (!summary.errors.empty()) {
-        const auto context = QString::fromUtf8(summary.errors.front().context);
-        setStatus(context.isEmpty() ? tr("Erro ao pesquisar") : tr("Erro ao pesquisar: %1").arg(context));
-      } else {
-        setStatus(summary.cancelled ? tr("Busca cancelada") : completedSearchStatus(summary, this));
-      }
+      if (summary.cancelled)
+        setStatus(tr("Busca cancelada"));
+      else if (summary.partialFailure)
+        setStatus(partialSearchStatus(summary, this));
+      else if (!summary.errors.empty())
+        setStatus(failedSearchStatus(summary, this));
+      else
+        setStatus(completedSearchStatus(summary, this));
 
       setRunning(false);
       activeWatcher->deleteLater();

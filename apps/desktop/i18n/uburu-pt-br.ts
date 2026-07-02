@@ -138,6 +138,9 @@
     <message><source>Erro ao pesquisar</source><translation>Erro ao pesquisar</translation></message>
     <message><source>Erro ao pesquisar: %1</source><translation>Erro ao pesquisar: %1</translation></message>
     <message><source>Busca cancelada</source><translation>Busca cancelada</translation></message>
+    <message numerus="yes"><source>%n erro(s) parcial(is)</source><translation><numerusform>%n erro parcial</numerusform><numerusform>%n erros parciais</numerusform></translation></message>
+    <message numerus="yes"><source>%n erro(s) parcial(is), primeiro: %1</source><translation><numerusform>%n erro parcial, primeiro: %1</numerusform><numerusform>%n erros parciais, primeiro: %1</numerusform></translation></message>
+    <message><source>%1 — avisos: %2</source><translation>%1 — avisos: %2</translation></message>
     <message><source>
 
 â€¦ prévia limitada para manter a interface responsiva.</source><translation>

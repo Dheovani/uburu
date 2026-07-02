@@ -234,7 +234,7 @@ e UI para avançarem mais rapidamente.
 - [x] Virtualizar a lista para centenas de milhares de resultados.
 - [ ] Preservar seleção durante batches e refinamento híbrido.
 - [ ] Criar agrupamento por arquivo e navegação entre ocorrências.
-- [ ] Implementar preview de arquivo assíncrono, cancelável e limitado.
+- [x] Implementar preview de arquivo assíncrono, cancelável e limitado.
 - [ ] Implementar highlight de múltiplas ocorrências e linhas de contexto.
 - [ ] Adicionar números de linha, monospace e tab width configurável.
 - [ ] Abrir arquivo no editor configurado e copiar caminho/ocorrência.

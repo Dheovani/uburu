@@ -18,9 +18,6 @@ ApplicationWindow {
     color: Theme.window
 
     property bool compact: width < 980
-    property string selectedPreview: ""
-    property string selectedFilePath: ""
-    property string selectedLocation: ""
 
     FolderDialog {
         id: folderDialog
@@ -99,16 +96,12 @@ ApplicationWindow {
                 SplitView.preferredWidth: root.compact ? parent.width : 430
                 SplitView.preferredHeight: root.compact ? 260 : parent.height
                 model: searchController.results
-                onResultsCleared: {
-                    root.selectedPreview = ""
-                    root.selectedFilePath = ""
-                    root.selectedLocation = ""
-                }
-                onResultSelected: (filePath, location, preview) => {
-                    root.selectedFilePath = filePath
-                    root.selectedLocation = location
-                    root.selectedPreview = preview
-                }
+                onResultsCleared: searchController.clearPreview()
+                onResultSelected: (filePath, absolutePath, location, preview) => searchController.loadPreview(
+                    absolutePath,
+                    location,
+                    preview
+                )
                 onOpenFileRequested: filePath => searchController.openFile(filePath)
                 onOpenFolderRequested: filePath => searchController.openContainingFolder(filePath)
                 onCopyTextRequested: text => searchController.copyToClipboard(text)
@@ -117,9 +110,10 @@ ApplicationWindow {
             PreviewPane {
                 SplitView.fillWidth: true
                 SplitView.fillHeight: true
-                filePath: root.selectedFilePath
-                location: root.selectedLocation
-                preview: root.selectedPreview
+                filePath: searchController.previewFilePath
+                location: searchController.previewLocation
+                preview: searchController.previewText
+                loading: searchController.previewLoading
             }
         }
 

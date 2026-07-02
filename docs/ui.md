@@ -45,6 +45,16 @@ proporcional à área visível e a uma pequena margem de navegação.
 O modelo C++ ainda retém os resultados publicados pela busca. Otimizações futuras de memória devem
 evoluir o contrato do modelo, não substituir a virtualização visual por lógica manual em QML.
 
+## Preview de arquivo
+
+O preview da tela principal é carregado pelo `SearchController` em worker assíncrono, usando o leitor
+de texto do core. Ao selecionar outro resultado, a prévia anterior recebe cancelamento cooperativo e
+eventos atrasados são descartados pelo watcher ativo.
+
+A prévia é limitada por janela de linhas ao redor da ocorrência e por orçamento de bytes para manter a
+UI responsiva. O QML exibe apenas o estado observável: arquivo selecionado, localização, texto da
+prévia e indicador de carregamento.
+
 ## Interações com arquivos encontrados
 
 Resultados devem permitir operações diretas sobre o arquivo encontrado sem quebrar a separação entre

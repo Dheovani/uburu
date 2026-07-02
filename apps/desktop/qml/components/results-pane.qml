@@ -10,7 +10,7 @@ Panel {
     property alias model: resultList.model
     property int resultCount: resultList.count
 
-    signal resultSelected(string filePath, string location, string preview)
+    signal resultSelected(string filePath, string absolutePath, string location, string preview)
     signal resultsCleared()
     signal openFileRequested(string filePath)
     signal openFolderRequested(string filePath)
@@ -22,30 +22,31 @@ Panel {
         id: resultContextMenu
 
         property string filePath: ""
+        property string absolutePath: ""
         property string location: ""
         property string preview: ""
 
         MenuItem {
             text: qsTr("Abrir arquivo")
-            onTriggered: root.openFileRequested(resultContextMenu.filePath)
+            onTriggered: root.openFileRequested(resultContextMenu.absolutePath)
         }
 
         MenuItem {
             text: qsTr("Abrir pasta")
-            onTriggered: root.openFolderRequested(resultContextMenu.filePath)
+            onTriggered: root.openFolderRequested(resultContextMenu.absolutePath)
         }
 
         MenuSeparator {}
 
         MenuItem {
             text: qsTr("Copiar caminho")
-            onTriggered: root.copyTextRequested(resultContextMenu.filePath)
+            onTriggered: root.copyTextRequested(resultContextMenu.absolutePath)
         }
 
         MenuItem {
             text: qsTr("Copiar ocorrência")
             onTriggered: {
-                const occurrence = resultContextMenu.filePath + ":" + resultContextMenu.location
+                const occurrence = resultContextMenu.absolutePath + ":" + resultContextMenu.location
                     + "\n" + resultContextMenu.preview
                 root.copyTextRequested(occurrence)
             }
@@ -121,6 +122,7 @@ Panel {
             delegate: ItemDelegate {
                 required property int index
                 required property string filePath
+                required property string absolutePath
                 required property string location
                 required property string preview
 
@@ -130,15 +132,16 @@ Panel {
 
                 onClicked: {
                     resultList.currentIndex = index
-                    root.resultSelected(filePath, location, preview)
+                    root.resultSelected(filePath, absolutePath, location, preview)
                 }
 
                 TapHandler {
                     acceptedButtons: Qt.RightButton
                     onTapped: {
                         resultList.currentIndex = index
-                        root.resultSelected(filePath, location, preview)
+                        root.resultSelected(filePath, absolutePath, location, preview)
                         resultContextMenu.filePath = filePath
+                        resultContextMenu.absolutePath = absolutePath
                         resultContextMenu.location = location
                         resultContextMenu.preview = preview
                         resultContextMenu.popup()

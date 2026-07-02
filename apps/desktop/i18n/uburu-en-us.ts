@@ -10,6 +10,7 @@
     <name>preview-pane</name>
     <message><source>PREVIEW</source><translation>PREVIEW</translation></message>
     <message><source>Pré-visualização</source><translation>Preview</translation></message>
+    <message><source>Carregando pré-visualização...</source><translation>Loading preview...</translation></message>
     <message><source>Selecione um resultado para inspecionar o contexto.</source><translation>Select a result to inspect its context.</translation></message>
     <message><source>O conteúdo do arquivo aparecerá aqui</source><translation>File content will appear here</translation></message>
   </context>
@@ -84,6 +85,16 @@
     <message><source>Pasta aberta</source><translation>Folder opened</translation></message>
     <message><source>Não foi possível abrir a pasta</source><translation>Could not open the folder</translation></message>
     <message><source>Copiado para a área de transferência</source><translation>Copied to clipboard</translation></message>
+    <message><source>
+
+â€¦ prévia limitada para manter a interface responsiva.</source><translation>
+
+… preview limited to keep the interface responsive.</translation></message>
+    <message><source>Arquivo binário: prévia de texto indisponível.</source><translation>Binary file: text preview unavailable.</translation></message>
+    <message><source>Não foi possível abrir o arquivo para pré-visualização.</source><translation>Could not open the file for preview.</translation></message>
+    <message><source>Não foi possível ler o arquivo para pré-visualização.</source><translation>Could not read the file for preview.</translation></message>
+    <message><source>Encoding inválido: prévia indisponível.</source><translation>Invalid encoding: preview unavailable.</translation></message>
+    <message><source>Linha muito longa: prévia limitada.</source><translation>Line too long: preview limited.</translation></message>
     <message numerus="yes">
       <source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source>
       <translation><numerusform>%n match found in %1 file(s)</numerusform><numerusform>%n matches found in %1 file(s)</numerusform></translation>

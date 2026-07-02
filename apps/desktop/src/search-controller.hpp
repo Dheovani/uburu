@@ -15,6 +15,27 @@
 namespace uburu::app
 {
 
+  enum class PreviewLoadStatus
+  {
+    completed,
+    cancelled,
+    openFailed,
+    readFailed,
+    binarySkipped,
+    invalidEncoding,
+    lineTooLong
+  };
+
+  struct PreviewLoadResult
+  {
+    QString filePath;
+    QString location;
+    QString fallbackPreview;
+    QString text;
+    PreviewLoadStatus status{PreviewLoadStatus::completed};
+    bool truncated{false};
+  };
+
   class SearchResultModel final : public QAbstractListModel
   {
     Q_OBJECT
@@ -23,6 +44,7 @@ namespace uburu::app
     enum Role
     {
       PathRole = Qt::UserRole + 1,
+      AbsolutePathRole,
       LocationRole,
       PreviewRole
     };
@@ -51,6 +73,10 @@ namespace uburu::app
     Q_PROPERTY(qulonglong matchesFound READ matchesFound NOTIFY searchMetricsChanged)
     Q_PROPERTY(QString timeToFirstResult READ timeToFirstResult NOTIFY searchMetricsChanged)
     Q_PROPERTY(QString searchDuration READ searchDuration NOTIFY searchMetricsChanged)
+    Q_PROPERTY(QString previewFilePath READ previewFilePath NOTIFY previewChanged)
+    Q_PROPERTY(QString previewLocation READ previewLocation NOTIFY previewChanged)
+    Q_PROPERTY(QString previewText READ previewText NOTIFY previewChanged)
+    Q_PROPERTY(bool previewLoading READ previewLoading NOTIFY previewLoadingChanged)
 
   public:
     explicit SearchController(QObject* parent = nullptr);
@@ -66,6 +92,10 @@ namespace uburu::app
     [[nodiscard]] qulonglong matchesFound() const;
     [[nodiscard]] QString timeToFirstResult() const;
     [[nodiscard]] QString searchDuration() const;
+    [[nodiscard]] QString previewFilePath() const;
+    [[nodiscard]] QString previewLocation() const;
+    [[nodiscard]] QString previewText() const;
+    [[nodiscard]] bool previewLoading() const;
 
     Q_INVOKABLE void selectDirectory(const QString& url);
     Q_INVOKABLE void selectSavedDirectory(const QString& path);
@@ -74,6 +104,8 @@ namespace uburu::app
     Q_INVOKABLE void openFile(const QString& path);
     Q_INVOKABLE void openContainingFolder(const QString& path);
     Q_INVOKABLE void copyToClipboard(const QString& text);
+    Q_INVOKABLE void loadPreview(const QString& path, const QString& location, const QString& fallbackPreview);
+    Q_INVOKABLE void clearPreview();
     Q_INVOKABLE void startSearch(const QString& expression,
                                  bool regex,
                                  bool caseSensitive,
@@ -89,6 +121,8 @@ namespace uburu::app
     void runningChanged();
     void scopeHistoryChanged();
     void searchMetricsChanged();
+    void previewChanged();
+    void previewLoadingChanged();
 
   private:
     void loadScopeHistory();
@@ -97,6 +131,8 @@ namespace uburu::app
     void addRecentDirectory(const QString& directory);
     void setStatus(QString status);
     void setRunning(bool running);
+    void setPreviewLoading(bool loading);
+    void setPreviewResult(const PreviewLoadResult& result);
     void resetSearchMetrics();
     void updateSearchMetrics(const search::SearchSummary& summary);
     QString directoryValue;
@@ -107,11 +143,17 @@ namespace uburu::app
     qulonglong matchesFoundValue{0};
     QString timeToFirstResultValue;
     QString searchDurationValue;
+    QString previewFilePathValue;
+    QString previewLocationValue;
+    QString previewTextValue;
+    bool previewLoadingValue{false};
     bool runningValue{false};
     SearchResultModel resultsModel;
     std::shared_ptr<const SearchService> searchService;
     std::stop_source stopSource;
+    std::stop_source previewStopSource;
     QFutureWatcher<search::SearchSummary>* activeWatcher{nullptr};
+    QFutureWatcher<PreviewLoadResult>* activePreviewWatcher{nullptr};
   };
 
 } // namespace uburu::app

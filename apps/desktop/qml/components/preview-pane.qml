@@ -10,6 +10,7 @@ Panel {
     property string filePath: ""
     property string location: ""
     property string preview: ""
+    property bool loading: false
 
     color: Theme.windowRaised
 
@@ -37,7 +38,9 @@ Panel {
 
             MutedLabel {
                 Layout.fillWidth: true
-                text: root.location.length > 0
+                text: root.loading
+                      ? qsTr("Carregando pré-visualização...")
+                      : root.location.length > 0
                       ? root.location
                       : qsTr("Selecione um resultado para inspecionar o contexto.")
                 elide: Text.ElideRight
@@ -77,6 +80,17 @@ Panel {
                     background: Rectangle {
                         color: "transparent"
                     }
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                visible: root.loading
+                color: "#66000000"
+
+                BusyIndicator {
+                    anchors.centerIn: parent
+                    running: root.loading
                 }
             }
         }

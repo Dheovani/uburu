@@ -3,6 +3,7 @@
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/search/direct-search-engine.hpp"
 #include "core/search/search-errors.hpp"
+#include "core/text/text-file-reader.hpp"
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -22,8 +23,10 @@
 #include <exception>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace uburu::app
 {
@@ -32,6 +35,11 @@ namespace uburu::app
 
     constexpr int maximumRecentDirectories = 8;
     constexpr std::int64_t missingFirstResultTime = -1;
+    constexpr std::size_t previewContextBeforeLines = 80;
+    constexpr std::size_t previewContextAfterLines = 160;
+    constexpr std::size_t maximumPreviewLinesWithoutLocation = 240;
+    constexpr std::size_t maximumPreviewBytes = 256U * 1024U;
+    constexpr int previewLineNumberWidth = 6;
     constexpr auto settingsScopeGroup = "scope";
     constexpr auto recentDirectoriesKey = "recentDirectories";
     constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
@@ -50,6 +58,17 @@ namespace uburu::app
       const auto text = path.generic_u8string();
 
       return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
+    std::filesystem::path absoluteResultPath(const SearchResult& result)
+    {
+      if (result.path.is_absolute())
+        return result.path;
+
+      if (!result.searchRoot.empty())
+        return result.searchRoot / result.path;
+
+      return result.path;
     }
 
     QString localDirectoryFromUrlOrPath(const QString& value)
@@ -130,6 +149,104 @@ namespace uburu::app
       return QStringLiteral("%1 s").arg(QString::number(seconds, 'f', 2));
     }
 
+    std::optional<std::size_t> lineNumberFromLocation(const QString& location)
+    {
+      const auto line = location.section(QLatin1Char(':'), 0, 0).toULongLong();
+
+      if (line == 0)
+        return std::nullopt;
+
+      return static_cast<std::size_t>(line);
+    }
+
+    QString formattedPreviewLine(const text::TextLine& line, bool selected)
+    {
+      return QStringLiteral("%1 %2  %3")
+        .arg(selected ? QLatin1Char('>') : QLatin1Char(' '))
+        .arg(static_cast<qulonglong>(line.lineNumber), previewLineNumberWidth)
+        .arg(QString::fromStdString(line.text));
+    }
+
+    PreviewLoadStatus previewStatusFromTextStatus(text::TextReadStatus status)
+    {
+      switch (status) {
+      case text::TextReadStatus::completed:
+        return PreviewLoadStatus::completed;
+      case text::TextReadStatus::cancelled:
+        return PreviewLoadStatus::cancelled;
+      case text::TextReadStatus::openFailed:
+        return PreviewLoadStatus::openFailed;
+      case text::TextReadStatus::readFailed:
+        return PreviewLoadStatus::readFailed;
+      case text::TextReadStatus::binarySkipped:
+        return PreviewLoadStatus::binarySkipped;
+      case text::TextReadStatus::invalidEncoding:
+        return PreviewLoadStatus::invalidEncoding;
+      case text::TextReadStatus::lineTooLong:
+        return PreviewLoadStatus::lineTooLong;
+      }
+
+      return PreviewLoadStatus::readFailed;
+    }
+
+    PreviewLoadResult loadPreviewText(const QString& path,
+                                      const QString& location,
+                                      const QString& fallbackPreview,
+                                      std::stop_token stopToken)
+    {
+      PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
+      const auto targetLine = lineNumberFromLocation(location);
+      const auto firstLine = targetLine.has_value() && *targetLine > previewContextBeforeLines
+        ? *targetLine - previewContextBeforeLines
+        : std::size_t{1};
+      const auto lastLine =
+        targetLine.has_value() ? *targetLine + previewContextAfterLines : maximumPreviewLinesWithoutLocation;
+      SearchOptions options;
+      QStringList lines;
+      std::size_t previewBytes = 0;
+
+      options.includeBinary = false;
+      options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
+
+      const auto summary = text::readTextFileLines(
+        nativePath(path),
+        options,
+        [&](const text::TextLine& line) {
+          if (stopToken.stop_requested())
+            return false;
+
+          if (line.lineNumber < firstLine)
+            return true;
+
+          if (line.lineNumber > lastLine)
+            return false;
+
+          const auto selectedLine = targetLine.has_value() && *targetLine == line.lineNumber;
+          lines.push_back(formattedPreviewLine(line, selectedLine));
+          previewBytes += line.text.size();
+
+          if (previewBytes >= maximumPreviewBytes) {
+            result.truncated = true;
+            return false;
+          }
+
+          return true;
+        },
+        stopToken);
+
+      result.status = previewStatusFromTextStatus(summary.status);
+
+      if (result.status == PreviewLoadStatus::cancelled)
+        return result;
+
+      result.text = lines.join(QStringLiteral("\n"));
+
+      if (result.text.isEmpty() && !fallbackPreview.isEmpty())
+        result.text = fallbackPreview;
+
+      return result;
+    }
+
     std::vector<std::string> parseDocumentTypes(const QString& text)
     {
       std::vector<std::string> extensions;
@@ -169,6 +286,9 @@ namespace uburu::app
     if (role == PathRole)
       return QString::fromUtf8(pathToUtf8(result.path));
 
+    if (role == AbsolutePathRole)
+      return QString::fromUtf8(pathToUtf8(absoluteResultPath(result)));
+
     if (role == LocationRole)
       return QStringLiteral("%1:%2").arg(result.line).arg(result.column);
 
@@ -180,7 +300,10 @@ namespace uburu::app
 
   QHash<int, QByteArray> SearchResultModel::roleNames() const
   {
-    return {{PathRole, "filePath"}, {LocationRole, "location"}, {PreviewRole, "preview"}};
+    return {{PathRole, "filePath"},
+            {AbsolutePathRole, "absolutePath"},
+            {LocationRole, "location"},
+            {PreviewRole, "preview"}};
   }
 
   void SearchResultModel::clear()
@@ -210,9 +333,13 @@ namespace uburu::app
   SearchController::~SearchController()
   {
     cancel();
+    previewStopSource.request_stop();
 
     if (activeWatcher != nullptr)
       activeWatcher->waitForFinished();
+
+    if (activePreviewWatcher != nullptr)
+      activePreviewWatcher->waitForFinished();
   }
 
   QString SearchController::directory() const
@@ -268,6 +395,26 @@ namespace uburu::app
   QString SearchController::searchDuration() const
   {
     return searchDurationValue;
+  }
+
+  QString SearchController::previewFilePath() const
+  {
+    return previewFilePathValue;
+  }
+
+  QString SearchController::previewLocation() const
+  {
+    return previewLocationValue;
+  }
+
+  QString SearchController::previewText() const
+  {
+    return previewTextValue;
+  }
+
+  bool SearchController::previewLoading() const
+  {
+    return previewLoadingValue;
   }
 
   void SearchController::selectDirectory(const QString& url)
@@ -364,6 +511,64 @@ namespace uburu::app
     setStatus(tr("Copiado para a área de transferência"));
   }
 
+  void SearchController::loadPreview(const QString& path, const QString& location, const QString& fallbackPreview)
+  {
+    if (path.isEmpty()) {
+      clearPreview();
+      return;
+    }
+
+    previewStopSource.request_stop();
+    previewStopSource = std::stop_source{};
+
+    if (activePreviewWatcher != nullptr) {
+      activePreviewWatcher->deleteLater();
+      activePreviewWatcher = nullptr;
+    }
+
+    previewFilePathValue = path;
+    previewLocationValue = location;
+    previewTextValue = fallbackPreview;
+    emit previewChanged();
+    setPreviewLoading(true);
+
+    const auto token = previewStopSource.get_token();
+    auto* watcher = new QFutureWatcher<PreviewLoadResult>(this);
+    activePreviewWatcher = watcher;
+
+    connect(watcher, &QFutureWatcher<PreviewLoadResult>::finished, this, [this, watcher] {
+      if (watcher != activePreviewWatcher) {
+        watcher->deleteLater();
+        return;
+      }
+
+      const auto result = watcher->result();
+      activePreviewWatcher->deleteLater();
+      activePreviewWatcher = nullptr;
+      setPreviewResult(result);
+      setPreviewLoading(false);
+    });
+    watcher->setFuture(QtConcurrent::run([path, location, fallbackPreview, token] {
+      return loadPreviewText(path, location, fallbackPreview, token);
+    }));
+  }
+
+  void SearchController::clearPreview()
+  {
+    previewStopSource.request_stop();
+
+    if (activePreviewWatcher != nullptr) {
+      activePreviewWatcher->deleteLater();
+      activePreviewWatcher = nullptr;
+    }
+
+    previewFilePathValue.clear();
+    previewLocationValue.clear();
+    previewTextValue.clear();
+    emit previewChanged();
+    setPreviewLoading(false);
+  }
+
   void SearchController::startSearch(const QString& expression,
                                      bool regex,
                                      bool caseSensitive,
@@ -376,6 +581,7 @@ namespace uburu::app
       return;
 
     resultsModel.clear();
+    clearPreview();
     resetSearchMetrics();
     stopSource = std::stop_source{};
     setRunning(true);
@@ -504,6 +710,45 @@ namespace uburu::app
   {
     runningValue = running;
     emit runningChanged();
+  }
+
+  void SearchController::setPreviewLoading(bool loading)
+  {
+    if (previewLoadingValue == loading)
+      return;
+
+    previewLoadingValue = loading;
+    emit previewLoadingChanged();
+  }
+
+  void SearchController::setPreviewResult(const PreviewLoadResult& result)
+  {
+    if (result.status == PreviewLoadStatus::cancelled)
+      return;
+
+    previewFilePathValue = result.filePath;
+    previewLocationValue = result.location;
+    previewTextValue = result.text;
+
+    if (result.truncated)
+      previewTextValue += tr("\n\nâ€¦ prévia limitada para manter a interface responsiva.");
+
+    if (result.status == PreviewLoadStatus::binarySkipped)
+      previewTextValue = tr("Arquivo binário: prévia de texto indisponível.");
+
+    if (result.status == PreviewLoadStatus::openFailed)
+      previewTextValue = tr("Não foi possível abrir o arquivo para pré-visualização.");
+
+    if (result.status == PreviewLoadStatus::readFailed)
+      previewTextValue = tr("Não foi possível ler o arquivo para pré-visualização.");
+
+    if (result.status == PreviewLoadStatus::invalidEncoding)
+      previewTextValue = tr("Encoding inválido: prévia indisponível.");
+
+    if (result.status == PreviewLoadStatus::lineTooLong)
+      previewTextValue = tr("Linha muito longa: prévia limitada.");
+
+    emit previewChanged();
   }
 
   void SearchController::resetSearchMetrics()

@@ -56,30 +56,51 @@ Panel {
         property string location: ""
         property string preview: ""
 
-        MenuItem {
+        padding: 6
+
+        background: Rectangle {
+            implicitWidth: 250
+            radius: Theme.radius
+            color: Theme.surfaceRaised
+            border.color: Theme.borderStrong
+            border.width: 1
+        }
+
+        contentItem: ListView {
+            implicitWidth: 250
+            implicitHeight: contentHeight
+            model: resultContextMenu.contentModel
+            interactive: false
+            clip: true
+        }
+
+        ActionMenuItem {
             text: qsTr("Abrir arquivo")
+            shortcutText: qsTr("Enter")
             onTriggered: root.openFileRequested(resultContextMenu.absolutePath)
         }
 
-        MenuItem {
+        ActionMenuItem {
             text: qsTr("Abrir com...")
             onTriggered: root.openWithRequested(resultContextMenu.absolutePath)
         }
 
-        MenuItem {
+        ActionMenuItem {
             text: qsTr("Abrir local do arquivo")
             onTriggered: root.openFolderRequested(resultContextMenu.absolutePath)
         }
 
-        MenuSeparator {}
+        ActionMenuSeparator {}
 
-        MenuItem {
+        ActionMenuItem {
             text: qsTr("Copiar caminho")
+            shortcutText: qsTr("Ctrl+C")
             onTriggered: root.copyTextRequested(resultContextMenu.absolutePath)
         }
 
-        MenuItem {
+        ActionMenuItem {
             text: qsTr("Copiar ocorrência")
+            shortcutText: qsTr("Ctrl+Shift+C")
             onTriggered: root.copyTextRequested(
                 root.occurrenceText(
                     resultContextMenu.absolutePath,

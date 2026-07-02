@@ -13,6 +13,8 @@ qt_add_resources(uburu_desktop "uburu_qml"
   BASE "${CMAKE_CURRENT_SOURCE_DIR}"
   FILES
     qml/main.qml
+    qml/components/action-menu-item.qml
+    qml/components/action-menu-separator.qml
     qml/components/eyebrow-label.qml
     qml/components/filter-chip.qml
     qml/components/metric-card.qml

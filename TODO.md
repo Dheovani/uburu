@@ -241,7 +241,7 @@ e UI para avançarem mais rapidamente.
 - [x] Exibir menu próprio de ações de arquivo ao clicar com botão direito em um arquivo listado,
   com opções equivalentes às ações comuns do sistema: abrir arquivo, abrir com quando disponível,
   abrir local do arquivo, copiar caminho e copiar ocorrência.
-- [ ] Customizar/aprimorar estilo visual do menu de ações.
+- [x] Customizar/aprimorar estilo visual do menu de ações.
 - [ ] Adicionar atalhos de teclado completos e command palette.
 - [ ] Implementar histórico, buscas salvas e favoritos.
 - [ ] Implementar tema claro, escuro e sistema.

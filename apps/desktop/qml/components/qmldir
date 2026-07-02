@@ -1,5 +1,7 @@
 PrimaryButton 1.0 primary-button.qml
 SecondaryButton 1.0 secondary-button.qml
+ActionMenuItem 1.0 action-menu-item.qml
+ActionMenuSeparator 1.0 action-menu-separator.qml
 Panel 1.0 panel.qml
 EyebrowLabel 1.0 eyebrow-label.qml
 MutedLabel 1.0 muted-label.qml

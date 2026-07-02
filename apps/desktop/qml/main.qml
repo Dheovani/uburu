@@ -41,7 +41,15 @@ ApplicationWindow {
             resultCount: resultsPane.resultCount
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
-            onStartSearch: (query, regex, caseSensitive, wholeWord, gitignore, includeSubdirectories, documentTypes) => {
+            onStartSearch: (
+                query,
+                regex,
+                caseSensitive,
+                wholeWord,
+                gitignore,
+                includeSubdirectories,
+                documentTypes
+            ) => {
                 searchController.startSearch(
                     query,
                     regex,

@@ -13,7 +13,9 @@
 #include <QUrl>
 #include <QtConcurrentRun>
 
+#include <cstdint>
 #include <exception>
+#include <limits>
 #include <string>
 #include <utility>
 
@@ -291,7 +293,9 @@ namespace uburu::app
     query.options.respectGitignore = respectGitignore;
     query.options.includeSubdirectories = includeSubdirectories;
     query.options.target = SearchTarget::contentAndFileName;
+    query.options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
     query.options.extensions = parseDocumentTypes(documentTypes);
+
     const auto token = stopSource.get_token();
 
     activeWatcher = new QFutureWatcher<search::SearchSummary>(this);

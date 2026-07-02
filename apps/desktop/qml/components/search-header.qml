@@ -12,6 +12,9 @@ Panel {
     property bool compact: false
     property int resultCount: 0
     property bool hasDocumentContentExtractorGap: hasUnsupportedDocumentContentTypes(documentTypesField.text)
+    property bool autoSearchEnabled: true
+    property int debounceIntervalMs: 450
+    property bool pendingAutoSearch: false
 
     signal selectDirectory()
     signal startSearch(string query,
@@ -39,6 +42,54 @@ Panel {
         }
 
         return false
+    }
+
+    function canSearch() {
+        return !root.running && searchField.text.length > 0 && root.directory.length > 0
+    }
+
+    function requestDebouncedSearch() {
+        if (!root.autoSearchEnabled || searchField.text.length === 0 || root.directory.length === 0)
+            return
+
+        if (root.running) {
+            root.pendingAutoSearch = true
+            root.cancelSearch()
+            return
+        }
+
+        autoSearchTimer.restart()
+    }
+
+    function runSearch() {
+        if (!canSearch())
+            return
+
+        root.startSearch(
+            searchField.text,
+            regex.checked,
+            caseSensitive.checked,
+            wholeWord.checked,
+            gitignore.checked,
+            includeSubdirectories.checked,
+            documentTypesField.text
+        )
+    }
+
+    Timer {
+        id: autoSearchTimer
+
+        interval: root.debounceIntervalMs
+        repeat: false
+        onTriggered: root.runSearch()
+    }
+
+    onRunningChanged: {
+        if (root.running || !root.pendingAutoSearch)
+            return
+
+        root.pendingAutoSearch = false
+        root.requestDebouncedSearch()
     }
 
     RowLayout {
@@ -109,6 +160,7 @@ Panel {
                     placeholderText: qsTr("Pesquisar em arquivos")
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: searchButton.clicked()
+                    onTextEdited: root.requestDebouncedSearch()
 
                     color: Theme.text
                     placeholderTextColor: Theme.textMuted
@@ -135,16 +187,8 @@ Panel {
                     id: searchButton
 
                     text: qsTr("Buscar")
-                    enabled: !root.running && searchField.text.length > 0 && root.directory.length > 0
-                    onClicked: root.startSearch(
-                        searchField.text,
-                        regex.checked,
-                        caseSensitive.checked,
-                        wholeWord.checked,
-                        gitignore.checked,
-                        includeSubdirectories.checked,
-                        documentTypesField.text
-                    )
+                    enabled: root.canSearch()
+                    onClicked: root.runSearch()
                 }
 
                 SecondaryButton {
@@ -170,6 +214,7 @@ Panel {
                     Layout.preferredHeight: 34
                     placeholderText: qsTr("Ex.: pdf, docx, txt")
                     verticalAlignment: TextInput.AlignVCenter
+                    onTextEdited: root.requestDebouncedSearch()
 
                     color: Theme.text
                     placeholderTextColor: Theme.textMuted
@@ -225,28 +270,33 @@ Panel {
                 FilterChip {
                     id: regex
                     text: qsTr("Regex")
+                    onCheckedChanged: root.requestDebouncedSearch()
                 }
 
                 FilterChip {
                     id: caseSensitive
                     text: qsTr("Case-sensitive")
+                    onCheckedChanged: root.requestDebouncedSearch()
                 }
 
                 FilterChip {
                     id: wholeWord
                     text: qsTr("Palavra inteira")
+                    onCheckedChanged: root.requestDebouncedSearch()
                 }
 
                 FilterChip {
                     id: gitignore
                     text: qsTr("Respeitar .gitignore")
                     checked: true
+                    onCheckedChanged: root.requestDebouncedSearch()
                 }
 
                 FilterChip {
                     id: includeSubdirectories
                     text: qsTr("Incluir subdiretórios")
                     checked: true
+                    onCheckedChanged: root.requestDebouncedSearch()
                 }
             }
 

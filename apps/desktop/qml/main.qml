@@ -97,10 +97,11 @@ ApplicationWindow {
                 SplitView.preferredHeight: root.compact ? 260 : parent.height
                 model: searchController.results
                 onResultsCleared: searchController.clearPreview()
-                onResultSelected: (filePath, absolutePath, location, preview) => searchController.loadPreview(
+                onResultSelected: (filePath, absolutePath, location, preview, highlights) => searchController.loadPreview(
                     absolutePath,
                     location,
-                    preview
+                    preview,
+                    highlights
                 )
                 onOpenFileRequested: filePath => searchController.openFile(filePath)
                 onOpenFolderRequested: filePath => searchController.openContainingFolder(filePath)
@@ -113,6 +114,7 @@ ApplicationWindow {
                 filePath: searchController.previewFilePath
                 location: searchController.previewLocation
                 preview: searchController.previewText
+                previewHtml: searchController.previewHtml
                 loading: searchController.previewLoading
             }
         }

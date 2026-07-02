@@ -55,6 +55,11 @@ A prévia é limitada por janela de linhas ao redor da ocorrência e por orçame
 UI responsiva. O QML exibe apenas o estado observável: arquivo selecionado, localização, texto da
 prévia e indicador de carregamento.
 
+O controller também entrega uma versão HTML segura da prévia quando há ocorrência selecionada. Essa
+representação escapa o conteúdo do arquivo, destaca todas as ocorrências conhecidas na linha ativa e
+mantém números de linha alinhados em fonte monoespaçada. O `PreviewPane` preserva uma propriedade de
+largura de tabulação para futura exposição em preferências sem reescrever o componente.
+
 ## Interações com arquivos encontrados
 
 Resultados devem permitir operações diretas sobre o arquivo encontrado sem quebrar a separação entre

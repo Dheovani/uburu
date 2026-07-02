@@ -15,8 +15,10 @@
 #include <QSettings>
 #include <QStringList>
 #include <QUrl>
+#include <QVariantMap>
 #include <QtConcurrentRun>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -40,6 +42,11 @@ namespace uburu::app
     constexpr std::size_t maximumPreviewLinesWithoutLocation = 240;
     constexpr std::size_t maximumPreviewBytes = 256U * 1024U;
     constexpr int previewLineNumberWidth = 6;
+    constexpr auto previewHtmlTextColor = "#e8f0ff";
+    constexpr auto previewHtmlLineNumberColor = "#7f91b5";
+    constexpr auto previewHtmlSelectedLineBackground = "#13233f";
+    constexpr auto previewHtmlHighlightBackground = "#2f66ff";
+    constexpr auto previewHtmlHighlightColor = "#ffffff";
     constexpr auto settingsScopeGroup = "scope";
     constexpr auto recentDirectoriesKey = "recentDirectories";
     constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
@@ -69,6 +76,43 @@ namespace uburu::app
         return result.searchRoot / result.path;
 
       return result.path;
+    }
+
+    QVariantList highlightRanges(const std::vector<MatchSpan>& highlights)
+    {
+      QVariantList ranges;
+
+      for (const auto& highlight : highlights) {
+        QVariantMap range;
+        range.insert(QStringLiteral("byteOffset"), static_cast<qulonglong>(highlight.byteOffset));
+        range.insert(QStringLiteral("byteLength"), static_cast<qulonglong>(highlight.byteLength));
+        ranges.push_back(std::move(range));
+      }
+
+      return ranges;
+    }
+
+    std::vector<MatchSpan> highlightRangesFromVariantList(const QVariantList& ranges)
+    {
+      std::vector<MatchSpan> highlights;
+      highlights.reserve(static_cast<std::size_t>(ranges.size()));
+
+      for (const auto& rangeValue : ranges) {
+        const auto range = rangeValue.toMap();
+        const auto byteOffset = range.value(QStringLiteral("byteOffset")).toULongLong();
+        const auto byteLength = range.value(QStringLiteral("byteLength")).toULongLong();
+
+        if (byteLength == 0)
+          continue;
+
+        highlights.push_back(MatchSpan{.column = 0,
+                                       .byteOffset = static_cast<std::size_t>(byteOffset),
+                                       .byteLength = static_cast<std::size_t>(byteLength)});
+      }
+
+      std::ranges::sort(highlights, {}, &MatchSpan::byteOffset);
+
+      return highlights;
     }
 
     QString localDirectoryFromUrlOrPath(const QString& value)
@@ -167,6 +211,52 @@ namespace uburu::app
         .arg(QString::fromStdString(line.text));
     }
 
+    QString highlightedHtml(std::string_view text, const std::vector<MatchSpan>& highlights)
+    {
+      QString html;
+      std::size_t cursor = 0;
+
+      for (const auto& highlight : highlights) {
+        if (highlight.byteOffset < cursor || highlight.byteOffset >= text.size())
+          continue;
+
+        const auto highlightEnd = std::min(text.size(), highlight.byteOffset + highlight.byteLength);
+
+        if (highlightEnd <= highlight.byteOffset)
+          continue;
+
+        html += QString::fromUtf8(text.data() + cursor, static_cast<qsizetype>(highlight.byteOffset - cursor))
+                  .toHtmlEscaped();
+        html += QStringLiteral("<span style=\"background:%1;color:%2;border-radius:3px;\">%3</span>")
+                  .arg(QString::fromLatin1(previewHtmlHighlightBackground),
+                       QString::fromLatin1(previewHtmlHighlightColor),
+                       QString::fromUtf8(text.data() + highlight.byteOffset,
+                                         static_cast<qsizetype>(highlightEnd - highlight.byteOffset))
+                         .toHtmlEscaped());
+        cursor = highlightEnd;
+      }
+
+      html += QString::fromUtf8(text.data() + cursor, static_cast<qsizetype>(text.size() - cursor)).toHtmlEscaped();
+
+      return html;
+    }
+
+    QString formattedPreviewHtmlLine(const text::TextLine& line,
+                                     bool selected,
+                                     const std::vector<MatchSpan>& highlights)
+    {
+      const auto lineNumber = QString::number(static_cast<qulonglong>(line.lineNumber)).rightJustified(
+        previewLineNumberWidth, QLatin1Char(' '));
+      const auto lineText = selected ? highlightedHtml(line.text, highlights)
+                                     : QString::fromStdString(line.text).toHtmlEscaped();
+      const auto lineStyle = selected ? QStringLiteral(" style=\"background:%1;\"")
+                                          .arg(QString::fromLatin1(previewHtmlSelectedLineBackground))
+                                      : QString{};
+
+      return QStringLiteral("<div%1><span style=\"color:%2;\">%3</span>  %4</div>")
+        .arg(lineStyle, QString::fromLatin1(previewHtmlLineNumberColor), lineNumber.toHtmlEscaped(), lineText);
+    }
+
     PreviewLoadStatus previewStatusFromTextStatus(text::TextReadStatus status)
     {
       switch (status) {
@@ -192,6 +282,7 @@ namespace uburu::app
     PreviewLoadResult loadPreviewText(const QString& path,
                                       const QString& location,
                                       const QString& fallbackPreview,
+                                      std::vector<MatchSpan> highlights,
                                       std::stop_token stopToken)
     {
       PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
@@ -203,7 +294,9 @@ namespace uburu::app
         targetLine.has_value() ? *targetLine + previewContextAfterLines : maximumPreviewLinesWithoutLocation;
       SearchOptions options;
       QStringList lines;
+      QStringList htmlLines;
       std::size_t previewBytes = 0;
+      const std::vector<MatchSpan> emptyHighlights;
 
       options.includeBinary = false;
       options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
@@ -222,7 +315,9 @@ namespace uburu::app
             return false;
 
           const auto selectedLine = targetLine.has_value() && *targetLine == line.lineNumber;
+          const auto& lineHighlights = selectedLine ? highlights : emptyHighlights;
           lines.push_back(formattedPreviewLine(line, selectedLine));
+          htmlLines.push_back(formattedPreviewHtmlLine(line, selectedLine, lineHighlights));
           previewBytes += line.text.size();
 
           if (previewBytes >= maximumPreviewBytes) {
@@ -240,6 +335,12 @@ namespace uburu::app
         return result;
 
       result.text = lines.join(QStringLiteral("\n"));
+
+      if (!htmlLines.empty()) {
+        result.html =
+          QStringLiteral("<html><body style=\"white-space:pre;font-family:Consolas,monospace;color:%1;\">%2</body></html>")
+            .arg(QString::fromLatin1(previewHtmlTextColor), htmlLines.join(QString{}));
+      }
 
       if (result.text.isEmpty() && !fallbackPreview.isEmpty())
         result.text = fallbackPreview;
@@ -295,6 +396,9 @@ namespace uburu::app
     if (role == PreviewRole)
       return QString::fromStdString(result.lineText);
 
+    if (role == HighlightsRole)
+      return highlightRanges(result.highlights);
+
     return {};
   }
 
@@ -303,7 +407,8 @@ namespace uburu::app
     return {{PathRole, "filePath"},
             {AbsolutePathRole, "absolutePath"},
             {LocationRole, "location"},
-            {PreviewRole, "preview"}};
+            {PreviewRole, "preview"},
+            {HighlightsRole, "highlights"}};
   }
 
   void SearchResultModel::clear()
@@ -412,6 +517,11 @@ namespace uburu::app
     return previewTextValue;
   }
 
+  QString SearchController::previewHtml() const
+  {
+    return previewHtmlValue;
+  }
+
   bool SearchController::previewLoading() const
   {
     return previewLoadingValue;
@@ -511,7 +621,10 @@ namespace uburu::app
     setStatus(tr("Copiado para a área de transferência"));
   }
 
-  void SearchController::loadPreview(const QString& path, const QString& location, const QString& fallbackPreview)
+  void SearchController::loadPreview(const QString& path,
+                                     const QString& location,
+                                     const QString& fallbackPreview,
+                                     const QVariantList& highlights)
   {
     if (path.isEmpty()) {
       clearPreview();
@@ -529,10 +642,12 @@ namespace uburu::app
     previewFilePathValue = path;
     previewLocationValue = location;
     previewTextValue = fallbackPreview;
+    previewHtmlValue.clear();
     emit previewChanged();
     setPreviewLoading(true);
 
     const auto token = previewStopSource.get_token();
+    auto previewHighlights = highlightRangesFromVariantList(highlights);
     auto* watcher = new QFutureWatcher<PreviewLoadResult>(this);
     activePreviewWatcher = watcher;
 
@@ -548,8 +663,8 @@ namespace uburu::app
       setPreviewResult(result);
       setPreviewLoading(false);
     });
-    watcher->setFuture(QtConcurrent::run([path, location, fallbackPreview, token] {
-      return loadPreviewText(path, location, fallbackPreview, token);
+    watcher->setFuture(QtConcurrent::run([path, location, fallbackPreview, previewHighlights = std::move(previewHighlights), token] {
+      return loadPreviewText(path, location, fallbackPreview, previewHighlights, token);
     }));
   }
 
@@ -565,6 +680,7 @@ namespace uburu::app
     previewFilePathValue.clear();
     previewLocationValue.clear();
     previewTextValue.clear();
+    previewHtmlValue.clear();
     emit previewChanged();
     setPreviewLoading(false);
   }
@@ -729,24 +845,35 @@ namespace uburu::app
     previewFilePathValue = result.filePath;
     previewLocationValue = result.location;
     previewTextValue = result.text;
+    previewHtmlValue = result.html;
 
     if (result.truncated)
       previewTextValue += tr("\n\nâ€¦ prévia limitada para manter a interface responsiva.");
 
-    if (result.status == PreviewLoadStatus::binarySkipped)
+    if (result.status == PreviewLoadStatus::binarySkipped) {
       previewTextValue = tr("Arquivo binário: prévia de texto indisponível.");
+      previewHtmlValue.clear();
+    }
 
-    if (result.status == PreviewLoadStatus::openFailed)
+    if (result.status == PreviewLoadStatus::openFailed) {
       previewTextValue = tr("Não foi possível abrir o arquivo para pré-visualização.");
+      previewHtmlValue.clear();
+    }
 
-    if (result.status == PreviewLoadStatus::readFailed)
+    if (result.status == PreviewLoadStatus::readFailed) {
       previewTextValue = tr("Não foi possível ler o arquivo para pré-visualização.");
+      previewHtmlValue.clear();
+    }
 
-    if (result.status == PreviewLoadStatus::invalidEncoding)
+    if (result.status == PreviewLoadStatus::invalidEncoding) {
       previewTextValue = tr("Encoding inválido: prévia indisponível.");
+      previewHtmlValue.clear();
+    }
 
-    if (result.status == PreviewLoadStatus::lineTooLong)
+    if (result.status == PreviewLoadStatus::lineTooLong) {
       previewTextValue = tr("Linha muito longa: prévia limitada.");
+      previewHtmlValue.clear();
+    }
 
     emit previewChanged();
   }

@@ -10,7 +10,7 @@ Panel {
     property alias model: resultList.model
     property int resultCount: resultList.count
 
-    signal resultSelected(string filePath, string absolutePath, string location, string preview)
+    signal resultSelected(string filePath, string absolutePath, string location, string preview, var highlights)
     signal resultsCleared()
     signal openFileRequested(string filePath)
     signal openFolderRequested(string filePath)
@@ -125,6 +125,7 @@ Panel {
                 required property string absolutePath
                 required property string location
                 required property string preview
+                required property var highlights
 
                 width: ListView.view.width
                 height: 64
@@ -132,14 +133,14 @@ Panel {
 
                 onClicked: {
                     resultList.currentIndex = index
-                    root.resultSelected(filePath, absolutePath, location, preview)
+                    root.resultSelected(filePath, absolutePath, location, preview, highlights)
                 }
 
                 TapHandler {
                     acceptedButtons: Qt.RightButton
                     onTapped: {
                         resultList.currentIndex = index
-                        root.resultSelected(filePath, absolutePath, location, preview)
+                        root.resultSelected(filePath, absolutePath, location, preview, highlights)
                         resultContextMenu.filePath = filePath
                         resultContextMenu.absolutePath = absolutePath
                         resultContextMenu.location = location

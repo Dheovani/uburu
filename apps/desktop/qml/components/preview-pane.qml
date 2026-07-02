@@ -10,7 +10,9 @@ Panel {
     property string filePath: ""
     property string location: ""
     property string preview: ""
+    property string previewHtml: ""
     property bool loading: false
+    property int tabWidthSpaces: 2
 
     color: Theme.windowRaised
 
@@ -60,11 +62,19 @@ Panel {
                 anchors.fill: parent
                 anchors.margins: 1
 
+                FontMetrics {
+                    id: previewFontMetrics
+
+                    font.family: "Consolas"
+                    font.pixelSize: 13
+                }
+
                 TextArea {
                     readOnly: true
                     wrapMode: TextEdit.NoWrap
                     placeholderText: qsTr("O conteúdo do arquivo aparecerá aqui")
-                    text: root.preview
+                    text: root.previewHtml.length > 0 ? root.previewHtml : root.preview
+                    textFormat: root.previewHtml.length > 0 ? TextEdit.RichText : TextEdit.PlainText
 
                     color: Theme.text
                     placeholderTextColor: Theme.textFaint
@@ -72,6 +82,7 @@ Panel {
                     selectedTextColor: "white"
                     font.family: "Consolas"
                     font.pixelSize: 13
+                    tabStopDistance: previewFontMetrics.advanceWidth(" ") * root.tabWidthSpaces
                     leftPadding: 16
                     rightPadding: 16
                     topPadding: 16

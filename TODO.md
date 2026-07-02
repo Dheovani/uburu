@@ -235,8 +235,8 @@ e UI para avançarem mais rapidamente.
 - [ ] Preservar seleção durante batches e refinamento híbrido.
 - [ ] Criar agrupamento por arquivo e navegação entre ocorrências.
 - [x] Implementar preview de arquivo assíncrono, cancelável e limitado.
-- [ ] Implementar highlight de múltiplas ocorrências e linhas de contexto.
-- [ ] Adicionar números de linha, monospace e tab width configurável.
+- [x] Implementar highlight de múltiplas ocorrências e linhas de contexto.
+- [x] Adicionar números de linha, monospace e tab width configurável.
 - [ ] Abrir arquivo no editor configurado e copiar caminho/ocorrência.
 - [ ] Exibir menu de contexto nativo do sistema operacional ao clicar com botão direito em um
   arquivo listado, equivalente ao menu do Explorer/Finder/gerenciador de arquivos.

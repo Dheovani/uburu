@@ -321,7 +321,8 @@ Panel {
                 width: parent.width
                 height: implicitHeight
                 columns: 2
-                spacing: 8
+                columnSpacing: 8
+                rowSpacing: 8
 
                 MetricCard {
                     title: qsTr("Resultados")

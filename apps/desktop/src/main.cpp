@@ -1,12 +1,38 @@
 #include "search-controller.hpp"
 
+#include <QFile>
 #include <QGuiApplication>
 #include <QLocale>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQmlEngine>
+#include <QQmlError>
 #include <QQuickStyle>
+#include <QTextStream>
 #include <QTranslator>
 #include <QUrl>
+
+namespace
+{
+
+  void appendQmlLoadLog(const QString& message)
+  {
+    QFile file(QStringLiteral("uburu-qml-load-error.log"));
+
+    if (!file.open(QIODevice::Append | QIODevice::Text))
+      return;
+
+    QTextStream output(&file);
+    output << message << '\n';
+  }
+
+  void appendQmlWarnings(const QList<QQmlError>& warnings)
+  {
+    for (const auto& warning : warnings)
+      appendQmlLoadLog(warning.toString());
+  }
+
+} // namespace
 
 int main(int argc, char* argv[])
 {
@@ -24,9 +50,13 @@ int main(int argc, char* argv[])
 
   uburu::app::SearchController searchController;
   QQmlApplicationEngine engine;
+  QObject::connect(&engine, &QQmlEngine::warnings, &application, appendQmlWarnings);
   engine.rootContext()->setContextProperty(QStringLiteral("searchController"), &searchController);
   engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
-  if (engine.rootObjects().isEmpty())
+  if (engine.rootObjects().isEmpty()) {
+    appendQmlLoadLog(QStringLiteral("Root QML object was not created."));
     return -1;
+  }
+
   return application.exec();
 }

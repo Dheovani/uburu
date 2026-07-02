@@ -8,6 +8,7 @@
 #include <QFutureWatcher>
 #include <QMetaObject>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QStringList>
 #include <QUrl>
 #include <QtConcurrentRun>
@@ -20,6 +21,11 @@ namespace uburu::app
 {
   namespace
   {
+
+    constexpr int maximumRecentDirectories = 8;
+    constexpr auto settingsScopeGroup = "scope";
+    constexpr auto recentDirectoriesKey = "recentDirectories";
+    constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
 
     std::filesystem::path nativePath(const QString& path)
     {
@@ -35,6 +41,36 @@ namespace uburu::app
       const auto text = path.generic_u8string();
 
       return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
+    QString localDirectoryFromUrlOrPath(const QString& value)
+    {
+      const auto url = QUrl(value);
+
+      if (url.isLocalFile())
+        return url.toLocalFile();
+
+      return value;
+    }
+
+    QString canonicalDirectoryPath(const QString& value)
+    {
+      if (value.isEmpty())
+        return {};
+
+      const QFileInfo info(localDirectoryFromUrlOrPath(value));
+
+      if (info.exists())
+        return info.canonicalFilePath();
+
+      return info.absoluteFilePath();
+    }
+
+    QStringList withoutDirectory(QStringList directories, const QString& directory)
+    {
+      directories.removeAll(directory);
+
+      return directories;
     }
 
     search::SearchSummary failedSearchSummary(QString context)
@@ -142,7 +178,9 @@ namespace uburu::app
     : QObject(parent), statusValue(tr("Pronto")), resultsModel(this),
       searchService(std::make_shared<DefaultSearchService>(
         std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
-  {}
+  {
+    loadScopeHistory();
+  }
 
   SearchController::~SearchController()
   {
@@ -172,11 +210,61 @@ namespace uburu::app
     return &resultsModel;
   }
 
+  QStringList SearchController::recentDirectories() const
+  {
+    return recentDirectoryValues;
+  }
+
+  QStringList SearchController::favoriteDirectories() const
+  {
+    return favoriteDirectoryValues;
+  }
+
+  bool SearchController::currentDirectoryFavorite() const
+  {
+    return !directoryValue.isEmpty() && favoriteDirectoryValues.contains(directoryValue);
+  }
+
   void SearchController::selectDirectory(const QString& url)
   {
-    const auto selectedUrl = QUrl(url);
-    directoryValue = selectedUrl.isLocalFile() ? selectedUrl.toLocalFile() : url;
-    emit directoryChanged();
+    const auto directory = canonicalDirectoryPath(url);
+
+    if (directory.isEmpty())
+      return;
+
+    setDirectory(directory);
+    addRecentDirectory(directory);
+    saveScopeHistory();
+  }
+
+  void SearchController::selectSavedDirectory(const QString& path)
+  {
+    selectDirectory(path);
+  }
+
+  void SearchController::toggleCurrentDirectoryFavorite()
+  {
+    if (directoryValue.isEmpty())
+      return;
+
+    toggleFavoriteDirectory(directoryValue);
+  }
+
+  void SearchController::toggleFavoriteDirectory(const QString& path)
+  {
+    const auto directory = canonicalDirectoryPath(path);
+
+    if (directory.isEmpty())
+      return;
+
+    if (favoriteDirectoryValues.contains(directory)) {
+      favoriteDirectoryValues.removeAll(directory);
+    } else {
+      favoriteDirectoryValues.push_front(directory);
+    }
+
+    saveScopeHistory();
+    emit scopeHistoryChanged();
   }
 
   void SearchController::startSearch(const QString& expression,
@@ -195,10 +283,8 @@ namespace uburu::app
     setRunning(true);
     setStatus(tr("Buscando..."));
 
-    SearchQuery query{.root = nativePath(directoryValue),
-                      .scope = {},
-                      .expression = expression.toUtf8().toStdString(),
-                      .options = {}};
+    SearchQuery query{
+      .root = nativePath(directoryValue), .scope = {}, .expression = expression.toUtf8().toStdString(), .options = {}};
     query.options.mode = regex ? SearchMode::regex : SearchMode::literal;
     query.options.caseSensitive = caseSensitive;
     query.options.wholeWord = wholeWord;
@@ -246,6 +332,45 @@ namespace uburu::app
   void SearchController::cancel()
   {
     stopSource.request_stop();
+  }
+
+  void SearchController::loadScopeHistory()
+  {
+    QSettings settings;
+    settings.beginGroup(QString::fromLatin1(settingsScopeGroup));
+    recentDirectoryValues = settings.value(QString::fromLatin1(recentDirectoriesKey)).toStringList();
+    favoriteDirectoryValues = settings.value(QString::fromLatin1(favoriteDirectoriesKey)).toStringList();
+    settings.endGroup();
+  }
+
+  void SearchController::saveScopeHistory() const
+  {
+    QSettings settings;
+    settings.beginGroup(QString::fromLatin1(settingsScopeGroup));
+    settings.setValue(QString::fromLatin1(recentDirectoriesKey), recentDirectoryValues);
+    settings.setValue(QString::fromLatin1(favoriteDirectoriesKey), favoriteDirectoryValues);
+    settings.endGroup();
+  }
+
+  void SearchController::setDirectory(QString directory)
+  {
+    if (directoryValue == directory)
+      return;
+
+    directoryValue = std::move(directory);
+    emit directoryChanged();
+    emit scopeHistoryChanged();
+  }
+
+  void SearchController::addRecentDirectory(const QString& directory)
+  {
+    recentDirectoryValues = withoutDirectory(std::move(recentDirectoryValues), directory);
+    recentDirectoryValues.push_front(directory);
+
+    while (recentDirectoryValues.size() > maximumRecentDirectories)
+      recentDirectoryValues.removeLast();
+
+    emit scopeHistoryChanged();
   }
 
   void SearchController::setStatus(QString status)

@@ -49,6 +49,12 @@
     <name>scope-bar</name>
     <message><source>Escopo</source><translation>Scope</translation></message>
     <message><source>Nenhum diretório selecionado</source><translation>No directory selected</translation></message>
+    <message><source>★ Favorito</source><translation>★ Favorite</translation></message>
+    <message><source>☆ Favoritar</source><translation>☆ Add favorite</translation></message>
+    <message><source>Favoritos</source><translation>Favorites</translation></message>
+    <message><source>Recentes</source><translation>Recent</translation></message>
+    <message><source>Nenhum favorito</source><translation>No favorites</translation></message>
+    <message><source>Nenhum recente</source><translation>No recent folders</translation></message>
   </context>
   <context>
     <name>status-line</name>

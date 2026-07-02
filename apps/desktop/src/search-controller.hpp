@@ -6,6 +6,7 @@
 #include <QFutureWatcher>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 #include <memory>
 #include <stop_token>
@@ -42,6 +43,9 @@ namespace uburu::app
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(QAbstractItemModel* results READ results CONSTANT)
+    Q_PROPERTY(QStringList recentDirectories READ recentDirectories NOTIFY scopeHistoryChanged)
+    Q_PROPERTY(QStringList favoriteDirectories READ favoriteDirectories NOTIFY scopeHistoryChanged)
+    Q_PROPERTY(bool currentDirectoryFavorite READ currentDirectoryFavorite NOTIFY scopeHistoryChanged)
 
   public:
     explicit SearchController(QObject* parent = nullptr);
@@ -50,8 +54,14 @@ namespace uburu::app
     [[nodiscard]] QString status() const;
     [[nodiscard]] bool running() const;
     [[nodiscard]] QAbstractItemModel* results();
+    [[nodiscard]] QStringList recentDirectories() const;
+    [[nodiscard]] QStringList favoriteDirectories() const;
+    [[nodiscard]] bool currentDirectoryFavorite() const;
 
     Q_INVOKABLE void selectDirectory(const QString& url);
+    Q_INVOKABLE void selectSavedDirectory(const QString& path);
+    Q_INVOKABLE void toggleCurrentDirectoryFavorite();
+    Q_INVOKABLE void toggleFavoriteDirectory(const QString& path);
     Q_INVOKABLE void startSearch(const QString& expression,
                                  bool regex,
                                  bool caseSensitive,
@@ -65,12 +75,19 @@ namespace uburu::app
     void directoryChanged();
     void statusChanged();
     void runningChanged();
+    void scopeHistoryChanged();
 
   private:
+    void loadScopeHistory();
+    void saveScopeHistory() const;
+    void setDirectory(QString directory);
+    void addRecentDirectory(const QString& directory);
     void setStatus(QString status);
     void setRunning(bool running);
     QString directoryValue;
     QString statusValue;
+    QStringList recentDirectoryValues;
+    QStringList favoriteDirectoryValues;
     bool runningValue{false};
     SearchResultModel resultsModel;
     std::shared_ptr<const SearchService> searchService;

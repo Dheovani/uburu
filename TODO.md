@@ -224,7 +224,7 @@ e UI para avançarem mais rapidamente.
 ## Marco 8 — Experiência desktop produtiva (P1)
 
 - [x] Redesenhar a tela principal com layout responsivo e estados vazios claros.
-- [ ] Implementar seletor de diretório/repositório com recentes e favoritos.
+- [x] Implementar seletor de diretório/repositório com recentes e favoritos.
 - [ ] Permitir selecionar múltiplos diretórios/repositórios no seletor visual, com inclusão e
   exclusão de subdiretórios por raiz.
 - [ ] Expor todos os filtros previstos sem hardcode de textos.

@@ -56,6 +56,11 @@ ApplicationWindow {
 
         ScopeBar {
             directory: searchController.directory
+            recentDirectories: searchController.recentDirectories
+            favoriteDirectories: searchController.favoriteDirectories
+            currentDirectoryFavorite: searchController.currentDirectoryFavorite
+            onSelectDirectory: path => searchController.selectSavedDirectory(path)
+            onToggleCurrentFavorite: searchController.toggleCurrentDirectoryFavorite()
         }
 
         SplitView {

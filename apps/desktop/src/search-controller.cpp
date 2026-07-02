@@ -542,6 +542,15 @@ namespace uburu::app
     return previewLoadingValue;
   }
 
+  bool SearchController::regexAvailable() const
+  {
+#ifdef UBURU_HAS_PCRE2
+    return true;
+#else
+    return false;
+#endif
+  }
+
   void SearchController::selectDirectory(const QString& url)
   {
     const auto directory = canonicalDirectoryPath(url);

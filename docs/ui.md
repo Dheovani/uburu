@@ -123,6 +123,10 @@ respeitar `.gitignore` e incluir subdiretórios.
 Essas mensagens são textos visíveis ao usuário e devem continuar passando por `qsTr`/catálogos de
 tradução.
 
+O chip de regex só fica habilitado quando o build expõe suporte a PCRE2 pelo `SearchController`. Mesmo
+assim, o core continua sendo a autoridade final e valida `SearchQuery` para impedir regex em builds sem
+backend compatível.
+
 ## Formatos com extração de conteúdo pendente
 
 A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos

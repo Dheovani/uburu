@@ -14,6 +14,7 @@ Panel {
     property int filesScanned: 0
     property string timeToFirstResult: "—"
     property string searchDuration: "—"
+    property bool regexAvailable: true
     property bool hasDocumentContentExtractorGap: hasUnsupportedDocumentContentTypes(documentTypesField.text)
     property bool autoSearchEnabled: true
     property int debounceIntervalMs: 450
@@ -82,7 +83,7 @@ Panel {
 
         root.startSearch(
             searchField.text,
-            regex.checked,
+            root.regexAvailable && regex.checked,
             caseSensitive.checked,
             wholeWord.checked,
             gitignore.checked,
@@ -289,7 +290,10 @@ Panel {
                 FilterChip {
                     id: regex
                     text: qsTr("Regex")
-                    toolTipText: qsTr("Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.")
+                    enabled: root.regexAvailable
+                    toolTipText: root.regexAvailable
+                                 ? qsTr("Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.")
+                                 : qsTr("Regex indisponível neste build porque o backend PCRE2 não foi encontrado.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
 

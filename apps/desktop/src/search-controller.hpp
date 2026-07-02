@@ -81,6 +81,7 @@ namespace uburu::app
     Q_PROPERTY(QString previewText READ previewText NOTIFY previewChanged)
     Q_PROPERTY(QString previewHtml READ previewHtml NOTIFY previewChanged)
     Q_PROPERTY(bool previewLoading READ previewLoading NOTIFY previewLoadingChanged)
+    Q_PROPERTY(bool regexAvailable READ regexAvailable CONSTANT)
 
   public:
     explicit SearchController(QObject* parent = nullptr);
@@ -101,6 +102,7 @@ namespace uburu::app
     [[nodiscard]] QString previewText() const;
     [[nodiscard]] QString previewHtml() const;
     [[nodiscard]] bool previewLoading() const;
+    [[nodiscard]] bool regexAvailable() const;
 
     Q_INVOKABLE void selectDirectory(const QString& url);
     Q_INVOKABLE void selectSavedDirectory(const QString& path);

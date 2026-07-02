@@ -247,15 +247,13 @@ e UI para avançarem mais rapidamente.
   avançada.
 - [ ] Implementar histórico, buscas salvas e favoritos.
 - [ ] Implementar tema claro, escuro e sistema.
-- [ ] Disponibilizar botões de configuração da janela para idioma, tema, preferências gerais e
-  diagnósticos rápidos.
 - [x] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
   `.gitignore`, busca regex e demais controles potencialmente ambíguos.
 - [ ] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam
   em `pt-BR` ou `en-US` conforme o idioma ativo, sem mistura acidental.
 - [x] Persistir geometria, splitters, filtros e último repositório.
 - [ ] Exibir erros parciais sem interromper resultados válidos.
-- [ ] Impedir busca regex enquanto backend não estiver disponível ou remover o stub visual enganoso.
+- [x] Impedir busca regex enquanto backend não estiver disponível ou remover o stub visual enganoso.
 - [ ] Tornar cancelamento imediato e visualmente confiável.
 - [ ] Testar acessibilidade: foco, teclado, contraste, nomes acessíveis e leitores de tela.
 - [ ] Testar DPI alto, múltiplos monitores e escalas fracionárias.
@@ -306,6 +304,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Validar limites de threads, arquivo, resultados, memória e disco.
 - [ ] Adicionar importação/exportação de configurações e buscas salvas.
 - [ ] Definir política de telemetria: desabilitada por padrão e somente opt-in, se existir.
+- [ ] Disponibilizar botões de configuração da janela para idioma, tema, preferências gerais e diagnósticos rápidos.
 - [ ] Nunca enviar nomes, caminhos ou conteúdo sem consentimento explícito.
 - [ ] Proteger histórico e índice conforme permissões do usuário.
 - [ ] Tratar caminhos inacessíveis, mídia removível e rede instável.

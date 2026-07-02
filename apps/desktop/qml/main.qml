@@ -160,6 +160,7 @@ ApplicationWindow {
             filesScanned: searchController.filesScanned
             timeToFirstResult: searchController.timeToFirstResult
             searchDuration: searchController.searchDuration
+            regexAvailable: searchController.regexAvailable
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
             onStartSearch: (

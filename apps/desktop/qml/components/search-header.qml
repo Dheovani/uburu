@@ -18,6 +18,13 @@ Panel {
     property bool autoSearchEnabled: true
     property int debounceIntervalMs: 450
     property bool pendingAutoSearch: false
+    property alias queryText: searchField.text
+    property alias documentTypes: documentTypesField.text
+    property alias regexEnabled: regex.checked
+    property alias caseSensitiveEnabled: caseSensitive.checked
+    property alias wholeWordEnabled: wholeWord.checked
+    property alias respectGitignoreEnabled: gitignore.checked
+    property alias includeSubdirectoriesEnabled: includeSubdirectories.checked
 
     signal selectDirectory()
     signal startSearch(string query,

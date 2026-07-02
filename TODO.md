@@ -253,7 +253,7 @@ e UI para avançarem mais rapidamente.
   `.gitignore`, busca regex e demais controles potencialmente ambíguos.
 - [ ] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam
   em `pt-BR` ou `en-US` conforme o idioma ativo, sem mistura acidental.
-- [ ] Persistir geometria, splitters, filtros e último repositório.
+- [x] Persistir geometria, splitters, filtros e último repositório.
 - [ ] Exibir erros parciais sem interromper resultados válidos.
 - [ ] Impedir busca regex enquanto backend não estiver disponível ou remover o stub visual enganoso.
 - [ ] Tornar cancelamento imediato e visualmente confiável.

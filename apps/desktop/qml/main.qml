@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtCore
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
@@ -18,6 +19,8 @@ ApplicationWindow {
     color: Theme.window
 
     property bool compact: width < 980
+    property int resultsPanePreferredWidth: 430
+    property int resultsPanePreferredHeight: 260
     property var commandPaletteItems: [
         {
             title: qsTr("Focar busca"),
@@ -211,9 +214,17 @@ ApplicationWindow {
             ResultsPane {
                 id: resultsPane
 
-                SplitView.preferredWidth: root.compact ? parent.width : 430
-                SplitView.preferredHeight: root.compact ? 260 : parent.height
+                SplitView.preferredWidth: root.compact ? parent.width : root.resultsPanePreferredWidth
+                SplitView.preferredHeight: root.compact ? root.resultsPanePreferredHeight : parent.height
                 model: searchController.results
+                onWidthChanged: {
+                    if (!root.compact && width > 0)
+                        root.resultsPanePreferredWidth = Math.round(width)
+                }
+                onHeightChanged: {
+                    if (root.compact && height > 0)
+                        root.resultsPanePreferredHeight = Math.round(height)
+                }
                 onResultsCleared: searchController.clearPreview()
                 onResultSelected: (filePath, absolutePath, location, preview, highlights) => searchController.loadPreview(
                     absolutePath,
@@ -242,5 +253,21 @@ ApplicationWindow {
             status: searchController.status
             running: searchController.running
         }
+    }
+
+    Settings {
+        category: "main-window"
+        property alias windowX: root.x
+        property alias windowY: root.y
+        property alias windowWidth: root.width
+        property alias windowHeight: root.height
+        property alias resultsWidth: root.resultsPanePreferredWidth
+        property alias resultsHeight: root.resultsPanePreferredHeight
+        property alias documentTypes: searchHeader.documentTypes
+        property alias regexEnabled: searchHeader.regexEnabled
+        property alias caseSensitiveEnabled: searchHeader.caseSensitiveEnabled
+        property alias wholeWordEnabled: searchHeader.wholeWordEnabled
+        property alias respectGitignoreEnabled: searchHeader.respectGitignoreEnabled
+        property alias includeSubdirectoriesEnabled: searchHeader.includeSubdirectoriesEnabled
     }
 }

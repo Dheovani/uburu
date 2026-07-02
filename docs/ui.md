@@ -102,6 +102,17 @@ Atalhos essenciais disponíveis nesta fase:
 A paleta deve evoluir para incluir configurações, diagnósticos, histórico, buscas salvas e navegação
 entre ocorrências, sem mover regras de domínio para QML.
 
+## Persistência de estado da janela
+
+O estado visual da janela principal é persistido em `Settings` no QML, pois pertence à camada de
+apresentação. Nesta fase, a aplicação restaura geometria da janela, tamanho preferido do painel de
+resultados e filtros visuais da busca. A consulta textual em si não é restaurada automaticamente para
+evitar reexecutar uma busca antiga ao abrir o aplicativo.
+
+O último diretório selecionado é restaurado pelo `SearchController`, junto do histórico de diretórios e
+favoritos já persistidos com `QSettings`. O controller só restaura um diretório recente quando ele ainda
+existe no sistema de arquivos.
+
 ## Formatos com extração de conteúdo pendente
 
 A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos

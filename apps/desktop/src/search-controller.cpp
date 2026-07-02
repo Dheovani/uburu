@@ -819,6 +819,13 @@ namespace uburu::app
     recentDirectoryValues = settings.value(QString::fromLatin1(recentDirectoriesKey)).toStringList();
     favoriteDirectoryValues = settings.value(QString::fromLatin1(favoriteDirectoriesKey)).toStringList();
     settings.endGroup();
+
+    for (const auto& directory : recentDirectoryValues) {
+      if (!directory.isEmpty() && QFileInfo::exists(directory)) {
+        directoryValue = directory;
+        break;
+      }
+    }
   }
 
   void SearchController::saveScopeHistory() const

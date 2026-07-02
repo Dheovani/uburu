@@ -242,7 +242,9 @@ e UI para avançarem mais rapidamente.
   com opções equivalentes às ações comuns do sistema: abrir arquivo, abrir com quando disponível,
   abrir local do arquivo, copiar caminho e copiar ocorrência.
 - [x] Customizar/aprimorar estilo visual do menu de ações.
-- [ ] Adicionar atalhos de teclado completos e command palette.
+- [x] Adicionar atalhos essenciais e command palette inicial.
+- [ ] Completar command palette com ações de configuração, diagnóstico, histórico e navegação
+  avançada.
 - [ ] Implementar histórico, buscas salvas e favoritos.
 - [ ] Implementar tema claro, escuro e sistema.
 - [ ] Disponibilizar botões de configuração da janela para idioma, tema, preferências gerais e

@@ -18,6 +18,87 @@ ApplicationWindow {
     color: Theme.window
 
     property bool compact: width < 980
+    property var commandPaletteItems: [
+        {
+            title: qsTr("Focar busca"),
+            description: qsTr("Ir para o campo principal de pesquisa"),
+            shortcut: qsTr("Ctrl+F"),
+            available: true
+        },
+        {
+            title: qsTr("Selecionar pasta"),
+            description: qsTr("Escolher outro diretório ou repositório"),
+            shortcut: qsTr("Ctrl+O"),
+            available: true
+        },
+        {
+            title: qsTr("Iniciar busca"),
+            description: qsTr("Executar a consulta atual"),
+            shortcut: qsTr("Enter"),
+            available: searchHeader.canSearch()
+        },
+        {
+            title: qsTr("Cancelar busca"),
+            description: qsTr("Interromper a busca em andamento"),
+            shortcut: qsTr("Esc"),
+            available: searchController.running
+        },
+        {
+            title: qsTr("Favoritar pasta atual"),
+            description: qsTr("Alternar favorito para o diretório selecionado"),
+            shortcut: qsTr("Ctrl+D"),
+            available: searchController.directory.length > 0
+        },
+        {
+            title: qsTr("Abrir resultado selecionado"),
+            description: qsTr("Abrir o arquivo do resultado atual"),
+            shortcut: qsTr("Enter"),
+            available: resultsPane.hasCurrentResult()
+        },
+        {
+            title: qsTr("Copiar caminho do resultado"),
+            description: qsTr("Copiar o caminho absoluto do resultado atual"),
+            shortcut: qsTr("Ctrl+C"),
+            available: resultsPane.hasCurrentResult()
+        },
+        {
+            title: qsTr("Copiar ocorrência do resultado"),
+            description: qsTr("Copiar caminho, localização e trecho da ocorrência atual"),
+            shortcut: qsTr("Ctrl+Shift+C"),
+            available: resultsPane.hasCurrentResult()
+        }
+    ]
+
+    function runPaletteCommand(commandIndex) {
+        switch (commandIndex) {
+        case 0:
+            searchHeader.focusSearch()
+            return
+        case 1:
+            folderDialog.open()
+            return
+        case 2:
+            searchHeader.runSearch()
+            return
+        case 3:
+            searchController.cancel()
+            return
+        case 4:
+            searchController.toggleCurrentDirectoryFavorite()
+            return
+        case 5:
+            resultsPane.openCurrentResult()
+            return
+        case 6:
+            resultsPane.copyCurrentPath()
+            return
+        case 7:
+            resultsPane.copyCurrentOccurrence()
+            return
+        default:
+            return
+        }
+    }
 
     FolderDialog {
         id: folderDialog
@@ -26,12 +107,49 @@ ApplicationWindow {
         onAccepted: searchController.selectDirectory(selectedFolder.toString())
     }
 
+    Shortcut {
+        sequences: ["Ctrl+K", "Ctrl+Shift+P"]
+        onActivated: commandPalette.openPalette()
+    }
+
+    Shortcut {
+        sequences: [StandardKey.Find]
+        onActivated: searchHeader.focusSearch()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+O"
+        onActivated: folderDialog.open()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+D"
+        enabled: searchController.directory.length > 0
+        onActivated: searchController.toggleCurrentDirectoryFavorite()
+    }
+
+    Shortcut {
+        sequence: "Esc"
+        enabled: searchController.running
+        onActivated: searchController.cancel()
+    }
+
+    CommandPalette {
+        id: commandPalette
+
+        parent: Overlay.overlay
+        commands: root.commandPaletteItems
+        onCommandTriggered: commandIndex => root.runPaletteCommand(commandIndex)
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 18
         spacing: 12
 
         SearchHeader {
+            id: searchHeader
+
             directory: searchController.directory
             running: searchController.running
             compact: root.compact

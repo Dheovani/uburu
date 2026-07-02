@@ -82,6 +82,26 @@ Na iteração inicial, abrir arquivo usa o aplicativo padrão configurado no sis
 também aceita duplo clique ou Enter para abrir o resultado selecionado, Ctrl+C para copiar o caminho
 absoluto e Ctrl+Shift+C para copiar a ocorrência com localização e trecho.
 
+## Atalhos e paleta de comandos
+
+A tela principal expõe uma paleta de comandos inicial por `Ctrl+K` ou `Ctrl+Shift+P`. A paleta é um
+componente QML de coordenação: ela lista comandos disponíveis e emite a escolha do usuário, enquanto
+as ações continuam delegadas aos componentes existentes e ao `SearchController`.
+
+Atalhos essenciais disponíveis nesta fase:
+
+- `Ctrl+F`: focar o campo de busca;
+- `Ctrl+O`: selecionar diretório ou repositório;
+- `Ctrl+K` / `Ctrl+Shift+P`: abrir paleta de comandos;
+- `Ctrl+D`: alternar favorito para o diretório atual;
+- `Esc`: cancelar busca em andamento;
+- `Enter`: executar busca ou abrir resultado selecionado conforme o foco;
+- `Ctrl+C`: copiar caminho do resultado quando a lista está focada;
+- `Ctrl+Shift+C`: copiar ocorrência do resultado quando a lista está focada.
+
+A paleta deve evoluir para incluir configurações, diagnósticos, histórico, buscas salvas e navegação
+entre ocorrências, sem mover regras de domínio para QML.
+
 ## Formatos com extração de conteúdo pendente
 
 A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos

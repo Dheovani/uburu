@@ -27,6 +27,10 @@ Panel {
         return resultList.currentItem
     }
 
+    function hasCurrentResult() {
+        return resultList.currentIndex >= 0 && resultList.currentItem !== null
+    }
+
     function openCurrentResult() {
         const result = currentResult()
 

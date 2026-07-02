@@ -3,6 +3,7 @@ SecondaryButton 1.0 secondary-button.qml
 ActionMenu 1.0 action-menu.qml
 ActionMenuItem 1.0 action-menu-item.qml
 ActionMenuSeparator 1.0 action-menu-separator.qml
+CommandPalette 1.0 command-palette.qml
 Panel 1.0 panel.qml
 EyebrowLabel 1.0 eyebrow-label.qml
 MutedLabel 1.0 muted-label.qml

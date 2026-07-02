@@ -16,6 +16,7 @@ qt_add_resources(uburu_desktop "uburu_qml"
     qml/components/action-menu.qml
     qml/components/action-menu-item.qml
     qml/components/action-menu-separator.qml
+    qml/components/command-palette.qml
     qml/components/eyebrow-label.qml
     qml/components/filter-chip.qml
     qml/components/metric-card.qml

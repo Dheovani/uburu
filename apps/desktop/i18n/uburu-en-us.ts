@@ -5,6 +5,37 @@
     <name>main</name>
     <message><source>Uburu — Busca avançada</source><translation>Uburu — Advanced search</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Select directory or repository</translation></message>
+    <message><source>Focar busca</source><translation>Focus search</translation></message>
+    <message><source>Ir para o campo principal de pesquisa</source><translation>Go to the main search field</translation></message>
+    <message><source>Ctrl+F</source><translation>Ctrl+F</translation></message>
+    <message><source>Selecionar pasta</source><translation>Select folder</translation></message>
+    <message><source>Escolher outro diretório ou repositório</source><translation>Choose another directory or repository</translation></message>
+    <message><source>Ctrl+O</source><translation>Ctrl+O</translation></message>
+    <message><source>Iniciar busca</source><translation>Start search</translation></message>
+    <message><source>Executar a consulta atual</source><translation>Run the current query</translation></message>
+    <message><source>Enter</source><translation>Enter</translation></message>
+    <message><source>Cancelar busca</source><translation>Cancel search</translation></message>
+    <message><source>Interromper a busca em andamento</source><translation>Stop the running search</translation></message>
+    <message><source>Esc</source><translation>Esc</translation></message>
+    <message><source>Favoritar pasta atual</source><translation>Favorite current folder</translation></message>
+    <message><source>Alternar favorito para o diretório selecionado</source><translation>Toggle favorite for the selected directory</translation></message>
+    <message><source>Ctrl+D</source><translation>Ctrl+D</translation></message>
+    <message><source>Abrir resultado selecionado</source><translation>Open selected result</translation></message>
+    <message><source>Abrir o arquivo do resultado atual</source><translation>Open the file for the current result</translation></message>
+    <message><source>Copiar caminho do resultado</source><translation>Copy result path</translation></message>
+    <message><source>Copiar o caminho absoluto do resultado atual</source><translation>Copy the absolute path for the current result</translation></message>
+    <message><source>Ctrl+C</source><translation>Ctrl+C</translation></message>
+    <message><source>Copiar ocorrência do resultado</source><translation>Copy result occurrence</translation></message>
+    <message><source>Copiar caminho, localização e trecho da ocorrência atual</source><translation>Copy path, location, and excerpt for the current occurrence</translation></message>
+    <message><source>Ctrl+Shift+C</source><translation>Ctrl+Shift+C</translation></message>
+  </context>
+  <context>
+    <name>command-palette</name>
+    <message><source>COMANDOS</source><translation>COMMANDS</translation></message>
+    <message><source>Paleta de comandos</source><translation>Command palette</translation></message>
+    <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
+    <message><source>Digite um comando</source><translation>Type a command</translation></message>
+    <message><source>Nenhum comando encontrado</source><translation>No command found</translation></message>
   </context>
   <context>
     <name>preview-pane</name>

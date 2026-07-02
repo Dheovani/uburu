@@ -51,6 +51,11 @@ Panel {
         return !root.running && searchField.text.length > 0 && root.directory.length > 0
     }
 
+    function focusSearch() {
+        searchField.forceActiveFocus()
+        searchField.selectAll()
+    }
+
     function requestDebouncedSearch() {
         if (!root.autoSearchEnabled || searchField.text.length === 0 || root.directory.length === 0)
             return

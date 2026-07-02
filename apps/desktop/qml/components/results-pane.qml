@@ -48,31 +48,13 @@ Panel {
             root.copyTextRequested(occurrenceText(result.absolutePath, result.location, result.preview))
     }
 
-    Menu {
+    ActionMenu {
         id: resultContextMenu
 
         property string filePath: ""
         property string absolutePath: ""
         property string location: ""
         property string preview: ""
-
-        padding: 6
-
-        background: Rectangle {
-            implicitWidth: 250
-            radius: Theme.radius
-            color: Theme.surfaceRaised
-            border.color: Theme.borderStrong
-            border.width: 1
-        }
-
-        contentItem: ListView {
-            implicitWidth: 250
-            implicitHeight: contentHeight
-            model: resultContextMenu.contentModel
-            interactive: false
-            clip: true
-        }
 
         ActionMenuItem {
             text: qsTr("Abrir arquivo")

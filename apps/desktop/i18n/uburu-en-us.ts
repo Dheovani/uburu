@@ -13,6 +13,11 @@
     <message><source>Carregando pré-visualização...</source><translation>Loading preview...</translation></message>
     <message><source>Selecione um resultado para inspecionar o contexto.</source><translation>Select a result to inspect its context.</translation></message>
     <message><source>O conteúdo do arquivo aparecerá aqui</source><translation>File content will appear here</translation></message>
+    <message><source>Copiar seleção</source><translation>Copy selection</translation></message>
+    <message><source>Ctrl+C</source><translation>Ctrl+C</translation></message>
+    <message><source>Copiar prévia</source><translation>Copy preview</translation></message>
+    <message><source>Selecionar tudo</source><translation>Select all</translation></message>
+    <message><source>Ctrl+A</source><translation>Ctrl+A</translation></message>
   </context>
   <context>
     <name>results-pane</name>

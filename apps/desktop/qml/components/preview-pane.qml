@@ -112,7 +112,11 @@ Panel {
                 }
 
                 TextArea {
+                    id: previewTextArea
+
                     readOnly: true
+                    selectByMouse: true
+                    persistentSelection: true
                     wrapMode: TextEdit.NoWrap
                     placeholderText: qsTr("O conteúdo do arquivo aparecerá aqui")
                     text: root.previewHtml.length > 0 ? root.previewHtml : root.preview
@@ -132,6 +136,41 @@ Panel {
 
                     background: Rectangle {
                         color: "transparent"
+                    }
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: previewTextMenu.popup()
+                    }
+
+                    ActionMenu {
+                        id: previewTextMenu
+
+                        ActionMenuItem {
+                            text: qsTr("Copiar seleção")
+                            shortcutText: qsTr("Ctrl+C")
+                            enabled: previewTextArea.selectedText.length > 0
+                            onTriggered: previewTextArea.copy()
+                        }
+
+                        ActionMenuItem {
+                            text: qsTr("Copiar prévia")
+                            enabled: previewTextArea.text.length > 0
+                            onTriggered: {
+                                previewTextArea.selectAll()
+                                previewTextArea.copy()
+                                previewTextArea.deselect()
+                            }
+                        }
+
+                        ActionMenuSeparator {}
+
+                        ActionMenuItem {
+                            text: qsTr("Selecionar tudo")
+                            shortcutText: qsTr("Ctrl+A")
+                            enabled: previewTextArea.text.length > 0
+                            onTriggered: previewTextArea.selectAll()
+                        }
                     }
                 }
             }

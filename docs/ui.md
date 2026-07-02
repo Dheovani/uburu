@@ -73,9 +73,10 @@ seletor de aplicativo, abrir local do arquivo, copiar caminho e copiar ocorrênc
 `Abrir com...` usa o seletor do sistema operacional. Em outras plataformas, ela deve evoluir por
 adaptadores específicos de Finder, portal ou desktop environment.
 
-Visualmente, o menu usa o mesmo vocabulário da tela principal: superfície elevada, borda discreta,
-realce azul suave no item ativo e atalhos alinhados à direita. O objetivo é parecer integrado ao
-produto sem imitar integralmente o menu nativo da plataforma.
+Visualmente, menus de ação usam o mesmo vocabulário da tela principal: superfície elevada, borda
+discreta, realce azul suave no item ativo e atalhos alinhados à direita. O objetivo é parecer
+integrado ao produto sem imitar integralmente o menu nativo da plataforma. Esse padrão é compartilhado
+pelo menu de arquivos da lista de resultados e pelo menu de texto da pré-visualização.
 
 Na iteração inicial, abrir arquivo usa o aplicativo padrão configurado no sistema operacional. A lista
 também aceita duplo clique ou Enter para abrir o resultado selecionado, Ctrl+C para copiar o caminho

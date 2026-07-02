@@ -66,7 +66,7 @@ Panel {
             spacing: 2
 
             EyebrowLabel {
-                text: qsTr("PREVIEW")
+                text: qsTr("PRÉ-VISUALIZAÇÃO")
             }
 
             Label {

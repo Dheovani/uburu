@@ -249,7 +249,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Implementar tema claro, escuro e sistema.
 - [x] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
   `.gitignore`, busca regex e demais controles potencialmente ambíguos.
-- [ ] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam
+- [x] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam
   em `pt-BR` ou `en-US` conforme o idioma ativo, sem mistura acidental.
 - [x] Persistir geometria, splitters, filtros e último repositório.
 - [ ] Exibir erros parciais sem interromper resultados válidos.
@@ -257,7 +257,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Tornar cancelamento imediato e visualmente confiável.
 - [ ] Testar acessibilidade: foco, teclado, contraste, nomes acessíveis e leitores de tela.
 - [ ] Testar DPI alto, múltiplos monitores e escalas fracionárias.
-- [ ] Completar e revisar traduções `pt-BR` e `en-US`.
+- [x] Completar e revisar traduções `pt-BR` e `en-US`.
 - [ ] Definir estratégia para pluralização, atalhos e strings técnicas.
 
 ## Marco 9 — Testes e qualidade contínua (P0/P1)

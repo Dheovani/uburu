@@ -299,7 +299,7 @@ Panel {
 
                 FilterChip {
                     id: caseSensitive
-                    text: qsTr("Case-sensitive")
+                    text: qsTr("Diferenciar maiúsculas")
                     toolTipText: qsTr("Diferencia letras maiúsculas e minúsculas. Quando desligado, Verdade e verdade são tratados como equivalentes.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }

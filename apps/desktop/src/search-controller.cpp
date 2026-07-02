@@ -175,7 +175,7 @@ namespace uburu::app
         skipped.push_back(receiver->tr("%1 binário(s)").arg(summary.metrics.binaryFilesSkipped));
 
       if (!skipped.empty())
-        status += receiver->tr(" — pulados: %1").arg(skipped.join(receiver->tr(", ")));
+        status += receiver->tr(" — ignorados: %1").arg(skipped.join(receiver->tr(", ")));
 
       return status;
     }
@@ -917,7 +917,7 @@ namespace uburu::app
     }
 
     if (result.status == PreviewLoadStatus::invalidEncoding) {
-      previewTextValue = tr("Encoding inválido: prévia indisponível.");
+      previewTextValue = tr("Codificação inválida: prévia indisponível.");
       previewHtmlValue.clear();
     }
 

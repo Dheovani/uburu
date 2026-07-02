@@ -16,6 +16,46 @@ Panel {
 
     color: Theme.windowRaised
 
+    function selectedPreviewLineIndex() {
+        const lines = root.preview.split("\n")
+
+        for (let lineIndex = 0; lineIndex < lines.length; ++lineIndex) {
+            if (lines[lineIndex].startsWith(">"))
+                return lineIndex
+        }
+
+        return -1
+    }
+
+    function scrollPreviewToSelectedLine() {
+        const lineIndex = selectedPreviewLineIndex()
+
+        if (lineIndex < 0)
+            return
+
+        const flickable = previewScrollView.contentItem
+
+        if (!flickable || flickable.contentHeight === undefined || flickable.contentY === undefined)
+            return
+
+        const lineHeight = Math.max(previewFontMetrics.height, 1)
+        const preferredTopMargin = previewScrollView.availableHeight / 3
+        const targetY = Math.max(0, lineIndex * lineHeight - preferredTopMargin)
+        const maximumY = Math.max(0, flickable.contentHeight - flickable.height)
+        flickable.contentY = Math.min(targetY, maximumY)
+    }
+
+    onPreviewChanged: previewScrollTimer.restart()
+    onPreviewHtmlChanged: previewScrollTimer.restart()
+
+    Timer {
+        id: previewScrollTimer
+
+        interval: 0
+        repeat: false
+        onTriggered: root.scrollPreviewToSelectedLine()
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
@@ -59,6 +99,8 @@ Panel {
             clip: true
 
             ScrollView {
+                id: previewScrollView
+
                 anchors.fill: parent
                 anchors.margins: 1
 

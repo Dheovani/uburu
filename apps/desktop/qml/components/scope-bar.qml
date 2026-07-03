@@ -28,7 +28,10 @@ Rectangle {
     signal toggleCurrentFavorite()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 38 + (hasSelectedScopes ? 68 : 0) + (hasSavedScopes ? 70 : 0)
+    Layout.preferredHeight: implicitHeight
+
+    implicitHeight: contentColumn.implicitHeight + 16
+
     radius: Theme.radius
     color: Theme.surface
     border.color: Theme.border
@@ -64,6 +67,8 @@ Rectangle {
     }
 
     ColumnLayout {
+        id: contentColumn
+
         anchors.fill: parent
         anchors.leftMargin: 12
         anchors.rightMargin: 12
@@ -256,7 +261,9 @@ Rectangle {
                                 selectedScopeText.implicitWidth + removeSelectedScopeText.implicitWidth + 28
                             )
                             radius: 13
-                            color: selectedScopeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                            color: selectedScopeMouseArea.containsMouse
+                                   ? Theme.surfaceRaised
+                                   : Theme.surfaceSunken
                             border.color: modelData === root.directory ? Theme.primary : Theme.border
                             border.width: 1
                             Accessible.role: Accessible.Button
@@ -302,37 +309,47 @@ Rectangle {
             }
         }
 
-        RowLayout {
+        GridLayout {
             Layout.fillWidth: true
-            visible: root.hasSelectedScopes
-            spacing: 12
+            visible: root.hasIncludedScopes
+                    || root.hasExcludedScopes
+                    || root.hasSavedScopes
+
+            columns: 2
+            columnSpacing: 12
+            rowSpacing: 8
 
             ScopeChipRow {
                 Layout.fillWidth: true
+                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
+                visible: root.hasIncludedScopes
+
                 title: qsTr("Incluídos")
                 emptyText: qsTr("Nenhuma subpasta incluída")
                 entries: root.includedDirectories
                 removeAccessibleTemplate: qsTr("Remover subpasta incluída: %1")
-                onRemoveRequested: (scopeRoot, relativePath) => root.removeIncludedDirectory(scopeRoot, relativePath)
+                onRemoveRequested: (scopeRoot, relativePath) =>
+                    root.removeIncludedDirectory(scopeRoot, relativePath)
             }
 
             ScopeChipRow {
                 Layout.fillWidth: true
+                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
+                visible: root.hasExcludedScopes
+
                 title: qsTr("Ignorados")
                 emptyText: qsTr("Nenhuma subpasta ignorada")
                 entries: root.excludedDirectories
                 removeAccessibleTemplate: qsTr("Remover subpasta ignorada: %1")
-                onRemoveRequested: (scopeRoot, relativePath) => root.removeExcludedDirectory(scopeRoot, relativePath)
+                onRemoveRequested: (scopeRoot, relativePath) =>
+                    root.removeExcludedDirectory(scopeRoot, relativePath)
             }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            visible: root.hasSavedScopes
-            spacing: 12
 
             SavedScopeRow {
                 Layout.fillWidth: true
+                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
+                visible: root.favoriteDirectories.length > 0
+
                 title: qsTr("Favoritos")
                 directories: root.favoriteDirectories
                 emptyText: qsTr("Nenhum favorito")
@@ -341,6 +358,9 @@ Rectangle {
 
             SavedScopeRow {
                 Layout.fillWidth: true
+                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
+                visible: root.recentDirectories.length > 0
+
                 title: qsTr("Recentes")
                 directories: root.recentDirectories
                 emptyText: qsTr("Nenhum recente")
@@ -349,8 +369,11 @@ Rectangle {
         }
     }
 
-    component ScopeChipRow: RowLayout {
+    component ScopeChipRow: ColumnLayout {
         id: scopeChipRow
+
+        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignLeft
 
         property string title: ""
         property string emptyText: ""
@@ -359,7 +382,7 @@ Rectangle {
 
         signal removeRequested(string scopeRoot, string relativePath)
 
-        spacing: 12
+        spacing: 4
 
         Label {
             text: scopeChipRow.title
@@ -395,7 +418,9 @@ Rectangle {
                             ignoredScopeText.implicitWidth + removeIgnoredScopeText.implicitWidth + 28
                         )
                         radius: 13
-                        color: ignoredScopeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                        color: ignoredScopeMouseArea.containsMouse
+                               ? Theme.surfaceRaised
+                               : Theme.surfaceSunken
                         border.color: Theme.border
                         border.width: 1
                         Accessible.role: Accessible.Button
@@ -458,6 +483,9 @@ Rectangle {
     component SavedScopeRow: ColumnLayout {
         id: savedScopeRow
 
+        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignLeft
+
         property string title: ""
         property string emptyText: ""
         property var directories: []
@@ -492,10 +520,14 @@ Rectangle {
                     model: savedScopeRow.directories
 
                     delegate: Rectangle {
+                        required property string modelData
+
                         height: 26
                         width: Math.min(220, scopeText.implicitWidth + 20)
                         radius: 13
-                        color: scopeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                        color: scopeMouseArea.containsMouse
+                               ? Theme.surfaceRaised
+                               : Theme.surfaceSunken
                         border.color: Theme.border
                         border.width: 1
                         Accessible.role: Accessible.Button

@@ -335,6 +335,8 @@ ApplicationWindow {
                 caseSensitive,
                 wholeWord,
                 gitignore,
+                includeHidden,
+                includeBinary,
                 includeSubdirectories,
                 documentTypes
             ) => {
@@ -344,6 +346,8 @@ ApplicationWindow {
                     caseSensitive,
                     wholeWord,
                     gitignore,
+                    includeHidden,
+                    includeBinary,
                     includeSubdirectories,
                     documentTypes
                 )
@@ -443,6 +447,8 @@ ApplicationWindow {
         property alias caseSensitiveEnabled: searchHeader.caseSensitiveEnabled
         property alias wholeWordEnabled: searchHeader.wholeWordEnabled
         property alias respectGitignoreEnabled: searchHeader.respectGitignoreEnabled
+        property alias includeHiddenEnabled: searchHeader.includeHiddenEnabled
+        property alias includeBinaryEnabled: searchHeader.includeBinaryEnabled
         property alias includeSubdirectoriesEnabled: searchHeader.includeSubdirectoriesEnabled
     }
 

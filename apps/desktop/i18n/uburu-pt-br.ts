@@ -155,6 +155,10 @@
     <message><source>Retorna apenas ocorrências isoladas por limites de palavra, evitando correspondências dentro de outras palavras.</source><translation>Retorna apenas ocorrências isoladas por limites de palavra, evitando correspondências dentro de outras palavras.</translation></message>
     <message><source>Respeitar .gitignore</source><translation>Respeitar .gitignore</translation></message>
     <message><source>Ignora arquivos e diretórios cobertos por regras .gitignore, como build, node_modules e outros artefatos do repositório.</source><translation>Ignora arquivos e diretórios cobertos por regras .gitignore, como build, node_modules e outros artefatos do repositório.</translation></message>
+    <message><source>Incluir ocultos</source><translation>Incluir ocultos</translation></message>
+    <message><source>Inclui arquivos ocultos. Deixe desligado para evitar caches e metadados.</source><translation>Inclui arquivos ocultos. Deixe desligado para evitar caches e metadados.</translation></message>
+    <message><source>Incluir binários</source><translation>Incluir binários</translation></message>
+    <message><source>Tenta ler binários. Pode reduzir a velocidade e gerar resultados pouco úteis.</source><translation>Tenta ler binários. Pode reduzir a velocidade e gerar resultados pouco úteis.</translation></message>
     <message><source>Incluir subdiretórios</source><translation>Incluir subdiretórios</translation></message>
     <message><source>Pesquisa também dentro das subpastas do diretório selecionado. Desligue para limitar a busca apenas à pasta atual.</source><translation>Pesquisa também dentro das subpastas do diretório selecionado. Desligue para limitar a busca apenas à pasta atual.</translation></message>
     <message><source>Resultados</source><translation>Resultados</translation></message>

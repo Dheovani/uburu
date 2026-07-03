@@ -30,6 +30,8 @@ Panel {
     property alias caseSensitiveEnabled: caseSensitive.checked
     property alias wholeWordEnabled: wholeWord.checked
     property alias respectGitignoreEnabled: gitignore.checked
+    property alias includeHiddenEnabled: includeHidden.checked
+    property alias includeBinaryEnabled: includeBinary.checked
     property alias includeSubdirectoriesEnabled: includeSubdirectories.checked
 
     signal selectDirectory()
@@ -38,6 +40,8 @@ Panel {
                        bool caseSensitive,
                        bool wholeWord,
                        bool gitignore,
+                       bool includeHidden,
+                       bool includeBinary,
                        bool includeSubdirectories,
                        string documentTypes)
     signal cancelSearch()
@@ -46,8 +50,8 @@ Panel {
     signal openCommandPalette()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: (compact ? 238 : 198) + (hasDocumentContentExtractorGap ? 30 : 0)
-                            + (hasSearchMemory ? 34 : 0)
+    Layout.preferredHeight: (compact ? 238 : 198) + Math.max(0, filterFlow.implicitHeight - 34)
+                            + (hasDocumentContentExtractorGap ? 30 : 0) + (hasSearchMemory ? 34 : 0)
     color: Theme.surface
 
     function hasUnsupportedDocumentContentTypes(text) {
@@ -103,6 +107,8 @@ Panel {
             caseSensitive.checked,
             wholeWord.checked,
             gitignore.checked,
+            includeHidden.checked,
+            includeBinary.checked,
             includeSubdirectories.checked,
             documentTypesField.text
         )
@@ -238,8 +244,11 @@ Panel {
                 }
             }
 
-            RowLayout {
+            Flow {
+                id: filterFlow
+
                 Layout.fillWidth: true
+                Layout.preferredHeight: implicitHeight
                 spacing: 8
                 Layout.alignment: Qt.AlignVCenter
 
@@ -443,6 +452,20 @@ Panel {
                     text: qsTr("Respeitar .gitignore")
                     checked: true
                     toolTipText: qsTr("Ignora arquivos e diretórios cobertos por regras .gitignore, como build, node_modules e outros artefatos do repositório.")
+                    onCheckedChanged: root.requestDebouncedSearch()
+                }
+
+                FilterChip {
+                    id: includeHidden
+                    text: qsTr("Incluir ocultos")
+                    toolTipText: qsTr("Inclui arquivos ocultos. Deixe desligado para evitar caches e metadados.")
+                    onCheckedChanged: root.requestDebouncedSearch()
+                }
+
+                FilterChip {
+                    id: includeBinary
+                    text: qsTr("Incluir binários")
+                    toolTipText: qsTr("Tenta ler binários. Pode reduzir a velocidade e gerar resultados pouco úteis.")
                     onCheckedChanged: root.requestDebouncedSearch()
                 }
 

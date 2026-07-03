@@ -126,6 +126,8 @@ namespace uburu::app
                                  bool caseSensitive,
                                  bool wholeWord,
                                  bool respectGitignore,
+                                 bool includeHidden,
+                                 bool includeBinary,
                                  bool includeSubdirectories,
                                  const QString& documentTypes);
     Q_INVOKABLE void cancel();

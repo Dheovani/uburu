@@ -22,6 +22,14 @@ A tela principal deve permanecer como composição de alto nível. Componentes r
 ficam em `apps/desktop/qml/components/`, preferencialmente com arquivos pequenos e responsabilidade
 única para evitar que `main.qml` concentre toda a evolução do Marco 8.
 
+## Filtros visíveis
+
+O cabeçalho expõe apenas filtros com comportamento real conectado ao core ou ao controller. Nesta fase,
+os filtros visuais cobrem regex, diferenciação de maiúsculas/minúsculas, palavra inteira, respeito a
+`.gitignore`, inclusão de arquivos ocultos, inclusão de binários, inclusão de subdiretórios e tipos de
+documento por extensão. Opções como alvo da busca e limite máximo de tamanho permanecem com defaults
+internos até a futura tela de configurações, evitando controles avançados demais na tela principal.
+
 ## Métricas da busca na tela principal
 
 O cabeçalho da busca deve expor métricas operacionais leves para reforçar a percepção de velocidade

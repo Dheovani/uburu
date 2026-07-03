@@ -155,6 +155,10 @@
     <message><source>Retorna apenas ocorrências isoladas por limites de palavra, evitando correspondências dentro de outras palavras.</source><translation>Returns only matches isolated by word boundaries, avoiding matches inside other words.</translation></message>
     <message><source>Respeitar .gitignore</source><translation>Respect .gitignore</translation></message>
     <message><source>Ignora arquivos e diretórios cobertos por regras .gitignore, como build, node_modules e outros artefatos do repositório.</source><translation>Ignores files and directories covered by .gitignore rules, such as build, node_modules, and other repository artifacts.</translation></message>
+    <message><source>Incluir ocultos</source><translation>Include hidden</translation></message>
+    <message><source>Inclui arquivos ocultos. Deixe desligado para evitar caches e metadados.</source><translation>Includes hidden files. Leave it off to avoid caches and metadata.</translation></message>
+    <message><source>Incluir binários</source><translation>Include binaries</translation></message>
+    <message><source>Tenta ler binários. Pode reduzir a velocidade e gerar resultados pouco úteis.</source><translation>Tries to read binaries. It can reduce speed and produce less useful results.</translation></message>
     <message><source>Incluir subdiretórios</source><translation>Include subdirectories</translation></message>
     <message><source>Pesquisa também dentro das subpastas do diretório selecionado. Desligue para limitar a busca apenas à pasta atual.</source><translation>Also searches inside subfolders of the selected directory. Turn it off to limit search to the current folder only.</translation></message>
     <message><source>Resultados</source><translation>Results</translation></message>

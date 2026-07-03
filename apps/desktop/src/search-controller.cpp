@@ -781,6 +781,8 @@ namespace uburu::app
                                      bool caseSensitive,
                                      bool wholeWord,
                                      bool respectGitignore,
+                                     bool includeHidden,
+                                     bool includeBinary,
                                      bool includeSubdirectories,
                                      const QString& documentTypes)
   {
@@ -803,6 +805,8 @@ namespace uburu::app
     query.options.caseSensitive = caseSensitive;
     query.options.wholeWord = wholeWord;
     query.options.respectGitignore = respectGitignore;
+    query.options.includeHidden = includeHidden;
+    query.options.includeBinary = includeBinary;
     query.options.includeSubdirectories = includeSubdirectories;
     query.options.target = SearchTarget::contentAndFileName;
     query.options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();

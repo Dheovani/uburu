@@ -3,10 +3,28 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <string_view>
+#include <vector>
 
 using uburu::SearchOptions;
 using uburu::text::findAllLiterals;
 using uburu::text::findLiteral;
+using uburu::text::matchesRequestedBoundaries;
+
+namespace
+{
+
+  struct BoundaryFixture
+  {
+    std::string_view text;
+    std::size_t offset{0};
+    std::size_t length{0};
+    bool wholeWord{false};
+    bool wholeIdentifier{false};
+    bool expected{false};
+  };
+
+} // namespace
 
 TEST_CASE("literal matching is case insensitive by default")
 {
@@ -131,6 +149,26 @@ TEST_CASE("whole identifier does not match code identifier fragments")
   CHECK_FALSE(findLiteral("search2", "search", options).has_value());
   CHECK(findLiteral("search engine", "search", options).has_value());
   CHECK(findLiteral("call(search)", "search", options).has_value());
+}
+
+TEST_CASE("requested boundaries combine whole word and whole identifier rules")
+{
+  const std::vector<BoundaryFixture> fixtures{
+    {.text = "search engine", .offset = 0, .length = 6, .wholeWord = true, .wholeIdentifier = true, .expected = true},
+    {.text = "search_engine", .offset = 0, .length = 6, .wholeWord = true, .wholeIdentifier = true, .expected = false},
+    {.text = "search2", .offset = 0, .length = 6, .wholeWord = true, .wholeIdentifier = true, .expected = false},
+    {.text = "pre-action", .offset = 4, .length = 6, .wholeWord = true, .wholeIdentifier = false, .expected = true},
+    {.text = "preaction", .offset = 3, .length = 6, .wholeWord = true, .wholeIdentifier = false, .expected = false},
+    {.text = "call(search)", .offset = 5, .length = 6, .wholeWord = false, .wholeIdentifier = true, .expected = true},
+  };
+
+  for (const auto& fixture : fixtures) {
+    SearchOptions options;
+    options.wholeWord = fixture.wholeWord;
+    options.wholeIdentifier = fixture.wholeIdentifier;
+
+    CHECK(matchesRequestedBoundaries(fixture.text, {fixture.offset, fixture.length}, options) == fixture.expected);
+  }
 }
 
 TEST_CASE("a null byte identifies a binary sample")

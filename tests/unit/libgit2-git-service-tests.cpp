@@ -1,14 +1,13 @@
 #include "core/filesystem/path-normalization.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/git/libgit2-git-service.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -22,11 +21,13 @@
 namespace
 {
 
+  using uburu::tests::writeFile;
+
   class TemporaryDirectory
   {
   public:
     explicit TemporaryDirectory(std::string name)
-      : pathValue(std::filesystem::temp_directory_path() / uniqueName(std::move(name)))
+      : pathValue(std::filesystem::current_path() / uburu::tests::uniqueTemporaryPath(std::move(name)).filename())
     {
       std::error_code error;
 
@@ -41,37 +42,45 @@ namespace
       std::filesystem::remove_all(pathValue, error);
     }
 
+    TemporaryDirectory(const TemporaryDirectory&) = delete;
+    TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
+    TemporaryDirectory(TemporaryDirectory&&) noexcept = delete;
+    TemporaryDirectory& operator=(TemporaryDirectory&&) noexcept = delete;
+
     [[nodiscard]] const std::filesystem::path& path() const
     {
       return pathValue;
     }
 
   private:
-    [[nodiscard]] static std::string uniqueName(std::string name)
-    {
-      const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
-
-      return name + "-" + std::to_string(now);
-    }
-
     std::filesystem::path pathValue;
   };
 
-  void writeFile(const std::filesystem::path& path, std::string_view content)
-  {
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream file(path, std::ios::binary);
-    file << content;
-  }
-
 #if defined(UBURU_HAS_LIBGIT2)
+
+  void requireGitSuccess(int status, std::string_view operation, const std::filesystem::path& path)
+  {
+    if (status != 0) {
+      const auto* lastError = git_error_last();
+      INFO("operation: " << operation);
+      INFO("path: " << path.string());
+
+      if (lastError != nullptr && lastError->message != nullptr)
+        INFO("libgit2: " << lastError->message);
+
+    }
+
+    REQUIRE(status == 0);
+  }
 
   void createInitialCommit(const std::filesystem::path& repositoryRoot)
   {
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    REQUIRE(git_repository_init(&repository, repositoryRoot.string().c_str(), false) == 0);
+    requireGitSuccess(git_repository_init(&repository, repositoryRoot.string().c_str(), false),
+                      "git_repository_init",
+                      repositoryRoot);
 
     writeFile(repositoryRoot / "tracked.txt", "tracked\n");
     writeFile(repositoryRoot / "modify-me.txt", "modify me\n");
@@ -188,8 +197,11 @@ namespace
     options.ref = featureBranch;
 
     git_worktree* worktree = nullptr;
-    REQUIRE(
-      git_worktree_add(&worktree, repository, std::string(name).c_str(), worktreeRoot.string().c_str(), &options) == 0);
+    REQUIRE(git_worktree_add(&worktree,
+                             repository,
+                             std::string(name).c_str(),
+                             worktreeRoot.string().c_str(),
+                             &options) == 0);
 
     git_worktree_free(worktree);
     git_reference_free(featureBranch);
@@ -255,7 +267,7 @@ namespace
 
 TEST_CASE("libgit2 git service reports typed error outside repositories")
 {
-  TemporaryDirectory directory("uburu-libgit2-git-service-not-repo-test");
+  uburu::tests::TemporaryDirectory directory("uburu-libgit2-git-service-not-repo-test");
   const uburu::git::Libgit2GitService service;
 
   const auto result = service.discoverRepository(directory.path());

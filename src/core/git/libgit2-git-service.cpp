@@ -122,6 +122,45 @@ namespace uburu::git
       return GitError{.code = code, .message = std::string(fallbackMessage)};
     }
 
+    [[nodiscard]] bool pathIsOutsideRepository(const std::filesystem::path& path)
+    {
+      git_buf discoveredRepository = GIT_BUF_INIT;
+      const auto result = git_repository_discover(&discoveredRepository, path.string().c_str(), false, nullptr);
+      git_buf_dispose(&discoveredRepository);
+
+      return result == GIT_ENOTFOUND;
+    }
+
+    [[nodiscard]] bool hasGitMarkerInAncestors(const std::filesystem::path& path)
+    {
+      std::error_code error;
+      auto current = std::filesystem::absolute(path, error);
+
+      if (error)
+        current = path;
+
+      error.clear();
+
+      if (!std::filesystem::is_directory(current, error))
+        current = current.parent_path();
+
+      while (!current.empty()) {
+        error.clear();
+
+        if (std::filesystem::exists(current / ".git", error))
+          return true;
+
+        const auto parent = current.parent_path();
+
+        if (parent == current)
+          break;
+
+        current = parent;
+      }
+
+      return false;
+    }
+
     [[nodiscard]] std::string oidToString(const git_oid* oid)
     {
       return git_oid_tostr_s(oid);
@@ -498,10 +537,13 @@ namespace uburu::git
   GitResult<RepositoryInfo> Libgit2GitService::discoverRepository(const std::filesystem::path& path) const
   {
 #if defined(UBURU_HAS_LIBGIT2)
+    if (!hasGitMarkerInAncestors(path))
+      return GitError{.code = GitErrorCode::notRepository, .message = "path is not inside a Git repository"};
+
     git_repository* rawRepository = nullptr;
     const auto result = git_repository_open_ext(&rawRepository, path.string().c_str(), 0, nullptr);
 
-    if (result == GIT_ENOTFOUND)
+    if (result == GIT_ENOTFOUND || pathIsOutsideRepository(path))
       return GitError{.code = GitErrorCode::notRepository, .message = "path is not inside a Git repository"};
 
     if (result != 0)

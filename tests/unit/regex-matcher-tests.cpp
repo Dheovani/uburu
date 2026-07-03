@@ -70,6 +70,27 @@ TEST_CASE("regex matching can be case sensitive")
 #endif
 }
 
+TEST_CASE("regex matching applies requested boundary filters")
+{
+  SearchOptions options;
+  options.mode = SearchMode::regex;
+  options.wholeIdentifier = true;
+
+  auto compiled = compileRegex("search", options);
+
+#ifdef UBURU_HAS_PCRE2
+  REQUIRE(compiled.matcher.has_value());
+  const auto result = compiled.matcher->findAll("search search_engine call(search)");
+
+  CHECK(result.status == RegexMatchStatus::completed);
+  REQUIRE(result.matches.size() == 2);
+  CHECK(result.matches[0].offset == 0);
+  CHECK(result.matches[1].offset == 26);
+#else
+  REQUIRE_FALSE(compiled.matcher.has_value());
+#endif
+}
+
 TEST_CASE("regex matching reports compilation errors")
 {
   SearchOptions options;

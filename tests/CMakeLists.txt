@@ -20,6 +20,7 @@ add_executable(uburu_core_tests
   unit/search-query-validation-tests.cpp
   unit/search-dto-tests.cpp
   unit/search-result-merge-tests.cpp
+  unit/search-scope-tests.cpp
   unit/search-service-tests.cpp
   unit/sqlite-storage-service-tests.cpp
   unit/text-file-reader-tests.cpp
@@ -56,4 +57,8 @@ if(WIN32)
 endif()
 
 include(Catch)
+set_property(TARGET uburu_core_tests
+  PROPERTY CROSSCOMPILING_EMULATOR
+    ${CMAKE_COMMAND} -E env GIT_CONFIG_COUNT=0 GIT_CONFIG_KEY_0= GIT_CONFIG_VALUE_0=
+)
 catch_discover_tests(uburu_core_tests)

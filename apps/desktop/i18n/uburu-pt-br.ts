@@ -159,6 +159,12 @@
     <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</translation></message>
+    <message><source>Remover busca salva</source><translation>Remover busca salva</translation></message>
+    <message><source>Salvar busca atual</source><translation>Salvar busca atual</translation></message>
+    <message><source>Buscas salvas</source><translation>Buscas salvas</translation></message>
+    <message><source>Salva</source><translation>Salva</translation></message>
+    <message><source>Buscas recentes</source><translation>Buscas recentes</translation></message>
+    <message><source>Recente</source><translation>Recente</translation></message>
     <message><source>★ Salva</source><translation>★ Salva</translation></message>
     <message><source>☆ Salvar</source><translation>☆ Salvar</translation></message>
     <message><source>Salvas</source><translation>Salvas</translation></message>

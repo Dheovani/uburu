@@ -51,7 +51,7 @@ Panel {
 
     Layout.fillWidth: true
     Layout.preferredHeight: (compact ? 238 : 198) + Math.max(0, filterFlow.implicitHeight - 34)
-                            + (hasDocumentContentExtractorGap ? 30 : 0) + (hasSearchMemory ? 34 : 0)
+                            + (hasDocumentContentExtractorGap ? 30 : 0)
     color: Theme.surface
 
     function hasUnsupportedDocumentContentTypes(text) {
@@ -78,10 +78,10 @@ Panel {
     }
 
     function shortSearch(text) {
-        if (text.length <= 32)
+        if (text.length <= 80)
             return text
 
-        return text.slice(0, 29) + "..."
+        return text.slice(0, 77) + "..."
     }
 
     function requestDebouncedSearch() {
@@ -257,7 +257,16 @@ Panel {
                     placeholderText: qsTr("Pesquisar em arquivos")
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: searchButton.clicked()
-                    onTextEdited: root.requestDebouncedSearch()
+                    onTextEdited: {
+                        root.requestDebouncedSearch()
+
+                        if (root.hasSearchMemory)
+                            searchMemoryPopup.open()
+                    }
+                    onActiveFocusChanged: {
+                        if (activeFocus && root.hasSearchMemory)
+                            searchMemoryPopup.open()
+                    }
                     Accessible.name: qsTr("Consulta de busca")
                     Accessible.description: qsTr(
                         "Digite o texto ou expressão regular que será pesquisado nos arquivos."
@@ -276,6 +285,84 @@ Panel {
                         color: Theme.surfaceSunken
                         border.color: searchField.activeFocus ? Theme.primary : Theme.border
                         border.width: 1
+                    }
+
+                    Popup {
+                        id: searchMemoryPopup
+
+                        x: 0
+                        y: searchField.height + 6
+                        width: searchField.width
+                        padding: 8
+                        modal: false
+                        focus: false
+                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                        background: Rectangle {
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.color: Theme.border
+                            border.width: 1
+                        }
+
+                        contentItem: Column {
+                            spacing: 6
+
+                            SearchMemoryRow {
+                                width: parent.width
+                                visible: root.queryText.length > 0
+                                text: root.currentSearchSaved
+                                      ? qsTr("Remover busca salva")
+                                      : qsTr("Salvar busca atual")
+                                detail: root.queryText
+                                accessibleName: text
+                                emphasized: true
+                                onClicked: {
+                                    searchMemoryPopup.close()
+                                    root.toggleCurrentSearchSaved()
+                                }
+                            }
+
+                            MutedLabel {
+                                text: qsTr("Buscas salvas")
+                                visible: root.savedSearches.length > 0
+                            }
+
+                            Repeater {
+                                model: root.savedSearches
+
+                                delegate: SearchMemoryRow {
+                                    width: searchMemoryPopup.contentItem.width
+                                    text: root.shortSearch(modelData)
+                                    detail: qsTr("Salva")
+                                    accessibleName: qsTr("Busca salva: %1").arg(modelData)
+                                    onClicked: {
+                                        searchMemoryPopup.close()
+                                        root.selectSearch(modelData)
+                                    }
+                                }
+                            }
+
+                            MutedLabel {
+                                text: qsTr("Buscas recentes")
+                                visible: root.recentSearches.length > 0
+                            }
+
+                            Repeater {
+                                model: root.recentSearches
+
+                                delegate: SearchMemoryRow {
+                                    width: searchMemoryPopup.contentItem.width
+                                    text: root.shortSearch(modelData)
+                                    detail: qsTr("Recente")
+                                    accessibleName: qsTr("Busca recente: %1").arg(modelData)
+                                    onClicked: {
+                                        searchMemoryPopup.close()
+                                        root.selectSearch(modelData)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -367,52 +454,6 @@ Panel {
                     text: qsTr("PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.")
                     color: Theme.warning
                     wrapMode: Text.WordWrap
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                visible: root.hasSearchMemory
-                spacing: 8
-
-                SecondaryButton {
-                    text: root.currentSearchSaved ? qsTr("★ Salva") : qsTr("☆ Salvar")
-                    enabled: root.queryText.length > 0
-                    onClicked: root.toggleCurrentSearchSaved()
-                }
-
-                MutedLabel {
-                    text: qsTr("Salvas")
-                    visible: root.savedSearches.length > 0
-                }
-
-                Repeater {
-                    model: root.savedSearches.slice(0, 3)
-
-                    delegate: SearchMemoryChip {
-                        text: root.shortSearch(modelData)
-                        accessibleName: qsTr("Busca salva: %1").arg(modelData)
-                        onClicked: root.selectSearch(modelData)
-                    }
-                }
-
-                MutedLabel {
-                    text: qsTr("Recentes")
-                    visible: root.recentSearches.length > 0
-                }
-
-                Repeater {
-                    model: root.recentSearches.slice(0, 3)
-
-                    delegate: SearchMemoryChip {
-                        text: root.shortSearch(modelData)
-                        accessibleName: qsTr("Busca recente: %1").arg(modelData)
-                        onClicked: root.selectSearch(modelData)
-                    }
-                }
-
-                Item {
-                    Layout.fillWidth: true
                 }
             }
 
@@ -522,33 +563,48 @@ Panel {
         }
     }
 
-    component SearchMemoryChip: Rectangle {
-        id: searchMemoryChip
+    component SearchMemoryRow: Rectangle {
+        id: searchMemoryRow
 
         property string text: ""
+        property string detail: ""
         property string accessibleName: text
+        property bool emphasized: false
 
         signal clicked()
 
-        Layout.preferredHeight: 28
-        Layout.preferredWidth: Math.min(210, chipText.implicitWidth + 20)
-        radius: 14
-        color: chipMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
-        border.color: Theme.border
+        height: 42
+        radius: 10
+        color: chipMouseArea.containsMouse ? Theme.surfaceRaised : "transparent"
+        border.color: emphasized ? Theme.primary : "transparent"
         border.width: 1
         Accessible.role: Accessible.Button
         Accessible.name: accessibleName
 
-        Text {
-            id: chipText
+        Column {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            anchors.topMargin: 5
+            anchors.bottomMargin: 5
+            spacing: 2
 
-            anchors.centerIn: parent
-            width: parent.width - 18
-            text: searchMemoryChip.text
-            color: Theme.text
-            font.pixelSize: Theme.fontSizeTiny
-            elide: Text.ElideRight
-            horizontalAlignment: Text.AlignHCenter
+            Text {
+                width: parent.width
+                text: searchMemoryRow.text
+                color: Theme.text
+                font.pixelSize: Theme.fontSizeSmall
+                font.bold: searchMemoryRow.emphasized
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                text: searchMemoryRow.detail
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSizeTiny
+                elide: Text.ElideRight
+            }
         }
 
         HoverHandler {
@@ -560,7 +616,7 @@ Panel {
 
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: searchMemoryChip.clicked()
+            onClicked: searchMemoryRow.clicked()
         }
     }
 }

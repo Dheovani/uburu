@@ -245,7 +245,7 @@ e UI para avançarem mais rapidamente.
 - [x] Adicionar atalhos essenciais e command palette inicial.
 - [ ] Completar command palette com ações de configuração, diagnóstico, histórico e navegação
   avançada.
-- [ ] Implementar histórico, buscas salvas e favoritos.
+- [x] Implementar histórico, buscas salvas e favoritos.
 - [x] Implementar tema claro, escuro e sistema.
 - [x] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
   `.gitignore`, busca regex e demais controles potencialmente ambíguos.

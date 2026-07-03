@@ -22,6 +22,14 @@
     <message><source>Alternar tema</source><translation>Switch theme</translation></message>
     <message><source>Alternar entre tema do sistema, claro e escuro</source><translation>Switch between system, light, and dark theme</translation></message>
     <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
+    <message><source>Remover busca salva</source><translation>Remove saved search</translation></message>
+    <message><source>Salvar busca atual</source><translation>Save current search</translation></message>
+    <message><source>Alternar busca atual na lista de buscas salvas</source><translation>Toggle current search in the saved searches list</translation></message>
+    <message><source>Ctrl+S</source><translation>Ctrl+S</translation></message>
+    <message><source>Executar última busca salva</source><translation>Run latest saved search</translation></message>
+    <message><source>Carregar e executar a busca salva mais recente</source><translation>Load and run the latest saved search</translation></message>
+    <message><source>Executar última busca recente</source><translation>Run latest recent search</translation></message>
+    <message><source>Carregar e executar a busca recente mais nova</source><translation>Load and run the newest recent search</translation></message>
     <message><source>Abrir resultado selecionado</source><translation>Open selected result</translation></message>
     <message><source>Abrir o arquivo do resultado atual</source><translation>Open the file for the current result</translation></message>
     <message><source>Próxima ocorrência</source><translation>Next occurrence</translation></message>
@@ -123,6 +131,12 @@
     <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filter by extensions separated by comma or space, such as txt, cpp, or md. Formats like PDF and DOCX still depend on future extractors for content search.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX, and similar formats are still filtered by name; content search depends on future extractors.</translation></message>
+    <message><source>★ Salva</source><translation>★ Saved</translation></message>
+    <message><source>☆ Salvar</source><translation>☆ Save</translation></message>
+    <message><source>Salvas</source><translation>Saved</translation></message>
+    <message><source>Busca salva: %1</source><translation>Saved search: %1</translation></message>
+    <message><source>Recentes</source><translation>Recent</translation></message>
+    <message><source>Busca recente: %1</source><translation>Recent search: %1</translation></message>
     <message><source>Regex</source><translation>Regex</translation></message>
     <message><source>Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.</source><translation>Interprets the query as a regular expression. Use it when you need patterns; for plain text, leave it off to keep search more direct.</translation></message>
     <message><source>Regex indisponível neste build porque o backend PCRE2 não foi encontrado.</source><translation>Regex is unavailable in this build because the PCRE2 backend was not found.</translation></message>

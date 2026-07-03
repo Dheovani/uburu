@@ -17,9 +17,13 @@ Panel {
     property string searchDuration: "—"
     property bool regexAvailable: true
     property bool hasDocumentContentExtractorGap: hasUnsupportedDocumentContentTypes(documentTypesField.text)
+    property bool hasSearchMemory: recentSearches.length > 0 || savedSearches.length > 0 || queryText.length > 0
     property bool autoSearchEnabled: true
     property int debounceIntervalMs: 450
     property bool pendingAutoSearch: false
+    property var recentSearches: []
+    property var savedSearches: []
+    property bool currentSearchSaved: false
     property alias queryText: searchField.text
     property alias documentTypes: documentTypesField.text
     property alias regexEnabled: regex.checked
@@ -37,9 +41,12 @@ Panel {
                        bool includeSubdirectories,
                        string documentTypes)
     signal cancelSearch()
+    signal selectSearch(string query)
+    signal toggleCurrentSearchSaved()
 
     Layout.fillWidth: true
     Layout.preferredHeight: (compact ? 238 : 198) + (hasDocumentContentExtractorGap ? 30 : 0)
+                            + (hasSearchMemory ? 34 : 0)
     color: Theme.surface
 
     function hasUnsupportedDocumentContentTypes(text) {
@@ -63,6 +70,13 @@ Panel {
     function focusSearch() {
         searchField.forceActiveFocus()
         searchField.selectAll()
+    }
+
+    function shortSearch(text) {
+        if (text.length <= 32)
+            return text
+
+        return text.slice(0, 29) + "..."
     }
 
     function requestDebouncedSearch() {
@@ -179,7 +193,9 @@ Panel {
                     onAccepted: searchButton.clicked()
                     onTextEdited: root.requestDebouncedSearch()
                     Accessible.name: qsTr("Consulta de busca")
-                    Accessible.description: qsTr("Digite o texto ou expressão regular que será pesquisado nos arquivos.")
+                    Accessible.description: qsTr(
+                        "Digite o texto ou expressão regular que será pesquisado nos arquivos."
+                    )
 
                     color: Theme.text
                     placeholderTextColor: Theme.textMuted
@@ -290,6 +306,52 @@ Panel {
 
             RowLayout {
                 Layout.fillWidth: true
+                visible: root.hasSearchMemory
+                spacing: 8
+
+                SecondaryButton {
+                    text: root.currentSearchSaved ? qsTr("★ Salva") : qsTr("☆ Salvar")
+                    enabled: root.queryText.length > 0
+                    onClicked: root.toggleCurrentSearchSaved()
+                }
+
+                MutedLabel {
+                    text: qsTr("Salvas")
+                    visible: root.savedSearches.length > 0
+                }
+
+                Repeater {
+                    model: root.savedSearches.slice(0, 3)
+
+                    delegate: SearchMemoryChip {
+                        text: root.shortSearch(modelData)
+                        accessibleName: qsTr("Busca salva: %1").arg(modelData)
+                        onClicked: root.selectSearch(modelData)
+                    }
+                }
+
+                MutedLabel {
+                    text: qsTr("Recentes")
+                    visible: root.recentSearches.length > 0
+                }
+
+                Repeater {
+                    model: root.recentSearches.slice(0, 3)
+
+                    delegate: SearchMemoryChip {
+                        text: root.shortSearch(modelData)
+                        accessibleName: qsTr("Busca recente: %1").arg(modelData)
+                        onClicked: root.selectSearch(modelData)
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
                 spacing: 8
 
                 FilterChip {
@@ -374,6 +436,48 @@ Panel {
                     value: root.searchDuration
                 }
             }
+        }
+    }
+
+    component SearchMemoryChip: Rectangle {
+        id: searchMemoryChip
+
+        property string text: ""
+        property string accessibleName: text
+
+        signal clicked()
+
+        Layout.preferredHeight: 28
+        Layout.preferredWidth: Math.min(210, chipText.implicitWidth + 20)
+        radius: 14
+        color: chipMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+        border.color: Theme.border
+        border.width: 1
+        Accessible.role: Accessible.Button
+        Accessible.name: accessibleName
+
+        Text {
+            id: chipText
+
+            anchors.centerIn: parent
+            width: parent.width - 18
+            text: searchMemoryChip.text
+            color: Theme.text
+            font.pixelSize: Theme.fontSizeTiny
+            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
+
+        MouseArea {
+            id: chipMouseArea
+
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: searchMemoryChip.clicked()
         }
     }
 }

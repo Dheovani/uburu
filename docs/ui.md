@@ -109,6 +109,17 @@ Atalhos essenciais disponíveis nesta fase:
 A paleta deve evoluir para incluir configurações, diagnósticos, histórico, buscas salvas e navegação
 entre ocorrências, sem mover regras de domínio para QML.
 
+## Histórico e buscas salvas
+
+A tela principal mantém histórico local das últimas consultas executadas e uma lista de buscas salvas
+manualmente pelo usuário. Ambas são persistidas em `Settings` no QML como estado de experiência, não
+como dado do core de busca. A consulta é normalizada por `trim`, movida para o topo ao ser reutilizada
+e limitada a um número pequeno de entradas para evitar crescimento indefinido.
+
+O cabeçalho mostra chips compactos para as buscas salvas e recentes mais importantes. Selecionar um
+chip carrega a consulta e executa a busca quando houver escopo válido. A busca atual pode ser salva ou
+removida por botão no cabeçalho, atalho `Ctrl+S` ou command palette.
+
 ## Cancelamento visual
 
 O cancelamento da busca deve responder imediatamente à ação do usuário. Ao acionar `Esc` ou o botão de

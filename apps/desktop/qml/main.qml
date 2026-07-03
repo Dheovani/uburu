@@ -21,6 +21,9 @@ ApplicationWindow {
     property bool compact: width < 980
     property int resultsPanePreferredWidth: 430
     property int resultsPanePreferredHeight: 260
+    property int maximumStoredSearches: 8
+    property var recentSearches: []
+    property var savedSearches: []
     property var commandPaletteItems: [
         {
             title: qsTr("Focar busca"),
@@ -57,6 +60,26 @@ ApplicationWindow {
             description: qsTr("Alternar entre tema do sistema, claro e escuro"),
             shortcut: qsTr("Ctrl+Alt+T"),
             available: true
+        },
+        {
+            title: root.isSearchSaved(searchHeader.queryText)
+                   ? qsTr("Remover busca salva")
+                   : qsTr("Salvar busca atual"),
+            description: qsTr("Alternar busca atual na lista de buscas salvas"),
+            shortcut: qsTr("Ctrl+S"),
+            available: searchHeader.queryText.length > 0
+        },
+        {
+            title: qsTr("Executar última busca salva"),
+            description: qsTr("Carregar e executar a busca salva mais recente"),
+            shortcut: "",
+            available: root.savedSearches.length > 0
+        },
+        {
+            title: qsTr("Executar última busca recente"),
+            description: qsTr("Carregar e executar a busca recente mais nova"),
+            shortcut: "",
+            available: root.recentSearches.length > 0
         },
         {
             title: qsTr("Abrir resultado selecionado"),
@@ -111,18 +134,27 @@ ApplicationWindow {
             root.cycleThemeMode()
             return
         case 6:
-            resultsPane.openCurrentResult()
+            root.toggleSavedSearch(searchHeader.queryText)
             return
         case 7:
-            resultsPane.selectNextResult()
+            root.useStoredSearch(root.savedSearches[0] || "")
             return
         case 8:
-            resultsPane.selectPreviousResult()
+            root.useStoredSearch(root.recentSearches[0] || "")
             return
         case 9:
-            resultsPane.copyCurrentPath()
+            resultsPane.openCurrentResult()
             return
         case 10:
+            resultsPane.selectNextResult()
+            return
+        case 11:
+            resultsPane.selectPreviousResult()
+            return
+        case 12:
+            resultsPane.copyCurrentPath()
+            return
+        case 13:
             resultsPane.copyCurrentOccurrence()
             return
         default:
@@ -139,6 +171,74 @@ ApplicationWindow {
 
     function normalizeThemeMode(mode) {
         return mode === "system" || mode === "dark" || mode === "light" ? mode : "system"
+    }
+
+    function normalizedSearchText(query) {
+        return query.trim()
+    }
+
+    function parseStoredList(text) {
+        if (!text || text.length === 0)
+            return []
+
+        try {
+            const parsed = JSON.parse(text)
+
+            if (!Array.isArray(parsed))
+                return []
+
+            return parsed.filter(value => typeof value === "string" && value.length > 0)
+        } catch (error) {
+            return []
+        }
+    }
+
+    function withSearchAtFront(searches, query) {
+        const normalizedQuery = normalizedSearchText(query)
+
+        if (normalizedQuery.length === 0)
+            return searches
+
+        const nextSearches = searches.filter(search => search !== normalizedQuery)
+        nextSearches.unshift(normalizedQuery)
+
+        return nextSearches.slice(0, root.maximumStoredSearches)
+    }
+
+    function isSearchSaved(query) {
+        const normalizedQuery = normalizedSearchText(query)
+
+        return normalizedQuery.length > 0 && root.savedSearches.indexOf(normalizedQuery) !== -1
+    }
+
+    function persistSearchMemory() {
+        mainWindowSettings.recentSearches = JSON.stringify(root.recentSearches)
+        mainWindowSettings.savedSearches = JSON.stringify(root.savedSearches)
+    }
+
+    function recordSearch(query) {
+        root.recentSearches = withSearchAtFront(root.recentSearches, query)
+        root.persistSearchMemory()
+    }
+
+    function toggleSavedSearch(query) {
+        const normalizedQuery = normalizedSearchText(query)
+
+        if (normalizedQuery.length === 0)
+            return
+
+        if (root.isSearchSaved(normalizedQuery))
+            root.savedSearches = root.savedSearches.filter(search => search !== normalizedQuery)
+        else
+            root.savedSearches = withSearchAtFront(root.savedSearches, normalizedQuery)
+
+        root.persistSearchMemory()
+    }
+
+    function useStoredSearch(query) {
+        searchHeader.queryText = query
+        searchHeader.focusSearch()
+        searchHeader.runSearch()
     }
 
     FolderDialog {
@@ -172,6 +272,12 @@ ApplicationWindow {
     Shortcut {
         sequence: "Ctrl+Alt+T"
         onActivated: root.cycleThemeMode()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+S"
+        enabled: searchHeader.queryText.length > 0
+        onActivated: root.toggleSavedSearch(searchHeader.queryText)
     }
 
     Shortcut {
@@ -217,8 +323,13 @@ ApplicationWindow {
             timeToFirstResult: searchController.timeToFirstResult
             searchDuration: searchController.searchDuration
             regexAvailable: searchController.regexAvailable
+            recentSearches: root.recentSearches
+            savedSearches: root.savedSearches
+            currentSearchSaved: root.isSearchSaved(queryText)
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
+            onSelectSearch: query => root.useStoredSearch(query)
+            onToggleCurrentSearchSaved: root.toggleSavedSearch(searchHeader.queryText)
             onStartSearch: (
                 query,
                 regex,
@@ -237,6 +348,7 @@ ApplicationWindow {
                     includeSubdirectories,
                     documentTypes
                 )
+                root.recordSearch(query)
             }
         }
 
@@ -318,6 +430,8 @@ ApplicationWindow {
 
         category: "main-window"
         property string themeMode: "system"
+        property string recentSearches: "[]"
+        property string savedSearches: "[]"
         property alias windowX: root.x
         property alias windowY: root.y
         property alias windowWidth: root.width
@@ -334,6 +448,8 @@ ApplicationWindow {
 
     Component.onCompleted: {
         Theme.mode = root.normalizeThemeMode(mainWindowSettings.themeMode)
+        root.recentSearches = root.parseStoredList(mainWindowSettings.recentSearches)
+        root.savedSearches = root.parseStoredList(mainWindowSettings.savedSearches)
     }
 
     Connections {

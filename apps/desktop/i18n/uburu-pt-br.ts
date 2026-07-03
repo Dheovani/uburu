@@ -22,6 +22,14 @@
     <message><source>Alternar tema</source><translation>Alternar tema</translation></message>
     <message><source>Alternar entre tema do sistema, claro e escuro</source><translation>Alternar entre tema do sistema, claro e escuro</translation></message>
     <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
+    <message><source>Remover busca salva</source><translation>Remover busca salva</translation></message>
+    <message><source>Salvar busca atual</source><translation>Salvar busca atual</translation></message>
+    <message><source>Alternar busca atual na lista de buscas salvas</source><translation>Alternar busca atual na lista de buscas salvas</translation></message>
+    <message><source>Ctrl+S</source><translation>Ctrl+S</translation></message>
+    <message><source>Executar última busca salva</source><translation>Executar última busca salva</translation></message>
+    <message><source>Carregar e executar a busca salva mais recente</source><translation>Carregar e executar a busca salva mais recente</translation></message>
+    <message><source>Executar última busca recente</source><translation>Executar última busca recente</translation></message>
+    <message><source>Carregar e executar a busca recente mais nova</source><translation>Carregar e executar a busca recente mais nova</translation></message>
     <message><source>Abrir resultado selecionado</source><translation>Abrir resultado selecionado</translation></message>
     <message><source>Abrir o arquivo do resultado atual</source><translation>Abrir o arquivo do resultado atual</translation></message>
     <message><source>Próxima ocorrência</source><translation>Próxima ocorrência</translation></message>
@@ -123,6 +131,12 @@
     <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</translation></message>
+    <message><source>★ Salva</source><translation>★ Salva</translation></message>
+    <message><source>☆ Salvar</source><translation>☆ Salvar</translation></message>
+    <message><source>Salvas</source><translation>Salvas</translation></message>
+    <message><source>Busca salva: %1</source><translation>Busca salva: %1</translation></message>
+    <message><source>Recentes</source><translation>Recentes</translation></message>
+    <message><source>Busca recente: %1</source><translation>Busca recente: %1</translation></message>
     <message><source>Regex</source><translation>Regex</translation></message>
     <message><source>Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.</source><translation>Interpreta a consulta como expressão regular. Use quando precisar de padrões; para texto simples, deixe desligado para manter a busca mais direta.</translation></message>
     <message><source>Regex indisponível neste build porque o backend PCRE2 não foi encontrado.</source><translation>Regex indisponível neste build porque o backend PCRE2 não foi encontrado.</translation></message>

@@ -50,6 +50,7 @@ namespace uburu::app
     constexpr auto previewHtmlHighlightBackground = "#2f66ff";
     constexpr auto previewHtmlHighlightColor = "#ffffff";
     constexpr auto settingsScopeGroup = "scope";
+    constexpr auto selectedDirectoriesKey = "selectedDirectories";
     constexpr auto recentDirectoriesKey = "recentDirectories";
     constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
 
@@ -529,6 +530,11 @@ namespace uburu::app
     return &resultsModel;
   }
 
+  QStringList SearchController::selectedDirectories() const
+  {
+    return selectedDirectoryValues;
+  }
+
   QStringList SearchController::recentDirectories() const
   {
     return recentDirectoryValues;
@@ -562,6 +568,11 @@ namespace uburu::app
   QString SearchController::searchDuration() const
   {
     return searchDurationValue;
+  }
+
+  QString SearchController::indexingStatus() const
+  {
+    return tr("Indexação inativa");
   }
 
   QString SearchController::previewFilePath() const
@@ -606,6 +617,7 @@ namespace uburu::app
       return;
 
     setDirectory(directory);
+    addSelectedDirectory(directory);
     addRecentDirectory(directory);
     saveScopeHistory();
   }
@@ -613,6 +625,23 @@ namespace uburu::app
   void SearchController::selectSavedDirectory(const QString& path)
   {
     selectDirectory(path);
+  }
+
+  void SearchController::removeSelectedDirectory(const QString& path)
+  {
+    const auto directory = canonicalDirectoryPath(path);
+
+    if (directory.isEmpty())
+      return;
+
+    selectedDirectoryValues.removeAll(directory);
+
+    if (directoryValue == directory)
+      directoryValue = selectedDirectoryValues.empty() ? QString{} : selectedDirectoryValues.front();
+
+    saveScopeHistory();
+    emit directoryChanged();
+    emit scopeHistoryChanged();
   }
 
   void SearchController::toggleCurrentDirectoryFavorite()
@@ -786,7 +815,7 @@ namespace uburu::app
                                      bool includeSubdirectories,
                                      const QString& documentTypes)
   {
-    if (runningValue || directoryValue.isEmpty() || expression.isEmpty())
+    if (runningValue || selectedDirectoryValues.empty() || expression.isEmpty())
       return;
 
     resultsModel.clear();
@@ -797,7 +826,7 @@ namespace uburu::app
     setRunning(true);
     setStatus(tr("Buscando..."));
 
-    SearchQuery query{.root = nativePath(directoryValue),
+    SearchQuery query{.root = nativePath(selectedDirectoryValues.front()),
                       .scope = {},
                       .expression = expression.toUtf8().toStdString(),
                       .options = {}};
@@ -811,6 +840,11 @@ namespace uburu::app
     query.options.target = SearchTarget::contentAndFileName;
     query.options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
     query.options.extensions = parseDocumentTypes(documentTypes);
+
+    query.scope.roots.reserve(static_cast<std::size_t>(selectedDirectoryValues.size()));
+
+    for (const auto& selectedDirectory : selectedDirectoryValues)
+      query.scope.roots.push_back(SearchRoot{.path = nativePath(selectedDirectory)});
 
     const auto token = stopSource.get_token();
     const auto startedAt = std::chrono::steady_clock::now();
@@ -835,39 +869,36 @@ namespace uburu::app
       activeWatcher->deleteLater();
       activeWatcher = nullptr;
     });
-    activeWatcher->setFuture(QtConcurrent::run([this,
-                                                query = std::move(query),
-                                                token,
-                                                startedAt,
-                                                firstResultNanoseconds] {
-      try {
-        auto summary = searchService->search(
-          query,
-          [this, startedAt, firstResultNanoseconds](SearchResult result) {
-            auto expected = missingFirstResultTime;
-            const auto elapsed = std::chrono::steady_clock::now() - startedAt;
-            const auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count();
-            firstResultNanoseconds->compare_exchange_strong(expected, elapsedNanoseconds);
+    activeWatcher->setFuture(QtConcurrent::run(
+      [this, query = std::move(query), token, startedAt, firstResultNanoseconds] {
+        try {
+          auto summary = searchService->search(
+            query,
+            [this, startedAt, firstResultNanoseconds](SearchResult result) {
+              auto expected = missingFirstResultTime;
+              const auto elapsed = std::chrono::steady_clock::now() - startedAt;
+              const auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count();
+              firstResultNanoseconds->compare_exchange_strong(expected, elapsedNanoseconds);
 
-            QMetaObject::invokeMethod(
-              this,
-              [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
-              Qt::QueuedConnection);
-            return true;
-          },
-          token);
+              QMetaObject::invokeMethod(
+                this,
+                [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
+                Qt::QueuedConnection);
+              return true;
+            },
+            token);
 
-        const auto observedFirstResultNanoseconds = firstResultNanoseconds->load();
+          const auto observedFirstResultNanoseconds = firstResultNanoseconds->load();
 
-        if (observedFirstResultNanoseconds != missingFirstResultTime)
-          summary.metrics.timeToFirstResult = std::chrono::nanoseconds(observedFirstResultNanoseconds);
+          if (observedFirstResultNanoseconds != missingFirstResultTime)
+            summary.metrics.timeToFirstResult = std::chrono::nanoseconds(observedFirstResultNanoseconds);
 
-        return summary;
-      } catch (const std::exception& exception) {
-        return failedSearchSummary(QString::fromLocal8Bit(exception.what()));
-      } catch (...) {
-        return failedSearchSummary(QStringLiteral("unknown exception"));
-      }
+          return summary;
+        } catch (const std::exception& exception) {
+          return failedSearchSummary(QString::fromLocal8Bit(exception.what()));
+        } catch (...) {
+          return failedSearchSummary(QStringLiteral("unknown exception"));
+        }
     }));
   }
 
@@ -885,13 +916,24 @@ namespace uburu::app
   {
     QSettings settings;
     settings.beginGroup(QString::fromLatin1(settingsScopeGroup));
+    selectedDirectoryValues = settings.value(QString::fromLatin1(selectedDirectoriesKey)).toStringList();
     recentDirectoryValues = settings.value(QString::fromLatin1(recentDirectoriesKey)).toStringList();
     favoriteDirectoryValues = settings.value(QString::fromLatin1(favoriteDirectoriesKey)).toStringList();
     settings.endGroup();
 
+    selectedDirectoryValues.removeIf([](const QString& directory) {
+      return directory.isEmpty() || !QFileInfo::exists(directory);
+    });
+
+    if (!selectedDirectoryValues.empty()) {
+      directoryValue = selectedDirectoryValues.front();
+      return;
+    }
+
     for (const auto& directory : recentDirectoryValues) {
       if (!directory.isEmpty() && QFileInfo::exists(directory)) {
         directoryValue = directory;
+        selectedDirectoryValues = {directory};
         break;
       }
     }
@@ -901,6 +943,7 @@ namespace uburu::app
   {
     QSettings settings;
     settings.beginGroup(QString::fromLatin1(settingsScopeGroup));
+    settings.setValue(QString::fromLatin1(selectedDirectoriesKey), selectedDirectoryValues);
     settings.setValue(QString::fromLatin1(recentDirectoriesKey), recentDirectoryValues);
     settings.setValue(QString::fromLatin1(favoriteDirectoriesKey), favoriteDirectoryValues);
     settings.endGroup();
@@ -913,6 +956,13 @@ namespace uburu::app
 
     directoryValue = std::move(directory);
     emit directoryChanged();
+    emit scopeHistoryChanged();
+  }
+
+  void SearchController::addSelectedDirectory(const QString& directory)
+  {
+    selectedDirectoryValues.removeAll(directory);
+    selectedDirectoryValues.push_back(directory);
     emit scopeHistoryChanged();
   }
 

@@ -72,6 +72,7 @@ namespace uburu::app
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(bool cancelling READ cancelling NOTIFY cancellingChanged)
     Q_PROPERTY(QAbstractItemModel* results READ results CONSTANT)
+    Q_PROPERTY(QStringList selectedDirectories READ selectedDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(QStringList recentDirectories READ recentDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(QStringList favoriteDirectories READ favoriteDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(bool currentDirectoryFavorite READ currentDirectoryFavorite NOTIFY scopeHistoryChanged)
@@ -79,6 +80,7 @@ namespace uburu::app
     Q_PROPERTY(qulonglong matchesFound READ matchesFound NOTIFY searchMetricsChanged)
     Q_PROPERTY(QString timeToFirstResult READ timeToFirstResult NOTIFY searchMetricsChanged)
     Q_PROPERTY(QString searchDuration READ searchDuration NOTIFY searchMetricsChanged)
+    Q_PROPERTY(QString indexingStatus READ indexingStatus CONSTANT)
     Q_PROPERTY(QString previewFilePath READ previewFilePath NOTIFY previewChanged)
     Q_PROPERTY(QString previewLocation READ previewLocation NOTIFY previewChanged)
     Q_PROPERTY(QString previewText READ previewText NOTIFY previewChanged)
@@ -94,6 +96,7 @@ namespace uburu::app
     [[nodiscard]] bool running() const;
     [[nodiscard]] bool cancelling() const;
     [[nodiscard]] QAbstractItemModel* results();
+    [[nodiscard]] QStringList selectedDirectories() const;
     [[nodiscard]] QStringList recentDirectories() const;
     [[nodiscard]] QStringList favoriteDirectories() const;
     [[nodiscard]] bool currentDirectoryFavorite() const;
@@ -101,6 +104,7 @@ namespace uburu::app
     [[nodiscard]] qulonglong matchesFound() const;
     [[nodiscard]] QString timeToFirstResult() const;
     [[nodiscard]] QString searchDuration() const;
+    [[nodiscard]] QString indexingStatus() const;
     [[nodiscard]] QString previewFilePath() const;
     [[nodiscard]] QString previewLocation() const;
     [[nodiscard]] QString previewText() const;
@@ -110,6 +114,7 @@ namespace uburu::app
 
     Q_INVOKABLE void selectDirectory(const QString& url);
     Q_INVOKABLE void selectSavedDirectory(const QString& path);
+    Q_INVOKABLE void removeSelectedDirectory(const QString& path);
     Q_INVOKABLE void toggleCurrentDirectoryFavorite();
     Q_INVOKABLE void toggleFavoriteDirectory(const QString& path);
     Q_INVOKABLE void openFile(const QString& path);
@@ -146,6 +151,7 @@ namespace uburu::app
     void loadScopeHistory();
     void saveScopeHistory() const;
     void setDirectory(QString directory);
+    void addSelectedDirectory(const QString& directory);
     void addRecentDirectory(const QString& directory);
     void setStatus(QString status);
     void setRunning(bool running);
@@ -156,6 +162,7 @@ namespace uburu::app
     void updateSearchMetrics(const search::SearchSummary& summary);
     QString directoryValue;
     QString statusValue;
+    QStringList selectedDirectoryValues;
     QStringList recentDirectoryValues;
     QStringList favoriteDirectoryValues;
     qulonglong filesScannedValue{0};

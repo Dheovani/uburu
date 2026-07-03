@@ -103,7 +103,8 @@
   <context>
     <name>scope-bar</name>
     <message><source>Escopo</source><translation>Escopo</translation></message>
-    <message><source>Define o diretório ou repositório usado como raiz da busca. Favoritos e recentes ajudam a alternar rapidamente entre escopos frequentes.</source><translation>Define o diretório ou repositório usado como raiz da busca. Favoritos e recentes ajudam a alternar rapidamente entre escopos frequentes.</translation></message>
+    <message><source>Define as pastas usadas na busca. Favoritos e recentes ajudam a alternar escopos.</source><translation>Define as pastas usadas na busca. Favoritos e recentes ajudam a alternar escopos.</translation></message>
+    <message><source>%1 diretórios selecionados</source><translation>%1 diretórios selecionados</translation></message>
     <message><source>Nenhum diretório selecionado</source><translation>Nenhum diretório selecionado</translation></message>
     <message><source>★ Favorito</source><translation>★ Favorito</translation></message>
     <message><source>☆ Favoritar</source><translation>☆ Favoritar</translation></message>
@@ -111,6 +112,10 @@
     <message><source>Adicionar favorito</source><translation>Adicionar favorito</translation></message>
     <message><source>Remover este diretório dos favoritos.</source><translation>Remover este diretório dos favoritos.</translation></message>
     <message><source>Adicionar este diretório aos favoritos.</source><translation>Adicionar este diretório aos favoritos.</translation></message>
+    <message><source>Selecionados</source><translation>Selecionados</translation></message>
+    <message><source>Diretórios selecionados</source><translation>Diretórios selecionados</translation></message>
+    <message><source>Remover diretório selecionado: %1</source><translation>Remover diretório selecionado: %1</translation></message>
+    <message><source>Remover</source><translation>Remover</translation></message>
     <message><source>Favoritos</source><translation>Favoritos</translation></message>
     <message><source>Nenhum favorito</source><translation>Nenhum favorito</translation></message>
     <message><source>Recentes</source><translation>Recentes</translation></message>
@@ -171,10 +176,12 @@
   <context>
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Aguardando comando de busca</translation></message>
+    <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
   </context>
   <context>
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Pronto</translation></message>
+    <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
     <message numerus="yes"><source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source><translation><numerusform>%n ocorrência encontrada em %1 arquivo(s)</numerusform><numerusform>%n ocorrências encontradas em %1 arquivo(s)</numerusform></translation></message>
     <message><source>%1 ignorado(s)</source><translation>%1 ignorado(s)</translation></message>
     <message><source>%1 oculto(s)</source><translation>%1 oculto(s)</translation></message>

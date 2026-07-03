@@ -30,6 +30,17 @@ os filtros visuais cobrem regex, diferenciação de maiúsculas/minúsculas, pal
 documento por extensão. Opções como alvo da busca e limite máximo de tamanho permanecem com defaults
 internos até a futura tela de configurações, evitando controles avançados demais na tela principal.
 
+## Escopos múltiplos
+
+O seletor visual de escopo permite acumular múltiplas raízes de busca. Selecionar uma pasta pelo diálogo,
+favoritos ou recentes adiciona a raiz ao conjunto atual; os chips em `Selecionados` mostram as raízes
+ativas e permitem removê-las sem apagar favoritos ou histórico. O `SearchController` monta um
+`SearchScope` com essas raízes antes de chamar o serviço de busca, preservando `SearchQuery::root` apenas
+como compatibilidade com chamadas de raiz única.
+
+Inclusões e exclusões de subdiretórios por raiz ainda exigem uma UI própria para edição de regras por
+root. Até essa etapa, cada raiz usa os filtros globais visíveis no cabeçalho.
+
 ## Métricas da busca na tela principal
 
 O cabeçalho da busca deve expor métricas operacionais leves para reforçar a percepção de velocidade
@@ -43,6 +54,10 @@ sem transformar a tela em painel de diagnóstico. As métricas visíveis no Marc
 Esses valores são calculados pelo controller a partir do resumo retornado pelo `SearchService`. O QML
 apenas apresenta propriedades observáveis; não deve medir busca, inferir progresso do core nem acessar
 threads de worker diretamente.
+
+O rodapé possui um ponto fixo para estado de indexação. Na integração desktop atual, a busca usa o
+motor direto e o status aparece como indexação inativa; quando o `IndexingService` for conectado à
+janela, esse mesmo ponto deve exibir progresso real sem bloquear a busca direta.
 
 ## Lista de resultados
 

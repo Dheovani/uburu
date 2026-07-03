@@ -244,11 +244,8 @@ Panel {
                 }
             }
 
-            Flow {
-                id: filterFlow
-
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: implicitHeight
                 spacing: 8
                 Layout.alignment: Qt.AlignVCenter
 
@@ -419,8 +416,11 @@ Panel {
                 }
             }
 
-            RowLayout {
+            Flow {
+                id: filterFlow
+
                 Layout.fillWidth: true
+                Layout.preferredHeight: implicitHeight
                 spacing: 8
 
                 FilterChip {

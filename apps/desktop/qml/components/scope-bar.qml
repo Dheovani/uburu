@@ -8,16 +8,19 @@ Rectangle {
     id: root
 
     property string directory: ""
+    property var selectedDirectories: []
     property var recentDirectories: []
     property var favoriteDirectories: []
     property bool currentDirectoryFavorite: false
     property bool hasSavedScopes: recentDirectories.length > 0 || favoriteDirectories.length > 0
+    property bool hasSelectedScopes: selectedDirectories.length > 0
 
     signal selectDirectory(string path)
+    signal removeDirectory(string path)
     signal toggleCurrentFavorite()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: hasSavedScopes ? 108 : 38
+    Layout.preferredHeight: 38 + (hasSelectedScopes ? 34 : 0) + (hasSavedScopes ? 70 : 0)
     radius: Theme.radius
     color: Theme.surface
     border.color: Theme.border
@@ -55,13 +58,17 @@ Rectangle {
             }
 
             InfoIcon {
-                text: qsTr("Define o diretório ou repositório usado como raiz da busca. Favoritos e recentes ajudam a alternar rapidamente entre escopos frequentes.")
+                text: qsTr("Define as pastas usadas na busca. Favoritos e recentes ajudam a alternar escopos.")
             }
 
             Label {
                 Layout.fillWidth: true
-                text: root.directory.length > 0 ? root.directory : qsTr("Nenhum diretório selecionado")
-                color: root.directory.length > 0 ? Theme.text : Theme.textMuted
+                text: root.selectedDirectories.length > 1
+                      ? qsTr("%1 diretórios selecionados").arg(root.selectedDirectories.length)
+                      : root.directory.length > 0
+                        ? root.directory
+                        : qsTr("Nenhum diretório selecionado")
+                color: root.hasSelectedScopes ? Theme.text : Theme.textMuted
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideLeft
             }
@@ -105,6 +112,89 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: root.toggleCurrentFavorite()
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            visible: root.hasSelectedScopes
+            spacing: 12
+
+            Label {
+                text: qsTr("Selecionados")
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSizeTiny
+                font.bold: true
+            }
+
+            Flickable {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 28
+                contentWidth: selectedChipsRow.implicitWidth
+                contentHeight: height
+                clip: true
+                Accessible.role: Accessible.List
+                Accessible.name: qsTr("Diretórios selecionados")
+
+                Row {
+                    id: selectedChipsRow
+
+                    spacing: 6
+                    height: parent.height
+
+                    Repeater {
+                        model: root.selectedDirectories
+
+                        delegate: Rectangle {
+                            height: 26
+                            width: Math.min(
+                                260,
+                                selectedScopeText.implicitWidth + removeSelectedScopeText.implicitWidth + 28
+                            )
+                            radius: 13
+                            color: selectedScopeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                            border.color: modelData === root.directory ? Theme.primary : Theme.border
+                            border.width: 1
+                            Accessible.role: Accessible.Button
+                            Accessible.name: qsTr("Remover diretório selecionado: %1").arg(modelData)
+
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 6
+
+                                Text {
+                                    id: selectedScopeText
+
+                                    width: Math.min(210, implicitWidth)
+                                    text: root.shortPath(modelData)
+                                    color: Theme.text
+                                    font.pixelSize: Theme.fontSizeTiny
+                                    elide: Text.ElideLeft
+                                }
+
+                                Text {
+                                    id: removeSelectedScopeText
+
+                                    text: qsTr("Remover")
+                                    color: Theme.textMuted
+                                    font.pixelSize: Theme.fontSizeTiny
+                                }
+                            }
+
+                            HoverHandler {
+                                cursorShape: Qt.PointingHandCursor
+                            }
+
+                            MouseArea {
+                                id: selectedScopeMouseArea
+
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: root.removeDirectory(modelData)
+                            }
+                        }
+                    }
                 }
             }
         }

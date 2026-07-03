@@ -357,10 +357,12 @@ ApplicationWindow {
 
         ScopeBar {
             directory: searchController.directory
+            selectedDirectories: searchController.selectedDirectories
             recentDirectories: searchController.recentDirectories
             favoriteDirectories: searchController.favoriteDirectories
             currentDirectoryFavorite: searchController.currentDirectoryFavorite
             onSelectDirectory: path => searchController.selectSavedDirectory(path)
+            onRemoveDirectory: path => searchController.removeSelectedDirectory(path)
             onToggleCurrentFavorite: searchController.toggleCurrentDirectoryFavorite()
         }
 
@@ -424,6 +426,7 @@ ApplicationWindow {
 
         StatusLine {
             status: searchController.status
+            indexingStatus: searchController.indexingStatus
             running: searchController.running
             cancelling: searchController.cancelling
         }

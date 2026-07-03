@@ -6,6 +6,7 @@ import "../theme"
 
 Rectangle {
     property string status: ""
+    property string indexingStatus: ""
     property bool running: false
     property bool cancelling: false
 
@@ -34,6 +35,13 @@ Rectangle {
             text: status.length > 0 ? status : qsTr("Aguardando comando de busca")
             color: Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
+            elide: Text.ElideRight
+        }
+
+        Label {
+            text: indexingStatus.length > 0 ? indexingStatus : qsTr("Indexação inativa")
+            color: Theme.textFaint
+            font.pixelSize: Theme.fontSizeTiny
             elide: Text.ElideRight
         }
     }

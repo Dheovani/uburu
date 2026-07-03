@@ -43,6 +43,7 @@ Panel {
     signal cancelSearch()
     signal selectSearch(string query)
     signal toggleCurrentSearchSaved()
+    signal openCommandPalette()
 
     Layout.fillWidth: true
     Layout.preferredHeight: (compact ? 238 : 198) + (hasDocumentContentExtractorGap ? 30 : 0)
@@ -170,10 +171,69 @@ Panel {
                         id: statusText
 
                         anchors.centerIn: parent
-                        text: root.cancelling ? qsTr("Cancelando") : root.running ? qsTr("Buscando") : qsTr("Pronto")
+                        text: root.cancelling
+                              ? qsTr("Cancelando")
+                              : root.running
+                                ? qsTr("Buscando")
+                                : qsTr("Pronto")
                         color: root.cancelling ? Theme.warning : Theme.textMuted
                         font.pixelSize: Theme.fontSizeTiny
                         font.bold: true
+                    }
+                }
+
+                Button {
+                    id: commandPaletteButton
+
+                    Layout.preferredHeight: 28
+                    Layout.preferredWidth: commandPaletteLabel.implicitWidth
+                                           + commandPaletteShortcut.implicitWidth
+                                           + 30
+                    text: qsTr("Comandos")
+                    hoverEnabled: true
+                    Accessible.name: qsTr("Abrir paleta de comandos")
+                    Accessible.description: qsTr("Mostra os comandos disponíveis e seus atalhos.")
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 450
+                    ToolTip.text: qsTr("Abrir paleta de comandos (%1)").arg(qsTr("Ctrl+K"))
+                    onClicked: root.openCommandPalette()
+
+                    HoverHandler {
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    contentItem: Row {
+                        spacing: 8
+
+                        Text {
+                            id: commandPaletteLabel
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: commandPaletteButton.text
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSizeTiny
+                            font.bold: true
+                        }
+
+                        Text {
+                            id: commandPaletteShortcut
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Ctrl+K")
+                            color: Theme.textMuted
+                            font.pixelSize: Theme.fontSizeTiny
+                        }
+                    }
+
+                    background: Rectangle {
+                        radius: 14
+                        color: commandPaletteButton.down
+                               ? Theme.surfaceRaised
+                               : commandPaletteButton.hovered
+                                 ? "#242a38"
+                                 : Theme.surface
+                        border.color: commandPaletteButton.hovered ? Theme.primary : Theme.border
+                        border.width: 1
                     }
                 }
             }

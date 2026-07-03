@@ -118,6 +118,11 @@
   </context>
   <context>
     <name>search-header</name>
+    <message><source>Comandos</source><translation>Commands</translation></message>
+    <message><source>Abrir paleta de comandos</source><translation>Open command palette</translation></message>
+    <message><source>Mostra os comandos disponíveis e seus atalhos.</source><translation>Shows available commands and their shortcuts.</translation></message>
+    <message><source>Abrir paleta de comandos (%1)</source><translation>Open command palette (%1)</translation></message>
+    <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
     <message><source>BUSCA LOCAL</source><translation>LOCAL SEARCH</translation></message>
     <message><source>Uburu</source><translation>Uburu</translation></message>
     <message><source>Cancelando</source><translation>Cancelling</translation></message>

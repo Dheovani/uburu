@@ -324,6 +324,7 @@ ApplicationWindow {
             recentSearches: root.recentSearches
             savedSearches: root.savedSearches
             currentSearchSaved: root.isSearchSaved(queryText)
+            onOpenCommandPalette: commandPalette.openPalette()
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
             onSelectSearch: query => root.useStoredSearch(query)

@@ -93,9 +93,10 @@ absoluto e Ctrl+Shift+C para copiar a ocorrência com localização e trecho.
 
 ## Atalhos e paleta de comandos
 
-A tela principal expõe uma paleta de comandos inicial por `Ctrl+K` ou `Ctrl+Shift+P`. A paleta é um
-componente QML de coordenação: ela lista comandos disponíveis e emite a escolha do usuário, enquanto
-as ações continuam delegadas aos componentes existentes e ao `SearchController`.
+A tela principal expõe uma paleta de comandos inicial por `Ctrl+K`, `Ctrl+Shift+P` e por um botão
+compacto `Comandos` no cabeçalho. A paleta é um componente QML de coordenação: ela lista comandos
+disponíveis e emite a escolha do usuário, enquanto as ações continuam delegadas aos componentes
+existentes e ao `SearchController`.
 
 Atalhos essenciais disponíveis nesta fase:
 

@@ -44,7 +44,14 @@
     <message><source>Paleta de comandos</source><translation>Paleta de comandos</translation></message>
     <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
     <message><source>Digite um comando</source><translation>Digite um comando</translation></message>
+    <message><source>Filtro da paleta de comandos</source><translation>Filtro da paleta de comandos</translation></message>
+    <message><source>Digite para filtrar comandos disponíveis.</source><translation>Digite para filtrar comandos disponíveis.</translation></message>
+    <message><source>Comandos disponíveis</source><translation>Comandos disponíveis</translation></message>
     <message><source>Nenhum comando encontrado</source><translation>Nenhum comando encontrado</translation></message>
+  </context>
+  <context>
+    <name>info-icon</name>
+    <message><source>Informação</source><translation>Informação</translation></message>
   </context>
   <context>
     <name>preview-pane</name>
@@ -53,6 +60,9 @@
     <message><source>Carregando pré-visualização...</source><translation>Carregando pré-visualização...</translation></message>
     <message><source>Selecione um resultado para inspecionar o contexto.</source><translation>Selecione um resultado para inspecionar o contexto.</translation></message>
     <message><source>O conteúdo do arquivo aparecerá aqui</source><translation>O conteúdo do arquivo aparecerá aqui</translation></message>
+    <message><source>Pré-visualização do arquivo</source><translation>Pré-visualização do arquivo</translation></message>
+    <message><source>Conteúdo de %1</source><translation>Conteúdo de %1</translation></message>
+    <message><source>Nenhum resultado selecionado.</source><translation>Nenhum resultado selecionado.</translation></message>
     <message><source>Copiar seleção</source><translation>Copiar seleção</translation></message>
     <message><source>Ctrl+C</source><translation>Ctrl+C</translation></message>
     <message><source>Copiar prévia</source><translation>Copiar prévia</translation></message>
@@ -72,6 +82,9 @@
     <message><source>OCORRÊNCIAS</source><translation>OCORRÊNCIAS</translation></message>
     <message><source>Resultados</source><translation>Resultados</translation></message>
     <message><source>%1</source><translation>%1</translation></message>
+    <message><source>Lista de resultados</source><translation>Lista de resultados</translation></message>
+    <message><source>Resultados encontrados na busca atual.</source><translation>Resultados encontrados na busca atual.</translation></message>
+    <message><source>Ocorrência em %1</source><translation>Ocorrência em %1</translation></message>
     <message><source>Pronto para buscar</source><translation>Pronto para buscar</translation></message>
     <message><source>Escolha uma pasta e digite uma consulta para ver os resultados aqui.</source><translation>Escolha uma pasta e digite uma consulta para ver os resultados aqui.</translation></message>
   </context>
@@ -82,6 +95,8 @@
     <message><source>Nenhum diretório selecionado</source><translation>Nenhum diretório selecionado</translation></message>
     <message><source>★ Favorito</source><translation>★ Favorito</translation></message>
     <message><source>☆ Favoritar</source><translation>☆ Favoritar</translation></message>
+    <message><source>Remover favorito</source><translation>Remover favorito</translation></message>
+    <message><source>Adicionar favorito</source><translation>Adicionar favorito</translation></message>
     <message><source>Remover este diretório dos favoritos.</source><translation>Remover este diretório dos favoritos.</translation></message>
     <message><source>Adicionar este diretório aos favoritos.</source><translation>Adicionar este diretório aos favoritos.</translation></message>
     <message><source>Favoritos</source><translation>Favoritos</translation></message>
@@ -97,10 +112,14 @@
     <message><source>Buscando</source><translation>Buscando</translation></message>
     <message><source>Pronto</source><translation>Pronto</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Pesquisar em arquivos</translation></message>
+    <message><source>Consulta de busca</source><translation>Consulta de busca</translation></message>
+    <message><source>Digite o texto ou expressão regular que será pesquisado nos arquivos.</source><translation>Digite o texto ou expressão regular que será pesquisado nos arquivos.</translation></message>
     <message><source>Pasta</source><translation>Pasta</translation></message>
     <message><source>Buscar</source><translation>Buscar</translation></message>
     <message><source>Cancelar</source><translation>Cancelar</translation></message>
     <message><source>Tipos</source><translation>Tipos</translation></message>
+    <message><source>Tipos de documento</source><translation>Tipos de documento</translation></message>
+    <message><source>Filtre por extensões separadas por vírgula ou espaço.</source><translation>Filtre por extensões separadas por vírgula ou espaço.</translation></message>
     <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</translation></message>

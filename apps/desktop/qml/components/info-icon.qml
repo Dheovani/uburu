@@ -14,6 +14,9 @@ Rectangle {
     color: hoverHandler.hovered ? Theme.surfaceRaised : Theme.surfaceSunken
     border.color: hoverHandler.hovered ? Theme.primary : Theme.border
     border.width: 1
+    Accessible.role: Accessible.StaticText
+    Accessible.name: qsTr("Informação")
+    Accessible.description: root.text
 
     Text {
         anchors.centerIn: parent

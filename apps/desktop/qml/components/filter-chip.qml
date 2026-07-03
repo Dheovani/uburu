@@ -8,6 +8,10 @@ CheckBox {
 
     property string toolTipText: ""
 
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: chip.text
+    Accessible.description: chip.toolTipText
+
     HoverHandler {
         id: hoverHandler
 

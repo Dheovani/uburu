@@ -16,6 +16,8 @@ MenuItem {
     topPadding: 0
     bottomPadding: 0
     font.pixelSize: Theme.fontSizeSmall
+    Accessible.role: Accessible.MenuItem
+    Accessible.name: root.text
 
     contentItem: RowLayout {
         spacing: 18

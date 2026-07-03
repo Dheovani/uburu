@@ -10,6 +10,8 @@ Button {
     leftPadding: 16
     rightPadding: 16
     font.pixelSize: Theme.fontSize
+    Accessible.role: Accessible.Button
+    Accessible.name: control.text
 
     HoverHandler {
         cursorShape: control.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor

@@ -158,6 +158,17 @@ O chip de regex só fica habilitado quando o build expõe suporte a PCRE2 pelo `
 assim, o core continua sendo a autoridade final e valida `SearchQuery` para impedir regex em builds sem
 backend compatível.
 
+## Acessibilidade inicial
+
+Componentes interativos reutilizáveis devem expor nomes acessíveis coerentes com o texto visível e com
+os atalhos documentados. Botões, chips de filtro, menus, campos de entrada, lista de resultados, paleta
+de comandos e pré-visualização possuem `Accessible.name` ou `Accessible.description` localizados para
+reduzir dependência de inferência visual.
+
+Essa base não substitui auditoria manual. O Marco 8 ainda deve validar navegação por teclado completa,
+contraste real nos temas claro/escuro, ordem de foco e comportamento com leitores de tela nas
+plataformas suportadas.
+
 ## Erros parciais de busca
 
 Falhas isoladas de leitura, permissão ou arquivo removido durante a busca não devem interromper a

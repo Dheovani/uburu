@@ -44,7 +44,14 @@
     <message><source>Paleta de comandos</source><translation>Command palette</translation></message>
     <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
     <message><source>Digite um comando</source><translation>Type a command</translation></message>
+    <message><source>Filtro da paleta de comandos</source><translation>Command palette filter</translation></message>
+    <message><source>Digite para filtrar comandos disponíveis.</source><translation>Type to filter available commands.</translation></message>
+    <message><source>Comandos disponíveis</source><translation>Available commands</translation></message>
     <message><source>Nenhum comando encontrado</source><translation>No command found</translation></message>
+  </context>
+  <context>
+    <name>info-icon</name>
+    <message><source>Informação</source><translation>Information</translation></message>
   </context>
   <context>
     <name>preview-pane</name>
@@ -53,6 +60,9 @@
     <message><source>Carregando pré-visualização...</source><translation>Loading preview...</translation></message>
     <message><source>Selecione um resultado para inspecionar o contexto.</source><translation>Select a result to inspect its context.</translation></message>
     <message><source>O conteúdo do arquivo aparecerá aqui</source><translation>File content will appear here</translation></message>
+    <message><source>Pré-visualização do arquivo</source><translation>File preview</translation></message>
+    <message><source>Conteúdo de %1</source><translation>Content of %1</translation></message>
+    <message><source>Nenhum resultado selecionado.</source><translation>No result selected.</translation></message>
     <message><source>Copiar seleção</source><translation>Copy selection</translation></message>
     <message><source>Ctrl+C</source><translation>Ctrl+C</translation></message>
     <message><source>Copiar prévia</source><translation>Copy preview</translation></message>
@@ -72,6 +82,9 @@
     <message><source>OCORRÊNCIAS</source><translation>MATCHES</translation></message>
     <message><source>Resultados</source><translation>Results</translation></message>
     <message><source>%1</source><translation>%1</translation></message>
+    <message><source>Lista de resultados</source><translation>Results list</translation></message>
+    <message><source>Resultados encontrados na busca atual.</source><translation>Results found in the current search.</translation></message>
+    <message><source>Ocorrência em %1</source><translation>Occurrence at %1</translation></message>
     <message><source>Pronto para buscar</source><translation>Ready to search</translation></message>
     <message><source>Escolha uma pasta e digite uma consulta para ver os resultados aqui.</source><translation>Choose a folder and type a query to see results here.</translation></message>
   </context>
@@ -82,6 +95,8 @@
     <message><source>Nenhum diretório selecionado</source><translation>No directory selected</translation></message>
     <message><source>★ Favorito</source><translation>★ Favorite</translation></message>
     <message><source>☆ Favoritar</source><translation>☆ Add favorite</translation></message>
+    <message><source>Remover favorito</source><translation>Remove favorite</translation></message>
+    <message><source>Adicionar favorito</source><translation>Add favorite</translation></message>
     <message><source>Remover este diretório dos favoritos.</source><translation>Remove this directory from favorites.</translation></message>
     <message><source>Adicionar este diretório aos favoritos.</source><translation>Add this directory to favorites.</translation></message>
     <message><source>Favoritos</source><translation>Favorites</translation></message>
@@ -97,10 +112,14 @@
     <message><source>Buscando</source><translation>Searching</translation></message>
     <message><source>Pronto</source><translation>Ready</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Search in files</translation></message>
+    <message><source>Consulta de busca</source><translation>Search query</translation></message>
+    <message><source>Digite o texto ou expressão regular que será pesquisado nos arquivos.</source><translation>Type the text or regular expression to search in files.</translation></message>
     <message><source>Pasta</source><translation>Folder</translation></message>
     <message><source>Buscar</source><translation>Search</translation></message>
     <message><source>Cancelar</source><translation>Cancel</translation></message>
     <message><source>Tipos</source><translation>Types</translation></message>
+    <message><source>Tipos de documento</source><translation>Document types</translation></message>
+    <message><source>Filtre por extensões separadas por vírgula ou espaço.</source><translation>Filter by extensions separated by comma or space.</translation></message>
     <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filter by extensions separated by comma or space, such as txt, cpp, or md. Formats like PDF and DOCX still depend on future extractors for content search.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX, and similar formats are still filtered by name; content search depends on future extractors.</translation></message>

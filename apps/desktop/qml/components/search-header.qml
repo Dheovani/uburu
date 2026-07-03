@@ -178,6 +178,8 @@ Panel {
                     verticalAlignment: TextInput.AlignVCenter
                     onAccepted: searchButton.clicked()
                     onTextEdited: root.requestDebouncedSearch()
+                    Accessible.name: qsTr("Consulta de busca")
+                    Accessible.description: qsTr("Digite o texto ou expressão regular que será pesquisado nos arquivos.")
 
                     color: Theme.text
                     placeholderTextColor: Theme.textMuted
@@ -236,6 +238,8 @@ Panel {
                     placeholderText: qsTr("Ex.: pdf, docx, txt")
                     verticalAlignment: TextInput.AlignVCenter
                     onTextEdited: root.requestDebouncedSearch()
+                    Accessible.name: qsTr("Tipos de documento")
+                    Accessible.description: qsTr("Filtre por extensões separadas por vírgula ou espaço.")
 
                     color: Theme.text
                     placeholderTextColor: Theme.textMuted

@@ -121,6 +121,10 @@ Panel {
                     placeholderText: qsTr("O conteúdo do arquivo aparecerá aqui")
                     text: root.previewHtml.length > 0 ? root.previewHtml : root.preview
                     textFormat: root.previewHtml.length > 0 ? TextEdit.RichText : TextEdit.PlainText
+                    Accessible.name: qsTr("Pré-visualização do arquivo")
+                    Accessible.description: root.filePath.length > 0
+                                            ? qsTr("Conteúdo de %1").arg(root.filePath)
+                                            : qsTr("Nenhum resultado selecionado.")
 
                     color: Theme.previewText
                     placeholderTextColor: Theme.textFaint

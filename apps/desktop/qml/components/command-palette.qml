@@ -123,6 +123,8 @@ Popup {
             Layout.preferredHeight: 42
             placeholderText: qsTr("Digite um comando")
             verticalAlignment: TextInput.AlignVCenter
+            Accessible.name: qsTr("Filtro da paleta de comandos")
+            Accessible.description: qsTr("Digite para filtrar comandos disponíveis.")
             color: Theme.text
             placeholderTextColor: Theme.textMuted
             selectionColor: Theme.primary
@@ -163,6 +165,8 @@ Popup {
             model: root.filteredCommands()
             currentIndex: count > 0 ? 0 : -1
             boundsBehavior: Flickable.StopAtBounds
+            Accessible.role: Accessible.List
+            Accessible.name: qsTr("Comandos disponíveis")
 
             delegate: ItemDelegate {
                 required property int index
@@ -178,6 +182,9 @@ Popup {
                 height: 58
                 highlighted: ListView.isCurrentItem
                 enabled: commandEnabled
+                Accessible.role: Accessible.ListItem
+                Accessible.name: title
+                Accessible.description: description
 
                 onClicked: {
                     commandList.currentIndex = index

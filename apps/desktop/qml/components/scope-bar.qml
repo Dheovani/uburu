@@ -74,6 +74,9 @@ Rectangle {
                 border.color: root.currentDirectoryFavorite ? Theme.warning : Theme.border
                 border.width: 1
                 visible: root.directory.length > 0
+                Accessible.role: Accessible.Button
+                Accessible.name: root.currentDirectoryFavorite ? qsTr("Remover favorito") : qsTr("Adicionar favorito")
+                Accessible.description: root.directory
 
                 Text {
                     id: favoriteLabel
@@ -153,6 +156,8 @@ Rectangle {
             contentWidth: chipsRow.implicitWidth
             contentHeight: height
             clip: true
+            Accessible.role: Accessible.List
+            Accessible.name: savedScopeRow.title
 
             Row {
                 id: chipsRow
@@ -170,6 +175,8 @@ Rectangle {
                         color: scopeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
                         border.color: Theme.border
                         border.width: 1
+                        Accessible.role: Accessible.Button
+                        Accessible.name: modelData
 
                         Text {
                             id: scopeText

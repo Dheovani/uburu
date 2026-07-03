@@ -190,6 +190,9 @@ Panel {
             reuseItems: true
             boundsBehavior: Flickable.StopAtBounds
             focus: true
+            Accessible.role: Accessible.List
+            Accessible.name: qsTr("Lista de resultados")
+            Accessible.description: qsTr("Resultados encontrados na busca atual.")
 
             Keys.onReturnPressed: root.openCurrentResult()
             Keys.onEnterPressed: root.openCurrentResult()
@@ -245,6 +248,9 @@ Panel {
                 width: ListView.view.width
                 height: 64
                 highlighted: ListView.isCurrentItem
+                Accessible.role: Accessible.ListItem
+                Accessible.name: filePath
+                Accessible.description: qsTr("Ocorrência em %1").arg(location)
 
                 onClicked: {
                     resultList.currentIndex = index

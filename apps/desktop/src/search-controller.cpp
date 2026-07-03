@@ -287,6 +287,50 @@ namespace uburu::app
                           .headOid = repository->headOid};
     }
 
+    WorktreeInfo filesystemWorktreeForRoot(const std::filesystem::path& root)
+    {
+      const auto normalizedRoot = normalizedAbsolutePath(root);
+      const auto rootId = "filesystem:" + pathToUtf8(normalizedRoot);
+
+      return WorktreeInfo{.id = rootId,
+                          .repositoryId = rootId,
+                          .root = normalizedRoot,
+                          .gitDirectory = normalizedRoot / ".git",
+                          .headOid = "filesystem"};
+    }
+
+    RepositoryInfo repositoryForWorktree(const WorktreeInfo& worktree)
+    {
+      return RepositoryInfo{.id = worktree.repositoryId,
+                            .commonGitDirectory = worktree.gitDirectory,
+                            .worktreeRoot = worktree.root,
+                            .currentBranch = worktree.branch,
+                            .headOid = worktree.headOid};
+    }
+
+    std::vector<FileEntry> scanFilesForIndex(const filesystem::FileScanner& scanner,
+                                             const std::filesystem::path& root,
+                                             const SearchOptions& options,
+                                             std::stop_token stopToken)
+    {
+      std::vector<FileEntry> files;
+
+      scanner.scan(
+        root,
+        options,
+        [&](FileEntry file) {
+          if (stopToken.stop_requested())
+            return false;
+
+          files.push_back(std::move(file));
+
+          return true;
+        },
+        stopToken);
+
+      return files;
+    }
+
     void addIndexSummary(index::IndexUpdateSummary& target, const index::IndexUpdateSummary& source)
     {
       target.indexed += source.indexed;
@@ -1357,16 +1401,40 @@ namespace uburu::app
           auto worktree = worktreeForRoot(*gitService, nativeRoot);
 
           if (!worktree) {
-            ++totalSummary.failed;
             QMetaObject::invokeMethod(
               this,
-              [this, root] { setIndexingProgress(tr("Indexação ignorou raiz sem repositório Git: %1").arg(root), 0); },
+              [this, root] { setIndexingProgress(tr("Indexando diretório sem Git: %1").arg(root), 0); },
               Qt::QueuedConnection);
+
+            auto filesystemWorktree = filesystemWorktreeForRoot(nativeRoot);
+            storageService->upsertRepository(repositoryForWorktree(filesystemWorktree));
+            storageService->upsertWorktree(filesystemWorktree);
+
+            auto files = scanFilesForIndex(*scanner, filesystemWorktree.root, options, token);
+
+            if (token.stop_requested()) {
+              totalSummary.cancelled = true;
+              break;
+            }
+
+            auto summary = indexService->update(
+              filesystemWorktree,
+              files,
+              [this](const index::IndexUpdateProgress& progress) {
+                QMetaObject::invokeMethod(
+                  this, [this, progress] { updateIndexingProgress(progress); }, Qt::QueuedConnection);
+              },
+              token);
+
+            addIndexSummary(totalSummary, summary);
             continue;
           }
 
           QMetaObject::invokeMethod(
             this, [this, root] { setIndexingProgress(tr("Indexando %1").arg(root), 0); }, Qt::QueuedConnection);
+
+          storageService->upsertRepository(repositoryForWorktree(*worktree));
+          storageService->upsertWorktree(*worktree);
 
           auto summary = indexingService.requestManualReindex(
             *worktree,

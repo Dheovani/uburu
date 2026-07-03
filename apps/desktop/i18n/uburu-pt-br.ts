@@ -215,7 +215,7 @@
     <message><source>Preparando indexação...</source><translation>Preparando indexação...</translation></message>
     <message><source>Indexação cancelada</source><translation>Indexação cancelada</translation></message>
     <message><source>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)</source><translation>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)</translation></message>
-    <message><source>Indexação ignorou raiz sem repositório Git: %1</source><translation>Indexação ignorou raiz sem repositório Git: %1</translation></message>
+    <message><source>Indexando diretório sem Git: %1</source><translation>Indexando diretório sem Git: %1</translation></message>
     <message><source>Indexando %1</source><translation>Indexando %1</translation></message>
     <message><source>Cancelando indexação...</source><translation>Cancelando indexação...</translation></message>
     <message><source>Indexando %1/%2</source><translation>Indexando %1/%2</translation></message>

@@ -199,12 +199,13 @@ recebe progresso real do `IndexingService`, acionado pela command palette com `R
 (`Ctrl+Alt+I`) e cancelável com `Cancelar indexação` (`Ctrl+Alt+Esc`).
 
 A reindexação roda fora da thread gráfica. O `SearchController` cria o serviço de indexação em worker,
-descobre a worktree Git de cada raiz selecionada, executa `requestManualReindex()` e encaminha eventos
-de `IndexUpdateProgress` por queued connection. A UI mostra status textual, barra compacta de progresso
-e resumo final com documentos indexados, reutilizados, removidos e falhas.
+descobre a worktree Git de cada raiz selecionada quando existir, executa `requestManualReindex()` e
+encaminha eventos de `IndexUpdateProgress` por queued connection. A UI mostra status textual, barra
+compacta de progresso e resumo final com documentos indexados, reutilizados, removidos e falhas.
 
-Raízes que ainda não são repositórios Git são reportadas como falhas parciais de indexação, sem impedir
-que as demais raízes sejam processadas e sem afetar a busca direta.
+Raízes que ainda não são repositórios Git são indexadas como diretórios comuns, com identidade sintética
+baseada no caminho normalizado e sem overlay Git. Isso preserva suporte a diretórios avulsos sem diluir
+o tratamento Git-aware para repositórios reais.
 
 ## Ajuda contextual
 

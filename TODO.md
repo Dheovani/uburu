@@ -270,7 +270,7 @@ e UI para avançarem mais rapidamente.
 ## Marco 9 — Testes e qualidade contínua (P0/P1)
 
 - [x] Criar helpers RAII para diretórios e arquivos temporários nos testes.
-- [ ] Remover nomes temporários fixos que possam colidir em execução paralela.
+- [x] Remover nomes temporários fixos que possam colidir em execução paralela.
 - [ ] Criar fixtures pequenas de texto, encoding, ignore e Git.
 - [ ] Adicionar testes unitários para cada regra pura de matching e filtro.
 - [x] Adicionar testes de integração de scanner em filesystem real temporário.

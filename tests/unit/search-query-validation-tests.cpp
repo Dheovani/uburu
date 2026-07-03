@@ -1,10 +1,10 @@
 #include "core/search/search-query-validation.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 #include <system_error>
 #include <vector>
 
@@ -51,7 +51,7 @@ TEST_CASE("search query validation reports empty root and expression")
 
 TEST_CASE("search query validation reports a missing root")
 {
-  const auto missingRoot = std::filesystem::temp_directory_path() / "uburu-validation-missing-root";
+  const auto missingRoot = uburu::tests::uniqueTemporaryPath("uburu-validation-missing-root");
   std::error_code error;
   std::filesystem::remove_all(missingRoot, error);
   const uburu::SearchQuery query{.root = missingRoot, .scope = {}, .expression = "needle", .options = {}};
@@ -64,17 +64,12 @@ TEST_CASE("search query validation reports a missing root")
 
 TEST_CASE("search query validation reports a root that is not a directory")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-validation-file-root.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "fixture";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  uburu::tests::TemporaryFile file("uburu-validation-file-root.txt");
+  uburu::tests::writeFile(file.path(), "fixture");
 
-  const uburu::SearchQuery query{.root = path, .scope = {}, .expression = "needle", .options = {}};
+  const uburu::SearchQuery query{.root = file.path(), .scope = {}, .expression = "needle", .options = {}};
 
   const auto errors = uburu::search::validateSearchQuery(query);
-  cleanup();
 
   REQUIRE(errors.size() == 1);
   CHECK(errors.front().code == uburu::search::SearchErrorCode::rootNotDirectory);

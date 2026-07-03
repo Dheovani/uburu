@@ -1,4 +1,5 @@
 #include "app/services/indexing-service.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -15,7 +16,7 @@ namespace
 
   [[nodiscard]] uburu::WorktreeInfo worktreeInfo()
   {
-    const auto root = std::filesystem::temp_directory_path() / "uburu-indexing-service-test";
+    const auto root = uburu::tests::uniqueTemporaryPath("uburu-indexing-service-test");
 
     return uburu::WorktreeInfo{.id = "worktree-id",
                                .repositoryId = "repository-id",

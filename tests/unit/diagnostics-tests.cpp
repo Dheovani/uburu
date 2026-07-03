@@ -3,6 +3,7 @@
 #include "core/diagnostics/search-tracing.hpp"
 #include "core/diagnostics/structured-logger.hpp"
 #include "core/diagnostics/structured-metrics-sink.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -81,14 +82,11 @@ TEST_CASE("structured logger filters entries by minimum level and category")
 
 TEST_CASE("file structured logger writes sanitized json lines")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-file-structured-logger-test.log";
-  std::error_code error;
-
-  std::filesystem::remove(path, error);
+  uburu::tests::TemporaryFile file("uburu-file-structured-logger-test.log");
 
   uburu::diagnostics::FileStructuredLogger logger(
     uburu::diagnostics::FileStructuredLogOptions{.structuredOptions = {},
-                                                 .path = path,
+                                                 .path = file.path(),
                                                  .maximumFileSizeBytes = 1024,
                                                  .maximumRotatedFiles = 3});
 
@@ -99,7 +97,7 @@ TEST_CASE("file structured logger writes sanitized json lines")
     .fields = {uburu::diagnostics::LogField{.key = "path", .value = "C:/private/file.cpp", .sensitive = true}},
     .timestamp = std::chrono::system_clock::time_point{std::chrono::milliseconds{42}}});
 
-  std::ifstream stream(path, std::ios::binary);
+  std::ifstream stream(file.path(), std::ios::binary);
   std::string line;
 
   std::getline(stream, line);
@@ -108,18 +106,13 @@ TEST_CASE("file structured logger writes sanitized json lines")
   CHECK(line.find("\"category\":\"<diagnostics>\"") != std::string::npos);
   CHECK(line.find("hello \\\"logger\\\"") != std::string::npos);
   CHECK(line.find("<redacted>") != std::string::npos);
-
-  std::filesystem::remove(path, error);
 }
 
 TEST_CASE("file structured logger rotates files when size limit is reached")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-file-structured-logger-rotation-test.log";
+  uburu::tests::TemporaryFile file("uburu-file-structured-logger-rotation-test.log");
+  const auto& path = file.path();
   const auto rotated = std::filesystem::path(path.string() + ".1");
-  std::error_code error;
-
-  std::filesystem::remove(path, error);
-  std::filesystem::remove(rotated, error);
 
   uburu::diagnostics::FileStructuredLogger logger(
     uburu::diagnostics::FileStructuredLogOptions{.structuredOptions = {},
@@ -141,7 +134,7 @@ TEST_CASE("file structured logger rotates files when size limit is reached")
   CHECK(std::filesystem::exists(path));
   CHECK(std::filesystem::exists(rotated));
 
-  std::filesystem::remove(path, error);
+  std::error_code error;
   std::filesystem::remove(rotated, error);
 }
 
@@ -224,25 +217,20 @@ TEST_CASE("diagnostic report exports sanitized logs metrics and traces")
 
 TEST_CASE("diagnostic report can be exported to a file")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-diagnostic-report-test.json";
-  std::error_code error;
-
-  std::filesystem::remove(path, error);
+  uburu::tests::TemporaryFile file("uburu-diagnostic-report-test.json");
 
   uburu::diagnostics::DiagnosticReport report;
   report.productName = "Uburu Test";
   report.generatedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{42}};
 
-  uburu::diagnostics::exportDiagnosticReport(report, path);
+  uburu::diagnostics::exportDiagnosticReport(report, file.path());
 
-  std::ifstream stream(path, std::ios::binary);
+  std::ifstream stream(file.path(), std::ios::binary);
   std::string content;
 
   std::getline(stream, content);
 
   CHECK(content.find("Uburu Test") != std::string::npos);
-
-  std::filesystem::remove(path, error);
 }
 
 TEST_CASE("structured metrics sink records search metrics as structured log fields")

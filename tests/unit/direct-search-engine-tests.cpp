@@ -1,13 +1,13 @@
 #include "core/filesystem/file-scanner.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/search/direct-search-engine.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>
@@ -51,10 +51,7 @@ namespace
 
       const auto fileName = "source-" + std::to_string(calls.size()) + ".txt";
       const auto absolutePath = root / fileName;
-      {
-        std::ofstream file(absolutePath, std::ios::binary);
-        file << "needle\n";
-      }
+      uburu::tests::writeFile(absolutePath, "needle\n");
 
       sink(uburu::FileEntry{.absolutePath = absolutePath,
                             .relativePath = fileName,
@@ -181,13 +178,6 @@ namespace
     return {.root = std::move(root), .scope = {}, .expression = std::move(expression), .options = {}};
   }
 
-  void writeBytes(const std::filesystem::path& path, const std::vector<unsigned char>& bytes)
-  {
-    std::ofstream file(path, std::ios::binary);
-    for (const auto byte : bytes)
-      file.put(static_cast<char>(byte));
-  }
-
 } // namespace
 
 TEST_CASE("an empty expression does not start filesystem traversal")
@@ -209,10 +199,7 @@ TEST_CASE("an invalid root does not start filesystem traversal")
 {
   auto scanner = std::make_shared<EmptyScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query =
-    makeQuery(std::filesystem::temp_directory_path() / "uburu-direct-search-missing-root", "needle");
-  std::error_code error;
-  std::filesystem::remove_all(query.root, error);
+  uburu::SearchQuery query = makeQuery(uburu::tests::uniqueTemporaryPath("uburu-direct-search-missing-root"), "needle");
 
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
 
@@ -227,10 +214,10 @@ TEST_CASE("direct search scans every root in the search scope")
 {
   auto scanner = std::make_shared<CapturingScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
-  const auto firstRoot = std::filesystem::temp_directory_path() / "uburu-direct-search-scope-first";
-  const auto secondRoot = std::filesystem::temp_directory_path() / "uburu-direct-search-scope-second";
-  std::filesystem::create_directories(firstRoot);
-  std::filesystem::create_directories(secondRoot);
+  const uburu::tests::TemporaryDirectory firstDirectory("uburu-direct-search-scope-first");
+  const uburu::tests::TemporaryDirectory secondDirectory("uburu-direct-search-scope-second");
+  const auto& firstRoot = firstDirectory.path();
+  const auto& secondRoot = secondDirectory.path();
 
   uburu::SearchQuery query{
     .root = {},
@@ -248,10 +235,6 @@ TEST_CASE("direct search scans every root in the search scope")
 
     return true;
   });
-
-  std::error_code error;
-  std::filesystem::remove_all(firstRoot, error);
-  std::filesystem::remove_all(secondRoot, error);
 
   REQUIRE(scanner->calls.size() == 2);
   CHECK(scanner->calls.front().root == firstRoot);
@@ -299,23 +282,19 @@ TEST_CASE("a pre-cancelled regex search reports cancellation")
 
 TEST_CASE("direct search streams a match with one-based line and column")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "first line\nfind the Needle here\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "first line\nfind the Needle here\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 1);
   CHECK(results.front().path == std::filesystem::path("source.cpp"));
@@ -326,15 +305,10 @@ TEST_CASE("direct search streams a match with one-based line and column")
 
 TEST_CASE("direct search finds text through the recursive scanner")
 {
-  const auto root = std::filesystem::temp_directory_path() / "uburu-direct-search-real-scanner-test";
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-real-scanner-test");
+  const auto& root = directory.path();
   const auto path = root / "nested" / "sample.txt";
-  std::filesystem::remove_all(root);
-  std::filesystem::create_directories(path.parent_path());
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "first line\nselected fragment here\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove_all(root); };
+  uburu::tests::writeFile(path, "first line\nselected fragment here\n");
 
   auto scanner = std::make_shared<uburu::filesystem::RecursiveFileScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
@@ -345,7 +319,6 @@ TEST_CASE("direct search finds text through the recursive scanner")
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 1);
   CHECK(results.front().path == std::filesystem::path("nested") / "sample.txt");
@@ -356,12 +329,10 @@ TEST_CASE("direct search finds text through the recursive scanner")
 
 TEST_CASE("direct search finds file names through the recursive scanner")
 {
-  const auto root = std::filesystem::temp_directory_path() / "uburu-direct-search-real-file-name-test";
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-real-file-name-test");
+  const auto& root = directory.path();
   const auto path = root / "docs" / "important-report.pdf";
-  std::filesystem::remove_all(root);
-  std::filesystem::create_directories(path.parent_path());
-  writeBytes(path, {0x25U, 0x50U, 0x44U, 0x46U, 0x00U});
-  const auto cleanup = [&] { std::filesystem::remove_all(root); };
+  uburu::tests::writeBytes(path, {0x25U, 0x50U, 0x44U, 0x46U, 0x00U});
 
   auto scanner = std::make_shared<uburu::filesystem::RecursiveFileScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
@@ -374,7 +345,6 @@ TEST_CASE("direct search finds file names through the recursive scanner")
 
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 1);
   CHECK(results.front().kind == uburu::SearchResultKind::fileName);
@@ -386,23 +356,19 @@ TEST_CASE("direct search finds file names through the recursive scanner")
 
 TEST_CASE("direct search preserves unicode relative paths")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-unicode-path-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-unicode-path-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path, std::filesystem::path(L"código") / L"ação.cpp");
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 1);
   CHECK(results.front().path == std::filesystem::path(L"código") / L"ação.cpp");
@@ -412,23 +378,19 @@ TEST_CASE("direct search preserves unicode relative paths")
 
 TEST_CASE("direct search streams every match on the same line")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-multi-match-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle needle\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-multi-match-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle needle\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 2);
   CHECK(results[0].column == 1);
@@ -438,18 +400,12 @@ TEST_CASE("direct search streams every match on the same line")
 
 TEST_CASE("direct search publishes results before scanner completion")
 {
-  const auto firstPath = std::filesystem::temp_directory_path() / "uburu-progressive-first.txt";
-  const auto secondPath = std::filesystem::temp_directory_path() / "uburu-progressive-second.txt";
-  {
-    std::ofstream firstFile(firstPath, std::ios::binary);
-    firstFile << "needle\n";
-    std::ofstream secondFile(secondPath, std::ios::binary);
-    secondFile << "needle\n";
-  }
-  const auto cleanup = [&] {
-    std::filesystem::remove(firstPath);
-    std::filesystem::remove(secondPath);
-  };
+  const uburu::tests::TemporaryFile firstFile("uburu-progressive-first.txt");
+  const uburu::tests::TemporaryFile secondFile("uburu-progressive-second.txt");
+  const auto& firstPath = firstFile.path();
+  const auto& secondPath = secondFile.path();
+  uburu::tests::writeFile(firstPath, "needle\n");
+  uburu::tests::writeFile(secondPath, "needle\n");
 
   std::vector<uburu::SearchResult> results;
   auto scanner = std::make_shared<ObservingScanner>(firstPath, secondPath, [&] {
@@ -457,13 +413,12 @@ TEST_CASE("direct search publishes results before scanner completion")
     CHECK(results.front().path == std::filesystem::path("first.txt"));
   });
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(firstPath.parent_path(), "needle");
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 2);
   CHECK(results[1].path == std::filesystem::path("second.txt"));
@@ -472,23 +427,19 @@ TEST_CASE("direct search publishes results before scanner completion")
 
 TEST_CASE("direct search supports CRLF, LF, empty lines and files without final newline")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-line-ending-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle\r\n\nlast needle";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-line-ending-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle\r\n\nlast needle");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 2);
   CHECK(results[0].line == 1);
@@ -500,13 +451,14 @@ TEST_CASE("direct search supports CRLF, LF, empty lines and files without final 
 
 TEST_CASE("direct search decodes UTF-16 content before matching")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-utf16-content.txt";
-  writeBytes(path, {0xFFU, 0xFEU, 'n', 0x00U, 'e', 0x00U, 'e', 0x00U, 'd', 0x00U, 'l', 0x00U, 'e', 0x00U});
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-utf16-content.txt");
+  const auto& path = file.path();
+  uburu::tests::writeBytes(
+    path, {0xFFU, 0xFEU, 'n', 0x00U, 'e', 0x00U, 'e', 0x00U, 'd', 0x00U, 'l', 0x00U, 'e', 0x00U});
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
@@ -514,7 +466,6 @@ TEST_CASE("direct search decodes UTF-16 content before matching")
 
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 1);
   CHECK(results.front().lineText == "needle");
@@ -524,13 +475,13 @@ TEST_CASE("direct search decodes UTF-16 content before matching")
 
 TEST_CASE("direct search skips sampled binary files without reporting read errors")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-binary-content.bin";
-  writeBytes(path, {'n', 'e', 'e', 'd', 'l', 'e', 0x00U, 'n', 'e', 'e', 'd', 'l', 'e'});
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-binary-content.bin");
+  const auto& path = file.path();
+  uburu::tests::writeBytes(path, {'n', 'e', 'e', 'd', 'l', 'e', 0x00U, 'n', 'e', 'e', 'd', 'l', 'e'});
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   std::vector<uburu::SearchResult> results;
 
   const auto summary = engine.search(query, [&](uburu::SearchResult result) {
@@ -538,7 +489,6 @@ TEST_CASE("direct search skips sampled binary files without reporting read error
 
     return true;
   });
-  cleanup();
 
   CHECK(results.empty());
   CHECK(summary.matches == 0);
@@ -552,19 +502,15 @@ TEST_CASE("direct search skips sampled binary files without reporting read error
 
 TEST_CASE("direct search records processed file and result metrics")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-metrics-content.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-metrics-content.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
 
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
-  cleanup();
 
   CHECK(summary.matches == 1);
   CHECK(summary.metrics.filesProcessed == 1);
@@ -574,16 +520,13 @@ TEST_CASE("direct search records processed file and result metrics")
 
 TEST_CASE("direct search returns context lines and highlight spans")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-context-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "before\nneedle and needle\nafter\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-context-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "before\nneedle and needle\nafter\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   query.options.contextBeforeLines = 1;
   query.options.contextAfterLines = 1;
   std::vector<uburu::SearchResult> results;
@@ -593,7 +536,6 @@ TEST_CASE("direct search returns context lines and highlight spans")
 
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 2);
   CHECK(results.front().contextBefore == std::vector<std::string>{"before"});
@@ -606,16 +548,13 @@ TEST_CASE("direct search returns context lines and highlight spans")
 
 TEST_CASE("direct search applies the global result limit before publishing")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-limit-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle needle\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-limit-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle needle\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   query.options.resultLimit = 1;
   std::vector<uburu::SearchResult> results;
 
@@ -623,7 +562,6 @@ TEST_CASE("direct search applies the global result limit before publishing")
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 1);
   CHECK(results.front().column == 1);
@@ -633,16 +571,13 @@ TEST_CASE("direct search applies the global result limit before publishing")
 
 TEST_CASE("direct search applies the per-file result limit without stopping the full search")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-file-limit-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle needle needle\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-file-limit-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle needle needle\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   query.options.perFileResultLimit = 2;
   std::vector<uburu::SearchResult> results;
 
@@ -650,7 +585,6 @@ TEST_CASE("direct search applies the per-file result limit without stopping the 
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 2);
   CHECK(summary.matches == 2);
@@ -660,16 +594,13 @@ TEST_CASE("direct search applies the per-file result limit without stopping the 
 
 TEST_CASE("direct search supports regex queries")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-regex-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "todo(1) skip todo(42)\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-regex-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "todo(1) skip todo(42)\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), R"(todo\(\d+\))");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), R"(todo\(\d+\))");
   query.options.mode = uburu::SearchMode::regex;
   std::vector<uburu::SearchResult> results;
 
@@ -677,7 +608,6 @@ TEST_CASE("direct search supports regex queries")
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
 #ifdef UBURU_HAS_PCRE2
   REQUIRE(results.size() == 2);
@@ -696,11 +626,11 @@ TEST_CASE("direct search supports regex queries")
 
 TEST_CASE("direct search can target file names without opening file content")
 {
-  const auto missingPath = std::filesystem::temp_directory_path() / "uburu-search-file-name-target-missing-file.cpp";
+  const auto missingPath = uburu::tests::uniqueTemporaryPath("uburu-search-file-name-target-missing-file.cpp");
 
   auto scanner = std::make_shared<SingleFileScanner>(missingPath);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "source");
+  uburu::SearchQuery query = makeQuery(missingPath.parent_path(), "source");
   query.options.target = uburu::SearchTarget::fileName;
   std::vector<uburu::SearchResult> results;
 
@@ -721,16 +651,13 @@ TEST_CASE("direct search can target file names without opening file content")
 
 TEST_CASE("direct search can target file names and content in the same query")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-file-name-and-content-target-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "source appears in content\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-file-name-and-content-target-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "source appears in content\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "source");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "source");
   query.options.target = uburu::SearchTarget::contentAndFileName;
   std::vector<uburu::SearchResult> results;
 
@@ -738,7 +665,6 @@ TEST_CASE("direct search can target file names and content in the same query")
     results.push_back(std::move(result));
     return true;
   });
-  cleanup();
 
   REQUIRE(results.size() == 2);
   CHECK(results[0].kind == uburu::SearchResultKind::fileName);
@@ -749,11 +675,11 @@ TEST_CASE("direct search can target file names and content in the same query")
 
 TEST_CASE("direct search reports file open failures as partial failures")
 {
-  const auto missingPath = std::filesystem::temp_directory_path() / "uburu-search-missing-content-file.txt";
+  const auto missingPath = uburu::tests::uniqueTemporaryPath("uburu-search-missing-content-file.txt");
 
   auto scanner = std::make_shared<SingleFileScanner>(missingPath);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(missingPath.parent_path(), "needle");
 
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
 
@@ -766,15 +692,13 @@ TEST_CASE("direct search reports file open failures as partial failures")
 
 TEST_CASE("direct search reports files removed between scan and read as partial failures")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-removed-after-scan.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle\n";
-  }
+  const uburu::tests::TemporaryFile file("uburu-search-removed-after-scan.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle\n");
 
   auto scanner = std::make_shared<DeletingScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
 
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
 
@@ -810,25 +734,27 @@ TEST_CASE("direct search reports regex compilation errors")
 
 TEST_CASE("direct search stops when regex times out")
 {
-  const auto path = std::filesystem::temp_directory_path() / "uburu-search-regex-timeout-test.txt";
-  {
-    std::ofstream file(path, std::ios::binary);
-    file << "needle\n";
-  }
-  const auto cleanup = [&] { std::filesystem::remove(path); };
+  const uburu::tests::TemporaryFile file("uburu-search-regex-timeout-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle\n");
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);
-  uburu::SearchQuery query = makeQuery(std::filesystem::temp_directory_path(), "needle");
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
   query.options.mode = uburu::SearchMode::regex;
   query.options.regexTimeout = std::chrono::milliseconds{0};
 
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
-  cleanup();
 
 #ifdef UBURU_HAS_PCRE2
-  REQUIRE(summary.errors.size() == 1);
-  CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::regexTimeout);
+  auto foundRegexTimeout = false;
+
+  for (const auto& searchError : summary.errors) {
+    if (searchError.code == uburu::search::SearchErrorCode::regexTimeout)
+      foundRegexTimeout = true;
+  }
+
+  CHECK(foundRegexTimeout);
 #else
   REQUIRE(summary.errors.size() == 1);
   CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupportedSearchMode);

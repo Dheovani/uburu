@@ -9,18 +9,26 @@ Rectangle {
 
     property string directory: ""
     property var selectedDirectories: []
+    property var includedDirectories: []
+    property var excludedDirectories: []
     property var recentDirectories: []
     property var favoriteDirectories: []
     property bool currentDirectoryFavorite: false
     property bool hasSavedScopes: recentDirectories.length > 0 || favoriteDirectories.length > 0
     property bool hasSelectedScopes: selectedDirectories.length > 0
+    property bool hasIncludedScopes: includedDirectories.length > 0
+    property bool hasExcludedScopes: excludedDirectories.length > 0
 
     signal selectDirectory(string path)
     signal removeDirectory(string path)
+    signal addIncludedDirectory()
+    signal removeIncludedDirectory(string root, string relativePath)
+    signal addExcludedDirectory()
+    signal removeExcludedDirectory(string root, string relativePath)
     signal toggleCurrentFavorite()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 38 + (hasSelectedScopes ? 34 : 0) + (hasSavedScopes ? 70 : 0)
+    Layout.preferredHeight: 38 + (hasSelectedScopes ? 68 : 0) + (hasSavedScopes ? 70 : 0)
     radius: Theme.radius
     color: Theme.surface
     border.color: Theme.border
@@ -36,6 +44,23 @@ Rectangle {
             return path
 
         return parts[0] + "/…/" + parts[parts.length - 1]
+    }
+
+    function scopeEntryRoot(entry) {
+        return entry && entry.scopeRoot ? entry.scopeRoot : ""
+    }
+
+    function scopeEntryRelativePath(entry) {
+        return entry && entry.relativePath ? entry.relativePath : ""
+    }
+
+    function scopeEntryDisplayPath(entry) {
+        const absolutePath = entry && entry.absolutePath ? entry.absolutePath : ""
+
+        if (absolutePath.length > 0)
+            return absolutePath
+
+        return root.scopeEntryRelativePath(entry)
     }
 
     ColumnLayout {
@@ -112,6 +137,84 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: root.toggleCurrentFavorite()
+                }
+            }
+
+            Rectangle {
+                Layout.preferredHeight: 24
+                Layout.preferredWidth: includeLabel.implicitWidth + 20
+                radius: 12
+                color: includeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                border.color: Theme.border
+                border.width: 1
+                visible: root.hasSelectedScopes
+                Accessible.role: Accessible.Button
+                Accessible.name: qsTr("Incluir subpasta")
+
+                Text {
+                    id: includeLabel
+
+                    anchors.centerIn: parent
+                    text: qsTr("Incluir")
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeTiny
+                    font.bold: true
+                }
+
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                ToolTip.visible: includeMouseArea.containsMouse
+                ToolTip.delay: 450
+                ToolTip.timeout: 7000
+                ToolTip.text: qsTr("Escolha uma subpasta de um escopo selecionado para pesquisar apenas nela.")
+
+                MouseArea {
+                    id: includeMouseArea
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: root.addIncludedDirectory()
+                }
+            }
+
+            Rectangle {
+                Layout.preferredHeight: 24
+                Layout.preferredWidth: excludeLabel.implicitWidth + 20
+                radius: 12
+                color: excludeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                border.color: Theme.border
+                border.width: 1
+                visible: root.hasSelectedScopes
+                Accessible.role: Accessible.Button
+                Accessible.name: qsTr("Ignorar subpasta")
+
+                Text {
+                    id: excludeLabel
+
+                    anchors.centerIn: parent
+                    text: qsTr("Ignorar")
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeTiny
+                    font.bold: true
+                }
+
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                ToolTip.visible: excludeMouseArea.containsMouse
+                ToolTip.delay: 450
+                ToolTip.timeout: 7000
+                ToolTip.text: qsTr("Escolha uma subpasta de um escopo selecionado para ignorar.")
+
+                MouseArea {
+                    id: excludeMouseArea
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: root.addExcludedDirectory()
                 }
             }
         }
@@ -201,6 +304,30 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
+            visible: root.hasSelectedScopes
+            spacing: 12
+
+            ScopeChipRow {
+                Layout.fillWidth: true
+                title: qsTr("Incluídos")
+                emptyText: qsTr("Nenhuma subpasta incluída")
+                entries: root.includedDirectories
+                removeAccessibleTemplate: qsTr("Remover subpasta incluída: %1")
+                onRemoveRequested: (scopeRoot, relativePath) => root.removeIncludedDirectory(scopeRoot, relativePath)
+            }
+
+            ScopeChipRow {
+                Layout.fillWidth: true
+                title: qsTr("Ignorados")
+                emptyText: qsTr("Nenhuma subpasta ignorada")
+                entries: root.excludedDirectories
+                removeAccessibleTemplate: qsTr("Remover subpasta ignorada: %1")
+                onRemoveRequested: (scopeRoot, relativePath) => root.removeExcludedDirectory(scopeRoot, relativePath)
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
             visible: root.hasSavedScopes
             spacing: 12
 
@@ -218,6 +345,112 @@ Rectangle {
                 directories: root.recentDirectories
                 emptyText: qsTr("Nenhum recente")
                 onSelected: path => root.selectDirectory(path)
+            }
+        }
+    }
+
+    component ScopeChipRow: RowLayout {
+        id: scopeChipRow
+
+        property string title: ""
+        property string emptyText: ""
+        property string removeAccessibleTemplate: ""
+        property var entries: []
+
+        signal removeRequested(string scopeRoot, string relativePath)
+
+        spacing: 12
+
+        Label {
+            text: scopeChipRow.title
+            color: Theme.textMuted
+            font.pixelSize: Theme.fontSizeTiny
+            font.bold: true
+        }
+
+        Flickable {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 28
+            contentWidth: ignoredChipsRow.implicitWidth
+            contentHeight: height
+            clip: true
+            Accessible.role: Accessible.List
+            Accessible.name: scopeChipRow.title
+
+            Row {
+                id: ignoredChipsRow
+
+                spacing: 6
+                height: parent.height
+
+                Repeater {
+                    model: scopeChipRow.entries
+
+                    delegate: Rectangle {
+                        required property var modelData
+
+                        height: 26
+                        width: Math.min(
+                            260,
+                            ignoredScopeText.implicitWidth + removeIgnoredScopeText.implicitWidth + 28
+                        )
+                        radius: 13
+                        color: ignoredScopeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
+                        border.color: Theme.border
+                        border.width: 1
+                        Accessible.role: Accessible.Button
+                        Accessible.name: scopeChipRow.removeAccessibleTemplate.arg(
+                            root.scopeEntryDisplayPath(modelData)
+                        )
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Text {
+                                id: ignoredScopeText
+
+                                width: Math.min(210, implicitWidth)
+                                text: root.shortPath(root.scopeEntryDisplayPath(modelData))
+                                color: Theme.text
+                                font.pixelSize: Theme.fontSizeTiny
+                                elide: Text.ElideLeft
+                            }
+
+                            Text {
+                                id: removeIgnoredScopeText
+
+                                text: qsTr("Remover")
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontSizeTiny
+                            }
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
+                        MouseArea {
+                            id: ignoredScopeMouseArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: scopeChipRow.removeRequested(
+                                root.scopeEntryRoot(modelData),
+                                root.scopeEntryRelativePath(modelData)
+                            )
+                        }
+                    }
+                }
+
+                Text {
+                    height: parent.height
+                    text: scopeChipRow.emptyText
+                    color: Theme.textFaint
+                    font.pixelSize: Theme.fontSizeTiny
+                    verticalAlignment: Text.AlignVCenter
+                    visible: scopeChipRow.entries.length === 0
+                }
             }
         }
     }

@@ -225,11 +225,12 @@ e UI para avançarem mais rapidamente.
 
 - [x] Redesenhar a tela principal com layout responsivo e estados vazios claros.
 - [x] Implementar seletor de diretório/repositório com recentes e favoritos.
-- [ ] Permitir selecionar múltiplos diretórios/repositórios no seletor visual, com inclusão e
+- [x] Permitir selecionar múltiplos diretórios/repositórios no seletor visual, com inclusão e
   exclusão de subdiretórios por raiz.
   - [x] Permitir múltiplas raízes selecionadas no desktop e executar a busca sobre `SearchScope`.
   - [x] Exibir raízes selecionadas como chips removíveis no seletor visual.
-  - [ ] Permitir configurar inclusões e exclusões de subdiretórios por raiz.
+  - [x] Permitir configurar exclusões de subdiretórios por raiz.
+  - [x] Permitir configurar inclusões explícitas de subdiretórios por raiz.
 - [x] Expor todos os filtros previstos sem hardcode de textos.
 - [x] Adicionar debounce configurável e busca ao digitar.
 - [x] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.

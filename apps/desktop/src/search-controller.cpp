@@ -11,6 +11,9 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QGuiApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMetaObject>
 #include <QProcess>
 #include <QRegularExpression>
@@ -51,6 +54,8 @@ namespace uburu::app
     constexpr auto previewHtmlHighlightColor = "#ffffff";
     constexpr auto settingsScopeGroup = "scope";
     constexpr auto selectedDirectoriesKey = "selectedDirectories";
+    constexpr auto includedDirectoriesKey = "includedDirectories";
+    constexpr auto excludedDirectoriesKey = "excludedDirectories";
     constexpr auto recentDirectoriesKey = "recentDirectories";
     constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
 
@@ -141,11 +146,118 @@ namespace uburu::app
       return info.absoluteFilePath();
     }
 
+    bool isSameOrInsideDirectory(const QString& root, const QString& path)
+    {
+      const auto relativePath = QDir(root).relativeFilePath(path);
+
+      return relativePath == QStringLiteral(".") ||
+             (!relativePath.startsWith(QStringLiteral("..")) && !QDir::isAbsolutePath(relativePath));
+    }
+
+    QString relativeDirectoryPath(const QString& root, const QString& path)
+    {
+      return QDir::fromNativeSeparators(QDir(root).relativeFilePath(path));
+    }
+
     QStringList withoutDirectory(QStringList directories, const QString& directory)
     {
       directories.removeAll(directory);
 
       return directories;
+    }
+
+    QString longestContainingRoot(const QStringList& roots, const QString& path)
+    {
+      QString selectedRoot;
+
+      for (const auto& root : roots) {
+        if (!isSameOrInsideDirectory(root, path))
+          continue;
+
+        if (root.size() > selectedRoot.size())
+          selectedRoot = root;
+      }
+
+      return selectedRoot;
+    }
+
+    QVariantMap scopeDirectoryEntry(const QString& root, const QString& relativePath)
+    {
+      QVariantMap entry;
+      entry.insert(QStringLiteral("scopeRoot"), root);
+      entry.insert(QStringLiteral("relativePath"), relativePath);
+      entry.insert(QStringLiteral("absolutePath"), QDir(root).absoluteFilePath(relativePath));
+
+      return entry;
+    }
+
+    QHash<QString, QStringList> parseScopedDirectories(const QString& text, const QString& entriesKey)
+    {
+      QHash<QString, QStringList> entriesByRoot;
+      const auto document = QJsonDocument::fromJson(text.toUtf8());
+
+      if (!document.isArray())
+        return entriesByRoot;
+
+      for (const auto& rootValue : document.array()) {
+        if (!rootValue.isObject())
+          continue;
+
+        const auto rootObject = rootValue.toObject();
+        const auto root = rootObject.value(QStringLiteral("root")).toString();
+        const auto entries = rootObject.value(entriesKey).toArray();
+
+        if (root.isEmpty())
+          continue;
+
+        QStringList paths;
+
+        for (const auto& pathValue : entries) {
+          const auto path = pathValue.toString();
+
+          if (!path.isEmpty())
+            paths.push_back(path);
+        }
+
+        if (!paths.empty())
+          entriesByRoot.insert(root, paths);
+      }
+
+      return entriesByRoot;
+    }
+
+    QString serializedScopedDirectories(const QHash<QString, QStringList>& entriesByRoot, const QString& entriesKey)
+    {
+      QJsonArray roots;
+      const auto rootKeys = entriesByRoot.keys();
+
+      for (const auto& root : rootKeys) {
+        QJsonArray entries;
+
+        for (const auto& path : entriesByRoot.value(root))
+          entries.push_back(path);
+
+        if (entries.empty())
+          continue;
+
+        QJsonObject rootObject;
+        rootObject.insert(QStringLiteral("root"), root);
+        rootObject.insert(entriesKey, entries);
+        roots.push_back(rootObject);
+      }
+
+      return QString::fromUtf8(QJsonDocument(roots).toJson(QJsonDocument::Compact));
+    }
+
+    std::vector<std::filesystem::path> nativePaths(const QStringList& paths)
+    {
+      std::vector<std::filesystem::path> nativeValues;
+      nativeValues.reserve(static_cast<std::size_t>(paths.size()));
+
+      for (const auto& path : paths)
+        nativeValues.push_back(nativePath(path));
+
+      return nativeValues;
     }
 
     search::SearchSummary failedSearchSummary(QString context)
@@ -535,6 +647,28 @@ namespace uburu::app
     return selectedDirectoryValues;
   }
 
+  QVariantList SearchController::includedDirectories() const
+  {
+    QVariantList entries;
+
+    for (const auto& root : selectedDirectoryValues)
+      for (const auto& relativePath : includedDirectoryValues.value(root))
+        entries.push_back(scopeDirectoryEntry(root, relativePath));
+
+    return entries;
+  }
+
+  QVariantList SearchController::excludedDirectories() const
+  {
+    QVariantList entries;
+
+    for (const auto& root : selectedDirectoryValues)
+      for (const auto& relativePath : excludedDirectoryValues.value(root))
+        entries.push_back(scopeDirectoryEntry(root, relativePath));
+
+    return entries;
+  }
+
   QStringList SearchController::recentDirectories() const
   {
     return recentDirectoryValues;
@@ -635,12 +769,102 @@ namespace uburu::app
       return;
 
     selectedDirectoryValues.removeAll(directory);
+    includedDirectoryValues.remove(directory);
+    excludedDirectoryValues.remove(directory);
 
     if (directoryValue == directory)
       directoryValue = selectedDirectoryValues.empty() ? QString{} : selectedDirectoryValues.front();
 
     saveScopeHistory();
     emit directoryChanged();
+    emit scopeHistoryChanged();
+  }
+
+  void SearchController::addIncludedDirectory(const QString& url)
+  {
+    const auto directory = canonicalDirectoryPath(url);
+
+    if (directory.isEmpty())
+      return;
+
+    const auto root = longestContainingRoot(selectedDirectoryValues, directory);
+
+    if (root.isEmpty()) {
+      setStatus(tr("A pasta incluída precisa estar dentro de um escopo selecionado"));
+      return;
+    }
+
+    const auto relativePath = relativeDirectoryPath(root, directory);
+
+    if (relativePath == QStringLiteral(".")) {
+      setStatus(tr("Selecione uma subpasta para incluir, não a raiz da busca"));
+      return;
+    }
+
+    auto inclusions = includedDirectoryValues.value(root);
+    inclusions.removeAll(relativePath);
+    inclusions.push_back(relativePath);
+    includedDirectoryValues.insert(root, inclusions);
+
+    saveScopeHistory();
+    emit scopeHistoryChanged();
+  }
+
+  void SearchController::removeIncludedDirectory(const QString& root, const QString& relativePath)
+  {
+    auto inclusions = includedDirectoryValues.value(root);
+    inclusions.removeAll(relativePath);
+
+    if (inclusions.empty())
+      includedDirectoryValues.remove(root);
+    else
+      includedDirectoryValues.insert(root, inclusions);
+
+    saveScopeHistory();
+    emit scopeHistoryChanged();
+  }
+
+  void SearchController::addExcludedDirectory(const QString& url)
+  {
+    const auto directory = canonicalDirectoryPath(url);
+
+    if (directory.isEmpty())
+      return;
+
+    const auto root = longestContainingRoot(selectedDirectoryValues, directory);
+
+    if (root.isEmpty()) {
+      setStatus(tr("A pasta ignorada precisa estar dentro de um escopo selecionado"));
+      return;
+    }
+
+    const auto relativePath = relativeDirectoryPath(root, directory);
+
+    if (relativePath == QStringLiteral(".")) {
+      setStatus(tr("Selecione uma subpasta para ignorar, não a raiz da busca"));
+      return;
+    }
+
+    auto exclusions = excludedDirectoryValues.value(root);
+    exclusions.removeAll(relativePath);
+    exclusions.push_back(relativePath);
+    excludedDirectoryValues.insert(root, exclusions);
+
+    saveScopeHistory();
+    emit scopeHistoryChanged();
+  }
+
+  void SearchController::removeExcludedDirectory(const QString& root, const QString& relativePath)
+  {
+    auto exclusions = excludedDirectoryValues.value(root);
+    exclusions.removeAll(relativePath);
+
+    if (exclusions.empty())
+      excludedDirectoryValues.remove(root);
+    else
+      excludedDirectoryValues.insert(root, exclusions);
+
+    saveScopeHistory();
     emit scopeHistoryChanged();
   }
 
@@ -843,8 +1067,14 @@ namespace uburu::app
 
     query.scope.roots.reserve(static_cast<std::size_t>(selectedDirectoryValues.size()));
 
-    for (const auto& selectedDirectory : selectedDirectoryValues)
-      query.scope.roots.push_back(SearchRoot{.path = nativePath(selectedDirectory)});
+    for (const auto& selectedDirectory : selectedDirectoryValues) {
+      const auto inclusions = includedDirectoryValues.value(selectedDirectory);
+      const auto exclusions = excludedDirectoryValues.value(selectedDirectory);
+
+      query.scope.roots.push_back(SearchRoot{.path = nativePath(selectedDirectory),
+                                             .includedDirectories = nativePaths(inclusions),
+                                             .excludedDirectories = nativePaths(exclusions)});
+    }
 
     const auto token = stopSource.get_token();
     const auto startedAt = std::chrono::steady_clock::now();
@@ -917,6 +1147,10 @@ namespace uburu::app
     QSettings settings;
     settings.beginGroup(QString::fromLatin1(settingsScopeGroup));
     selectedDirectoryValues = settings.value(QString::fromLatin1(selectedDirectoriesKey)).toStringList();
+    includedDirectoryValues = parseScopedDirectories(
+      settings.value(QString::fromLatin1(includedDirectoriesKey)).toString(), QStringLiteral("included"));
+    excludedDirectoryValues = parseScopedDirectories(
+      settings.value(QString::fromLatin1(excludedDirectoriesKey)).toString(), QStringLiteral("excluded"));
     recentDirectoryValues = settings.value(QString::fromLatin1(recentDirectoriesKey)).toStringList();
     favoriteDirectoryValues = settings.value(QString::fromLatin1(favoriteDirectoriesKey)).toStringList();
     settings.endGroup();
@@ -944,6 +1178,10 @@ namespace uburu::app
     QSettings settings;
     settings.beginGroup(QString::fromLatin1(settingsScopeGroup));
     settings.setValue(QString::fromLatin1(selectedDirectoriesKey), selectedDirectoryValues);
+    settings.setValue(QString::fromLatin1(includedDirectoriesKey),
+                      serializedScopedDirectories(includedDirectoryValues, QStringLiteral("included")));
+    settings.setValue(QString::fromLatin1(excludedDirectoriesKey),
+                      serializedScopedDirectories(excludedDirectoryValues, QStringLiteral("excluded")));
     settings.setValue(QString::fromLatin1(recentDirectoriesKey), recentDirectoryValues);
     settings.setValue(QString::fromLatin1(favoriteDirectoriesKey), favoriteDirectoryValues);
     settings.endGroup();

@@ -4,6 +4,7 @@
 
 #include <QAbstractListModel>
 #include <QFutureWatcher>
+#include <QHash>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -73,6 +74,8 @@ namespace uburu::app
     Q_PROPERTY(bool cancelling READ cancelling NOTIFY cancellingChanged)
     Q_PROPERTY(QAbstractItemModel* results READ results CONSTANT)
     Q_PROPERTY(QStringList selectedDirectories READ selectedDirectories NOTIFY scopeHistoryChanged)
+    Q_PROPERTY(QVariantList includedDirectories READ includedDirectories NOTIFY scopeHistoryChanged)
+    Q_PROPERTY(QVariantList excludedDirectories READ excludedDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(QStringList recentDirectories READ recentDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(QStringList favoriteDirectories READ favoriteDirectories NOTIFY scopeHistoryChanged)
     Q_PROPERTY(bool currentDirectoryFavorite READ currentDirectoryFavorite NOTIFY scopeHistoryChanged)
@@ -97,6 +100,8 @@ namespace uburu::app
     [[nodiscard]] bool cancelling() const;
     [[nodiscard]] QAbstractItemModel* results();
     [[nodiscard]] QStringList selectedDirectories() const;
+    [[nodiscard]] QVariantList includedDirectories() const;
+    [[nodiscard]] QVariantList excludedDirectories() const;
     [[nodiscard]] QStringList recentDirectories() const;
     [[nodiscard]] QStringList favoriteDirectories() const;
     [[nodiscard]] bool currentDirectoryFavorite() const;
@@ -115,6 +120,10 @@ namespace uburu::app
     Q_INVOKABLE void selectDirectory(const QString& url);
     Q_INVOKABLE void selectSavedDirectory(const QString& path);
     Q_INVOKABLE void removeSelectedDirectory(const QString& path);
+    Q_INVOKABLE void addIncludedDirectory(const QString& url);
+    Q_INVOKABLE void removeIncludedDirectory(const QString& root, const QString& relativePath);
+    Q_INVOKABLE void addExcludedDirectory(const QString& url);
+    Q_INVOKABLE void removeExcludedDirectory(const QString& root, const QString& relativePath);
     Q_INVOKABLE void toggleCurrentDirectoryFavorite();
     Q_INVOKABLE void toggleFavoriteDirectory(const QString& path);
     Q_INVOKABLE void openFile(const QString& path);
@@ -163,6 +172,8 @@ namespace uburu::app
     QString directoryValue;
     QString statusValue;
     QStringList selectedDirectoryValues;
+    QHash<QString, QStringList> includedDirectoryValues;
+    QHash<QString, QStringList> excludedDirectoryValues;
     QStringList recentDirectoryValues;
     QStringList favoriteDirectoryValues;
     qulonglong filesScannedValue{0};

@@ -44,6 +44,8 @@
     <message><source>Copiar caminho, localização e trecho da ocorrência atual</source><translation>Copy path, location, and excerpt for the current occurrence</translation></message>
     <message><source>Ctrl+Shift+C</source><translation>Ctrl+Shift+C</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Select directory or repository</translation></message>
+    <message><source>Selecionar subpasta para ignorar</source><translation>Select subfolder to ignore</translation></message>
+    <message><source>Selecionar subpasta para incluir</source><translation>Select subfolder to include</translation></message>
     <message><source>Status: %1</source><translation>Status: %1</translation></message>
     <message><source>Resultados visíveis: %1</source><translation>Visible results: %1</translation></message>
     <message><source>Arquivos lidos: %1</source><translation>Files read: %1</translation></message>
@@ -116,6 +118,18 @@
     <message><source>Diretórios selecionados</source><translation>Selected directories</translation></message>
     <message><source>Remover diretório selecionado: %1</source><translation>Remove selected directory: %1</translation></message>
     <message><source>Remover</source><translation>Remove</translation></message>
+    <message><source>Incluir subpasta</source><translation>Include subfolder</translation></message>
+    <message><source>Incluir</source><translation>Include</translation></message>
+    <message><source>Escolha uma subpasta de um escopo selecionado para pesquisar apenas nela.</source><translation>Choose a subfolder inside a selected scope to search only within it.</translation></message>
+    <message><source>Ignorar subpasta</source><translation>Ignore subfolder</translation></message>
+    <message><source>Ignorar</source><translation>Ignore</translation></message>
+    <message><source>Escolha uma subpasta de um escopo selecionado para ignorar.</source><translation>Choose a subfolder from a selected scope to ignore.</translation></message>
+    <message><source>Incluídos</source><translation>Included</translation></message>
+    <message><source>Nenhuma subpasta incluída</source><translation>No included subfolder</translation></message>
+    <message><source>Remover subpasta incluída: %1</source><translation>Remove included subfolder: %1</translation></message>
+    <message><source>Ignorados</source><translation>Ignored</translation></message>
+    <message><source>Nenhuma subpasta ignorada</source><translation>No ignored subfolder</translation></message>
+    <message><source>Remover subpasta ignorada: %1</source><translation>Remove ignored subfolder: %1</translation></message>
     <message><source>Favoritos</source><translation>Favorites</translation></message>
     <message><source>Nenhum favorito</source><translation>No favorites</translation></message>
     <message><source>Recentes</source><translation>Recent</translation></message>
@@ -177,11 +191,15 @@
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Waiting for a search command</translation></message>
     <message><source>Indexação inativa</source><translation>Indexing inactive</translation></message>
+    <message><source>A pasta ignorada precisa estar dentro de um escopo selecionado</source><translation>The ignored folder must be inside a selected scope</translation></message>
+    <message><source>Selecione uma subpasta para ignorar, não a raiz da busca</source><translation>Select a subfolder to ignore, not the search root</translation></message>
   </context>
   <context>
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Ready</translation></message>
     <message><source>Indexação inativa</source><translation>Indexing inactive</translation></message>
+    <message><source>A pasta incluída precisa estar dentro de um escopo selecionado</source><translation>The included folder must be inside a selected scope</translation></message>
+    <message><source>Selecione uma subpasta para incluir, não a raiz da busca</source><translation>Select a subfolder to include, not the search root</translation></message>
     <message numerus="yes"><source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source><translation><numerusform>%n match found in %1 file(s)</numerusform><numerusform>%n matches found in %1 file(s)</numerusform></translation></message>
     <message><source>%1 ignorado(s)</source><translation>%1 ignored</translation></message>
     <message><source>%1 oculto(s)</source><translation>%1 hidden</translation></message>

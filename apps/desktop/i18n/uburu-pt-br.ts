@@ -44,6 +44,8 @@
     <message><source>Copiar caminho, localização e trecho da ocorrência atual</source><translation>Copiar caminho, localização e trecho da ocorrência atual</translation></message>
     <message><source>Ctrl+Shift+C</source><translation>Ctrl+Shift+C</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Selecionar diretório ou repositório</translation></message>
+    <message><source>Selecionar subpasta para ignorar</source><translation>Selecionar subpasta para ignorar</translation></message>
+    <message><source>Selecionar subpasta para incluir</source><translation>Selecionar subpasta para incluir</translation></message>
     <message><source>Status: %1</source><translation>Status: %1</translation></message>
     <message><source>Resultados visíveis: %1</source><translation>Resultados visíveis: %1</translation></message>
     <message><source>Arquivos lidos: %1</source><translation>Arquivos lidos: %1</translation></message>
@@ -116,6 +118,18 @@
     <message><source>Diretórios selecionados</source><translation>Diretórios selecionados</translation></message>
     <message><source>Remover diretório selecionado: %1</source><translation>Remover diretório selecionado: %1</translation></message>
     <message><source>Remover</source><translation>Remover</translation></message>
+    <message><source>Incluir subpasta</source><translation>Incluir subpasta</translation></message>
+    <message><source>Incluir</source><translation>Incluir</translation></message>
+    <message><source>Escolha uma subpasta de um escopo selecionado para pesquisar apenas nela.</source><translation>Escolha uma subpasta de um escopo selecionado para pesquisar apenas nela.</translation></message>
+    <message><source>Ignorar subpasta</source><translation>Ignorar subpasta</translation></message>
+    <message><source>Ignorar</source><translation>Ignorar</translation></message>
+    <message><source>Escolha uma subpasta de um escopo selecionado para ignorar.</source><translation>Escolha uma subpasta de um escopo selecionado para ignorar.</translation></message>
+    <message><source>Incluídos</source><translation>Incluídos</translation></message>
+    <message><source>Nenhuma subpasta incluída</source><translation>Nenhuma subpasta incluída</translation></message>
+    <message><source>Remover subpasta incluída: %1</source><translation>Remover subpasta incluída: %1</translation></message>
+    <message><source>Ignorados</source><translation>Ignorados</translation></message>
+    <message><source>Nenhuma subpasta ignorada</source><translation>Nenhuma subpasta ignorada</translation></message>
+    <message><source>Remover subpasta ignorada: %1</source><translation>Remover subpasta ignorada: %1</translation></message>
     <message><source>Favoritos</source><translation>Favoritos</translation></message>
     <message><source>Nenhum favorito</source><translation>Nenhum favorito</translation></message>
     <message><source>Recentes</source><translation>Recentes</translation></message>
@@ -177,11 +191,15 @@
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Aguardando comando de busca</translation></message>
     <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
+    <message><source>A pasta ignorada precisa estar dentro de um escopo selecionado</source><translation>A pasta ignorada precisa estar dentro de um escopo selecionado</translation></message>
+    <message><source>Selecione uma subpasta para ignorar, não a raiz da busca</source><translation>Selecione uma subpasta para ignorar, não a raiz da busca</translation></message>
   </context>
   <context>
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Pronto</translation></message>
     <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
+    <message><source>A pasta incluída precisa estar dentro de um escopo selecionado</source><translation>A pasta incluída precisa estar dentro de um escopo selecionado</translation></message>
+    <message><source>Selecione uma subpasta para incluir, não a raiz da busca</source><translation>Selecione uma subpasta para incluir, não a raiz da busca</translation></message>
     <message numerus="yes"><source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source><translation><numerusform>%n ocorrência encontrada em %1 arquivo(s)</numerusform><numerusform>%n ocorrências encontradas em %1 arquivo(s)</numerusform></translation></message>
     <message><source>%1 ignorado(s)</source><translation>%1 ignorado(s)</translation></message>
     <message><source>%1 oculto(s)</source><translation>%1 oculto(s)</translation></message>

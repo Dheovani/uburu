@@ -251,6 +251,20 @@ ApplicationWindow {
         onAccepted: searchController.selectDirectory(selectedFolder.toString())
     }
 
+    FolderDialog {
+        id: excludedDirectoryDialog
+
+        title: qsTr("Selecionar subpasta para ignorar")
+        onAccepted: searchController.addExcludedDirectory(selectedFolder.toString())
+    }
+
+    FolderDialog {
+        id: includedDirectoryDialog
+
+        title: qsTr("Selecionar subpasta para incluir")
+        onAccepted: searchController.addIncludedDirectory(selectedFolder.toString())
+    }
+
     Shortcut {
         sequences: ["Ctrl+K", "Ctrl+Shift+P"]
         onActivated: commandPalette.openPalette()
@@ -358,11 +372,23 @@ ApplicationWindow {
         ScopeBar {
             directory: searchController.directory
             selectedDirectories: searchController.selectedDirectories
+            includedDirectories: searchController.includedDirectories
+            excludedDirectories: searchController.excludedDirectories
             recentDirectories: searchController.recentDirectories
             favoriteDirectories: searchController.favoriteDirectories
             currentDirectoryFavorite: searchController.currentDirectoryFavorite
             onSelectDirectory: path => searchController.selectSavedDirectory(path)
             onRemoveDirectory: path => searchController.removeSelectedDirectory(path)
+            onAddIncludedDirectory: includedDirectoryDialog.open()
+            onRemoveIncludedDirectory: (scopeRoot, relativePath) => searchController.removeIncludedDirectory(
+                scopeRoot,
+                relativePath
+            )
+            onAddExcludedDirectory: excludedDirectoryDialog.open()
+            onRemoveExcludedDirectory: (scopeRoot, relativePath) => searchController.removeExcludedDirectory(
+                scopeRoot,
+                relativePath
+            )
             onToggleCurrentFavorite: searchController.toggleCurrentDirectoryFavorite()
         }
 

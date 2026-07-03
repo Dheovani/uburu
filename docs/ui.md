@@ -32,14 +32,21 @@ internos até a futura tela de configurações, evitando controles avançados de
 
 ## Escopos múltiplos
 
-O seletor visual de escopo permite acumular múltiplas raízes de busca. Selecionar uma pasta pelo diálogo,
-favoritos ou recentes adiciona a raiz ao conjunto atual; os chips em `Selecionados` mostram as raízes
-ativas e permitem removê-las sem apagar favoritos ou histórico. O `SearchController` monta um
-`SearchScope` com essas raízes antes de chamar o serviço de busca, preservando `SearchQuery::root` apenas
-como compatibilidade com chamadas de raiz única.
+O seletor visual de escopo permite acumular múltiplas raízes de busca. Selecionar uma pasta pelo
+diálogo, favoritos ou recentes adiciona a raiz ao conjunto atual; os chips em `Selecionados` mostram as
+raízes ativas e permitem removê-las sem apagar favoritos ou histórico. O `SearchController` monta um
+`SearchScope` com essas raízes antes de chamar o serviço de busca, preservando `SearchQuery::root`
+apenas como compatibilidade com chamadas de raiz única.
 
-Inclusões e exclusões de subdiretórios por raiz ainda exigem uma UI própria para edição de regras por
-root. Até essa etapa, cada raiz usa os filtros globais visíveis no cabeçalho.
+Inclusões e exclusões de subdiretórios são associadas à raiz selecionada mais específica que contém a
+pasta escolhida. A UI mostra inclusões em `Incluídos` e exclusões em `Ignorados`, sempre como chips
+removíveis. O controller converte inclusões para `SearchRoot::includedDirectories` e exclusões para
+`SearchRoot::excludedDirectories`.
+
+Quando uma raiz possui inclusões explícitas, a busca naquela raiz fica restrita às subárvores incluídas.
+Exclusões continuam removendo subárvores específicas do escopo final. Isso permite cenários como buscar
+em vários repositórios ao mesmo tempo, incluir apenas módulos relevantes e ignorar pastas volumosas como
+`node_modules`, `build` ou caches locais sem transformar esses filtros em regras globais.
 
 ## Métricas da busca na tela principal
 

@@ -24,19 +24,19 @@ CheckBox {
     ToolTip.text: chip.toolTipText
 
     indicator: Rectangle {
-        implicitWidth: 16
-        implicitHeight: 16
-        x: 10
+        implicitWidth: 14
+        implicitHeight: 14
+        x: 8
         y: parent.height / 2 - height / 2
-        radius: 5
+        radius: 4
         color: chip.checked ? Theme.primarySoft : Theme.surfaceSunken
         border.color: chip.checked ? Theme.primary : Theme.borderStrong
         border.width: 1
 
         Rectangle {
             anchors.centerIn: parent
-            width: 7
-            height: 7
+            width: 6
+            height: 6
             radius: 3
             color: Theme.text
             visible: chip.checked
@@ -46,16 +46,16 @@ CheckBox {
     contentItem: Text {
         text: chip.text
         color: chip.enabled ? Theme.text : Theme.textFaint
-        font.pixelSize: Theme.fontSizeSmall
+        font.pixelSize: Theme.fontSizeTiny
         verticalAlignment: Text.AlignVCenter
-        leftPadding: 32
-        rightPadding: 12
+        leftPadding: 28
+        rightPadding: 10
         elide: Text.ElideRight
     }
 
     background: Rectangle {
-        implicitHeight: 32
-        radius: 16
+        implicitHeight: 28
+        radius: 14
         color: chip.hovered && chip.enabled ? Theme.surfaceRaised : Theme.surface
         border.color: chip.checked ? Theme.borderStrong : Theme.border
         border.width: 1

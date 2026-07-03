@@ -142,20 +142,12 @@ Panel {
             Layout.fillWidth: true
             spacing: 10
 
-            ColumnLayout {
+            Label {
                 Layout.fillWidth: true
-                spacing: 2
-
-                EyebrowLabel {
-                    text: qsTr("OCORRÊNCIAS")
-                }
-
-                Label {
-                    text: qsTr("Resultados")
-                    color: Theme.text
-                    font.pixelSize: 18
-                    font.bold: true
-                }
+                text: qsTr("Resultados")
+                color: Theme.text
+                font.pixelSize: 18
+                font.bold: true
             }
 
             Rectangle {

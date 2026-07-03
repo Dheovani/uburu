@@ -61,13 +61,9 @@ Panel {
         anchors.margins: 14
         spacing: 10
 
-        ColumnLayout {
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 2
-
-            EyebrowLabel {
-                text: qsTr("PRÉ-VISUALIZAÇÃO")
-            }
+            spacing: 10
 
             Label {
                 Layout.fillWidth: true
@@ -79,7 +75,7 @@ Panel {
             }
 
             MutedLabel {
-                Layout.fillWidth: true
+                Layout.preferredWidth: Math.min(260, implicitWidth)
                 text: root.loading
                       ? qsTr("Carregando pré-visualização...")
                       : root.location.length > 0

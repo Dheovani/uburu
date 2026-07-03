@@ -50,7 +50,7 @@ Panel {
     signal openCommandPalette()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: (compact ? 238 : 198) + Math.max(0, filterFlow.implicitHeight - 34)
+    Layout.preferredHeight: (compact ? 218 : 178) + Math.max(0, filterFlow.implicitHeight - 34)
                             + (hasDocumentContentExtractorGap ? 30 : 0)
     color: Theme.surface
 
@@ -149,19 +149,19 @@ Panel {
                 Layout.fillWidth: true
                 spacing: 10
 
-                ColumnLayout {
+                RowLayout {
                     Layout.fillWidth: true
-                    spacing: 2
-
-                    EyebrowLabel {
-                        text: qsTr("BUSCA LOCAL")
-                    }
+                    spacing: 10
 
                     Label {
                         text: qsTr("Uburu")
                         color: Theme.text
                         font.pixelSize: Theme.fontSizeTitle
                         font.bold: true
+                    }
+
+                    EyebrowLabel {
+                        text: qsTr("BUSCA LOCAL")
                     }
                 }
 
@@ -462,7 +462,7 @@ Panel {
 
                 Layout.fillWidth: true
                 Layout.preferredHeight: implicitHeight
-                spacing: 8
+                spacing: 6
 
                 FilterChip {
                     id: regex

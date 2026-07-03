@@ -233,7 +233,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Mostrar status e progresso da indexação.
 - [x] Virtualizar a lista para centenas de milhares de resultados.
 - [x] Preservar seleção durante batches e refinamento híbrido.
-- [ ] Criar agrupamento por arquivo e navegação entre ocorrências.
+- [x] Criar agrupamento por arquivo e navegação entre ocorrências.
 - [x] Implementar preview de arquivo assíncrono, cancelável e limitado.
 - [x] Implementar highlight de múltiplas ocorrências e linhas de contexto.
 - [x] Adicionar números de linha, monospace e tab width configurável.
@@ -243,7 +243,7 @@ e UI para avançarem mais rapidamente.
   abrir local do arquivo, copiar caminho e copiar ocorrência.
 - [x] Customizar/aprimorar estilo visual do menu de ações.
 - [x] Adicionar atalhos essenciais e command palette inicial.
-- [ ] Completar command palette com ações de configuração, diagnóstico, histórico e navegação
+- [x] Completar command palette com ações de diagnóstico, histórico, buscas salvas e navegação
   avançada.
 - [x] Implementar histórico, buscas salvas e favoritos.
 - [x] Implementar tema claro, escuro e sistema.
@@ -258,7 +258,7 @@ e UI para avançarem mais rapidamente.
 - [ ] Testar acessibilidade: foco, teclado, contraste, nomes acessíveis e leitores de tela.
 - [ ] Testar DPI alto, múltiplos monitores e escalas fracionárias.
 - [x] Completar e revisar traduções `pt-BR` e `en-US`.
-- [ ] Definir estratégia para pluralização, atalhos e strings técnicas.
+- [x] Definir estratégia para pluralização, atalhos e strings técnicas.
 
 ## Marco 9 — Testes e qualidade contínua (P0/P1)
 

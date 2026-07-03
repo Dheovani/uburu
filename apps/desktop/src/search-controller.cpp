@@ -430,7 +430,8 @@ namespace uburu::app
     if (!index.isValid() || index.row() < 0 || static_cast<std::size_t>(index.row()) >= results.size())
       return {};
 
-    const auto& result = results[static_cast<std::size_t>(index.row())];
+    const auto row = static_cast<std::size_t>(index.row());
+    const auto& result = results[row];
 
     if (role == PathRole)
       return QString::fromUtf8(pathToUtf8(result.path));
@@ -447,6 +448,12 @@ namespace uburu::app
     if (role == HighlightsRole)
       return highlightRanges(result.highlights);
 
+    if (role == FileGroupHeaderRole)
+      return row == 0 || absoluteResultPath(results[row - 1]) != absoluteResultPath(result);
+
+    if (role == FileGroupLabelRole)
+      return QString::fromUtf8(pathToUtf8(absoluteResultPath(result)));
+
     return {};
   }
 
@@ -456,7 +463,9 @@ namespace uburu::app
             {AbsolutePathRole, "absolutePath"},
             {LocationRole, "location"},
             {PreviewRole, "preview"},
-            {HighlightsRole, "highlights"}};
+            {HighlightsRole, "highlights"},
+            {FileGroupHeaderRole, "fileGroupHeader"},
+            {FileGroupLabelRole, "fileGroupLabel"}};
   }
 
   void SearchResultModel::clear()

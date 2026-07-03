@@ -19,9 +19,8 @@
     <message><source>Favoritar pasta atual</source><translation>Favoritar pasta atual</translation></message>
     <message><source>Alternar favorito para o diretório selecionado</source><translation>Alternar favorito para o diretório selecionado</translation></message>
     <message><source>Ctrl+D</source><translation>Ctrl+D</translation></message>
-    <message><source>Alternar tema</source><translation>Alternar tema</translation></message>
-    <message><source>Alternar entre tema do sistema, claro e escuro</source><translation>Alternar entre tema do sistema, claro e escuro</translation></message>
-    <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
+    <message><source>Copiar diagnóstico da busca</source><translation>Copiar diagnóstico da busca</translation></message>
+    <message><source>Copiar status, contadores e tempos da busca atual</source><translation>Copiar status, contadores e tempos da busca atual</translation></message>
     <message><source>Remover busca salva</source><translation>Remover busca salva</translation></message>
     <message><source>Salvar busca atual</source><translation>Salvar busca atual</translation></message>
     <message><source>Alternar busca atual na lista de buscas salvas</source><translation>Alternar busca atual na lista de buscas salvas</translation></message>
@@ -45,6 +44,11 @@
     <message><source>Copiar caminho, localização e trecho da ocorrência atual</source><translation>Copiar caminho, localização e trecho da ocorrência atual</translation></message>
     <message><source>Ctrl+Shift+C</source><translation>Ctrl+Shift+C</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Selecionar diretório ou repositório</translation></message>
+    <message><source>Status: %1</source><translation>Status: %1</translation></message>
+    <message><source>Resultados visíveis: %1</source><translation>Resultados visíveis: %1</translation></message>
+    <message><source>Arquivos lidos: %1</source><translation>Arquivos lidos: %1</translation></message>
+    <message><source>Tempo até primeiro resultado: %1</source><translation>Tempo até primeiro resultado: %1</translation></message>
+    <message><source>Duração total: %1</source><translation>Duração total: %1</translation></message>
   </context>
   <context>
     <name>command-palette</name>

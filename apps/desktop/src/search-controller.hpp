@@ -49,7 +49,9 @@ namespace uburu::app
       AbsolutePathRole,
       LocationRole,
       PreviewRole,
-      HighlightsRole
+      HighlightsRole,
+      FileGroupHeaderRole,
+      FileGroupLabelRole
     };
     explicit SearchResultModel(QObject* parent = nullptr);
     [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;

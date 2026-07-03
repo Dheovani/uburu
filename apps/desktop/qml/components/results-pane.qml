@@ -244,9 +244,11 @@ Panel {
                 required property string location
                 required property string preview
                 required property var highlights
+                required property bool fileGroupHeader
+                required property string fileGroupLabel
 
                 width: ListView.view.width
-                height: 64
+                height: fileGroupHeader ? 92 : 64
                 highlighted: ListView.isCurrentItem
                 Accessible.role: Accessible.ListItem
                 Accessible.name: filePath
@@ -281,10 +283,23 @@ Panel {
                 contentItem: Column {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
                     anchors.leftMargin: 12
                     anchors.rightMargin: 12
+                    anchors.topMargin: fileGroupHeader ? 8 : 10
+                    anchors.bottomMargin: 10
                     spacing: 4
+
+                    Text {
+                        visible: fileGroupHeader
+                        text: fileGroupLabel
+                        width: parent.width
+                        color: Theme.textMuted
+                        font.pixelSize: Theme.fontSizeTiny
+                        font.bold: true
+                        elide: Text.ElideLeft
+                    }
 
                     Text {
                         text: filePath

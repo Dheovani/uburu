@@ -56,9 +56,9 @@ ApplicationWindow {
             available: searchController.directory.length > 0
         },
         {
-            title: qsTr("Alternar tema"),
-            description: qsTr("Alternar entre tema do sistema, claro e escuro"),
-            shortcut: qsTr("Ctrl+Alt+T"),
+            title: qsTr("Copiar diagnóstico da busca"),
+            description: qsTr("Copiar status, contadores e tempos da busca atual"),
+            shortcut: "",
             available: true
         },
         {
@@ -131,7 +131,7 @@ ApplicationWindow {
             searchController.toggleCurrentDirectoryFavorite()
             return
         case 5:
-            root.cycleThemeMode()
+            searchController.copyToClipboard(root.searchDiagnosticText())
             return
         case 6:
             root.toggleSavedSearch(searchHeader.queryText)
@@ -162,15 +162,18 @@ ApplicationWindow {
         }
     }
 
-    function cycleThemeMode() {
-        const themeModes = ["system", "dark", "light"]
-        const currentIndex = themeModes.indexOf(Theme.mode)
-        const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % themeModes.length
-        Theme.mode = themeModes[nextIndex]
-    }
-
     function normalizeThemeMode(mode) {
         return mode === "system" || mode === "dark" || mode === "light" ? mode : "system"
+    }
+
+    function searchDiagnosticText() {
+        return [
+            qsTr("Status: %1").arg(searchController.status),
+            qsTr("Resultados visíveis: %1").arg(resultsPane.resultCount),
+            qsTr("Arquivos lidos: %1").arg(searchController.filesScanned),
+            qsTr("Tempo até primeiro resultado: %1").arg(searchController.timeToFirstResult),
+            qsTr("Duração total: %1").arg(searchController.searchDuration)
+        ].join("\n")
     }
 
     function normalizedSearchText(query) {
@@ -267,11 +270,6 @@ ApplicationWindow {
         sequence: "Ctrl+D"
         enabled: searchController.directory.length > 0
         onActivated: searchController.toggleCurrentDirectoryFavorite()
-    }
-
-    Shortcut {
-        sequence: "Ctrl+Alt+T"
-        onActivated: root.cycleThemeMode()
     }
 
     Shortcut {
@@ -395,12 +393,13 @@ ApplicationWindow {
                         root.resultsPanePreferredHeight = Math.round(height)
                 }
                 onResultsCleared: searchController.clearPreview()
-                onResultSelected: (filePath, absolutePath, location, preview, highlights) => searchController.loadPreview(
+                onResultSelected: (
+                    filePath,
                     absolutePath,
                     location,
                     preview,
                     highlights
-                )
+                ) => searchController.loadPreview(absolutePath, location, preview, highlights)
                 onOpenFileRequested: filePath => searchController.openFile(filePath)
                 onOpenWithRequested: filePath => searchController.openWith(filePath)
                 onOpenFolderRequested: filePath => searchController.openContainingFolder(filePath)

@@ -50,6 +50,10 @@ anexados. Se a busca ainda não tiver seleção e chegar o primeiro resultado, a
 ocorrência automaticamente para carregar o preview sem exigir um clique extra. Navegação linear entre
 ocorrências visíveis usa `F4` para avançar e `Shift+F4` para voltar.
 
+Resultados consecutivos do mesmo arquivo são agrupados visualmente. O modelo C++ expõe roles
+específicos para início de grupo e rótulo do arquivo, mantendo o QML focado em renderização e evitando
+deduzir agrupamento por inspeção manual de itens vizinhos.
+
 ## Preview de arquivo
 
 O preview da tela principal é carregado pelo `SearchController` em worker assíncrono, usando o leitor
@@ -106,8 +110,10 @@ Atalhos essenciais disponíveis nesta fase:
 - `Ctrl+C`: copiar caminho do resultado quando a lista está focada;
 - `Ctrl+Shift+C`: copiar ocorrência do resultado quando a lista está focada.
 
-A paleta deve evoluir para incluir configurações, diagnósticos, histórico, buscas salvas e navegação
-entre ocorrências, sem mover regras de domínio para QML.
+A paleta inclui ações de diagnóstico, histórico, buscas salvas e navegação entre ocorrências, sem mover
+regras de domínio para QML. A ação de diagnóstico copia status, contadores e tempos observáveis da
+busca atual para a área de transferência, servindo como ponte simples até uma tela de diagnóstico
+dedicada.
 
 ## Histórico e buscas salvas
 
@@ -132,13 +138,13 @@ de resultados já publicada permanece disponível até a busca finalizar ou uma 
 
 ## Temas
 
-O Marco 8 introduz seleção de tema `system`, `dark` e `light` diretamente na tela principal. O modo é
-persistido em `Settings` na camada QML e aplicado pelo singleton `Theme`, mantendo os componentes
-desacoplados de paletas locais e reduzindo inconsistências visuais.
+O Marco 8 introduz a infraestrutura de tema `system`, `dark` e `light`. O modo é persistido em
+`Settings` na camada QML e aplicado pelo singleton `Theme`, mantendo os componentes desacoplados de
+paletas locais e reduzindo inconsistências visuais.
 
-O modo `system` segue a preferência de cores do sistema operacional quando disponível. A alternância
-temporária pode ser feita pela paleta de comandos ou pelo atalho `Ctrl+Alt+T`. O controle visual
-dedicado de tema deve viver na futura área de configurações, não no cabeçalho principal de busca.
+O modo `system` segue a preferência de cores do sistema operacional quando disponível. O controle visual
+dedicado de tema deve viver na futura área de configurações, não no cabeçalho principal de busca nem na
+paleta de comandos.
 
 A área de pré-visualização de conteúdo permanece em superfície escura mesmo no tema claro. Essa decisão
 preserva contraste para o HTML de highlight gerado pelo controller e evita alternar cores de código em
@@ -179,6 +185,22 @@ reduzir dependência de inferência visual.
 Essa base não substitui auditoria manual. O Marco 8 ainda deve validar navegação por teclado completa,
 contraste real nos temas claro/escuro, ordem de foco e comportamento com leitores de tela nas
 plataformas suportadas.
+
+## Pluralização, atalhos e strings técnicas
+
+Textos com contagem variável devem usar pluralização nativa do Qt com `%n` sempre que a frase depender
+do número de itens. Evite montar plural em QML por concatenação de sufixos como `s`, pois isso quebra
+idiomas futuros e torna o `pt-BR` artificial. Placeholders numéricos que não alteram a gramática podem
+continuar usando `%1`, como cartões compactos de métrica.
+
+Atalhos de teclado devem ser tratados como strings traduzíveis somente quando aparecem na interface,
+mas a sequência real deve permanecer centralizada no `Shortcut` ou no componente que executa a ação.
+Ao criar uma ação nova, atualize em conjunto: command palette, tooltip/menu quando existir, docs de UI e
+catálogos `pt-BR`/`en-US`.
+
+Strings técnicas amplamente reconhecidas por usuários avançados, como `Regex`, `.gitignore`, `Ctrl`,
+`Shift`, `PCRE2`, `HEAD` e nomes de formatos como `PDF` ou `DOCX`, devem permanecer estáveis. A frase
+ao redor delas deve ser localizada e explicar o impacto prático em português claro.
 
 ## Erros parciais de busca
 

@@ -232,7 +232,7 @@ e UI para avançarem mais rapidamente.
 - [x] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.
 - [ ] Mostrar status e progresso da indexação.
 - [x] Virtualizar a lista para centenas de milhares de resultados.
-- [ ] Preservar seleção durante batches e refinamento híbrido.
+- [x] Preservar seleção durante batches e refinamento híbrido.
 - [ ] Criar agrupamento por arquivo e navegação entre ocorrências.
 - [x] Implementar preview de arquivo assíncrono, cancelável e limitado.
 - [x] Implementar highlight de múltiplas ocorrências e linhas de contexto.

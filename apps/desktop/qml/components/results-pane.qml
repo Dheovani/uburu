@@ -9,6 +9,7 @@ Panel {
 
     property alias model: resultList.model
     property int resultCount: resultList.count
+    property bool autoSelectFirstResult: true
 
     signal resultSelected(string filePath, string absolutePath, string location, string preview, var highlights)
     signal resultsCleared()
@@ -25,6 +26,41 @@ Panel {
 
     function currentResult() {
         return resultList.currentItem
+    }
+
+    function selectCurrentResult() {
+        const result = currentResult()
+
+        if (!result)
+            return
+
+        root.resultSelected(result.filePath, result.absolutePath, result.location, result.preview, result.highlights)
+    }
+
+    function selectResultAt(index) {
+        if (index < 0 || index >= resultList.count)
+            return
+
+        resultList.currentIndex = index
+        resultList.positionViewAtIndex(index, ListView.Contain)
+        resultList.forceActiveFocus()
+        Qt.callLater(root.selectCurrentResult)
+    }
+
+    function selectNextResult() {
+        if (resultList.count === 0)
+            return
+
+        const nextIndex = resultList.currentIndex < 0 ? 0 : Math.min(resultList.currentIndex + 1, resultList.count - 1)
+        selectResultAt(nextIndex)
+    }
+
+    function selectPreviousResult() {
+        if (resultList.count === 0)
+            return
+
+        const previousIndex = resultList.currentIndex < 0 ? 0 : Math.max(resultList.currentIndex - 1, 0)
+        selectResultAt(previousIndex)
     }
 
     function hasCurrentResult() {
@@ -158,6 +194,18 @@ Panel {
             Keys.onReturnPressed: root.openCurrentResult()
             Keys.onEnterPressed: root.openCurrentResult()
             Keys.onPressed: event => {
+                if (event.key === Qt.Key_F4 && (event.modifiers & Qt.ShiftModifier)) {
+                    root.selectPreviousResult()
+                    event.accepted = true
+                    return
+                }
+
+                if (event.key === Qt.Key_F4) {
+                    root.selectNextResult()
+                    event.accepted = true
+                    return
+                }
+
                 if (event.matches(StandardKey.Copy)) {
                     root.copyCurrentPath()
                     event.accepted = true
@@ -176,8 +224,14 @@ Panel {
             }
 
             onCountChanged: {
-                if (count === 0)
+                if (count === 0) {
+                    currentIndex = -1
                     root.resultsCleared()
+                    return
+                }
+
+                if (root.autoSelectFirstResult && currentIndex < 0)
+                    root.selectResultAt(0)
             }
 
             delegate: ItemDelegate {

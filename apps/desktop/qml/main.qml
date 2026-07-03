@@ -65,6 +65,18 @@ ApplicationWindow {
             available: resultsPane.hasCurrentResult()
         },
         {
+            title: qsTr("Próxima ocorrência"),
+            description: qsTr("Selecionar a próxima ocorrência visível"),
+            shortcut: qsTr("F4"),
+            available: resultsPane.resultCount > 0
+        },
+        {
+            title: qsTr("Ocorrência anterior"),
+            description: qsTr("Selecionar a ocorrência visível anterior"),
+            shortcut: qsTr("Shift+F4"),
+            available: resultsPane.resultCount > 0
+        },
+        {
             title: qsTr("Copiar caminho do resultado"),
             description: qsTr("Copiar o caminho absoluto do resultado atual"),
             shortcut: qsTr("Ctrl+C"),
@@ -102,9 +114,15 @@ ApplicationWindow {
             resultsPane.openCurrentResult()
             return
         case 7:
-            resultsPane.copyCurrentPath()
+            resultsPane.selectNextResult()
             return
         case 8:
+            resultsPane.selectPreviousResult()
+            return
+        case 9:
+            resultsPane.copyCurrentPath()
+            return
+        case 10:
             resultsPane.copyCurrentOccurrence()
             return
         default:
@@ -157,6 +175,18 @@ ApplicationWindow {
     }
 
     Shortcut {
+        sequence: "F4"
+        enabled: resultsPane.resultCount > 0
+        onActivated: resultsPane.selectNextResult()
+    }
+
+    Shortcut {
+        sequence: "Shift+F4"
+        enabled: resultsPane.resultCount > 0
+        onActivated: resultsPane.selectPreviousResult()
+    }
+
+    Shortcut {
         sequence: "Esc"
         enabled: searchController.running
         onActivated: searchController.cancel()
@@ -181,7 +211,6 @@ ApplicationWindow {
             directory: searchController.directory
             running: searchController.running
             cancelling: searchController.cancelling
-            themeMode: Theme.mode
             compact: root.compact
             resultCount: resultsPane.resultCount
             filesScanned: searchController.filesScanned
@@ -190,7 +219,6 @@ ApplicationWindow {
             regexAvailable: searchController.regexAvailable
             onSelectDirectory: folderDialog.open()
             onCancelSearch: searchController.cancel()
-            onCycleTheme: root.cycleThemeMode()
             onStartSearch: (
                 query,
                 regex,

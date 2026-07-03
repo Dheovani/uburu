@@ -10,7 +10,6 @@ Panel {
     property string directory: ""
     property bool running: false
     property bool cancelling: false
-    property string themeMode: "system"
     property bool compact: false
     property int resultCount: 0
     property int filesScanned: 0
@@ -38,7 +37,6 @@ Panel {
                        bool includeSubdirectories,
                        string documentTypes)
     signal cancelSearch()
-    signal cycleTheme()
 
     Layout.fillWidth: true
     Layout.preferredHeight: (compact ? 238 : 198) + (hasDocumentContentExtractorGap ? 30 : 0)
@@ -65,16 +63,6 @@ Panel {
     function focusSearch() {
         searchField.forceActiveFocus()
         searchField.selectAll()
-    }
-
-    function themeButtonText() {
-        if (root.themeMode === "light")
-            return qsTr("Tema: Claro")
-
-        if (root.themeMode === "dark")
-            return qsTr("Tema: Escuro")
-
-        return qsTr("Tema: Sistema")
     }
 
     function requestDebouncedSearch() {
@@ -205,11 +193,6 @@ Panel {
                         border.color: searchField.activeFocus ? Theme.primary : Theme.border
                         border.width: 1
                     }
-                }
-
-                SecondaryButton {
-                    text: root.themeButtonText()
-                    onClicked: root.cycleTheme()
                 }
 
                 SecondaryButton {

@@ -24,6 +24,12 @@
     <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
     <message><source>Abrir resultado selecionado</source><translation>Open selected result</translation></message>
     <message><source>Abrir o arquivo do resultado atual</source><translation>Open the file for the current result</translation></message>
+    <message><source>Próxima ocorrência</source><translation>Next occurrence</translation></message>
+    <message><source>Selecionar a próxima ocorrência visível</source><translation>Select the next visible occurrence</translation></message>
+    <message><source>F4</source><translation>F4</translation></message>
+    <message><source>Ocorrência anterior</source><translation>Previous occurrence</translation></message>
+    <message><source>Selecionar a ocorrência visível anterior</source><translation>Select the previous visible occurrence</translation></message>
+    <message><source>Shift+F4</source><translation>Shift+F4</translation></message>
     <message><source>Copiar caminho do resultado</source><translation>Copy result path</translation></message>
     <message><source>Copiar o caminho absoluto do resultado atual</source><translation>Copy the absolute path for the current result</translation></message>
     <message><source>Ctrl+C</source><translation>Ctrl+C</translation></message>
@@ -90,9 +96,6 @@
     <message><source>Cancelando</source><translation>Cancelling</translation></message>
     <message><source>Buscando</source><translation>Searching</translation></message>
     <message><source>Pronto</source><translation>Ready</translation></message>
-    <message><source>Tema: Claro</source><translation>Theme: Light</translation></message>
-    <message><source>Tema: Escuro</source><translation>Theme: Dark</translation></message>
-    <message><source>Tema: Sistema</source><translation>Theme: System</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Search in files</translation></message>
     <message><source>Pasta</source><translation>Folder</translation></message>
     <message><source>Buscar</source><translation>Search</translation></message>

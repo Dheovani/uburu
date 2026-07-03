@@ -45,6 +45,11 @@ proporcional à área visível e a uma pequena margem de navegação.
 O modelo C++ ainda retém os resultados publicados pela busca. Otimizações futuras de memória devem
 evoluir o contrato do modelo, não substituir a virtualização visual por lógica manual em QML.
 
+Durante a publicação progressiva de resultados, a lista preserva a seleção atual quando novos itens são
+anexados. Se a busca ainda não tiver seleção e chegar o primeiro resultado, a UI seleciona a primeira
+ocorrência automaticamente para carregar o preview sem exigir um clique extra. Navegação linear entre
+ocorrências visíveis usa `F4` para avançar e `Shift+F4` para voltar.
+
 ## Preview de arquivo
 
 O preview da tela principal é carregado pelo `SearchController` em worker assíncrono, usando o leitor
@@ -94,6 +99,8 @@ Atalhos essenciais disponíveis nesta fase:
 - `Ctrl+O`: selecionar diretório ou repositório;
 - `Ctrl+K` / `Ctrl+Shift+P`: abrir paleta de comandos;
 - `Ctrl+D`: alternar favorito para o diretório atual;
+- `F4`: selecionar próxima ocorrência visível;
+- `Shift+F4`: selecionar ocorrência visível anterior;
 - `Esc`: cancelar busca em andamento;
 - `Enter`: executar busca ou abrir resultado selecionado conforme o foco;
 - `Ctrl+C`: copiar caminho do resultado quando a lista está focada;
@@ -119,7 +126,8 @@ persistido em `Settings` na camada QML e aplicado pelo singleton `Theme`, manten
 desacoplados de paletas locais e reduzindo inconsistências visuais.
 
 O modo `system` segue a preferência de cores do sistema operacional quando disponível. A alternância
-pode ser feita pelo botão do cabeçalho, pela paleta de comandos ou pelo atalho `Ctrl+Alt+T`.
+temporária pode ser feita pela paleta de comandos ou pelo atalho `Ctrl+Alt+T`. O controle visual
+dedicado de tema deve viver na futura área de configurações, não no cabeçalho principal de busca.
 
 A área de pré-visualização de conteúdo permanece em superfície escura mesmo no tema claro. Essa decisão
 preserva contraste para o HTML de highlight gerado pelo controller e evita alternar cores de código em

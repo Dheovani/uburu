@@ -24,6 +24,12 @@
     <message><source>Ctrl+Alt+T</source><translation>Ctrl+Alt+T</translation></message>
     <message><source>Abrir resultado selecionado</source><translation>Abrir resultado selecionado</translation></message>
     <message><source>Abrir o arquivo do resultado atual</source><translation>Abrir o arquivo do resultado atual</translation></message>
+    <message><source>Próxima ocorrência</source><translation>Próxima ocorrência</translation></message>
+    <message><source>Selecionar a próxima ocorrência visível</source><translation>Selecionar a próxima ocorrência visível</translation></message>
+    <message><source>F4</source><translation>F4</translation></message>
+    <message><source>Ocorrência anterior</source><translation>Ocorrência anterior</translation></message>
+    <message><source>Selecionar a ocorrência visível anterior</source><translation>Selecionar a ocorrência visível anterior</translation></message>
+    <message><source>Shift+F4</source><translation>Shift+F4</translation></message>
     <message><source>Copiar caminho do resultado</source><translation>Copiar caminho do resultado</translation></message>
     <message><source>Copiar o caminho absoluto do resultado atual</source><translation>Copiar o caminho absoluto do resultado atual</translation></message>
     <message><source>Ctrl+C</source><translation>Ctrl+C</translation></message>
@@ -90,9 +96,6 @@
     <message><source>Cancelando</source><translation>Cancelando</translation></message>
     <message><source>Buscando</source><translation>Buscando</translation></message>
     <message><source>Pronto</source><translation>Pronto</translation></message>
-    <message><source>Tema: Claro</source><translation>Tema: Claro</translation></message>
-    <message><source>Tema: Escuro</source><translation>Tema: Escuro</translation></message>
-    <message><source>Tema: Sistema</source><translation>Tema: Sistema</translation></message>
     <message><source>Pesquisar em arquivos</source><translation>Pesquisar em arquivos</translation></message>
     <message><source>Pasta</source><translation>Pasta</translation></message>
     <message><source>Buscar</source><translation>Buscar</translation></message>

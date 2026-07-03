@@ -1,4 +1,5 @@
 #include "core/index/index-overlay.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -35,7 +36,7 @@ namespace
 
 TEST_CASE("index overlay marks scanned modified files as working tree candidates")
 {
-  const auto root = std::filesystem::temp_directory_path() / "uburu-index-overlay-modified-test";
+  const auto root = uburu::tests::uniqueTemporaryPath("uburu-index-overlay-modified-test");
   const auto worktree = worktreeInfo(root);
   const std::vector scannedFiles{
     fileEntry(root, "src/clean.cpp"),
@@ -58,7 +59,7 @@ TEST_CASE("index overlay marks scanned modified files as working tree candidates
 
 TEST_CASE("index overlay creates tombstones for deleted indexed paths")
 {
-  const auto root = std::filesystem::temp_directory_path() / "uburu-index-overlay-deleted-test";
+  const auto root = uburu::tests::uniqueTemporaryPath("uburu-index-overlay-deleted-test");
   const auto worktree = worktreeInfo(root);
   const std::vector<uburu::FileEntry> scannedFiles;
   const std::vector overlay{
@@ -79,7 +80,7 @@ TEST_CASE("index overlay creates tombstones for deleted indexed paths")
 
 TEST_CASE("index overlay models renames as reusable current path plus hidden previous path")
 {
-  const auto root = std::filesystem::temp_directory_path() / "uburu-index-overlay-rename-test";
+  const auto root = uburu::tests::uniqueTemporaryPath("uburu-index-overlay-rename-test");
   const auto worktree = worktreeInfo(root);
   const std::vector scannedFiles{
     fileEntry(root, "src/current.cpp"),
@@ -108,7 +109,7 @@ TEST_CASE("index overlay models renames as reusable current path plus hidden pre
 
 TEST_CASE("index overlay reports missing working tree files without fabricating content candidates")
 {
-  const auto root = std::filesystem::temp_directory_path() / "uburu-index-overlay-missing-test";
+  const auto root = uburu::tests::uniqueTemporaryPath("uburu-index-overlay-missing-test");
   const auto worktree = worktreeInfo(root);
   const std::vector<uburu::FileEntry> scannedFiles;
   const std::vector overlay{

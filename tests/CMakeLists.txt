@@ -28,6 +28,7 @@ add_executable(uburu_core_tests
 )
 
 target_link_libraries(uburu_core_tests PRIVATE Uburu::App Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)
+target_include_directories(uburu_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(WIN32)
   add_custom_command(TARGET uburu_core_tests POST_BUILD

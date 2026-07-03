@@ -269,7 +269,7 @@ e UI para avançarem mais rapidamente.
 
 ## Marco 9 — Testes e qualidade contínua (P0/P1)
 
-- [ ] Criar helpers RAII para diretórios e arquivos temporários nos testes.
+- [x] Criar helpers RAII para diretórios e arquivos temporários nos testes.
 - [ ] Remover nomes temporários fixos que possam colidir em execução paralela.
 - [ ] Criar fixtures pequenas de texto, encoding, ignore e Git.
 - [ ] Adicionar testes unitários para cada regra pura de matching e filtro.
@@ -308,6 +308,8 @@ e UI para avançarem mais rapidamente.
 
 - [ ] Implementar configurações globais tipadas e versionadas.
 - [ ] Implementar configurações por repositório com herança previsível.
+- [ ] Separar no status de indexação falhas reais de arquivos ignorados por formato não suportado,
+  binário, tamanho, filtro ou limitação temporária de parser.
 - [ ] Validar limites de threads, arquivo, resultados, memória e disco.
 - [ ] Adicionar importação/exportação de configurações e buscas salvas.
 - [ ] Definir política de telemetria: desabilitada por padrão e somente opt-in, se existir.

@@ -1,51 +1,16 @@
 #include "core/filesystem/polling-file-watcher.hpp"
+#include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
-#include <fstream>
 #include <stop_token>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <utility>
 
 namespace
 {
 
-  class TemporaryDirectory
-  {
-  public:
-    explicit TemporaryDirectory(std::string name) : pathValue(std::filesystem::temp_directory_path() / std::move(name))
-    {
-      std::error_code error;
-
-      std::filesystem::remove_all(pathValue, error);
-      std::filesystem::create_directories(pathValue);
-    }
-
-    ~TemporaryDirectory()
-    {
-      std::error_code error;
-
-      std::filesystem::remove_all(pathValue, error);
-    }
-
-    [[nodiscard]] const std::filesystem::path& path() const
-    {
-      return pathValue;
-    }
-
-  private:
-    std::filesystem::path pathValue;
-  };
-
-  void writeFile(const std::filesystem::path& path, std::string_view content)
-  {
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream file(path, std::ios::binary);
-    file << content;
-  }
+  using uburu::tests::TemporaryDirectory;
+  using uburu::tests::writeFile;
 
 } // namespace
 

@@ -110,6 +110,18 @@ ApplicationWindow {
             description: qsTr("Copiar caminho, localização e trecho da ocorrência atual"),
             shortcut: qsTr("Ctrl+Shift+C"),
             available: resultsPane.hasCurrentResult()
+        },
+        {
+            title: qsTr("Reindexar escopo"),
+            description: qsTr("Atualizar o índice persistente das pastas selecionadas"),
+            shortcut: qsTr("Ctrl+Alt+I"),
+            available: searchController.selectedDirectories.length > 0 && !searchController.indexingRunning
+        },
+        {
+            title: qsTr("Cancelar indexação"),
+            description: qsTr("Interromper a atualização do índice em andamento"),
+            shortcut: qsTr("Ctrl+Alt+Esc"),
+            available: searchController.indexingRunning
         }
     ]
 
@@ -156,6 +168,18 @@ ApplicationWindow {
             return
         case 13:
             resultsPane.copyCurrentOccurrence()
+            return
+        case 14:
+            searchController.startIndexing(
+                searchHeader.respectGitignoreEnabled,
+                searchHeader.includeHiddenEnabled,
+                searchHeader.includeBinaryEnabled,
+                searchHeader.includeSubdirectoriesEnabled,
+                searchHeader.documentTypes
+            )
+            return
+        case 15:
+            searchController.cancelIndexing()
             return
         default:
             return
@@ -310,6 +334,24 @@ ApplicationWindow {
         onActivated: searchController.cancel()
     }
 
+    Shortcut {
+        sequence: "Ctrl+Alt+I"
+        enabled: searchController.selectedDirectories.length > 0 && !searchController.indexingRunning
+        onActivated: searchController.startIndexing(
+            searchHeader.respectGitignoreEnabled,
+            searchHeader.includeHiddenEnabled,
+            searchHeader.includeBinaryEnabled,
+            searchHeader.includeSubdirectoriesEnabled,
+            searchHeader.documentTypes
+        )
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Alt+Esc"
+        enabled: searchController.indexingRunning
+        onActivated: searchController.cancelIndexing()
+    }
+
     CommandPalette {
         id: commandPalette
 
@@ -453,6 +495,8 @@ ApplicationWindow {
         StatusLine {
             status: searchController.status
             indexingStatus: searchController.indexingStatus
+            indexingProgress: searchController.indexingProgress
+            indexingRunning: searchController.indexingRunning
             running: searchController.running
             cancelling: searchController.cancelling
         }

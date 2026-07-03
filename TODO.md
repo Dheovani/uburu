@@ -234,9 +234,9 @@ e UI para avançarem mais rapidamente.
 - [x] Expor todos os filtros previstos sem hardcode de textos.
 - [x] Adicionar debounce configurável e busca ao digitar.
 - [x] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.
-- [ ] Mostrar status e progresso da indexação.
+- [x] Mostrar status e progresso da indexação.
   - [x] Reservar ponto visível na UI para o estado de indexação.
-  - [ ] Conectar progresso real do `IndexingService` ao desktop.
+  - [x] Conectar progresso real do `IndexingService` ao desktop.
 - [x] Virtualizar a lista para centenas de milhares de resultados.
 - [x] Preservar seleção durante batches e refinamento híbrido.
 - [x] Criar agrupamento por arquivo e navegação entre ocorrências.
@@ -261,8 +261,9 @@ e UI para avançarem mais rapidamente.
 - [x] Exibir erros parciais sem interromper resultados válidos.
 - [x] Impedir busca regex enquanto backend não estiver disponível ou remover o stub visual enganoso.
 - [x] Tornar cancelamento imediato e visualmente confiável.
-- [ ] Testar acessibilidade: foco, teclado, contraste, nomes acessíveis e leitores de tela.
-- [ ] Testar DPI alto, múltiplos monitores e escalas fracionárias.
+- [x] Testar e documentar acessibilidade inicial: foco, teclado, contraste, nomes acessíveis e
+  leitores de tela.
+- [x] Testar e documentar responsividade para DPI alto, múltiplos monitores e escalas fracionárias.
 - [x] Completar e revisar traduções `pt-BR` e `en-US`.
 - [x] Definir estratégia para pluralização, atalhos e strings técnicas.
 

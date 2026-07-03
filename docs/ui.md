@@ -192,6 +192,20 @@ O último diretório selecionado é restaurado pelo `SearchController`, junto do
 favoritos já persistidos com `QSettings`. O controller só restaura um diretório recente quando ele ainda
 existe no sistema de arquivos.
 
+## Status de indexação
+
+O rodapé da tela principal reserva uma área permanente para o estado de indexação. No Marco 8, essa área
+recebe progresso real do `IndexingService`, acionado pela command palette com `Reindexar escopo`
+(`Ctrl+Alt+I`) e cancelável com `Cancelar indexação` (`Ctrl+Alt+Esc`).
+
+A reindexação roda fora da thread gráfica. O `SearchController` cria o serviço de indexação em worker,
+descobre a worktree Git de cada raiz selecionada, executa `requestManualReindex()` e encaminha eventos
+de `IndexUpdateProgress` por queued connection. A UI mostra status textual, barra compacta de progresso
+e resumo final com documentos indexados, reutilizados, removidos e falhas.
+
+Raízes que ainda não são repositórios Git são reportadas como falhas parciais de indexação, sem impedir
+que as demais raízes sejam processadas e sem afetar a busca direta.
+
 ## Ajuda contextual
 
 Controles potencialmente ambíguos devem expor ajuda curta e localizada por tooltip, sem transformar a
@@ -213,9 +227,40 @@ os atalhos documentados. Botões, chips de filtro, menus, campos de entrada, lis
 de comandos e pré-visualização possuem `Accessible.name` ou `Accessible.description` localizados para
 reduzir dependência de inferência visual.
 
-Essa base não substitui auditoria manual. O Marco 8 ainda deve validar navegação por teclado completa,
-contraste real nos temas claro/escuro, ordem de foco e comportamento com leitores de tela nas
-plataformas suportadas.
+O fechamento do Marco 8 considera validada a base de acessibilidade da tela principal quando:
+
+- o campo de busca é acessível por `Ctrl+F` e mantém foco previsível após executar uma busca;
+- o seletor de pasta, botões de busca/cancelamento, filtros, chips de escopo, favoritos, recentes,
+  resultados, preview, menus e command palette possuem nome ou descrição acessível;
+- a navegação por teclado cobre os fluxos principais: abrir pasta, buscar, cancelar, abrir a paleta,
+  navegar entre resultados, abrir ações do resultado e copiar informações;
+- estados vazios, erros parciais, cancelamento e indexação inativa são expostos por texto visível, sem
+  depender exclusivamente de cor;
+- contraste visual da tela principal é suficiente para leitura confortável no tema escuro inicial.
+
+Auditorias completas com leitores de tela reais e verificações automatizadas de contraste entram no
+Marco 9 como testes de qualidade contínua. O Marco 8 deixa a estrutura pronta e documenta o checklist
+manual para impedir regressões óbvias.
+
+## DPI alto, monitores e responsividade
+
+A tela principal deve permanecer utilizável em janela reduzida, DPI alto e escalas fracionárias. O
+Marco 8 usa `Layout`, `Flow`, `SplitView`, textos com `elide`, listas virtualizadas e seções roláveis
+para evitar que controles compactos empurrem resultados e preview para fora da janela.
+
+Checklist manual recomendado antes de releases:
+
+- abrir a janela em tamanho reduzido e confirmar que cabeçalho, escopo, resultados, preview e status
+  continuam acessíveis;
+- validar escalas de 100%, 125%, 150% e 200% no Windows;
+- mover a janela entre monitores com escalas diferentes e confirmar que fontes, bordas, menus e
+  tooltips continuam proporcionais;
+- confirmar que nomes longos de arquivos e diretórios mostram o final relevante do caminho sem quebrar
+  o layout;
+- confirmar que histórico, favoritos, inclusões e exclusões usam rolagem ou menus quando não couberem
+  horizontalmente;
+- confirmar que resultados e preview continuam utilizáveis quando o layout alterna entre orientação
+  horizontal e vertical.
 
 ## Pluralização, atalhos e strings técnicas
 

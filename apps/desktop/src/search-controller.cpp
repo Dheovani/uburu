@@ -1,9 +1,17 @@
 #include "search-controller.hpp"
 
+#include "app/services/indexing-service.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
+#include "core/git/git-cli-git-service.hpp"
+#include "core/index/persistent-index-service.hpp"
 #include "core/search/direct-search-engine.hpp"
 #include "core/search/search-errors.hpp"
+#include "core/storage/sqlite-storage-service.hpp"
 #include "core/text/text-file-reader.hpp"
+
+#ifdef UBURU_HAS_LIBGIT2
+#include "core/git/libgit2-git-service.hpp"
+#endif
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -18,6 +26,7 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QStringList>
 #include <QUrl>
 #include <QVariantMap>
@@ -58,6 +67,9 @@ namespace uburu::app
     constexpr auto excludedDirectoriesKey = "excludedDirectories";
     constexpr auto recentDirectoriesKey = "recentDirectories";
     constexpr auto favoriteDirectoriesKey = "favoriteDirectories";
+    constexpr int completeProgressPercentage = 100;
+
+    std::vector<std::string> parseDocumentTypes(const QString& text);
 
     std::filesystem::path nativePath(const QString& path)
     {
@@ -146,6 +158,17 @@ namespace uburu::app
       return info.absoluteFilePath();
     }
 
+    std::filesystem::path localDataPath()
+    {
+      const auto location = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+      const auto fallbackLocation = QDir::current().absoluteFilePath(QStringLiteral(".uburu"));
+      const auto directory = location.isEmpty() ? fallbackLocation : location;
+
+      QDir().mkpath(directory);
+
+      return nativePath(QDir(directory).filePath(QStringLiteral("uburu.sqlite3")));
+    }
+
     bool isSameOrInsideDirectory(const QString& root, const QString& path)
     {
       const auto relativePath = QDir(root).relativeFilePath(path);
@@ -159,11 +182,120 @@ namespace uburu::app
       return QDir::fromNativeSeparators(QDir(root).relativeFilePath(path));
     }
 
+    std::filesystem::path normalizedAbsolutePath(const std::filesystem::path& path)
+    {
+      std::error_code error;
+      auto normalizedPath = std::filesystem::weakly_canonical(path, error);
+
+      if (!error)
+        return normalizedPath;
+
+      normalizedPath = std::filesystem::absolute(path, error);
+
+      if (!error)
+        return normalizedPath.lexically_normal();
+
+      return path.lexically_normal();
+    }
+
+    bool pathIsSameOrInside(const std::filesystem::path& root, const std::filesystem::path& path)
+    {
+      const auto normalizedRoot = normalizedAbsolutePath(root);
+      const auto normalizedPath = normalizedAbsolutePath(path);
+      std::error_code error;
+      const auto relativePath = std::filesystem::relative(normalizedPath, normalizedRoot, error);
+
+      if (error)
+        return normalizedRoot == normalizedPath;
+
+      if (relativePath.empty() || relativePath == ".")
+        return true;
+
+      const auto firstPart = *relativePath.begin();
+
+      return firstPart != "..";
+    }
+
     QStringList withoutDirectory(QStringList directories, const QString& directory)
     {
       directories.removeAll(directory);
 
       return directories;
+    }
+
+    std::shared_ptr<git::GitService> makeGitService()
+    {
+#ifdef UBURU_HAS_LIBGIT2
+      return std::make_shared<git::Libgit2GitService>();
+#else
+      return std::make_shared<git::GitCliGitService>();
+#endif
+    }
+
+    SearchOptions indexingOptions(bool respectGitignore,
+                                  bool includeHidden,
+                                  bool includeBinary,
+                                  bool includeSubdirectories,
+                                  const QString& documentTypes)
+    {
+      SearchOptions options;
+      options.respectGitignore = respectGitignore;
+      options.includeHidden = includeHidden;
+      options.includeBinary = includeBinary;
+      options.includeSubdirectories = includeSubdirectories;
+      options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
+      options.extensions = parseDocumentTypes(documentTypes);
+
+      return options;
+    }
+
+    std::optional<WorktreeInfo> worktreeForRoot(const git::GitService& gitService,
+                                                const std::filesystem::path& root)
+    {
+      const auto repositoryResult = gitService.discoverRepository(root);
+      const auto* repository = std::get_if<RepositoryInfo>(&repositoryResult);
+
+      if (repository == nullptr)
+        return std::nullopt;
+
+      const auto worktreesResult = gitService.listWorktrees(*repository);
+      const auto* worktrees = std::get_if<std::vector<WorktreeInfo>>(&worktreesResult);
+
+      if (worktrees != nullptr) {
+        auto selectedWorktree = std::optional<WorktreeInfo>{};
+
+        for (const auto& worktree : *worktrees) {
+          if (!pathIsSameOrInside(worktree.root, root))
+            continue;
+
+          if (!selectedWorktree || worktree.root.native().size() > selectedWorktree->root.native().size())
+            selectedWorktree = worktree;
+        }
+
+        if (selectedWorktree)
+          return selectedWorktree;
+      }
+
+      if (!repository->worktreeRoot)
+        return std::nullopt;
+
+      return WorktreeInfo{.id = pathToUtf8(*repository->worktreeRoot),
+                          .repositoryId = repository->id,
+                          .root = *repository->worktreeRoot,
+                          .gitDirectory = repository->commonGitDirectory,
+                          .branch = repository->currentBranch,
+                          .headOid = repository->headOid};
+    }
+
+    void addIndexSummary(index::IndexUpdateSummary& target, const index::IndexUpdateSummary& source)
+    {
+      target.indexed += source.indexed;
+      target.reusedByCatalog += source.reusedByCatalog;
+      target.reusedByBlob += source.reusedByBlob;
+      target.reusedByHash += source.reusedByHash;
+      target.removed += source.removed;
+      target.failed += source.failed;
+      target.cancelled = target.cancelled || source.cancelled;
     }
 
     QString longestContainingRoot(const QStringList& roots, const QString& path)
@@ -305,8 +437,7 @@ namespace uburu::app
     {
       const auto context = firstSearchErrorContext(summary);
 
-      return context.isEmpty() ? receiver->tr("Erro ao pesquisar")
-                               : receiver->tr("Erro ao pesquisar: %1").arg(context);
+      return context.isEmpty() ? receiver->tr("Erro ao pesquisar") : receiver->tr("Erro ao pesquisar: %1").arg(context);
     }
 
     QString partialSearchStatus(const search::SearchSummary& summary, QObject* receiver)
@@ -318,10 +449,9 @@ namespace uburu::app
       if (errorCount == 0)
         return status;
 
-      const auto warning =
-        context.isEmpty()
-          ? receiver->tr("%n erro(s) parcial(is)", nullptr, errorCount)
-          : receiver->tr("%n erro(s) parcial(is), primeiro: %1", nullptr, errorCount).arg(context);
+      const auto warning = context.isEmpty()
+                             ? receiver->tr("%n erro(s) parcial(is)", nullptr, errorCount)
+                             : receiver->tr("%n erro(s) parcial(is), primeiro: %1", nullptr, errorCount).arg(context);
 
       return receiver->tr("%1 — avisos: %2").arg(status, warning);
     }
@@ -402,17 +532,17 @@ namespace uburu::app
       return html;
     }
 
-    QString formattedPreviewHtmlLine(const text::TextLine& line,
-                                     bool selected,
-                                     const std::vector<MatchSpan>& highlights)
+    QString
+    formattedPreviewHtmlLine(const text::TextLine& line, bool selected, const std::vector<MatchSpan>& highlights)
     {
-      const auto lineNumber = QString::number(static_cast<qulonglong>(line.lineNumber)).rightJustified(
-        previewLineNumberWidth, QLatin1Char(' '));
-      const auto lineText = selected ? highlightedHtml(line.text, highlights)
-                                     : QString::fromStdString(line.text).toHtmlEscaped();
-      const auto lineStyle = selected ? QStringLiteral(" style=\"background:%1;\"")
-                                          .arg(QString::fromLatin1(previewHtmlSelectedLineBackground))
-                                      : QString{};
+      const auto lineNumber = QString::number(static_cast<qulonglong>(line.lineNumber))
+                                .rightJustified(previewLineNumberWidth, QLatin1Char(' '));
+      const auto lineText =
+        selected ? highlightedHtml(line.text, highlights) : QString::fromStdString(line.text).toHtmlEscaped();
+      const auto lineStyle =
+        selected
+          ? QStringLiteral(" style=\"background:%1;\"").arg(QString::fromLatin1(previewHtmlSelectedLineBackground))
+          : QString{};
 
       return QStringLiteral("<div%1><span style=\"color:%2;\">%3</span>  %4</div>")
         .arg(lineStyle, QString::fromLatin1(previewHtmlLineNumberColor), lineNumber.toHtmlEscaped(), lineText);
@@ -449,8 +579,8 @@ namespace uburu::app
       PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
       const auto targetLine = lineNumberFromLocation(location);
       const auto firstLine = targetLine.has_value() && *targetLine > previewContextBeforeLines
-        ? *targetLine - previewContextBeforeLines
-        : std::size_t{1};
+                               ? *targetLine - previewContextBeforeLines
+                               : std::size_t{1};
       const auto lastLine =
         targetLine.has_value() ? *targetLine + previewContextAfterLines : maximumPreviewLinesWithoutLocation;
       SearchOptions options;
@@ -499,7 +629,8 @@ namespace uburu::app
 
       if (!htmlLines.empty()) {
         result.html =
-          QStringLiteral("<html><body style=\"white-space:pre;font-family:Consolas,monospace;color:%1;\">%2</body></html>")
+          QStringLiteral(
+            "<html><body style=\"white-space:pre;font-family:Consolas,monospace;color:%1;\">%2</body></html>")
             .arg(QString::fromLatin1(previewHtmlTextColor), htmlLines.join(QString{}));
       }
 
@@ -598,7 +729,7 @@ namespace uburu::app
 
   SearchController::SearchController(QObject* parent)
     : QObject(parent), statusValue(tr("Pronto")), timeToFirstResultValue(QStringLiteral("—")),
-      searchDurationValue(QStringLiteral("—")), resultsModel(this),
+      searchDurationValue(QStringLiteral("—")), indexingStatusValue(tr("Indexação inativa")), resultsModel(this),
       searchService(std::make_shared<DefaultSearchService>(
         std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
   {
@@ -612,6 +743,11 @@ namespace uburu::app
 
     if (activeWatcher != nullptr)
       activeWatcher->waitForFinished();
+
+    indexingStopSource.request_stop();
+
+    if (activeIndexingWatcher != nullptr)
+      activeIndexingWatcher->waitForFinished();
 
     if (activePreviewWatcher != nullptr)
       activePreviewWatcher->waitForFinished();
@@ -706,7 +842,17 @@ namespace uburu::app
 
   QString SearchController::indexingStatus() const
   {
-    return tr("Indexação inativa");
+    return indexingStatusValue;
+  }
+
+  bool SearchController::indexingRunning() const
+  {
+    return indexingRunningValue;
+  }
+
+  int SearchController::indexingProgress() const
+  {
+    return indexingProgressValue;
   }
 
   QString SearchController::previewFilePath() const
@@ -1007,9 +1153,10 @@ namespace uburu::app
       setPreviewResult(result);
       setPreviewLoading(false);
     });
-    watcher->setFuture(QtConcurrent::run([path, location, fallbackPreview, previewHighlights = std::move(previewHighlights), token] {
-      return loadPreviewText(path, location, fallbackPreview, previewHighlights, token);
-    }));
+    watcher->setFuture(
+      QtConcurrent::run([path, location, fallbackPreview, previewHighlights = std::move(previewHighlights), token] {
+        return loadPreviewText(path, location, fallbackPreview, previewHighlights, token);
+      }));
   }
 
   void SearchController::clearPreview()
@@ -1099,8 +1246,8 @@ namespace uburu::app
       activeWatcher->deleteLater();
       activeWatcher = nullptr;
     });
-    activeWatcher->setFuture(QtConcurrent::run(
-      [this, query = std::move(query), token, startedAt, firstResultNanoseconds] {
+    activeWatcher->setFuture(
+      QtConcurrent::run([this, query = std::move(query), token, startedAt, firstResultNanoseconds] {
         try {
           auto summary = searchService->search(
             query,
@@ -1129,7 +1276,7 @@ namespace uburu::app
         } catch (...) {
           return failedSearchSummary(QStringLiteral("unknown exception"));
         }
-    }));
+      }));
   }
 
   void SearchController::cancel()
@@ -1140,6 +1287,115 @@ namespace uburu::app
     setCancelling(true);
     setStatus(tr("Cancelando..."));
     stopSource.request_stop();
+  }
+
+  void SearchController::startIndexing(bool respectGitignore,
+                                       bool includeHidden,
+                                       bool includeBinary,
+                                       bool includeSubdirectories,
+                                       const QString& documentTypes)
+  {
+    if (indexingRunningValue)
+      return;
+
+    if (selectedDirectoryValues.empty()) {
+      setIndexingProgress(tr("Selecione um escopo para indexar"), 0);
+      return;
+    }
+
+    indexingStopSource = std::stop_source{};
+    const auto token = indexingStopSource.get_token();
+    const auto roots = selectedDirectoryValues;
+    const auto databasePath = localDataPath();
+    const auto options = indexingOptions(respectGitignore,
+                                         includeHidden,
+                                         includeBinary,
+                                         includeSubdirectories,
+                                         documentTypes);
+
+    setIndexingProgress(tr("Preparando indexação..."), 0);
+    setIndexingRunning(true);
+
+    activeIndexingWatcher = new QFutureWatcher<index::IndexUpdateSummary>(this);
+    connect(activeIndexingWatcher, &QFutureWatcher<index::IndexUpdateSummary>::finished, this, [this] {
+      const auto summary = activeIndexingWatcher->result();
+
+      if (summary.cancelled) {
+        setIndexingProgress(tr("Indexação cancelada"), indexingProgressValue);
+      } else {
+        const auto reusedDocuments = summary.reusedByCatalog + summary.reusedByBlob + summary.reusedByHash;
+        auto status = tr("Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)");
+        status = status.arg(summary.indexed).arg(reusedDocuments).arg(summary.removed).arg(summary.failed);
+
+        setIndexingProgress(status, completeProgressPercentage);
+      }
+
+      setIndexingRunning(false);
+      activeIndexingWatcher->deleteLater();
+      activeIndexingWatcher = nullptr;
+    });
+
+    activeIndexingWatcher->setFuture(QtConcurrent::run([this, roots, databasePath, options, token] {
+      index::IndexUpdateSummary totalSummary;
+
+      try {
+        auto storageService = std::make_shared<storage::SQLiteStorageService>(databasePath);
+        storageService->initialize();
+
+        auto gitService = makeGitService();
+        auto scanner = std::make_shared<filesystem::RecursiveFileScanner>();
+        auto indexService = std::make_shared<index::PersistentIndexService>(*storageService);
+        DefaultIndexingService indexingService(scanner, gitService, indexService);
+
+        for (const auto& root : roots) {
+          if (token.stop_requested()) {
+            totalSummary.cancelled = true;
+            break;
+          }
+
+          const auto nativeRoot = nativePath(root);
+          auto worktree = worktreeForRoot(*gitService, nativeRoot);
+
+          if (!worktree) {
+            ++totalSummary.failed;
+            QMetaObject::invokeMethod(
+              this,
+              [this, root] { setIndexingProgress(tr("Indexação ignorou raiz sem repositório Git: %1").arg(root), 0); },
+              Qt::QueuedConnection);
+            continue;
+          }
+
+          QMetaObject::invokeMethod(
+            this, [this, root] { setIndexingProgress(tr("Indexando %1").arg(root), 0); }, Qt::QueuedConnection);
+
+          auto summary = indexingService.requestManualReindex(
+            *worktree,
+            options,
+            [this](const index::IndexUpdateProgress& progress) {
+              QMetaObject::invokeMethod(
+                this, [this, progress] { updateIndexingProgress(progress); }, Qt::QueuedConnection);
+            },
+            token);
+
+          addIndexSummary(totalSummary, summary);
+        }
+      } catch (const std::exception&) {
+        ++totalSummary.failed;
+      } catch (...) {
+        ++totalSummary.failed;
+      }
+
+      return totalSummary;
+    }));
+  }
+
+  void SearchController::cancelIndexing()
+  {
+    if (!indexingRunningValue)
+      return;
+
+    setIndexingProgress(tr("Cancelando indexação..."), indexingProgressValue);
+    indexingStopSource.request_stop();
   }
 
   void SearchController::loadScopeHistory()
@@ -1155,9 +1411,8 @@ namespace uburu::app
     favoriteDirectoryValues = settings.value(QString::fromLatin1(favoriteDirectoriesKey)).toStringList();
     settings.endGroup();
 
-    selectedDirectoryValues.removeIf([](const QString& directory) {
-      return directory.isEmpty() || !QFileInfo::exists(directory);
-    });
+    selectedDirectoryValues.removeIf(
+      [](const QString& directory) { return directory.isEmpty() || !QFileInfo::exists(directory); });
 
     if (!selectedDirectoryValues.empty()) {
       directoryValue = selectedDirectoryValues.front();
@@ -1237,6 +1492,43 @@ namespace uburu::app
 
     cancellingValue = cancelling;
     emit cancellingChanged();
+  }
+
+  void SearchController::setIndexingRunning(bool running)
+  {
+    if (indexingRunningValue == running)
+      return;
+
+    indexingRunningValue = running;
+    emit indexingRunningChanged();
+  }
+
+  void SearchController::setIndexingProgress(QString status, int progress)
+  {
+    const auto normalizedProgress = std::clamp(progress, 0, completeProgressPercentage);
+
+    if (indexingStatusValue == status && indexingProgressValue == normalizedProgress)
+      return;
+
+    indexingStatusValue = std::move(status);
+    indexingProgressValue = normalizedProgress;
+    emit indexingProgressChanged();
+  }
+
+  void SearchController::updateIndexingProgress(const index::IndexUpdateProgress& progress)
+  {
+    auto progressPercent = 0;
+
+    if (progress.total > 0)
+      progressPercent = static_cast<int>((progress.processed * completeProgressPercentage) / progress.total);
+
+    const auto currentPath = QString::fromUtf8(pathToUtf8(progress.currentPath));
+    auto status = tr("Indexando %1/%2").arg(progress.processed).arg(progress.total);
+
+    if (!currentPath.isEmpty())
+      status = tr("Indexando %1/%2: %3").arg(progress.processed).arg(progress.total).arg(currentPath);
+
+    setIndexingProgress(status, progressPercent);
   }
 
   void SearchController::setPreviewLoading(bool loading)

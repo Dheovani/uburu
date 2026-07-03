@@ -43,6 +43,12 @@
     <message><source>Copiar ocorrência do resultado</source><translation>Copy result occurrence</translation></message>
     <message><source>Copiar caminho, localização e trecho da ocorrência atual</source><translation>Copy path, location, and excerpt for the current occurrence</translation></message>
     <message><source>Ctrl+Shift+C</source><translation>Ctrl+Shift+C</translation></message>
+    <message><source>Reindexar escopo</source><translation>Reindex scope</translation></message>
+    <message><source>Atualizar o índice persistente das pastas selecionadas</source><translation>Update the persistent index for the selected folders</translation></message>
+    <message><source>Ctrl+Alt+I</source><translation>Ctrl+Alt+I</translation></message>
+    <message><source>Cancelar indexação</source><translation>Cancel indexing</translation></message>
+    <message><source>Interromper a atualização do índice em andamento</source><translation>Stop the index update currently in progress</translation></message>
+    <message><source>Ctrl+Alt+Esc</source><translation>Ctrl+Alt+Esc</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Select directory or repository</translation></message>
     <message><source>Selecionar subpasta para ignorar</source><translation>Select subfolder to ignore</translation></message>
     <message><source>Selecionar subpasta para incluir</source><translation>Select subfolder to include</translation></message>
@@ -197,6 +203,7 @@
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Waiting for a search command</translation></message>
     <message><source>Indexação inativa</source><translation>Indexing inactive</translation></message>
+    <message><source>Progresso da indexação</source><translation>Indexing progress</translation></message>
     <message><source>A pasta ignorada precisa estar dentro de um escopo selecionado</source><translation>The ignored folder must be inside a selected scope</translation></message>
     <message><source>Selecione uma subpasta para ignorar, não a raiz da busca</source><translation>Select a subfolder to ignore, not the search root</translation></message>
   </context>
@@ -204,6 +211,15 @@
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Ready</translation></message>
     <message><source>Indexação inativa</source><translation>Indexing inactive</translation></message>
+    <message><source>Selecione um escopo para indexar</source><translation>Select a scope to index</translation></message>
+    <message><source>Preparando indexação...</source><translation>Preparing indexing...</translation></message>
+    <message><source>Indexação cancelada</source><translation>Indexing cancelled</translation></message>
+    <message><source>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)</source><translation>Index updated: %1 indexed, %2 reused, %3 removed, %4 failed</translation></message>
+    <message><source>Indexação ignorou raiz sem repositório Git: %1</source><translation>Indexing skipped root without Git repository: %1</translation></message>
+    <message><source>Indexando %1</source><translation>Indexing %1</translation></message>
+    <message><source>Cancelando indexação...</source><translation>Cancelling indexing...</translation></message>
+    <message><source>Indexando %1/%2</source><translation>Indexing %1/%2</translation></message>
+    <message><source>Indexando %1/%2: %3</source><translation>Indexing %1/%2: %3</translation></message>
     <message><source>A pasta incluída precisa estar dentro de um escopo selecionado</source><translation>The included folder must be inside a selected scope</translation></message>
     <message><source>Selecione uma subpasta para incluir, não a raiz da busca</source><translation>Select a subfolder to include, not the search root</translation></message>
     <message numerus="yes"><source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source><translation><numerusform>%n match found in %1 file(s)</numerusform><numerusform>%n matches found in %1 file(s)</numerusform></translation></message>

@@ -43,6 +43,12 @@
     <message><source>Copiar ocorrência do resultado</source><translation>Copiar ocorrência do resultado</translation></message>
     <message><source>Copiar caminho, localização e trecho da ocorrência atual</source><translation>Copiar caminho, localização e trecho da ocorrência atual</translation></message>
     <message><source>Ctrl+Shift+C</source><translation>Ctrl+Shift+C</translation></message>
+    <message><source>Reindexar escopo</source><translation>Reindexar escopo</translation></message>
+    <message><source>Atualizar o índice persistente das pastas selecionadas</source><translation>Atualizar o índice persistente das pastas selecionadas</translation></message>
+    <message><source>Ctrl+Alt+I</source><translation>Ctrl+Alt+I</translation></message>
+    <message><source>Cancelar indexação</source><translation>Cancelar indexação</translation></message>
+    <message><source>Interromper a atualização do índice em andamento</source><translation>Interromper a atualização do índice em andamento</translation></message>
+    <message><source>Ctrl+Alt+Esc</source><translation>Ctrl+Alt+Esc</translation></message>
     <message><source>Selecionar diretório ou repositório</source><translation>Selecionar diretório ou repositório</translation></message>
     <message><source>Selecionar subpasta para ignorar</source><translation>Selecionar subpasta para ignorar</translation></message>
     <message><source>Selecionar subpasta para incluir</source><translation>Selecionar subpasta para incluir</translation></message>
@@ -197,6 +203,7 @@
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Aguardando comando de busca</translation></message>
     <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
+    <message><source>Progresso da indexação</source><translation>Progresso da indexação</translation></message>
     <message><source>A pasta ignorada precisa estar dentro de um escopo selecionado</source><translation>A pasta ignorada precisa estar dentro de um escopo selecionado</translation></message>
     <message><source>Selecione uma subpasta para ignorar, não a raiz da busca</source><translation>Selecione uma subpasta para ignorar, não a raiz da busca</translation></message>
   </context>
@@ -204,6 +211,15 @@
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Pronto</translation></message>
     <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
+    <message><source>Selecione um escopo para indexar</source><translation>Selecione um escopo para indexar</translation></message>
+    <message><source>Preparando indexação...</source><translation>Preparando indexação...</translation></message>
+    <message><source>Indexação cancelada</source><translation>Indexação cancelada</translation></message>
+    <message><source>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)</source><translation>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)</translation></message>
+    <message><source>Indexação ignorou raiz sem repositório Git: %1</source><translation>Indexação ignorou raiz sem repositório Git: %1</translation></message>
+    <message><source>Indexando %1</source><translation>Indexando %1</translation></message>
+    <message><source>Cancelando indexação...</source><translation>Cancelando indexação...</translation></message>
+    <message><source>Indexando %1/%2</source><translation>Indexando %1/%2</translation></message>
+    <message><source>Indexando %1/%2: %3</source><translation>Indexando %1/%2: %3</translation></message>
     <message><source>A pasta incluída precisa estar dentro de um escopo selecionado</source><translation>A pasta incluída precisa estar dentro de um escopo selecionado</translation></message>
     <message><source>Selecione uma subpasta para incluir, não a raiz da busca</source><translation>Selecione uma subpasta para incluir, não a raiz da busca</translation></message>
     <message numerus="yes"><source>%n ocorrência(s) encontrada(s) em %1 arquivo(s)</source><translation><numerusform>%n ocorrência encontrada em %1 arquivo(s)</numerusform><numerusform>%n ocorrências encontradas em %1 arquivo(s)</numerusform></translation></message>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/services/search-service.hpp"
+#include "core/index/index-service.hpp"
 
 #include <QAbstractListModel>
 #include <QFutureWatcher>
@@ -83,7 +84,9 @@ namespace uburu::app
     Q_PROPERTY(qulonglong matchesFound READ matchesFound NOTIFY searchMetricsChanged)
     Q_PROPERTY(QString timeToFirstResult READ timeToFirstResult NOTIFY searchMetricsChanged)
     Q_PROPERTY(QString searchDuration READ searchDuration NOTIFY searchMetricsChanged)
-    Q_PROPERTY(QString indexingStatus READ indexingStatus CONSTANT)
+    Q_PROPERTY(QString indexingStatus READ indexingStatus NOTIFY indexingProgressChanged)
+    Q_PROPERTY(bool indexingRunning READ indexingRunning NOTIFY indexingRunningChanged)
+    Q_PROPERTY(int indexingProgress READ indexingProgress NOTIFY indexingProgressChanged)
     Q_PROPERTY(QString previewFilePath READ previewFilePath NOTIFY previewChanged)
     Q_PROPERTY(QString previewLocation READ previewLocation NOTIFY previewChanged)
     Q_PROPERTY(QString previewText READ previewText NOTIFY previewChanged)
@@ -110,6 +113,8 @@ namespace uburu::app
     [[nodiscard]] QString timeToFirstResult() const;
     [[nodiscard]] QString searchDuration() const;
     [[nodiscard]] QString indexingStatus() const;
+    [[nodiscard]] bool indexingRunning() const;
+    [[nodiscard]] int indexingProgress() const;
     [[nodiscard]] QString previewFilePath() const;
     [[nodiscard]] QString previewLocation() const;
     [[nodiscard]] QString previewText() const;
@@ -145,6 +150,12 @@ namespace uburu::app
                                  bool includeSubdirectories,
                                  const QString& documentTypes);
     Q_INVOKABLE void cancel();
+    Q_INVOKABLE void startIndexing(bool respectGitignore,
+                                   bool includeHidden,
+                                   bool includeBinary,
+                                   bool includeSubdirectories,
+                                   const QString& documentTypes);
+    Q_INVOKABLE void cancelIndexing();
 
   signals:
     void directoryChanged();
@@ -153,6 +164,8 @@ namespace uburu::app
     void cancellingChanged();
     void scopeHistoryChanged();
     void searchMetricsChanged();
+    void indexingRunningChanged();
+    void indexingProgressChanged();
     void previewChanged();
     void previewLoadingChanged();
 
@@ -165,6 +178,9 @@ namespace uburu::app
     void setStatus(QString status);
     void setRunning(bool running);
     void setCancelling(bool cancelling);
+    void setIndexingRunning(bool running);
+    void setIndexingProgress(QString status, int progress);
+    void updateIndexingProgress(const index::IndexUpdateProgress& progress);
     void setPreviewLoading(bool loading);
     void setPreviewResult(const PreviewLoadResult& result);
     void resetSearchMetrics();
@@ -180,6 +196,7 @@ namespace uburu::app
     qulonglong matchesFoundValue{0};
     QString timeToFirstResultValue;
     QString searchDurationValue;
+    QString indexingStatusValue;
     QString previewFilePathValue;
     QString previewLocationValue;
     QString previewTextValue;
@@ -187,11 +204,15 @@ namespace uburu::app
     bool previewLoadingValue{false};
     bool runningValue{false};
     bool cancellingValue{false};
+    bool indexingRunningValue{false};
+    int indexingProgressValue{0};
     SearchResultModel resultsModel;
     std::shared_ptr<const SearchService> searchService;
     std::stop_source stopSource;
+    std::stop_source indexingStopSource;
     std::stop_source previewStopSource;
     QFutureWatcher<search::SearchSummary>* activeWatcher{nullptr};
+    QFutureWatcher<index::IndexUpdateSummary>* activeIndexingWatcher{nullptr};
     QFutureWatcher<PreviewLoadResult>* activePreviewWatcher{nullptr};
   };
 

@@ -1,9 +1,9 @@
 #include "core/text/text-file-reader.hpp"
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <array>
 #include <string>
 #include <vector>
 
@@ -32,8 +32,7 @@ namespace
 TEST_CASE("text reader strips UTF-8 BOM and supports LF, CRLF and CR endings")
 {
   TemporaryFile file("uburu-text-reader-utf8-bom.txt");
-  writeBytes(file.path(), {0xEFU, 0xBBU, 0xBFU, 'o', 'n', 'e', '\n', 't', 'w', 'o', '\r',
-                           '\n',  't',   'h',   'r', 'e', 'e', '\r', 'f', 'o', 'u', 'r'});
+  writeBytes(file.path(), uburu::tests::fixtures::utf8BomMixedLineEndingBytes());
 
   const auto lines = readLines(file.path());
 
@@ -51,7 +50,7 @@ TEST_CASE("text reader strips UTF-8 BOM and supports LF, CRLF and CR endings")
 TEST_CASE("text reader decodes UTF-16 little endian with BOM")
 {
   TemporaryFile file("uburu-text-reader-utf16-le.txt");
-  writeBytes(file.path(), {0xFFU, 0xFEU, 'a', 0x00U, 0xE7U, 0x00U, 0xE3U, 0x00U, 'o', 0x00U});
+  writeBytes(file.path(), uburu::tests::fixtures::utf16LittleEndianPortugueseBytes());
 
   const auto lines = readLines(file.path());
 
@@ -62,7 +61,7 @@ TEST_CASE("text reader decodes UTF-16 little endian with BOM")
 TEST_CASE("text reader decodes UTF-16 big endian with BOM")
 {
   TemporaryFile file("uburu-text-reader-utf16-be.txt");
-  writeBytes(file.path(), {0xFEU, 0xFFU, 0x00U, 'a', 0x00U, 0xE7U, 0x00U, 0xE3U, 0x00U, 'o'});
+  writeBytes(file.path(), uburu::tests::fixtures::utf16BigEndianPortugueseBytes());
 
   const auto lines = readLines(file.path());
 
@@ -95,7 +94,7 @@ TEST_CASE("text reader prefers valid UTF-8 without BOM before Latin-1 fallback")
 TEST_CASE("text reader uses configurable Latin-1 fallback")
 {
   TemporaryFile file("uburu-text-reader-latin1.txt");
-  writeBytes(file.path(), {'a', 0xE7U, 0xE3U, 'o'});
+  writeBytes(file.path(), uburu::tests::fixtures::latin1PortugueseBytes());
 
   uburu::SearchOptions options;
   options.fallbackEncoding = uburu::TextEncoding::latin1;
@@ -129,7 +128,7 @@ TEST_CASE("text reader replaces invalid UTF-8 when policy allows it")
 TEST_CASE("text reader skips binary files using a sample instead of per-line checks")
 {
   TemporaryFile file("uburu-text-reader-binary.bin");
-  writeBytes(file.path(), {'t', 'e', 'x', 't', 0x00U, 'm', 'o', 'r', 'e'});
+  writeBytes(file.path(), uburu::tests::fixtures::binaryTextLikeBytes());
 
   uburu::SearchOptions options;
   options.includeBinary = false;

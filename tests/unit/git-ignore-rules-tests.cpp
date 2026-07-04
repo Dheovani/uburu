@@ -1,4 +1,5 @@
 #include "core/filesystem/git-ignore-rules.hpp"
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -22,7 +23,7 @@ TEST_CASE("git ignore rules apply the last matching rule")
   uburu::filesystem::GitIgnoreRules rules;
 
   uburu::tests::TemporaryFile temporaryFile("uburu-git-ignore-rules-test.gitignore");
-  uburu::tests::writeFile(temporaryFile.path(), "*.log\n!important.log\n");
+  uburu::tests::writeFile(temporaryFile.path(), uburu::tests::fixtures::rootGitIgnoreContent);
 
   rules.appendFile(temporaryFile.path(), {});
 

@@ -271,7 +271,7 @@ e UI para avançarem mais rapidamente.
 
 - [x] Criar helpers RAII para diretórios e arquivos temporários nos testes.
 - [x] Remover nomes temporários fixos que possam colidir em execução paralela.
-- [ ] Criar fixtures pequenas de texto, encoding, ignore e Git.
+- [x] Criar fixtures pequenas de texto, encoding, ignore e Git.
 - [x] Adicionar testes unitários para cada regra pura de matching e filtro.
 - [x] Adicionar testes de integração de scanner em filesystem real temporário.
 - [x] Adicionar testes de integração SQLite com banco descartável.

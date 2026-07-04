@@ -1,6 +1,7 @@
 #include "core/filesystem/path-normalization.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/git/libgit2-git-service.hpp"
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -82,10 +83,7 @@ namespace
                       "git_repository_init",
                       repositoryRoot);
 
-    writeFile(repositoryRoot / "tracked.txt", "tracked\n");
-    writeFile(repositoryRoot / "modify-me.txt", "modify me\n");
-    writeFile(repositoryRoot / "delete-me.txt", "delete me\n");
-    writeFile(repositoryRoot / ".gitignore", "*.ignored\n");
+    uburu::tests::fixtures::writeBasicGitWorkingTreeFixture(repositoryRoot);
 
     git_index* index = nullptr;
     REQUIRE(git_repository_index(&index, repository) == 0);

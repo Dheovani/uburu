@@ -1,4 +1,5 @@
 #include "core/text/text-matcher.hpp"
+#include "fixtures/test-fixtures.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -73,14 +74,8 @@ TEST_CASE("literal matching is case insensitive for precomposed latin Unicode")
 
 TEST_CASE("literal matching treats precomposed and decomposed Portuguese accents as equivalent")
 {
-  const std::string decomposedText =
-    "a gerac\xCC\xA7"
-    "a\xCC\x83"
-    "o e a corrupc\xCC\xA7"
-    "a\xCC\x83"
-    "o da mate\xCC\x81"
-    "ria";
-  const std::string precomposedExpression = "gera\xC3\xA7\xC3\xA3o e a corrup\xC3\xA7\xC3\xA3o da mat\xC3\xA9ria";
+  const auto decomposedText = uburu::tests::fixtures::portugueseDecomposedText();
+  const auto precomposedExpression = uburu::tests::fixtures::portuguesePrecomposedText().substr(2);
 
   const auto match = findLiteral(decomposedText, precomposedExpression, SearchOptions{});
 
@@ -90,14 +85,8 @@ TEST_CASE("literal matching treats precomposed and decomposed Portuguese accents
 
 TEST_CASE("literal matching treats decomposed and precomposed Portuguese accents as equivalent")
 {
-  const std::string precomposedText = "a gera\xC3\xA7\xC3\xA3o e a corrup\xC3\xA7\xC3\xA3o da mat\xC3\xA9ria";
-  const std::string decomposedExpression =
-    "gerac\xCC\xA7"
-    "a\xCC\x83"
-    "o e a corrupc\xCC\xA7"
-    "a\xCC\x83"
-    "o da mate\xCC\x81"
-    "ria";
+  const auto precomposedText = uburu::tests::fixtures::portuguesePrecomposedText();
+  const auto decomposedExpression = uburu::tests::fixtures::portugueseDecomposedText().substr(2);
 
   const auto match = findLiteral(precomposedText, decomposedExpression, SearchOptions{});
 

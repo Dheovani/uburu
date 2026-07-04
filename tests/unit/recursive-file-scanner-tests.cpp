@@ -1,4 +1,5 @@
 #include "core/filesystem/recursive-file-scanner.hpp"
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -201,11 +202,7 @@ TEST_CASE("recursive scanner prioritizes smaller files deterministically")
 TEST_CASE("recursive scanner respects root gitignore rules")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-root-gitignore-test");
-  writeFile(directory.path() / ".gitignore", "*.log\n!important.log\nbuild/\n");
-  writeFile(directory.path() / "debug.log", "ignored\n");
-  writeFile(directory.path() / "important.log", "kept\n");
-  writeFile(directory.path() / "build" / "output.txt", "ignored\n");
-  writeFile(directory.path() / "src" / "main.cpp", "kept\n");
+  uburu::tests::fixtures::writeRootGitIgnoreFixture(directory.path());
 
   uburu::SearchOptions options;
 
@@ -219,10 +216,7 @@ TEST_CASE("recursive scanner respects root gitignore rules")
 TEST_CASE("recursive scanner respects nested gitignore rules")
 {
   TemporaryDirectory directory("uburu-recursive-scanner-nested-gitignore-test");
-  writeFile(directory.path() / "src" / ".gitignore", "*.generated.cpp\n");
-  writeFile(directory.path() / "src" / "main.cpp", "kept\n");
-  writeFile(directory.path() / "src" / "main.generated.cpp", "ignored\n");
-  writeFile(directory.path() / "tests" / "main.generated.cpp", "kept\n");
+  uburu::tests::fixtures::writeNestedGitIgnoreFixture(directory.path());
 
   uburu::SearchOptions options;
 

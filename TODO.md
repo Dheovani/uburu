@@ -275,7 +275,7 @@ e UI para avançarem mais rapidamente.
 - [x] Adicionar testes unitários para cada regra pura de matching e filtro.
 - [x] Adicionar testes de integração de scanner em filesystem real temporário.
 - [x] Adicionar testes de integração SQLite com banco descartável.
-- [ ] Adicionar testes de integração libgit2 com repositórios descartáveis.
+- [x] Adicionar testes de integração libgit2 com repositórios descartáveis.
 - [ ] Testar cancelamento em diferentes pontos do pipeline.
 - [ ] Testar backpressure e limites de memória.
 - [ ] Testar concorrência repetidamente e sob ThreadSanitizer onde disponível.

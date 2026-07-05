@@ -150,9 +150,7 @@ namespace uburu::text
 
     bool isSupportedFallbackEncoding(TextEncoding encoding)
     {
-      return encoding == TextEncoding::utf16Le ||
-             encoding == TextEncoding::utf16Be ||
-             encoding == TextEncoding::latin1;
+      return encoding == TextEncoding::utf16Le || encoding == TextEncoding::utf16Be || encoding == TextEncoding::latin1;
     }
 
     bool sampleLooksValidUtf8(std::string_view sample);

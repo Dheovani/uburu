@@ -61,7 +61,6 @@ namespace uburu::tests
 
       if (lastError != nullptr && lastError->message != nullptr)
         INFO("libgit2: " << lastError->message);
-
     }
 
     REQUIRE(status == 0);
@@ -131,9 +130,8 @@ namespace uburu::tests
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    requireGitSuccess(git_repository_init(&repository, repositoryRoot.string().c_str(), false),
-                      "git_repository_init",
-                      repositoryRoot);
+    requireGitSuccess(
+      git_repository_init(&repository, repositoryRoot.string().c_str(), false), "git_repository_init", repositoryRoot);
 
     fixtures::writeBasicGitWorkingTreeFixture(repositoryRoot);
     createCommit(repository, "initial commit");
@@ -165,11 +163,10 @@ namespace uburu::tests
     REQUIRE(git_revparse_single(&headCommit, repository, "HEAD^{commit}") == 0);
 
     git_reference* branch = nullptr;
-    REQUIRE(git_branch_create(&branch,
-                              repository,
-                              std::string(branchName).c_str(),
-                              reinterpret_cast<const git_commit*>(headCommit),
-                              false) == 0);
+    REQUIRE(
+      git_branch_create(
+        &branch, repository, std::string(branchName).c_str(), reinterpret_cast<const git_commit*>(headCommit), false) ==
+      0);
 
     const auto branchReferenceName = std::string("refs/heads/") + std::string(branchName);
     REQUIRE(git_repository_set_head(repository, branchReferenceName.c_str()) == 0);

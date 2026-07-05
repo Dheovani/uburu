@@ -85,8 +85,7 @@ namespace uburu::text
   {}
 
   RegexMatcher::RegexMatcher(RegexMatcher&& other) noexcept
-    : code(std::exchange(other.code, nullptr)),
-      options(std::move(other.options)),
+    : code(std::exchange(other.code, nullptr)), options(std::move(other.options)),
       jitWasEnabled(std::exchange(other.jitWasEnabled, false))
   {}
 

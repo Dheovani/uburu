@@ -249,8 +249,7 @@ namespace uburu::app
       return options;
     }
 
-    std::optional<WorktreeInfo> worktreeForRoot(const git::GitService& gitService,
-                                                const std::filesystem::path& root)
+    std::optional<WorktreeInfo> worktreeForRoot(const git::GitService& gitService, const std::filesystem::path& root)
     {
       const auto repositoryResult = gitService.discoverRepository(root);
       const auto* repository = std::get_if<RepositoryInfo>(&repositoryResult);
@@ -1351,11 +1350,8 @@ namespace uburu::app
     const auto token = indexingStopSource.get_token();
     const auto roots = selectedDirectoryValues;
     const auto databasePath = localDataPath();
-    const auto options = indexingOptions(respectGitignore,
-                                         includeHidden,
-                                         includeBinary,
-                                         includeSubdirectories,
-                                         documentTypes);
+    const auto options =
+      indexingOptions(respectGitignore, includeHidden, includeBinary, includeSubdirectories, documentTypes);
 
     setIndexingProgress(tr("Preparando indexação..."), 0);
     setIndexingRunning(true);

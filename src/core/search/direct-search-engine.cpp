@@ -421,8 +421,8 @@ namespace uburu::search
           ++summary.filesScanned;
           ++summary.metrics.filesProcessed;
           summary.metrics.bytesProcessed += entry.size;
-          appendSearchDebugLog("engine", "read-candidate path=" + pathToUtf8(entry.relativePath) +
-                                           " size=" + std::to_string(entry.size));
+          appendSearchDebugLog(
+            "engine", "read-candidate path=" + pathToUtf8(entry.relativePath) + " size=" + std::to_string(entry.size));
 
           std::size_t fileMatches = 0;
           std::deque<std::string> previousContext;
@@ -435,8 +435,8 @@ namespace uburu::search
             if (!pathMatches)
               return false;
 
-            appendSearchDebugLog("engine", "file-name-check path=" + pathText +
-                                             " matches=" + std::to_string(pathMatches->size()));
+            appendSearchDebugLog(
+              "engine", "file-name-check path=" + pathText + " matches=" + std::to_string(pathMatches->size()));
 
             const auto decision = publishMatches(entry,
                                                  SearchResultKind::fileName,
@@ -488,9 +488,9 @@ namespace uburu::search
                 return true;
               }
 
-              appendSearchDebugLog("engine", "content-match path=" + pathToUtf8(entry.relativePath) +
-                                               " line=" + std::to_string(line.lineNumber) +
-                                               " matches=" + std::to_string(matches->size()));
+              appendSearchDebugLog("engine",
+                                   "content-match path=" + pathToUtf8(entry.relativePath) + " line=" +
+                                     std::to_string(line.lineNumber) + " matches=" + std::to_string(matches->size()));
 
               const auto decision = publishMatches(entry,
                                                    SearchResultKind::content,
@@ -533,9 +533,10 @@ namespace uburu::search
           if (stopCurrentFile)
             return true;
 
-          appendSearchDebugLog("engine", "read-summary path=" + pathToUtf8(entry.relativePath) +
-                                           " status=" + textReadStatusName(readSummary.status) +
-                                           " lines=" + std::to_string(readSummary.linesRead));
+          appendSearchDebugLog("engine",
+                               "read-summary path=" + pathToUtf8(entry.relativePath) +
+                                 " status=" + textReadStatusName(readSummary.status) +
+                                 " lines=" + std::to_string(readSummary.linesRead));
 
           return reportTextReadSummary(summary, entry, readSummary);
         },
@@ -545,9 +546,9 @@ namespace uburu::search
 
     summary.cancelled = stop_token.stop_requested();
     summary.metrics.resultsEmitted = summary.matches;
-    appendSearchDebugLog("engine", "finish filesScanned=" + std::to_string(summary.filesScanned) +
-                                     " matches=" + std::to_string(summary.matches) +
-                                     " errors=" + std::to_string(summary.errors.size()));
+    appendSearchDebugLog("engine",
+                         "finish filesScanned=" + std::to_string(summary.filesScanned) + " matches=" +
+                           std::to_string(summary.matches) + " errors=" + std::to_string(summary.errors.size()));
 
     return summary;
   }

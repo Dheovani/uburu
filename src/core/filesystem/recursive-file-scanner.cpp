@@ -489,8 +489,7 @@ namespace uburu::filesystem
                         .sparse = isSparseFile(path),
                         .searchRoot = root};
 
-        appendSearchDebugLog("scanner", "candidate path=" + pathToUtf8(relativePath) +
-                                          " size=" + std::to_string(size));
+        appendSearchDebugLog("scanner", "candidate path=" + pathToUtf8(relativePath) + " size=" + std::to_string(size));
 
         if (!error && !sink(std::move(entry)))
           return false;

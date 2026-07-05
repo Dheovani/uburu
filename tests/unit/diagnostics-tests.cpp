@@ -36,10 +36,8 @@ TEST_CASE("structured logger masks sensitive fields by default")
 
 TEST_CASE("structured logger can retain sensitive fields when explicitly enabled")
 {
-  uburu::diagnostics::InMemoryStructuredLogger logger(
-    uburu::diagnostics::StructuredLogOptions{.includeSensitiveFields = true,
-                                             .minimumLevel = uburu::diagnostics::LogLevel::trace,
-                                             .enabledCategories = {}});
+  uburu::diagnostics::InMemoryStructuredLogger logger(uburu::diagnostics::StructuredLogOptions{
+    .includeSensitiveFields = true, .minimumLevel = uburu::diagnostics::LogLevel::trace, .enabledCategories = {}});
 
   logger.write(uburu::diagnostics::LogEvent{
     .level = uburu::diagnostics::LogLevel::debug,
@@ -84,11 +82,8 @@ TEST_CASE("file structured logger writes sanitized json lines")
 {
   uburu::tests::TemporaryFile file("uburu-file-structured-logger-test.log");
 
-  uburu::diagnostics::FileStructuredLogger logger(
-    uburu::diagnostics::FileStructuredLogOptions{.structuredOptions = {},
-                                                 .path = file.path(),
-                                                 .maximumFileSizeBytes = 1024,
-                                                 .maximumRotatedFiles = 3});
+  uburu::diagnostics::FileStructuredLogger logger(uburu::diagnostics::FileStructuredLogOptions{
+    .structuredOptions = {}, .path = file.path(), .maximumFileSizeBytes = 1024, .maximumRotatedFiles = 3});
 
   logger.write(uburu::diagnostics::LogEvent{
     .level = uburu::diagnostics::LogLevel::warning,
@@ -114,11 +109,8 @@ TEST_CASE("file structured logger rotates files when size limit is reached")
   const auto& path = file.path();
   const auto rotated = std::filesystem::path(path.string() + ".1");
 
-  uburu::diagnostics::FileStructuredLogger logger(
-    uburu::diagnostics::FileStructuredLogOptions{.structuredOptions = {},
-                                                 .path = path,
-                                                 .maximumFileSizeBytes = 1,
-                                                 .maximumRotatedFiles = 1});
+  uburu::diagnostics::FileStructuredLogger logger(uburu::diagnostics::FileStructuredLogOptions{
+    .structuredOptions = {}, .path = path, .maximumFileSizeBytes = 1, .maximumRotatedFiles = 1});
 
   logger.write(uburu::diagnostics::LogEvent{.level = uburu::diagnostics::LogLevel::info,
                                             .category = uburu::diagnostics::LogCategory::diagnostics,

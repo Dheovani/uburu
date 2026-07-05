@@ -453,8 +453,8 @@ TEST_CASE("direct search decodes UTF-16 content before matching")
 {
   const uburu::tests::TemporaryFile file("uburu-search-utf16-content.txt");
   const auto& path = file.path();
-  uburu::tests::writeBytes(
-    path, {0xFFU, 0xFEU, 'n', 0x00U, 'e', 0x00U, 'e', 0x00U, 'd', 0x00U, 'l', 0x00U, 'e', 0x00U});
+  uburu::tests::writeBytes(path,
+                           {0xFFU, 0xFEU, 'n', 0x00U, 'e', 0x00U, 'e', 0x00U, 'd', 0x00U, 'l', 0x00U, 'e', 0x00U});
 
   auto scanner = std::make_shared<SingleFileScanner>(path);
   uburu::search::DirectSearchEngine engine(scanner);

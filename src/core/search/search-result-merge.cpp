@@ -26,9 +26,7 @@ namespace uburu::search
 
     [[nodiscard]] bool containsSameMatch(std::span<const SearchResult> results, const SearchResult& candidate)
     {
-      return std::ranges::any_of(results, [&](const auto& result) {
-        return searchResultSameMatch(result, candidate);
-      });
+      return std::ranges::any_of(results, [&](const auto& result) { return searchResultSameMatch(result, candidate); });
     }
 
   } // namespace

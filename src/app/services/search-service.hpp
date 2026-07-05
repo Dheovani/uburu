@@ -45,9 +45,8 @@ namespace uburu::app
     DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine,
                          std::shared_ptr<const index::IndexService> indexService,
                          SearchServiceOptions options);
-    [[nodiscard]] search::SearchSummary search(const SearchQuery& query,
-                                               search::ResultSink sink,
-                                               std::stop_token stopToken = {}) const override;
+    [[nodiscard]] search::SearchSummary
+    search(const SearchQuery& query, search::ResultSink sink, std::stop_token stopToken = {}) const override;
     [[nodiscard]] search::SearchSummary searchWithEvents(const SearchQuery& query,
                                                          const SearchEventSink& sink,
                                                          SearchExecutionOptions executionOptions = {},

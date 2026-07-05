@@ -187,9 +187,8 @@ namespace uburu::app
 
   DefaultSearchService::DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine,
                                              std::shared_ptr<const index::IndexService> indexService)
-    : DefaultSearchService(std::move(directEngine),
-                           std::move(indexService),
-                           SearchServiceOptions{.strategy = SearchStrategy::hybrid})
+    : DefaultSearchService(
+        std::move(directEngine), std::move(indexService), SearchServiceOptions{.strategy = SearchStrategy::hybrid})
   {}
 
   DefaultSearchService::DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine,

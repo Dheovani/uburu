@@ -405,8 +405,8 @@ namespace uburu::git
       return gitdir.lexically_normal();
     }
 
-    [[nodiscard]] std::optional<std::filesystem::path> metadataGitdirPath(
-      const std::filesystem::path& metadataDirectory)
+    [[nodiscard]] std::optional<std::filesystem::path>
+    metadataGitdirPath(const std::filesystem::path& metadataDirectory)
     {
       auto gitdirLine = readFirstLine(metadataDirectory / "gitdir");
 
@@ -427,15 +427,13 @@ namespace uburu::git
       return gitdir->parent_path();
     }
 
-    [[nodiscard]] std::vector<WorktreeInfo>::iterator findWorktreeRoot(
-      std::vector<WorktreeInfo>& worktrees,
-      const std::filesystem::path& root)
+    [[nodiscard]] std::vector<WorktreeInfo>::iterator findWorktreeRoot(std::vector<WorktreeInfo>& worktrees,
+                                                                       const std::filesystem::path& root)
     {
       const auto rootKey = filesystem::normalizedPathKey(root);
 
-      return std::ranges::find_if(worktrees, [&](const auto& worktree) {
-        return filesystem::normalizedPathKey(worktree.root) == rootKey;
-      });
+      return std::ranges::find_if(
+        worktrees, [&](const auto& worktree) { return filesystem::normalizedPathKey(worktree.root) == rootKey; });
     }
 
     void appendMetadataOnlyWorktrees(const RepositoryInfo& repository, std::vector<WorktreeInfo>& worktrees)

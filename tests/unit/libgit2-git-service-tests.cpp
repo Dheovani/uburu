@@ -68,7 +68,6 @@ namespace
 
       if (lastError != nullptr && lastError->message != nullptr)
         INFO("libgit2: " << lastError->message);
-
     }
 
     REQUIRE(status == 0);
@@ -79,9 +78,8 @@ namespace
     git_libgit2_init();
 
     git_repository* repository = nullptr;
-    requireGitSuccess(git_repository_init(&repository, repositoryRoot.string().c_str(), false),
-                      "git_repository_init",
-                      repositoryRoot);
+    requireGitSuccess(
+      git_repository_init(&repository, repositoryRoot.string().c_str(), false), "git_repository_init", repositoryRoot);
 
     uburu::tests::fixtures::writeBasicGitWorkingTreeFixture(repositoryRoot);
 
@@ -195,11 +193,8 @@ namespace
     options.ref = featureBranch;
 
     git_worktree* worktree = nullptr;
-    REQUIRE(git_worktree_add(&worktree,
-                             repository,
-                             std::string(name).c_str(),
-                             worktreeRoot.string().c_str(),
-                             &options) == 0);
+    REQUIRE(
+      git_worktree_add(&worktree, repository, std::string(name).c_str(), worktreeRoot.string().c_str(), &options) == 0);
 
     git_worktree_free(worktree);
     git_reference_free(featureBranch);

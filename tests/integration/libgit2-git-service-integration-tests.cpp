@@ -31,9 +31,8 @@ namespace
   [[nodiscard]] std::optional<uburu::GitOverlayEntry>
   findOverlayEntry(const std::vector<uburu::GitOverlayEntry>& overlay, const std::filesystem::path& relativePath)
   {
-    const auto entry = std::find_if(overlay.begin(), overlay.end(), [&](const auto& candidate) {
-      return candidate.relativePath == relativePath;
-    });
+    const auto entry = std::find_if(
+      overlay.begin(), overlay.end(), [&](const auto& candidate) { return candidate.relativePath == relativePath; });
 
     if (entry == overlay.end())
       return std::nullopt;

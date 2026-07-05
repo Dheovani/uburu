@@ -71,19 +71,13 @@ namespace uburu::diagnostics
                                      std::string name,
                                      LogCategory category,
                                      std::vector<LogField> fields)
-    : recorder(recorder.enabled() ? &recorder : nullptr),
-      name(std::move(name)),
-      category(category),
-      fields(std::move(fields)),
-      startedAt(std::chrono::steady_clock::now())
+    : recorder(recorder.enabled() ? &recorder : nullptr), name(std::move(name)), category(category),
+      fields(std::move(fields)), startedAt(std::chrono::steady_clock::now())
   {}
 
   SearchTraceScope::SearchTraceScope(SearchTraceScope&& other) noexcept
-    : recorder(std::exchange(other.recorder, nullptr)),
-      name(std::move(other.name)),
-      category(other.category),
-      fields(std::move(other.fields)),
-      startedAt(other.startedAt)
+    : recorder(std::exchange(other.recorder, nullptr)), name(std::move(other.name)), category(other.category),
+      fields(std::move(other.fields)), startedAt(other.startedAt)
   {}
 
   SearchTraceScope& SearchTraceScope::operator=(SearchTraceScope&& other) noexcept

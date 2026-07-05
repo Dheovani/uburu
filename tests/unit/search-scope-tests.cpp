@@ -71,4 +71,3 @@ TEST_CASE("search scope root filters override only configured filter sets")
   CHECK(options.extensions == baseOptions.extensions);
   CHECK(options.includedGlobs == baseOptions.includedGlobs);
 }
-

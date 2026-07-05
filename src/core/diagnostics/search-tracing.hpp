@@ -33,10 +33,8 @@ namespace uburu::diagnostics
     explicit SearchTraceRecorder(SearchTracingOptions options = {});
 
     [[nodiscard]] bool enabled() const noexcept;
-    void record(std::string name,
-                LogCategory category,
-                std::chrono::nanoseconds elapsed,
-                std::vector<LogField> fields = {});
+    void
+    record(std::string name, LogCategory category, std::chrono::nanoseconds elapsed, std::vector<LogField> fields = {});
     [[nodiscard]] const std::vector<SearchTraceEvent>& events() const noexcept;
     void clear();
 

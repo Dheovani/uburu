@@ -1,30 +1,25 @@
 # Build
 
-O fluxo preferido usa `CMakePresets.json`. Ele evita caminhos absolutos versionados e deixa cada
-máquina informar seus próprios diretórios por variáveis de ambiente.
+The preferred flow uses `CMakePresets.json`. It avoids versioned absolute paths and lets each machine provide its own directories through environment variables.
 
-## Variáveis de ambiente
+## Environment variables
 
-- `VCPKG_ROOT`: raiz do vcpkg.
-- `QT_ROOT`: prefixo do Qt usado pelo CMake. Exemplo Windows/MSVC:
-  `C:\Qt\6.11.1\msvc2022_64`.
-- `NINJA_ROOT`: diretório que contém `ninja.exe`, apenas para presets que usem Ninja.
+- `VCPKG_ROOT`: vcpkg root.
+- `QT_ROOT`: Qt prefix used by CMake. Windows/MSVC example: `C:\Qt\6.11.1\msvc2022_64`.
+- `NINJA_ROOT`: directory containing `ninja.exe`, only for presets that use Ninja.
 
-`CMakeUserPresets.json` é ignorado pelo Git e pode ser usado para aliases ou caminhos pessoais.
-`.env.example` lista as variáveis esperadas. Copie para `.env` se quiser registrar seus caminhos
-locais. Os scripts PowerShell carregam `.env` automaticamente; os presets do CMake ainda exigem que
-as variáveis estejam no ambiente do terminal.
+`CMakeUserPresets.json` is ignored by Git and can be used for personal aliases or paths. `.env.example` lists the expected variables. Copy it to `.env` if you want to record local paths. PowerShell scripts load `.env` automatically; CMake presets still require the variables to be present in the terminal environment.
 
-Exemplo PowerShell:
+PowerShell example:
 
 ```powershell
 $env:VCPKG_ROOT = "C:\Users\dheov\vcpkg"
 $env:QT_ROOT = "C:\Qt\6.11.1\msvc2022_64"
 ```
 
-## Windows com Qt/MSVC
+## Windows with Qt/MSVC
 
-Este é o fluxo local recomendado. Ele usa Visual Studio/MSVC e Qt `msvc2022_64`:
+This is the recommended local flow. It uses Visual Studio/MSVC and Qt `msvc2022_64`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
@@ -32,23 +27,23 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test
 ```
 
-Para executar a aplicação sem instalar DLLs no sistema:
+To run the application without installing DLLs system-wide:
 
 ```powershell
 .\scripts\run-windows-msvc-desktop.ps1
 ```
 
-Para criar uma pasta local redistribuível de desenvolvimento com `windeployqt` e as DLLs do vcpkg:
+To create a local redistributable development folder with `windeployqt` and vcpkg DLLs:
 
 ```powershell
 .\scripts\deploy-windows-msvc-desktop.ps1
 ```
 
-O script escreve por padrão em `dist/windows-msvc-debug`.
+The script writes to `dist/windows-msvc-debug` by default.
 
 ## Linux
 
-Com Ninja, vcpkg e Qt disponíveis:
+With Ninja, vcpkg, and Qt available:
 
 ```sh
 cmake --preset linux-debug
@@ -56,11 +51,11 @@ cmake --build --preset linux-debug
 ctest --preset linux-debug
 ```
 
-Se o Qt estiver instalado fora dos prefixos padrão do sistema, defina `QT_ROOT` antes de configurar.
+If Qt is installed outside the system's default prefixes, set `QT_ROOT` before configuring.
 
-## Core sem Qt
+## Core without Qt
 
-O projeto permite `UBURU_BUILD_DESKTOP=OFF` para compilar e testar o core sem Qt:
+The project supports `UBURU_BUILD_DESKTOP=OFF` to build and test the core without Qt:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-msvc-debug
@@ -68,12 +63,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-msvc-debug
 ```
 
-No Linux, use `core-linux-debug` para o mesmo fluxo sem Qt.
+On Linux, use `core-linux-debug` for the same flow without Qt.
 
-## Presets de qualidade
+## Quality presets
 
-O projeto separa presets de desenvolvimento e presets de gate. Os presets abaixo não exigem Qt e
-são adequados para CI e validação rápida do core:
+The project separates development presets from gate presets. The presets below do not require Qt and are suitable for CI and quick core validation:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-msvc-werror-debug
@@ -81,29 +75,27 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-msvc-werror-debug
 ```
 
-No Linux, use `core-linux-werror-debug` para tratar warnings como erros. Para ASan/UBSan, use
-`core-linux-sanitize-debug`.
+On Linux, use `core-linux-werror-debug` to treat warnings as errors. For ASan/UBSan, use `core-linux-sanitize-debug`.
 
-As opções CMake correspondentes são:
+The corresponding CMake options are:
 
-- `UBURU_WARNINGS_AS_ERRORS`: promove warnings dos targets próprios para erro.
-- `UBURU_ENABLE_SANITIZERS`: habilita AddressSanitizer e UndefinedBehaviorSanitizer onde suportado.
+- `UBURU_WARNINGS_AS_ERRORS`: promotes warnings from project-owned targets to errors.
+- `UBURU_ENABLE_SANITIZERS`: enables AddressSanitizer and UndefinedBehaviorSanitizer where supported.
 
-Sanitizers ficam desligados por padrão para não afetar builds normais, empacotamento ou ambientes
-onde o runtime não esteja disponível.
+Sanitizers are disabled by default so they do not affect normal builds, packaging, or environments where the runtime is unavailable.
 
-## Política inicial de versões
+## Initial version policy
 
-- CMake mínimo: 3.25.
-- Padrão C++: C++23, com `CMAKE_CXX_EXTENSIONS=OFF`.
-- Qt mínimo: 6.5.
-- Windows/MSVC validado: Visual Studio 18 2026 com Qt 6.11.1 `msvc2022_64`.
-- Linux: preset inicial com Ninja e triplet `x64-linux`.
-- vcpkg: usado para Catch2, SQLite, PCRE2 e libgit2. O baseline está fixado em `vcpkg.json`.
+- Minimum CMake: 3.25.
+- C++ standard: C++23, with `CMAKE_CXX_EXTENSIONS=OFF`.
+- Minimum Qt: 6.5.
+- Validated Windows/MSVC: Visual Studio 18 2026 with Qt 6.11.1 `msvc2022_64`.
+- Linux: initial preset with Ninja and the `x64-linux` triplet.
+- vcpkg: used for Catch2, SQLite, PCRE2, and libgit2. The baseline is pinned in `vcpkg.json`.
 
-## Build manual
+## Manual build
 
-Os comandos manuais continuam disponíveis quando um preset não se encaixar no ambiente:
+Manual commands remain available when a preset does not fit the environment:
 
 ```powershell
 cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -111,17 +103,13 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Qt 6.5 ou superior deve estar em `CMAKE_PREFIX_PATH` ou `Qt6_DIR`.
+Qt 6.5 or newer must be in `CMAKE_PREFIX_PATH` or `Qt6_DIR`.
 
-## Formatação C++
+## C++ formatting
 
-Todo arquivo C++ próprio em `apps/`, `src/` e `tests/` deve respeitar o `.clang-format` da raiz.
-Com `clang-format` disponível no `PATH` ou em uma instalação padrão do Visual Studio, o CMake
-cria o target opcional `format`:
+Every project-owned C++ file in `apps/`, `src/`, and `tests/` must follow the root `.clang-format`. When `clang-format` is available in `PATH` or in a standard Visual Studio installation, CMake creates the optional `format` target.
 
-O build impõe C++23 por `CMAKE_CXX_STANDARD`. No `.clang-format`, `Standard: Latest` é usado porque
-o formatador não oferece o valor `c++23`; essa opção habilita as regras de sintaxe C++ mais recentes
-reconhecidas pela versão instalada.
+The build enforces C++23 through `CMAKE_CXX_STANDARD`. In `.clang-format`, `Standard: Latest` is used because the formatter does not provide the `c++23` value; that option enables the newest C++ syntax rules recognized by the installed version.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
@@ -130,41 +118,35 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
 ```
 
-Também é possível formatar um arquivo isolado diretamente:
+You can also format a single file directly:
 
 ```powershell
 clang-format -i src/core/search/direct-search-engine.cpp
 ```
 
-O target não participa do build normal. Dependências vendorizadas, arquivos gerados e diretórios de
-build não são formatados.
+The target is not part of the normal build. Vendored dependencies, generated files, and build directories are not formatted.
 
-## Análise estática
+## Static analysis
 
-O arquivo `.clang-tidy` define o conjunto inicial de checks. Quando `clang-tidy` está disponível, o
-CMake cria o target opcional `tidy`:
+The `.clang-tidy` file defines the initial check set. When `clang-tidy` is available, CMake creates the optional `tidy` target:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
 ```
 
-Esse target é diagnóstico e não participa do build normal. A CI futura deve decidir quando transformar
-diagnósticos em bloqueios.
+This target is diagnostic and is not part of the normal build. Future CI should decide when diagnostics become blocking.
 
-Observação: o fluxo Windows validado em desenvolvimento usa MSVC. Se `clang-tidy` apresentar
-incompatibilidade com o compile database local, trate o alvo como diagnóstico e valide build/testes
-antes de transformar o resultado em bloqueio.
+Note: the validated Windows development flow uses MSVC. If `clang-tidy` is incompatible with the local compile database, treat the target as diagnostic and validate build/tests before making the result blocking.
 
 ## CI
 
-O workflow `.github/workflows/ci.yml` valida inicialmente o core independente de Qt:
+The `.github/workflows/ci.yml` workflow initially validates the Qt-independent core:
 
-- Windows/MSVC com warnings como erros;
-- Linux com warnings como erros;
-- Linux com AddressSanitizer e UndefinedBehaviorSanitizer;
-- testes via CTest;
-- `format-check` sem modificar arquivos.
+- Windows/MSVC with warnings as errors;
+- Linux with warnings as errors;
+- Linux with AddressSanitizer and UndefinedBehaviorSanitizer;
+- tests through CTest;
+- `format-check` without modifying files.
 
-A aplicação desktop Qt é validada localmente pelo preset `local-windows-msvc-debug`. Um job Qt
-completo deve ser adicionado quando o pipeline de instalação/cache do Qt estiver estabilizado.
+The Qt desktop application is validated locally by the `local-windows-msvc-debug` preset. A complete Qt job should be added when the Qt installation/cache pipeline is stabilized.

@@ -1,15 +1,12 @@
 # Fixtures
 
-Fixtures devem permanecer pequenas, determinísticas e conter explicitamente casos UTF-8, UTF-16,
-CRLF, binário, symlink e repositórios Git com worktrees.
+Fixtures must remain small, deterministic, and explicitly cover UTF-8, UTF-16, CRLF, binary files, symlinks, and Git repositories with worktrees.
 
-Use `test-fixtures.hpp` para dados pequenos compartilhados por testes unitários e de integração. A
-intenção é nomear semanticamente os casos recorrentes sem esconder a estrutura dos arquivos:
+Use `test-fixtures.hpp` for small data shared by unit and integration tests. The intent is to name recurring cases semantically without hiding the file structure:
 
-- texto Unicode precomposto e decomposto;
-- bytes de encoding UTF-8 com BOM, UTF-16 LE/BE, Latin-1 e binário;
-- layouts mínimos de `.gitignore`;
-- arquivos básicos de uma worktree Git descartável.
+- precomposed and decomposed Unicode text;
+- UTF-8 with BOM, UTF-16 LE/BE, Latin-1, and binary bytes;
+- minimal `.gitignore` layouts;
+- basic files for a disposable Git worktree.
 
-Evite fixtures grandes ou dependentes do ambiente local. Quando o teste precisar criar arquivos
-reais, combine estas fixtures com os helpers RAII de `tests/helpers`.
+Avoid large fixtures or fixtures that depend on the local environment. When a test needs to create real files, combine these fixtures with the RAII helpers in `tests/helpers`.

@@ -1,391 +1,380 @@
 # TODO — Uburu
 
-Este documento é o plano operacional do projeto. A ordem dos marcos representa dependências reais:
-itens posteriores não devem degradar correção, cancelamento, uso de memória ou separação entre core
-e UI para avançarem mais rapidamente.
+This document is the project's operational plan. Milestone order represents real dependencies: later items must not degrade correctness, cancellation, memory use, or core/UI separation just to move faster.
 
-## Convenções do backlog
+## Backlog conventions
 
-- `[ ]` pendente; `[x]` concluído e validado.
-- `P0` bloqueia uma base confiável; `P1` compõe o produto principal; `P2` profissionaliza e amplia; `P3` é evolução avançada.
-- Um item só pode ser marcado como concluído quando código, testes, documentação e métricas aplicáveis estiverem atualizados.
-- Alterações críticas do core exigem teste automatizado. Alterações de performance exigem benchmark antes/depois ou uma métrica reproduzível.
-- Textos visíveis devem existir em `pt-BR` e `en-US`.
+- `[ ]` pending; `[x]` completed and validated.
+- `P0` blocks a trustworthy base; `P1` forms the main product; `P2` professionalizes and expands it; `P3` is advanced evolution.
+- An item may be marked as completed only when code, tests, documentation, and applicable metrics are updated.
+- Critical core changes require automated tests. Performance changes require before/after benchmarks or a reproducible metric.
+- Visible text must exist in `pt-BR` and `en-US`.
 
-## Estado atual validado
+## Current validated state
 
-- [x] Biblioteca `uburu_core` independente de Qt.
-- [x] Camada de aplicação separada da UI.
-- [x] Aplicação Qt Quick mínima com busca assíncrona e cancelamento.
-- [x] Scanner recursivo inicial e busca literal linha a linha.
-- [x] Tipos centrais para repositório, worktree, documentos e resultados.
-- [x] Interfaces iniciais de busca, filesystem, índice, Git e storage.
-- [x] Escopo de busca com múltiplas raízes e exclusões por raiz no core.
-- [x] Build C++23 com CMake, Qt 6.11.1/MinGW e vcpkg.
-- [x] Testes unitários iniciais com Catch2.
-- [x] Formatação automática e convenção kebab-case.
+- [x] Qt-independent `uburu_core` library.
+- [x] Application layer separated from UI.
+- [x] Minimal Qt Quick application with asynchronous search and cancellation.
+- [x] Initial recursive scanner and line-by-line literal search.
+- [x] Central types for repository, worktree, documents, and results.
+- [x] Initial search, filesystem, index, Git, and storage interfaces.
+- [x] Search scope with multiple roots and per-root exclusions in the core.
+- [x] C++23 build with CMake, Qt 6.11.1/MSVC, and vcpkg.
+- [x] Initial unit tests with Catch2.
+- [x] Automatic formatting and kebab-case convention.
 
-## Marco 0 — Engenharia reproduzível e higiene do repositório (P0)
+## Milestone 0 — Reproducible engineering and repository hygiene (P0)
 
-- [x] Inicializar e documentar o repositório Git, branch principal e política de commits.
-- [x] Adicionar `CMakePresets.json` para Windows/MinGW, Windows/MSVC, Linux e desenvolvimento apenas do core.
-- [x] Eliminar comandos dependentes de caminhos locais fixos como `C:\Qt\6.11.1`.
-- [x] Corrigir `README.md` e `docs/build.md` com o fluxo MinGW atualmente validado.
-- [x] Adicionar scripts ou presets para configurar, compilar, testar, formatar e executar a aplicação.
-- [x] Criar target ou script de implantação local com `windeployqt` e DLLs do vcpkg.
-- [x] Adicionar `.editorconfig` coerente com `.clang-format` e arquivos Markdown/QML.
-- [x] Adicionar análise estática com clang-tidy e configurar conjunto inicial de regras.
-- [x] Adicionar verificação de warnings como erros em CI, com exceções justificadas por compilador.
-- [x] Adicionar sanitizers em plataformas compatíveis: AddressSanitizer e UndefinedBehaviorSanitizer.
-- [x] Adicionar verificação automática de formatação sem modificar arquivos (`format-check`).
-- [x] Criar CI para Windows, Linux e, quando viável, macOS.
-- [x] Executar em CI: configure, build, testes, format-check e análise estática.
-- [x] Definir política de versões mínimas de CMake, Qt, compiladores e vcpkg.
-- [x] Fixar baseline do vcpkg para builds reproduzíveis.
-- [x] Adicionar `LICENSE`, `CONTRIBUTING.md`, código de conduta e política de segurança.
-- [x] Documentar licenças das dependências e obrigações de redistribuição do Qt.
+- [x] Initialize and document the Git repository, main branch, and commit policy.
+- [x] Add `CMakePresets.json` for Windows/MinGW, Windows/MSVC, Linux, and core-only development.
+- [x] Remove commands dependent on fixed local paths such as `C:\Qt\6.11.1`.
+- [x] Fix `README.md` and `docs/build.md` with the currently validated MSVC flow.
+- [x] Add scripts or presets to configure, build, test, format, and run the application.
+- [x] Create a local deployment target or script with `windeployqt` and vcpkg DLLs.
+- [x] Add `.editorconfig` consistent with `.clang-format` and Markdown/QML files.
+- [x] Add static analysis with clang-tidy and configure the initial rule set.
+- [x] Add warnings-as-errors validation in CI, with compiler-specific exceptions justified.
+- [x] Add sanitizers on compatible platforms: AddressSanitizer and UndefinedBehaviorSanitizer.
+- [x] Add automatic formatting verification without modifying files (`format-check`).
+- [x] Create CI for Windows, Linux, and macOS when feasible.
+- [x] Run configure, build, tests, format-check, and static analysis in CI.
+- [x] Define minimum-version policy for CMake, Qt, compilers, and vcpkg.
+- [x] Pin the vcpkg baseline for reproducible builds.
+- [x] Add `LICENSE`, `CONTRIBUTING.md`, code of conduct, and security policy.
+- [x] Document dependency licenses and Qt redistribution obligations.
 
-### Critério de saída
+### Exit criteria
 
-- [x] Um clone limpo pode ser configurado e testado por preset sem editar caminhos manualmente.
-- [ ] CI verde em pelo menos Windows/MinGW e Linux.
+- [x] A clean clone can be configured and tested through presets without manually editing paths.
+- [ ] CI green on at least Windows/MinGW and Linux.
 
-## Marco 1 — Semântica correta da busca direta (P0)
+## Milestone 1 — Correct direct-search semantics (P0)
 
-- [x] Especificar formalmente a semântica em `docs/search-semantics.md`.
-- [x] Validar `SearchQuery` e retornar erros tipados para raiz inválida, expressão vazia e opções
-  incompatíveis.
-- [x] Encontrar todas as ocorrências de uma linha, não apenas a primeira.
-- [x] Definir e testar comportamento para ocorrências sobrepostas.
-- [x] Implementar busca case-sensitive e case-insensitive Unicode de forma consistente.
-- [x] Implementar palavra inteira com regras Unicode e opção específica para identificadores de código.
-- [x] Implementar busca regex com PCRE2.
-- [x] Habilitar PCRE2 JIT quando suportado e fornecer fallback explícito.
-- [x] Limitar tempo, profundidade e recursos de regex para evitar padrões patológicos.
-- [x] Retornar erro de compilação de regex com posição e mensagem traduzível.
-- [x] Implementar busca por nome de arquivo separada da busca por conteúdo.
-- [x] Implementar filtros por glob, extensão, diretório e tamanho.
-- [x] Normalizar extensões e definir sensibilidade a maiúsculas por plataforma.
-- [x] Implementar include/exclude com precedência documentada.
-- [x] Aplicar limite de resultados global e por arquivo.
-- [x] Implementar ordenação determinística e estratégia de relevância inicial.
-- [x] Preservar resultados progressivos sem esperar a conclusão da varredura.
-- [x] Distinguir cancelamento, falha parcial e conclusão normal no resumo.
-- [x] Propagar erros de leitura sem interromper silenciosamente toda a busca.
-- [x] Definir comportamento para arquivos alterados ou removidos durante a leitura.
-- [x] Evitar cópias desnecessárias de linhas, caminhos e resultados.
+- [x] Formally specify semantics in `docs/search-semantics.md`.
+- [x] Validate `SearchQuery` and return typed errors for invalid root, empty expression, and incompatible options.
+- [x] Find all occurrences in a line, not only the first one.
+- [x] Define and test overlapping occurrence behavior.
+- [x] Implement Unicode-consistent case-sensitive and case-insensitive search.
+- [x] Implement whole word with Unicode rules and a specific option for code identifiers.
+- [x] Implement regex search with PCRE2.
+- [x] Enable PCRE2 JIT when supported and provide explicit fallback.
+- [x] Limit regex time, depth, and resources to avoid pathological patterns.
+- [x] Return regex compilation errors with position and translatable message.
+- [x] Implement file-name search separately from content search.
+- [x] Implement filters by glob, extension, directory, and size.
+- [x] Normalize extensions and define platform-specific case sensitivity.
+- [x] Implement include/exclude with documented precedence.
+- [x] Apply global and per-file result limits.
+- [x] Implement deterministic ordering and an initial relevance strategy.
+- [x] Preserve progressive results without waiting for traversal completion.
+- [x] Distinguish cancellation, partial failure, and normal completion in the summary.
+- [x] Propagate read errors without silently stopping the whole search.
+- [x] Define behavior for files changed or removed during reading.
+- [x] Avoid unnecessary copies of lines, paths, and results.
 
-### Testes obrigatórios
+### Required tests
 
-- [x] Literal com múltiplas ocorrências na mesma linha.
-- [x] Case-sensitive e case-insensitive com ASCII e Unicode.
-- [x] Palavra inteira, identificadores, pontuação e limites Unicode.
-- [x] Regex válida, inválida, JIT/fallback e cancelamento.
-- [x] CRLF, LF, arquivo sem newline final e linhas vazias.
-- [x] Limite de resultados, filtros e ordenação determinística.
-- [x] Erros de permissão, arquivo removido e leitura parcial.
+- [x] Literal search with multiple occurrences on the same line.
+- [x] Case-sensitive and case-insensitive search with ASCII and Unicode.
+- [x] Whole word, identifiers, punctuation, and Unicode boundaries.
+- [x] Valid regex, invalid regex, JIT/fallback, and cancellation.
+- [x] CRLF, LF, file without final newline, and empty lines.
+- [x] Result limits, filters, and deterministic ordering.
+- [x] Permission errors, removed files, and partial reads.
 
-## Marco 2 — Texto, encoding e arquivos grandes (P0)
+## Milestone 2 — Text, encoding, and large files (P0)
 
-- [x] Criar abstração de leitor de texto streaming no módulo `core/text`.
-- [x] Detectar BOM e suportar UTF-8, UTF-16 LE e UTF-16 BE.
-- [x] Definir fallback configurável para Latin-1 e encoding desconhecido.
-- [x] Validar UTF-8 e definir política explícita para sequências inválidas.
-- [x] Detectar binários usando amostragem robusta, não apenas byte NUL por linha.
-- [x] Tornar tamanho da amostra e política de binários configuráveis.
-- [x] Ler arquivos grandes em blocos sem perder matches nas fronteiras.
-- [x] Preservar offsets corretos entre bytes, code points, linha e coluna visual.
-- [x] Extrair contexto anterior/posterior sem carregar o arquivo inteiro.
-- [x] Produzir spans de highlight para múltiplas ocorrências.
-- [x] Suportar LF, CRLF e CR isolado de maneira documentada.
-- [x] Definir limite para linha extremamente longa.
+- [x] Create a streaming text-reader abstraction in `core/text`.
+- [x] Detect BOM and support UTF-8, UTF-16 LE, and UTF-16 BE.
+- [x] Define configurable fallback for Latin-1 and unknown encoding.
+- [x] Validate UTF-8 and define an explicit policy for invalid sequences.
+- [x] Detect binaries with robust sampling, not only per-line NUL bytes.
+- [x] Make sample size and binary policy configurable.
+- [x] Read large files in chunks without losing matches at boundaries.
+- [x] Preserve correct offsets between bytes, code points, lines, and visual columns.
+- [x] Extract previous/following context without loading the whole file.
+- [x] Produce highlight spans for multiple occurrences.
+- [x] Support LF, CRLF, and standalone CR in documented form.
+- [x] Define a limit for extremely long lines.
 
-### Critério de saída
+### Exit criteria
 
-- [x] Buscar em arquivos maiores que o orçamento de memória sem alocação proporcional ao tamanho.
-- [x] Fixtures determinísticas cobrem todos os encodings e finais de linha suportados.
+- [x] Search files larger than the memory budget without allocation proportional to file size.
+- [x] Deterministic fixtures cover all supported encodings and line endings.
 
-## Marco 3 — Filesystem, ignore e concorrência (P0)
+## Milestone 3 — Filesystem, ignore, and concurrency (P0)
 
-- [x] Implementar `.gitignore` real com regras aninhadas, negação e precedência.
-- [x] Suportar arquivos globais de ignore do Git e `.git/info/exclude` quando configurado.
-- [x] Separar arquivos ocultos, ignorados e binários nas métricas.
-- [x] Aplicar corretamente diretórios incluídos e excluídos no scanner.
-- [x] Normalizar caminhos absolutos e relativos por plataforma.
-- [x] Tratar caminhos longos, UNC e diferenças de caixa no Windows.
-- [x] Detectar arquivos esparsos e definir política de leitura por plataforma.
-- [x] Definir política para junctions, symlinks e mount points.
-- [x] Detectar ciclos ao seguir symlinks.
-- [x] Implementar pool de workers com tamanho configurável.
-- [x] Priorizar arquivos pequenos e candidatos mais prováveis sem quebrar determinismo final.
-- [x] Adicionar fila limitada e backpressure entre scan, leitura, matching e publicação.
-- [x] Garantir cancelamento cooperativo em scan, fila, leitura e matching.
-- [x] Evitar mutex global e medir contenção.
-- [x] Implementar watchers por interface comum.
-- [x] Implementar backend Windows com `ReadDirectoryChangesW`.
-- [x] Implementar backend Linux com `inotify`.
-- [x] Implementar backend macOS com `FSEvents`.
-- [x] Tratar overflow/perda de eventos com rescan de reconciliação.
-- [x] Adicionar fallback inicial documentado quando backend nativo não estiver disponível.
+- [x] Implement real `.gitignore` with nested rules, negation, and precedence.
+- [x] Support global Git ignore files and `.git/info/exclude` when configured.
+- [x] Separate hidden, ignored, and binary files in metrics.
+- [x] Correctly apply included and excluded directories in the scanner.
+- [x] Normalize absolute and relative paths per platform.
+- [x] Handle long paths, UNC, and Windows case differences.
+- [x] Detect sparse files and define per-platform reading policy.
+- [x] Define policy for junctions, symlinks, and mount points.
+- [x] Detect cycles when following symlinks.
+- [x] Implement a worker pool with configurable size.
+- [x] Prioritize small files and likely candidates without breaking final determinism.
+- [x] Add a bounded queue and backpressure between scan, read, matching, and publication.
+- [x] Ensure cooperative cancellation in scan, queue, reading, and matching.
+- [x] Avoid a global mutex and measure contention.
+- [x] Implement watchers behind a common interface.
+- [x] Implement Windows backend with `ReadDirectoryChangesW`.
+- [x] Implement Linux backend with `inotify`.
+- [x] Implement macOS backend with `FSEvents`.
+- [x] Handle overflow/lost events with reconciliation rescan.
+- [x] Add a documented initial fallback when native backend is unavailable.
 
-## Marco 4 — Integração Git completa (P1)
+## Milestone 4 — Complete Git integration (P1)
 
-- [x] Implementar `GitService` com libgit2 e erros tipados.
-- [x] Descobrir repositório comum, `.git` arquivo/diretório e raiz da worktree.
-- [x] Gerar identificadores estáveis para repositório e worktree.
-- [x] Detectar branch atual, HEAD e detached HEAD.
-- [x] Enumerar múltiplas worktrees.
-- [x] Ler arquivos rastreados, não rastreados, ignorados, modificados, deletados e conflitantes.
-- [x] Obter blob OID de arquivos rastreados.
-- [x] Detectar alterações em HEAD, index e refs relevantes.
-- [x] Tratar troca de branch como reconciliação estrutural incremental.
-- [x] Modelar overlay local sobre conteúdo versionado.
-- [x] Tratar renames e movimentos com reutilização de conteúdo.
-- [x] Definir comportamento para submodules e repositórios aninhados.
-- [x] Suportar worktrees bloqueadas, removidas e prunable.
-- [x] Isolar fallback por Git CLI atrás de adapter explícito.
-- [x] Testar repositórios SHA-1 e preparar tipos para SHA-256.
+- [x] Implement `GitService` with libgit2 and typed errors.
+- [x] Discover common repository, `.git` file/directory, and worktree root.
+- [x] Generate stable identifiers for repository and worktree.
+- [x] Detect current branch, HEAD, and detached HEAD.
+- [x] Enumerate multiple worktrees.
+- [x] Read tracked, untracked, ignored, modified, deleted, and conflicted files.
+- [x] Obtain blob OID for tracked files.
+- [x] Detect changes in HEAD, index, and relevant refs.
+- [x] Treat branch switch as incremental structural reconciliation.
+- [x] Model local overlay over versioned content.
+- [x] Handle renames and moves with content reuse.
+- [x] Define behavior for submodules and nested repositories.
+- [x] Support locked, removed, and prunable worktrees.
+- [x] Isolate Git CLI fallback behind an explicit adapter.
+- [x] Test SHA-1 repositories and prepare types for SHA-256.
 
-### Testes de integração Git
+### Git integration tests
 
-- [x] Branch normal e detached HEAD.
-- [x] Troca de branch com arquivos adicionados, removidos e iguais por blob.
-- [x] Modificado local, novo, deletado, ignorado e conflito.
-- [x] Múltiplas worktrees e submodule.
-- [x] Reuso de conteúdo por blob/hash entre branches e worktrees.
+- [x] Normal branch and detached HEAD.
+- [x] Branch switch with added, removed, and blob-identical files.
+- [x] Locally modified, new, deleted, ignored, and conflicted files.
+- [x] Multiple worktrees and submodule.
+- [x] Content reuse by blob/hash between branches and worktrees.
 
-## Marco 5 — Storage SQLite profissional (P1)
+## Milestone 5 — Professional SQLite storage (P1)
 
-- [x] Implementar `StorageService` com RAII e statements preparados.
-- [x] Criar sistema versionado de migrations.
-- [x] Definir schema para repositories, worktrees, generations, files, documents e overlays.
-- [x] Separar identidade de caminho da identidade de conteúdo.
-- [x] Armazenar content hash e blob hash com algoritmo/versionamento explícitos.
-- [x] Ativar WAL, foreign keys, busy timeout e pragmas medidos.
-- [x] Publicar gerações do índice em transação atômica.
-- [x] Recuperar de interrupção durante migration ou indexação.
-- [x] Validar integridade e oferecer reconstrução segura do índice corrompido.
-- [x] Implementar retenção e coleta de documentos órfãos.
-- [x] Persistir preferências globais e por repositório.
-- [x] Persistir histórico de buscas e buscas salvas.
-- [x] Persistir métricas de indexação sem crescimento ilimitado.
-- [x] Definir localização padrão do banco por plataforma.
-- [x] Permitir localização personalizada e migração do banco.
-- [x] Testar concorrência entre leitura de busca e escrita de nova geração.
-- [x] Avaliar FTS5 por benchmark, sem acoplar o contrato ao backend.
+- [x] Implement `StorageService` with RAII and prepared statements.
+- [x] Create a versioned migration system.
+- [x] Define schema for repositories, worktrees, generations, files, documents, and overlays.
+- [x] Separate path identity from content identity.
+- [x] Store content hash and blob hash with explicit algorithm/versioning.
+- [x] Enable WAL, foreign keys, busy timeout, and measured pragmas.
+- [x] Publish index generations in atomic transactions.
+- [x] Recover from interruption during migration or indexing.
+- [x] Validate integrity and provide safe rebuild of corrupted index.
+- [x] Implement retention and orphan-document collection.
+- [x] Persist global and per-repository preferences.
+- [x] Persist search history and saved searches.
+- [x] Persist indexing metrics without unbounded growth.
+- [x] Define default database location per platform.
+- [x] Allow custom database location and migration.
+- [x] Test concurrency between search reads and new-generation writes.
+- [x] Evaluate FTS5 by benchmark without coupling the contract to the backend.
 
-## Marco 6 — Índice persistente e incremental (P1)
-  
-- [x] Definir formato interno de documento indexado e versioná-lo.
-- [x] Escolher hash de conteúdo com benchmark de throughput e colisão aceitável.
-- [x] Implementar indexação inicial cancelável e progressiva.
-- [x] Implementar catálogo incremental por tamanho, mtime, hash e estado Git.
-  - [x] Reutilizar entrada de catálogo quando tamanho, mtime, hash persistido e status limpo indicarem arquivo inalterado.
-  - [x] Integrar estado Git/overlay ao catálogo incremental antes de considerar o item completo.
-- [x] Deduplicar documentos por hash de conteúdo.
-- [x] Expor consultas de reuso por hash de conteúdo no storage.
-- [x] Reutilizar documentos por blob hash antes de reler arquivos.
-- [x] Expor consultas de reuso por blob hash Git no storage.
-- [x] Aplicar overlay da working tree sobre a geração versionada.
-  - [x] Tratar status Git `modified` como invalidação do reuso conservador por catálogo.
-  - [x] Publicar lápides para arquivos deletados localmente quando houver documento anterior.
-  - [x] Traduzir entradas `GitOverlayEntry` em candidatos de indexação e tombstones testáveis.
-  - [x] Conectar overlay ao pipeline incremental do `IndexService`.
-  - [x] Orquestrar chamada de `GitService::workingTreeOverlay()` no serviço de aplicação/indexação.
-- [x] Ocultar deletados e substituir modificados sem resultados obsoletos.
-- [x] Reconciliar eventos do watcher em batches transacionais.
-- [x] Detectar staleness do índice e expor estado via `IndexService`.
-- [x] Implementar busca indexada por conteúdo e metadados.
-  - [x] Implementar busca indexada inicial por metadados de caminho.
-  - [x] Persistir e consultar conteúdo indexado sem depender apenas de hash.
-- [x] Combinar resultado rápido do índice com validação direta.
-- [x] Atualizar, confirmar ou remover resultados durante refinamento.
-- [x] Definir ranking e merge determinísticos entre fontes.
-- [x] Implementar orçamento de disco e política de eviction.
-- [x] Versionar schema e formato para upgrades sem perda desnecessária do cache.
-- [x] Implementar pausa, retomada e reindexação manual.
+## Milestone 6 — Persistent and incremental index (P1)
 
-## Marco 7 — Serviço de busca e observabilidade (P1)
+- [x] Define and version the internal indexed-document format.
+- [x] Choose content hash with throughput benchmark and acceptable collision risk.
+- [x] Implement cancellable and progressive initial indexing.
+- [x] Implement incremental catalog by size, mtime, hash, and Git state.
+  - [x] Reuse catalog entry when size, mtime, persisted hash, and clean status indicate unchanged file.
+  - [x] Integrate Git state/overlay into the incremental catalog before considering the item complete.
+- [x] Deduplicate documents by content hash.
+- [x] Expose storage reuse queries by content hash.
+- [x] Reuse documents by blob hash before rereading files.
+- [x] Expose storage reuse queries by Git blob hash.
+- [x] Apply working tree overlay over the versioned generation.
+  - [x] Treat Git `modified` status as invalidation of conservative catalog reuse.
+  - [x] Publish tombstones for locally deleted files when a previous document exists.
+  - [x] Translate `GitOverlayEntry` values into testable indexing candidates and tombstones.
+  - [x] Connect overlay to the incremental `IndexService` pipeline.
+  - [x] Orchestrate `GitService::workingTreeOverlay()` in the application/indexing service.
+- [x] Hide deleted files and replace modified files without stale results.
+- [x] Reconcile watcher events in transactional batches.
+- [x] Detect index staleness and expose state through `IndexService`.
+- [x] Implement indexed search by content and metadata.
+  - [x] Implement initial indexed search by path metadata.
+  - [x] Persist and query indexed content without depending only on hash.
+- [x] Combine fast index results with direct validation.
+- [x] Update, confirm, or remove results during refinement.
+- [x] Define deterministic ranking and merge between sources.
+- [x] Implement disk budget and eviction policy.
+- [x] Version schema and format for upgrades without unnecessary cache loss.
+- [x] Implement pause, resume, and manual reindexing.
 
-- [x] Fazer `SearchService` selecionar busca direta, indexada ou híbrida por política explícita.
-- [x] Separar DTOs de aplicação dos tipos de persistência e detalhes dos engines.
-- [x] Criar canal de eventos para progresso, resultados, correções e erros.
-- [x] Adicionar IDs de busca para descartar eventos atrasados de consultas canceladas.
-- [x] Implementar batching adaptativo de resultados para a UI.
-- [x] Medir tempo até o primeiro resultado e tempo total em todas as estratégias.
-- [x] Implementar `MetricsSink` concreto e logging estruturado.
-- [x] Adicionar níveis, categorias e rotação de logs.
-- [x] Remover ou mascarar conteúdo e caminhos sensíveis dos logs por padrão.
-- [x] Medir arquivos/bytes por segundo, filas, cache hit e reuso por hash.
-- [x] Medir memória aproximada e detectar crescimento entre buscas.
-- [x] Criar modo/tela de diagnóstico exportável.
-- [x] Adicionar tracing de uma busca sem penalidade relevante quando desabilitado.
+## Milestone 7 — Search service and observability (P1)
 
-## Marco 8 — Experiência desktop produtiva (P1)
+- [x] Make `SearchService` choose direct, indexed, or hybrid search by explicit policy.
+- [x] Separate application DTOs from persistence types and engine details.
+- [x] Create an event channel for progress, results, corrections, and errors.
+- [x] Add search IDs to discard late events from cancelled queries.
+- [x] Implement adaptive result batching for the UI.
+- [x] Measure time to first result and total time in all strategies.
+- [x] Implement a concrete `MetricsSink` and structured logging.
+- [x] Add levels, categories, and log rotation.
+- [x] Remove or mask sensitive content and paths from logs by default.
+- [x] Measure files/bytes per second, queues, cache hits, and hash reuse.
+- [x] Measure approximate memory and detect growth between searches.
+- [x] Create an exportable diagnostics mode/screen.
+- [x] Add search tracing with no relevant penalty when disabled.
 
-- [x] Redesenhar a tela principal com layout responsivo e estados vazios claros.
-- [x] Implementar seletor de diretório/repositório com recentes e favoritos.
-- [x] Permitir selecionar múltiplos diretórios/repositórios no seletor visual, com inclusão e
-  exclusão de subdiretórios por raiz.
-  - [x] Permitir múltiplas raízes selecionadas no desktop e executar a busca sobre `SearchScope`.
-  - [x] Exibir raízes selecionadas como chips removíveis no seletor visual.
-  - [x] Permitir configurar exclusões de subdiretórios por raiz.
-  - [x] Permitir configurar inclusões explícitas de subdiretórios por raiz.
-- [x] Expor todos os filtros previstos sem hardcode de textos.
-- [x] Adicionar debounce configurável e busca ao digitar.
-- [x] Mostrar contagem, arquivos processados, tempo até primeiro resultado e duração total.
-- [x] Mostrar status e progresso da indexação.
-  - [x] Reservar ponto visível na UI para o estado de indexação.
-  - [x] Conectar progresso real do `IndexingService` ao desktop.
-- [x] Virtualizar a lista para centenas de milhares de resultados.
-- [x] Preservar seleção durante batches e refinamento híbrido.
-- [x] Criar agrupamento por arquivo e navegação entre ocorrências.
-- [x] Implementar preview de arquivo assíncrono, cancelável e limitado.
-- [x] Implementar highlight de múltiplas ocorrências e linhas de contexto.
-- [x] Adicionar números de linha, monospace e tab width configurável.
-- [x] Abrir arquivo no editor configurado e copiar caminho/ocorrência.
-- [x] Exibir menu próprio de ações de arquivo ao clicar com botão direito em um arquivo listado,
-  com opções equivalentes às ações comuns do sistema: abrir arquivo, abrir com quando disponível,
-  abrir local do arquivo, copiar caminho e copiar ocorrência.
-- [x] Customizar/aprimorar estilo visual do menu de ações.
-- [x] Adicionar atalhos essenciais e command palette inicial.
-- [x] Completar command palette com ações de diagnóstico, histórico, buscas salvas e navegação
-  avançada.
-- [x] Implementar histórico, buscas salvas e favoritos.
-- [x] Implementar tema claro, escuro e sistema.
-- [x] Adicionar ícones de informação com tooltips explicando filtros, escopo, tipos de documento,
-  `.gitignore`, busca regex e demais controles potencialmente ambíguos.
-- [x] Corrigir inconsistências de idioma na interface, garantindo que todos os textos visíveis estejam
-  em `pt-BR` ou `en-US` conforme o idioma ativo, sem mistura acidental.
-- [x] Persistir geometria, splitters, filtros e último repositório.
-- [x] Exibir erros parciais sem interromper resultados válidos.
-- [x] Impedir busca regex enquanto backend não estiver disponível ou remover o stub visual enganoso.
-- [x] Tornar cancelamento imediato e visualmente confiável.
-- [x] Testar e documentar acessibilidade inicial: foco, teclado, contraste, nomes acessíveis e
-  leitores de tela.
-- [x] Testar e documentar responsividade para DPI alto, múltiplos monitores e escalas fracionárias.
-- [x] Completar e revisar traduções `pt-BR` e `en-US`.
-- [x] Definir estratégia para pluralização, atalhos e strings técnicas.
+## Milestone 8 — Productive desktop experience (P1)
 
-## Marco 9 — Testes e qualidade contínua (P0/P1)
+- [x] Redesign the main screen with responsive layout and clear empty states.
+- [x] Implement directory/repository selector with recent entries and favorites.
+- [x] Allow selecting multiple directories/repositories in the visual selector, with per-root subdirectory inclusion and exclusion.
+  - [x] Allow multiple selected roots on desktop and execute search over `SearchScope`.
+  - [x] Display selected roots as removable chips in the visual selector.
+  - [x] Allow configuring per-root subdirectory exclusions.
+  - [x] Allow configuring explicit per-root subdirectory inclusions.
+- [x] Expose all planned filters without hardcoded text.
+- [x] Add configurable debounce and search as you type.
+- [x] Show count, processed files, time to first result, and total duration.
+- [x] Show indexing status and progress.
+  - [x] Reserve a visible UI point for indexing state.
+  - [x] Connect real `IndexingService` progress to desktop.
+- [x] Virtualize the list for hundreds of thousands of results.
+- [x] Preserve selection during batches and hybrid refinement.
+- [x] Create grouping by file and navigation between occurrences.
+- [x] Implement asynchronous, cancellable, bounded file preview.
+- [x] Implement multi-occurrence highlight and context lines.
+- [x] Add line numbers, monospace font, and configurable tab width.
+- [x] Open file in the configured editor and copy path/occurrence.
+- [x] Show an Uburu-owned file action menu on right click over a listed file, with actions equivalent to common system actions: open file, open with when available, open file location, copy path, and copy occurrence.
+- [x] Customize/improve the visual style of the action menu.
+- [x] Add essential shortcuts and initial command palette.
+- [x] Complete command palette with diagnostics, history, saved searches, and advanced navigation.
+- [x] Implement history, saved searches, and favorites.
+- [x] Implement light, dark, and system themes.
+- [x] Add information icons with tooltips explaining filters, scope, document types, `.gitignore`, regex search, and other potentially ambiguous controls.
+- [x] Fix interface language inconsistencies, ensuring all visible text is in `pt-BR` or `en-US` according to the active language, without accidental mixing.
+- [x] Persist geometry, splitters, filters, and last repository.
+- [x] Show partial errors without interrupting valid results.
+- [x] Prevent regex search while the backend is unavailable or remove the misleading visual stub.
+- [x] Make cancellation immediate and visually reliable.
+- [x] Test and document initial accessibility: focus, keyboard, contrast, accessible names, and screen readers.
+- [x] Test and document responsiveness for high DPI, multiple monitors, and fractional scales.
+- [x] Complete and review `pt-BR` and `en-US` translations.
+- [x] Define strategy for pluralization, shortcuts, and technical strings.
 
-- [x] Criar helpers RAII para diretórios e arquivos temporários nos testes.
-- [x] Remover nomes temporários fixos que possam colidir em execução paralela.
-- [x] Criar fixtures pequenas de texto, encoding, ignore e Git.
-- [x] Adicionar testes unitários para cada regra pura de matching e filtro.
-- [x] Adicionar testes de integração de scanner em filesystem real temporário.
-- [x] Adicionar testes de integração SQLite com banco descartável.
-- [x] Adicionar testes de integração libgit2 com repositórios descartáveis.
-- [ ] Testar cancelamento em diferentes pontos do pipeline.
-- [ ] Testar backpressure e limites de memória.
-- [ ] Testar concorrência repetidamente e sob ThreadSanitizer onde disponível.
-- [ ] Adicionar testes Qt do controller/model e estados observáveis da UI.
-- [ ] Adicionar poucos testes end-to-end para selecionar pasta, buscar, cancelar e abrir resultado.
-- [ ] Habilitar execução paralela segura do CTest.
-- [ ] Configurar coverage por módulo e publicar relatório em CI.
-- [ ] Definir limiares por comportamento crítico, sem perseguir cobertura cosmética.
-- [ ] Criar suíte de regressão com bugs reais encontrados.
-- [ ] Adicionar fuzzing para matcher, parser de ignore, encoding e paths.
+## Milestone 9 — Tests and continuous quality (P0/P1)
 
-## Marco 10 — Benchmarks e metas de performance (P1)
+- [x] Create RAII helpers for temporary directories and files in tests.
+- [x] Remove fixed temporary names that may collide in parallel execution.
+- [x] Create small fixtures for text, encoding, ignore, and Git.
+- [x] Add unit tests for each pure matching and filtering rule.
+- [x] Add scanner integration tests in a real temporary filesystem.
+- [x] Add SQLite integration tests with disposable database.
+- [x] Add libgit2 integration tests with disposable repositories.
+- [ ] Test cancellation at different pipeline points.
+- [ ] Test backpressure and memory limits.
+- [ ] Test concurrency repeatedly and under ThreadSanitizer where available.
+- [ ] Add Qt tests for controller/model and observable UI states.
+- [ ] Add a few end-to-end tests for selecting folder, searching, cancelling, and opening result.
+- [ ] Enable safe parallel CTest execution.
+- [ ] Configure per-module coverage and publish report in CI.
+- [ ] Define thresholds by critical behavior, without chasing cosmetic coverage.
+- [ ] Create regression suite with real bugs found.
+- [ ] Add fuzzing for matcher, ignore parser, encoding, and paths.
 
-- [ ] Escolher framework de benchmark e integrar ao CMake sem afetar o build padrão.
-- [ ] Criar gerador determinístico de datasets.
-- [ ] Medir muitos arquivos pequenos e poucos arquivos grandes.
-- [ ] Medir literal case-sensitive, case-insensitive, palavra inteira e regex/JIT.
-- [ ] Medir custo de normalização Unicode opcional antes de ativá-la no caminho quente.
-- [ ] Medir tempo até primeiro resultado separadamente do tempo total.
-- [ ] Medir scan frio/quente e efeitos do cache do sistema operacional.
-- [ ] Medir indexação inicial, incremental e troca de branch.
-- [ ] Medir reuso por content hash e blob hash.
-- [ ] Medir memória de filas, resultados e índice.
-- [ ] Medir custo de batching e renderização da UI.
-- [ ] Definir baselines por hardware/dataset e guardar resultados versionados.
-- [ ] Criar alertas de regressão relevantes em CI ou execução periódica.
-- [ ] Documentar metas quantitativas por classe de repositório.
+## Milestone 10 — Benchmarks and performance targets (P1)
 
-## Marco 11 — Configurações, privacidade e resiliência (P2)
+- [ ] Choose benchmark framework and integrate it into CMake without affecting the default build.
+- [ ] Create deterministic dataset generator.
+- [ ] Measure many small files and few large files.
+- [ ] Measure literal case-sensitive, case-insensitive, whole word, and regex/JIT.
+- [ ] Measure optional Unicode normalization cost before enabling it on the hot path.
+- [ ] Measure time to first result separately from total time.
+- [ ] Measure cold/hot scan and operating-system cache effects.
+- [ ] Measure initial indexing, incremental indexing, and branch switch.
+- [ ] Measure reuse by content hash and blob hash.
+- [ ] Measure memory for queues, results, and index.
+- [ ] Measure batching and UI rendering cost.
+- [ ] Define baselines by hardware/dataset and store versioned results.
+- [ ] Create relevant regression alerts in CI or periodic execution.
+- [ ] Document quantitative targets per repository class.
 
-- [ ] Implementar configurações globais tipadas e versionadas.
-- [ ] Implementar configurações por repositório com herança previsível.
-- [ ] Separar no status de indexação falhas reais de arquivos ignorados por formato não suportado,
-  binário, tamanho, filtro ou limitação temporária de parser.
-- [ ] Validar limites de threads, arquivo, resultados, memória e disco.
-- [ ] Adicionar importação/exportação de configurações e buscas salvas.
-- [ ] Definir política de telemetria: desabilitada por padrão e somente opt-in, se existir.
-- [ ] Disponibilizar botões de configuração da janela para idioma, tema, preferências gerais e diagnósticos rápidos.
-- [ ] Nunca enviar nomes, caminhos ou conteúdo sem consentimento explícito.
-- [ ] Proteger histórico e índice conforme permissões do usuário.
-- [ ] Tratar caminhos inacessíveis, mídia removível e rede instável.
-- [ ] Recuperar estado após crash sem corromper índice ou preferências.
-- [ ] Implementar relatórios de crash locais e exportáveis.
-- [ ] Adicionar limites contra decompression bombs e formatos especiais quando suportados.
-- [ ] Fazer threat model para regex, arquivos hostis, symlinks e banco local.
+## Milestone 11 — Settings, privacy, and resilience (P2)
 
-## Marco 12 — CLI e extensibilidade (P2)
+- [ ] Implement typed and versioned global settings.
+- [ ] Implement per-repository settings with predictable inheritance.
+- [ ] Separate real indexing failures from files ignored by unsupported format, binary, size, filter, or temporary parser limitation in indexing status.
+- [ ] Validate limits for threads, files, results, memory, and disk.
+- [ ] Add import/export for settings and saved searches.
+- [ ] Define telemetry policy: disabled by default and opt-in only, if it exists.
+- [ ] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.
+- [ ] Never send names, paths, or content without explicit consent.
+- [ ] Protect history and index according to user permissions.
+- [ ] Handle inaccessible paths, removable media, and unstable network locations.
+- [ ] Recover state after crash without corrupting index or preferences.
+- [ ] Implement local, exportable crash reports.
+- [ ] Add limits against decompression bombs and special formats when supported.
+- [ ] Create a threat model for regex, hostile files, symlinks, and local database.
 
-- [ ] Criar CLI fina sobre o mesmo `SearchService`, sem duplicar o engine.
-- [ ] Suportar saída humana, JSON Lines e códigos de saída estáveis.
-- [ ] Permitir busca direta, indexada e status/rebuild do índice por CLI.
-- [ ] Manter cancelamento por sinal e streaming com backpressure.
-- [ ] Definir interfaces para parsers de símbolos e linguagens.
-- [ ] Avaliar tree-sitter para símbolos apenas atrás de adapter substituível.
-- [ ] Definir API interna para novos backends de índice e watchers.
-- [ ] Versionar contratos públicos antes de permitir plugins externos.
-- [ ] Documentar limites de estabilidade ABI/API.
+## Milestone 12 — CLI and extensibility (P2)
 
-## Marco 13 — Empacotamento e releases (P2)
+- [ ] Create a thin CLI over the same `SearchService`, without duplicating the engine.
+- [ ] Support human output, JSON Lines, and stable exit codes.
+- [ ] Allow direct search, indexed search, and index status/rebuild through CLI.
+- [ ] Keep signal cancellation and streaming with backpressure.
+- [ ] Define interfaces for symbol and language parsers.
+- [ ] Evaluate tree-sitter for symbols only behind a replaceable adapter.
+- [ ] Define internal API for new index backends and watchers.
+- [ ] Version public contracts before allowing external plugins.
+- [ ] Document ABI/API stability limits.
 
-- [ ] Automatizar bundle Windows com Qt, runtime MinGW/MSVC e DLLs vcpkg necessárias.
-- [ ] Produzir instalador Windows e avaliar MSIX versus instalador tradicional.
-- [ ] Assinar executáveis e instaladores de release.
-- [ ] Produzir bundle macOS, assinar e notarizar.
-- [ ] Produzir AppImage e avaliar Flatpak no Linux.
-- [ ] Validar instalação, atualização e desinstalação em máquinas limpas.
-- [ ] Separar configurações, índice e cache para permitir upgrade/uninstall seguros.
-- [ ] Definir versionamento semântico e changelog.
-- [ ] Automatizar artefatos de release e checksums.
-- [ ] Gerar SBOM e relatório de licenças.
-- [ ] Adicionar política de atualização e canal estável/pré-release.
-- [ ] Criar checklist de release, rollback e compatibilidade de banco.
+## Milestone 13 — Packaging and releases (P2)
 
-## Marco 14 — Documentação profissional (P1/P2)
+- [ ] Automate Windows bundle with Qt, MinGW/MSVC runtime, and required vcpkg DLLs.
+- [ ] Produce Windows installer and evaluate MSIX versus traditional installer.
+- [ ] Sign release executables and installers.
+- [ ] Produce macOS bundle, sign, and notarize.
+- [ ] Produce AppImage and evaluate Flatpak on Linux.
+- [ ] Validate installation, update, and uninstallation on clean machines.
+- [ ] Separate settings, index, and cache to allow safe upgrade/uninstall.
+- [ ] Define semantic versioning and changelog.
+- [ ] Automate release artifacts and checksums.
+- [ ] Generate SBOM and license report.
+- [ ] Add update policy and stable/pre-release channel.
+- [ ] Create release, rollback, and database compatibility checklist.
 
-- [ ] Criar `docs/search-semantics.md`.
-- [ ] Expandir `docs/architecture.md` com componentes e sequência de busca.
-- [ ] Documentar contratos de cancelamento, ownership e threading.
-- [x] Documentar schema, migrations e recuperação em `docs/storage.md`.
-- [ ] Documentar formato, gerações e invalidação em `docs/indexing.md`.
-- [x] Documentar branch/worktree/overlay em `docs/git-awareness.md`.
-- [ ] Documentar métricas e metodologia em `docs/performance.md`.
-- [ ] Documentar estados, atalhos e acessibilidade em `docs/ui.md`.
-- [ ] Manter instruções de build por plataforma testadas em CI.
-- [ ] Adicionar guia de troubleshooting para Qt, vcpkg, toolchains e runtime DLLs.
-- [ ] Registrar decisões arquiteturais importantes como ADRs.
-- [ ] Criar documentação para contribuidores e arquitetura de testes.
-- [ ] Disponibilizar documentação em português e em inglês.
-- [ ] Eliminar quebras de linhas desnecessárias no meio de parágrafos.
+## Milestone 14 — Professional documentation (P1/P2)
 
-## Evoluções avançadas (P3)
+- [ ] Create `docs/search-semantics.md`.
+- [ ] Expand `docs/architecture.md` with components and search sequence.
+- [ ] Document cancellation, ownership, and threading contracts.
+- [x] Document schema, migrations, and recovery in `docs/storage.md`.
+- [ ] Document format, generations, and invalidation in `docs/indexing.md`.
+- [x] Document branch/worktree/overlay in `docs/git-awareness.md`.
+- [ ] Document metrics and methodology in `docs/performance.md`.
+- [ ] Document states, shortcuts, and accessibility in `docs/ui.md`.
+- [ ] Keep per-platform build instructions tested in CI.
+- [ ] Add troubleshooting guide for Qt, vcpkg, toolchains, and runtime DLLs.
+- [ ] Record important architectural decisions as ADRs.
+- [ ] Create contributor documentation and test architecture documentation.
+- [ ] Provide documentation in Portuguese and English.
+- [ ] Remove unnecessary line breaks in the middle of paragraphs.
 
-- [ ] Busca estrutural e por símbolos com ranking por linguagem.
-- [ ] Consultas compostas com operadores booleanos e filtros persistentes.
-- [ ] Busca em conteúdo histórico de commits de forma opt-in.
-- [ ] Comparação de resultados entre branches/worktrees.
-- [ ] Índices compartilháveis somente após modelo seguro de portabilidade e privacidade.
-- [ ] Preview especializado para formatos relevantes sem comprometer segurança.
-- [ ] API de automação local estável.
-- [ ] Avaliar aceleração SIMD e memory mapping somente com benchmarks e fallback portátil.
+## Advanced evolutions (P3)
 
-## Gates para considerar a versão 1.0 profissional
+- [ ] Structural and symbol search with language-aware ranking.
+- [ ] Compound queries with boolean operators and persistent filters.
+- [ ] Search historical commit content as opt-in behavior.
+- [ ] Compare results between branches/worktrees.
+- [ ] Shareable indexes only after a safe portability and privacy model exists.
+- [ ] Specialized preview for relevant formats without compromising security.
+- [ ] Stable local automation API.
+- [ ] Evaluate SIMD acceleration and memory mapping only with benchmarks and portable fallback.
 
-- [ ] Correção coberta para todas as semânticas documentadas de busca.
-- [ ] Busca direta, indexada e híbrida confiáveis e canceláveis.
-- [ ] Índice incremental Git-aware validado com branches, detached HEAD e worktrees.
-- [ ] Nenhuma operação pesada na thread da UI.
-- [ ] Orçamentos de memória, disco e filas configuráveis e testados.
-- [ ] Builds reproduzíveis e CI verde nas plataformas suportadas.
-- [ ] Benchmarks sem regressões críticas e metas publicadas.
-- [ ] Acessibilidade, i18n, instalação, atualização e desinstalação validadas.
-- [ ] Documentação, licenças, segurança e processo de release completos.
-- [ ] Teste prolongado em repositórios grandes reais sem perda de resultados ou corrupção do índice.
+## Gates for considering version 1.0 professional
+
+- [ ] Correctness covered for all documented search semantics.
+- [ ] Reliable and cancellable direct, indexed, and hybrid search.
+- [ ] Git-aware incremental index validated with branches, detached HEAD, and worktrees.
+- [ ] No heavy operation on the UI thread.
+- [ ] Configurable and tested memory, disk, and queue budgets.
+- [ ] Reproducible builds and green CI on supported platforms.
+- [ ] Benchmarks without critical regressions and published targets.
+- [ ] Accessibility, i18n, installation, update, and uninstallation validated.
+- [ ] Complete documentation, licenses, security, and release process.
+- [ ] Long-running tests on large real repositories without lost results or index corruption.

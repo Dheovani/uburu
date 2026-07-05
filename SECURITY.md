@@ -1,29 +1,24 @@
-# Política de segurança
+# Security Policy
 
-## Escopo
+## Scope
 
-O Uburu processa arquivos locais, metadados de repositórios e futuramente índices persistentes. Por
-isso, segurança e privacidade são requisitos de produto, não apenas detalhes operacionais.
+Uburu processes local files, repository metadata, and, in the future, persistent indexes. For that reason, security and privacy are product requirements, not just operational details.
 
-## Como reportar vulnerabilidades
+## Reporting vulnerabilities
 
-Enquanto o projeto não tiver canal público definitivo, reporte vulnerabilidades de forma privada aos
-mantenedores. Não abra issue pública com detalhes exploráveis antes de uma triagem inicial.
+Until the project has a definitive public channel, report vulnerabilities privately to the maintainers. Do not open a public issue with exploitable details before initial triage.
 
-Inclua, quando possível:
+When possible, include:
 
-- versão ou commit afetado;
-- sistema operacional;
-- passos mínimos de reprodução;
-- impacto esperado;
-- arquivos ou repositórios sintéticos que reproduzam o problema sem expor dados reais.
+- affected version or commit;
+- operating system;
+- minimal reproduction steps;
+- expected impact;
+- synthetic files or repositories that reproduce the issue without exposing real data.
 
-## Diretrizes iniciais
+## Initial guidelines
 
-- Não envie caminhos, nomes de arquivos ou conteúdo para serviços externos sem consentimento
-  explícito.
-- Não registre conteúdo de arquivos em logs por padrão.
-- Trate regex, encodings, symlinks, arquivos enormes e repositórios hostis como superfícies de
-  risco.
-- Bugs de travamento, negação de serviço local, corrupção de índice ou exposição de dados devem ser
-  tratados como relevantes.
+- Do not send paths, file names, or content to external services without explicit consent.
+- Do not log file content by default.
+- Treat regex, encodings, symlinks, huge files, and hostile repositories as risk surfaces.
+- Crashes, local denial of service, index corruption, or data exposure bugs should be treated as relevant.

@@ -1,122 +1,62 @@
-# Indexação
+# Indexing
 
-O catálogo persistente é dividido entre metadados mutáveis da worktree e documentos endereçados por
-conteúdo.
+The persistent catalog is split between mutable worktree metadata and content-addressed documents.
 
-Uma entrada lógica contém `repositoryId`, `worktreeId`, caminho relativo, tamanho, mtime, hash de
-conteúdo, blob Git opcional e status local. O documento de conteúdo pode ser reutilizado quando o mesmo
-hash reaparece em outra branch ou worktree.
+A logical entry contains `repositoryId`, `worktreeId`, relative path, size, mtime, content hash, optional Git blob hash, and local status. The content document can be reused when the same hash appears in another branch or worktree.
 
-## Formato interno versionado
+## Versioned internal format
 
-Todo documento indexado possui `formatVersion`. A versão atual é `1` e representa um documento
-endereçado por conteúdo com hash SHA-256, metadados de blob Git opcional e suporte a overlay da working
-tree. Essa versão é persistida no SQLite junto ao documento e ao caminho que aponta para ele.
+Every indexed document has `formatVersion`. The current version is `1` and represents a content-addressed document with SHA-256 content hash, optional Git blob metadata, and working tree overlay support. This version is persisted in SQLite together with the document and the path that points to it.
 
-O módulo `core/index` é o dono da interpretação desse formato. `core/storage` apenas persiste a versão
-para que upgrades futuros possam decidir se um documento pode ser reutilizado, migrado ou descartado. O
-formato do documento é separado da versão do schema SQLite: uma migration de schema pode existir sem
-mudar a semântica do documento indexado, e uma versão nova de documento pode exigir reindexação mesmo
-que o schema continue compatível.
+`core/index` owns the interpretation of this format. `core/storage` only persists the version so future upgrades can decide whether a document can be reused, migrated, or discarded. The document format is separate from the SQLite schema version: a schema migration can exist without changing indexed-document semantics, and a new document version can require reindexing even when the schema remains compatible.
 
-## Atualização incremental
+## Incremental update
 
-1. Capturar HEAD, branch e estado do index Git.
-2. Consumir eventos do watcher e reconciliar com um scan periódico.
-3. Calcular hash somente quando tamanho/mtime ou estado Git indicarem mudança.
-4. Reutilizar documentos por blob hash ou hash de conteúdo.
-5. Aplicar o overlay da working tree para adicionados, modificados e deletados.
-6. Publicar uma nova geração do índice de forma atômica.
+1. Capture HEAD, branch, and Git index state.
+2. Consume watcher events and reconcile them with a periodic scan.
+3. Compute hashes only when size/mtime or Git state indicate a change.
+4. Reuse documents by blob hash or content hash.
+5. Apply the working tree overlay for added, modified, and deleted files.
+6. Publish a new index generation atomically.
 
-Uma troca de branch invalida o catálogo visível, não o armazenamento endereçado por conteúdo.
-Backpressure e orçamento de memória devem limitar parsing e filas de resultados.
+A branch switch invalidates the visible catalog, not the content-addressed storage. Backpressure and a memory budget must limit parsing and result queues.
 
-A primeira base incremental compara a entrada persistida do catálogo com o `FileEntry` atual. Quando o
-caminho da mesma worktree continua limpo, não deletado, com mesmo tamanho, mesmo `mtime` e hash persistido
-válido, o indexador reutiliza a identidade do documento sem reler o arquivo. Essa otimização é deliberadamente
-conservadora: arquivos modificados, deletados, com status desconhecido ou futuramente marcados por overlay Git
-voltam para o caminho de revalidação/reindexação.
+The first incremental base compares the persisted catalog entry with the current `FileEntry`. When the path in the same worktree is still clean, not deleted, has the same size, the same `mtime`, and a valid persisted hash, the indexer reuses the document identity without rereading the file. This optimization is deliberately conservative: modified files, deleted files, unknown statuses, or files later marked by Git overlay return to the revalidation/reindexing path.
 
-## Reuso de documentos
+## Document reuse
 
-O storage expõe consultas separadas para reuso por `contentHash` e por `gitBlobHash`. Essas consultas
-retornam apenas a identidade reutilizável do documento, não uma entrada de arquivo completa, porque o
-mesmo conteúdo pode aparecer em múltiplos caminhos, branches ou worktrees.
+Storage exposes separate queries for reuse by `contentHash` and by `gitBlobHash`. These queries return only the reusable document identity, not a full file entry, because the same content can appear in multiple paths, branches, or worktrees.
 
-O catálogo de arquivos continua sendo o responsável por vincular uma identidade de documento ao caminho
-visível na worktree atual. Essa separação evita tratar `path` como identidade de conteúdo e prepara o
-indexador incremental para priorizar reuso por blob Git antes de reler arquivos da working tree.
+The file catalog remains responsible for linking a document identity to the visible path in the current worktree. This separation avoids treating `path` as content identity and prepares the incremental indexer to prioritize Git blob reuse before rereading working tree files.
 
-Quando o indexador recebe metadados Git confiáveis para um arquivo limpo, ele consulta primeiro o reuso
-por blob hash. Se o blob já está no storage, uma nova entrada de catálogo é criada apontando para o mesmo
-documento endereçado por conteúdo, sem abrir nem hashear o arquivo da working tree. Arquivos modificados,
-adicionados localmente ou sem blob confiável continuam passando pelo caminho de hash de conteúdo até o
-overlay Git completo ser aplicado.
+When the indexer receives reliable Git metadata for a clean file, it first queries reuse by blob hash. If the blob is already in storage, a new catalog entry is created pointing to the same content-addressed document, without opening or hashing the working tree file. Locally modified files, added files, or files without a reliable blob continue through the content-hash path until the full Git overlay is applied.
 
-## Overlay da working tree
+## Working tree overlay
 
-O estado Git participa da decisão incremental antes de qualquer reuso por tamanho e `mtime`. Entradas
-limpas podem reutilizar o catálogo persistido ou um documento conhecido por blob hash. Entradas modificadas
-localmente são sempre revalidadas pela leitura da working tree, mesmo quando tamanho e `mtime` ainda
-coincidem com o catálogo anterior, porque o Git já informou que o conteúdo visível ao usuário mudou.
+Git state participates in the incremental decision before any size/mtime reuse. Clean entries can reuse the persisted catalog or a document known by blob hash. Locally modified entries are always revalidated by reading the working tree, even when size and `mtime` still match the previous catalog, because Git has already reported that the user-visible content changed.
 
-Entradas deletadas publicam uma lápide na nova geração quando havia documento anterior para o caminho.
-Essa lápide mantém a identidade de conteúdo anterior apenas como referência histórica, mas marca o arquivo
-como `deleted` para que buscas indexadas futuras não retornem resultados obsoletos da geração versionada.
-Arquivos deletados sem entrada anterior são contabilizados como removidos, mas não criam documento novo.
+Deleted entries publish a tombstone in the new generation when a previous document existed for the path. This tombstone keeps the previous content identity only as historical reference, but marks the file as `deleted` so future indexed searches do not return stale results from the versioned generation. Deleted files without previous entries are counted as removed, but do not create a new document.
 
-`buildOverlayIndexCandidates()` é a ponte pura entre o scanner e o overlay Git: ele recebe os
-`FileEntry` encontrados na working tree e as entradas `GitOverlayEntry`, devolvendo candidatos de
-indexação com status Git, blob reutilizável e tombstones para caminhos ocultados. Renames preservam o
-caminho atual como candidato da working tree e geram uma lápide para o caminho anterior, evitando que a
-busca indexada mantenha os dois caminhos visíveis depois da reconciliação.
+`buildOverlayIndexCandidates()` is the pure bridge between the scanner and the Git overlay: it receives the `FileEntry` values found in the working tree and the `GitOverlayEntry` values, returning indexing candidates with Git status, reusable blob, and tombstones for hidden paths. Renames preserve the current path as a working-tree candidate and generate a tombstone for the previous path, preventing indexed search from keeping both paths visible after reconciliation.
 
-`IndexService::update(worktree, files, overlay)` usa essa tradução antes de publicar a geração
-incremental. Assim, o orquestrador futuro pode combinar o scan de filesystem com
-`GitService::workingTreeOverlay()` sem conhecer detalhes de tombstones, renames ou invalidação de reuso
-por status Git.
+`IndexService::update(worktree, files, overlay)` uses this translation before publishing the incremental generation. The future orchestrator can therefore combine filesystem scanning with `GitService::workingTreeOverlay()` without knowing tombstone, rename, or Git-status reuse-invalidation details.
 
-`DefaultIndexingService` é o primeiro orquestrador de aplicação para esse fluxo: ele escaneia a raiz da
-worktree, lê `GitService::workingTreeOverlay()` e só então chama o `IndexService`. Se o overlay Git não
-puder ser lido, a atualização retorna falha e não publica uma geração nova, evitando substituir um índice
-Git-aware por uma visão cega da árvore de arquivos.
+`DefaultIndexingService` is the first application orchestrator for this flow: it scans the worktree root, reads `GitService::workingTreeOverlay()`, and only then calls `IndexService`. If the Git overlay cannot be read, the update fails and does not publish a new generation, avoiding replacement of a Git-aware index with a blind filesystem view.
 
-A busca indexada consulta documentos visíveis por raiz de worktree e suporta metadados de caminho para
-`fileName`/`contentAndFileName`. Ela ignora tombstones (`deleted = true`) e, portanto, não retorna o
-caminho antigo de um arquivo deletado ou renomeado localmente. O primeiro suporte a conteúdo persistido
-armazena texto normalizado em `documents.indexed_text`, endereçado pelo hash de conteúdo. Isso permite
-consultas `content` reais sem reler a working tree e sem fabricar resultados a partir de hashes. Essa
-representação ainda não substitui um backend textual mais sofisticado: tokenização, FTS, compactação,
-ranking e highlights globais continuam evoluções futuras.
+Indexed search queries visible documents by worktree root and supports path metadata for `fileName` and `contentAndFileName`. It ignores tombstones (`deleted = true`) and therefore does not return the old path of a locally deleted or renamed file. The first persisted-content support stores normalized text in `documents.indexed_text`, addressed by content hash. This enables real `content` queries without rereading the working tree and without fabricating results from hashes. This representation does not replace a more sophisticated textual backend: tokenization, FTS, compression, ranking, and global highlights remain future evolutions.
 
-`IndexService::staleness()` compara a última geração publicada para a raiz da worktree com o `HEAD` e a
-branch atuais. O estado resultante diferencia índice ausente, fresco e obsoleto, além de indicar se a
-mudança veio de `HEAD`, branch ou ambos. A UI poderá usar esse contrato para exibir o status de indexação
-sem consultar diretamente o SQLite.
+`IndexService::staleness()` compares the last published generation for the worktree root with the current `HEAD` and branch. The resulting state differentiates missing, fresh, and stale indexes, and indicates whether the change came from `HEAD`, branch, or both. The UI can use this contract to display indexing status without querying SQLite directly.
 
-Eventos de watcher são reconciliados inicialmente por batch no `DefaultIndexingService`. Um batch vazio
-não faz trabalho; qualquer batch com evento, overflow ou marcação de rescan dispara uma única atualização
-transacional do índice. Essa política é conservadora e prioriza correção: a reconciliação parcial por
-arquivo pode substituir o rescan completo no futuro sem alterar o contrato externo do serviço.
+Watcher events are initially reconciled in batches by `DefaultIndexingService`. An empty batch does no work; any batch with an event, overflow, or rescan marker triggers a single transactional index update. This policy is conservative and prioritizes correctness: per-file partial reconciliation can replace the full rescan in the future without changing the service's external contract.
 
-## Hash de conteúdo
+## Content hash
 
-O algoritmo inicial de hash de conteúdo é SHA-256. A escolha privilegia correção, estabilidade e baixa
-probabilidade prática de colisão para deduplicação local, mesmo quando o mesmo conteúdo aparece em
-branches, worktrees ou caminhos diferentes.
+The initial content hash algorithm is SHA-256. The choice favors correctness, stability, and a very low practical collision probability for local deduplication, even when the same content appears in different branches, worktrees, or paths.
 
-O cálculo é feito em streaming para arquivos, com cancelamento cooperativo entre blocos, evitando carregar
-arquivos grandes inteiros em memória. O benchmark `uburu-content-hash-benchmark` mede throughput em um
-dataset sintético determinístico e deve ser usado para comparar compiladores, flags e plataformas antes de
-trocar o algoritmo ou adicionar uma implementação acelerada.
+Hashing is streamed for files, with cooperative cancellation between chunks, avoiding loading whole large files into memory. The `uburu-content-hash-benchmark` benchmark measures throughput on a deterministic synthetic dataset and should be used to compare compilers, flags, and platforms before changing the algorithm or adding an accelerated implementation.
 
-## Indexação inicial
+## Initial indexing
 
-`PersistentIndexService` implementa a primeira indexação persistente. Ele recebe uma lista de `FileEntry`,
-calcula SHA-256 em streaming para arquivos textuais, reutiliza documentos já conhecidos por hash de
-conteúdo e publica uma nova geração no storage.
+`PersistentIndexService` implements the first persistent indexing path. It receives a list of `FileEntry` values, computes streaming SHA-256 for textual files, reuses documents already known by content hash, and publishes a new generation to storage.
 
-O progresso é reportado por callback, com total, processados, indexados, reutilizados e falhas. O
-cancelamento é cooperativo: se o token é sinalizado antes ou durante o cálculo de hash, a operação retorna
-`cancelled` e não publica uma geração parcial. Falhas isoladas de leitura são contabilizadas e não impedem
-a publicação dos documentos válidos restantes.
+Progress is reported by callback, with total, processed, indexed, reused, and failed counters. Cancellation is cooperative: if the token is signaled before or during hashing, the operation returns `cancelled` and does not publish a partial generation. Isolated read failures are counted and do not prevent publication of the remaining valid documents.

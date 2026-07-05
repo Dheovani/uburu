@@ -1,3 +1,5 @@
-# Testes de integração
+# Integration tests
 
-Fixtures futuras cobrirão filesystem, SQLite, Git, worktrees e reconciliação incremental em diretórios temporários determinísticos.
+Integration tests cover filesystem, SQLite, Git, worktrees, and incremental reconciliation in deterministic temporary directories.
+
+Keep scenarios small and behavior-oriented. Prefer disposable repositories and databases built during the test over checked-in binary fixtures.

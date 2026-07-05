@@ -1,57 +1,55 @@
 # AGENTS.md
 
-## Visão do projeto
+## Project vision
 
-Este projeto é uma aplicação desktop de busca avançada em arquivos, inspirada em ferramentas como Agent Ransack, ripgrep e IDE search, mas com foco especial em repositórios de software, versionamento Git, indexação incremental e alta performance.
+This project is an advanced desktop file-search application inspired by Agent Ransack, ripgrep, and IDE search, with special focus on software repositories, Git versioning, incremental indexing, and high performance.
 
-O objetivo não é criar apenas um MVP. O objetivo é construir, ao longo do tempo, o melhor sistema possível para busca local em bases de código e diretórios complexos.
+The goal is not only to build an MVP. The goal is to build, over time, the best possible local search system for codebases and complex directories.
 
-A aplicação deve permitir que o usuário escolha um diretório/repositório, pesquise por texto, regex, nomes de arquivo, extensões, símbolos e conteúdo, recebendo resultados rapidamente, com visualização contextual, destaque das ocorrências e integração inteligente com o estado atual do Git.
+The application should let users choose a directory/repository, search by text, regex, file names, extensions, symbols, and content, and receive results quickly with contextual preview, occurrence highlighting, and intelligent integration with the current Git state.
 
-## Prioridades fundamentais
+## Fundamental priorities
 
-A prioridade absoluta é eficiência.
+The absolute priority is efficiency.
 
-A ordem de importância do projeto é:
+Project priorities, in order:
 
-1. Correção dos resultados.
-2. Velocidade perceptível para o usuário.
-3. Baixo consumo de memória.
-4. Arquitetura limpa e extensível.
-5. Experiência de uso refinada.
-6. Portabilidade.
-7. Facilidade de manutenção.
+1. Correct results.
+2. Perceived speed for the user.
+3. Low memory usage.
+4. Clean and extensible architecture.
+5. Refined user experience.
+6. Portability.
+7. Maintainability.
 
-Não sacrifique a arquitetura para entregar rapidamente. Prefira uma base sólida, modular e testável.
+Do not sacrifice architecture to deliver quickly. Prefer a solid, modular, testable base.
 
-## Stack principal
+## Main stack
 
-Use preferencialmente:
+Prefer:
 
-* Linguagem: C++23.
-* Interface: Qt 6 com QML/Qt Quick.
-* Build system: CMake.
-* Testes: Catch2 ou GoogleTest.
-* Banco local: SQLite.
-* Regex: PCRE2 com JIT, quando disponível.
-* Git integration: libgit2, quando fizer sentido; Git CLI pode ser usado apenas como fallback ou em pontos isolados.
-* Monitoramento de arquivos:
+- Language: C++23.
+- Interface: Qt 6 with QML/Qt Quick.
+- Build system: CMake.
+- Tests: Catch2 or GoogleTest.
+- Local database: SQLite.
+- Regex: PCRE2 with JIT when available.
+- Git integration: libgit2 when appropriate; Git CLI may be used only as fallback or in isolated points.
+- File monitoring:
+  - Windows: `ReadDirectoryChangesW`.
+  - Linux: `inotify`.
+  - macOS: `FSEvents`.
+  - Qt `QFileSystemWatcher` may be used initially, but the design must allow more efficient native backends.
+- Packaging:
+  - Windows: MSIX/traditional installer.
+  - Linux: AppImage/Flatpak.
+  - macOS: `.app` bundle.
 
-  * Windows: ReadDirectoryChangesW.
-  * Linux: inotify.
-  * macOS: FSEvents.
-  * Qt QFileSystemWatcher pode ser usado inicialmente, mas o design deve permitir backends nativos mais eficientes.
-* Empacotamento:
+The interface must be separated from the core. The search engine must not depend on QML.
 
-  * Windows: MSIX/installer tradicional.
-  * Linux: AppImage/Flatpak.
-  * macOS: bundle `.app`.
+## Architectural direction
 
-A interface deve ser separada do core. O motor de busca não deve depender de QML.
-
-## Diretriz arquitetural
-
-A aplicação deve ser dividida em camadas claras:
+The application must be divided into clear layers:
 
 ```txt
 UI/QML
@@ -65,9 +63,9 @@ Search Engine / Index Engine / Git Service / File System Service
 Platform Adapters
 ```
 
-O core de busca deve ser utilizável sem interface gráfica. Ele deve poder ser testado por linha de comando ou por testes automatizados.
+The search core must be usable without a graphical interface. It must be testable by command line or automated tests.
 
-Estrutura sugerida:
+Suggested structure:
 
 ```txt
 /
@@ -110,56 +108,56 @@ Estrutura sugerida:
   benchmarks/
 ```
 
-## Módulos principais
+## Main modules
 
 ### `core/search`
 
-Responsável por busca direta sem índice, matching textual, regex, busca por nome de arquivo e combinação de filtros.
+Responsible for direct non-indexed search, textual matching, regex, file-name search, and filter composition.
 
-Deve suportar:
+Must support:
 
-* Busca literal.
-* Busca case-sensitive e case-insensitive.
-* Busca regex.
-* Busca por palavra inteira.
-* Busca por extensão.
-* Busca por glob.
-* Busca por diretórios incluídos/excluídos.
-* Busca em arquivos ocultos, quando habilitada.
-* Busca respeitando `.gitignore`, quando habilitada.
-* Busca com cancelamento.
-* Busca com resultados progressivos.
-* Busca com limite configurável de resultados.
-* Busca com limite de tamanho de arquivo.
-* Detecção de arquivos binários.
+- literal search;
+- case-sensitive and case-insensitive search;
+- regex search;
+- whole-word search;
+- extension filtering;
+- glob filtering;
+- included/excluded directory filtering;
+- hidden-file search when enabled;
+- search respecting `.gitignore` when enabled;
+- cancellation;
+- progressive results;
+- configurable result limit;
+- file-size limit;
+- binary-file detection.
 
 ### `core/index`
 
-Responsável por indexação persistente.
+Responsible for persistent indexing.
 
-A indexação deve ser incremental, Git-aware e content-addressed sempre que possível.
+Indexing must be incremental, Git-aware, and content-addressed whenever possible.
 
-Não trate o índice apenas como uma lista de caminhos. O mesmo caminho pode ter conteúdos diferentes em branches diferentes.
+Do not treat the index only as a list of paths. The same path may have different content in different branches.
 
-O índice deve considerar:
+The index must consider:
 
-* `repositoryId`
-* `worktreeId`
-* caminho absoluto da worktree
-* caminho relativo do arquivo
-* tamanho
-* mtime
-* hash de conteúdo
-* hash de blob Git, quando disponível
-* branch atual
-* HEAD atual
-* status do arquivo
-* arquivos deletados
-* arquivos ignorados
-* arquivos não rastreados
-* arquivos modificados localmente
+- `repositoryId`;
+- `worktreeId`;
+- absolute worktree path;
+- relative file path;
+- size;
+- mtime;
+- content hash;
+- Git blob hash when available;
+- current branch;
+- current HEAD;
+- file status;
+- deleted files;
+- ignored files;
+- untracked files;
+- locally modified files.
 
-Modelo conceitual:
+Conceptual model:
 
 ```txt
 Repository
@@ -171,178 +169,180 @@ Repository
         └── Working tree overlay
 ```
 
-A busca deve representar o estado real da árvore de trabalho visível ao usuário, não apenas o último commit.
+Search must represent the real visible working tree state, not only the last commit.
 
 ### `core/git`
 
-Responsável por detectar e interpretar o estado Git.
+Responsible for detecting and interpreting Git state.
 
-Deve suportar:
+Must support:
 
-* Detectar se uma pasta é repositório Git.
-* Detectar diretório `.git`.
-* Detectar worktrees.
-* Detectar branch atual.
-* Detectar HEAD atual.
-* Detectar mudanças de branch.
-* Detectar mudanças em `.git/HEAD`.
-* Detectar mudanças em `.git/index`.
-* Identificar arquivos rastreados.
-* Identificar arquivos não rastreados.
-* Identificar arquivos ignorados.
-* Identificar arquivos modificados.
-* Obter blob hash de arquivos rastreados, quando possível.
-* Lidar corretamente com detached HEAD.
-* Lidar corretamente com submodules.
-* Lidar corretamente com múltiplas worktrees.
+- detecting whether a folder is a Git repository;
+- detecting the `.git` directory;
+- detecting worktrees;
+- detecting current branch;
+- detecting current HEAD;
+- detecting branch changes;
+- detecting changes in `.git/HEAD`;
+- detecting changes in `.git/index`;
+- identifying tracked files;
+- identifying untracked files;
+- identifying ignored files;
+- identifying modified files;
+- obtaining blob hashes for tracked files when possible;
+- correctly handling detached HEAD;
+- correctly handling submodules;
+- correctly handling multiple worktrees.
 
-O sistema deve tratar troca de branch como alteração estrutural importante, mas não deve necessariamente reconstruir todo o índice. Sempre que possível, reutilize documentos já indexados por hash de conteúdo ou blob hash.
+Branch switch should be treated as an important structural change, but it should not necessarily rebuild the whole index. Whenever possible, reuse already indexed documents by content hash or blob hash.
+
+Search must reflect the current worktree state, including uncommitted local changes.
 
 ### `core/filesystem`
 
-Responsável por varredura e monitoramento do sistema de arquivos.
+Responsible for scanning and monitoring the filesystem.
 
-Deve suportar:
+Must support:
 
-* Scan recursivo eficiente.
-* Filtros por diretório.
-* Filtros por extensão.
-* Detecção de binários.
-* Detecção de encoding.
-* Leitura em blocos.
-* Processamento paralelo.
-* Priorização de arquivos menores ou mais prováveis.
-* Backpressure para não sobrecarregar a UI.
-* Cancelamento cooperativo.
-* Watchers nativos por plataforma.
-* Normalização de caminhos.
-* Tratamento de symlinks.
-* Proteção contra ciclos de diretórios.
-* Configuração para seguir ou ignorar symlinks.
+- efficient recursive scan;
+- directory filters;
+- extension filters;
+- binary detection;
+- encoding detection;
+- chunked reading;
+- parallel processing;
+- prioritization of smaller or more likely files;
+- backpressure to avoid overloading the UI;
+- cooperative cancellation;
+- native watchers per platform;
+- path normalization;
+- symlink handling;
+- directory-cycle protection;
+- configuration to follow or ignore symlinks.
 
 ### `core/text`
 
-Responsável por leitura, normalização e matching de texto.
+Responsible for text reading, normalization, and matching.
 
-Deve considerar:
+Must consider:
 
-* UTF-8.
-* UTF-16 LE/BE.
-* Latin-1 quando necessário.
-* Arquivos com BOM.
-* Quebras de linha `LF` e `CRLF`.
-* Normalização Unicode opcional.
-* Busca case-insensitive robusta.
-* Extração de linhas.
-* Extração de contexto antes/depois.
-* Highlight das ocorrências.
-* Busca em arquivos grandes sem carregar tudo em memória, quando possível.
+- UTF-8;
+- UTF-16 LE/BE;
+- Latin-1 when needed;
+- files with BOM;
+- `LF` and `CRLF` line endings;
+- optional Unicode normalization;
+- robust case-insensitive search;
+- line extraction;
+- before/after context extraction;
+- occurrence highlighting;
+- searching large files without loading everything into memory when possible.
 
 ### `core/storage`
 
-Responsável por persistência local.
+Responsible for local persistence.
 
-Use SQLite para:
+Use SQLite for:
 
-* Catálogo de repositórios.
-* Catálogo de worktrees.
-* Metadados dos arquivos.
-* Estado do índice.
-* Histórico de buscas.
-* Preferências do usuário.
-* Configurações por repositório.
-* Cache de resultados, quando fizer sentido.
-* Diagnósticos de performance.
-* Estatísticas de indexação.
+- repository catalog;
+- worktree catalog;
+- file metadata;
+- index state;
+- search history;
+- user preferences;
+- per-repository settings;
+- result cache when appropriate;
+- performance diagnostics;
+- indexing statistics.
 
-Evite depender exclusivamente de SQLite FTS5 como solução definitiva para o motor de busca. Ele pode ser usado como componente, mas a arquitetura deve permitir troca ou evolução do backend de indexação.
+Avoid depending exclusively on SQLite FTS5 as the definitive search-engine solution. It may be used as a component, but the architecture must allow backend replacement or evolution.
 
 ### `core/diagnostics`
 
-Responsável por logging, métricas e profiling interno.
+Responsible for logging, metrics, and internal profiling.
 
-Deve medir:
+Must measure:
 
-* Tempo de scan.
-* Tempo de indexação.
-* Tempo até o primeiro resultado.
-* Tempo total da busca.
-* Arquivos processados por segundo.
-* Bytes processados por segundo.
-* Tempo de matching.
-* Tempo de renderização ou envio de resultados para UI.
-* Uso aproximado de memória.
-* Número de arquivos ignorados.
-* Número de arquivos binários ignorados.
-* Número de arquivos reindexados.
-* Número de documentos reutilizados por hash.
+- scan time;
+- indexing time;
+- time to first result;
+- total search time;
+- files processed per second;
+- bytes processed per second;
+- matching time;
+- result rendering or UI-delivery time;
+- approximate memory usage;
+- number of ignored files;
+- number of skipped binary files;
+- number of reindexed files;
+- number of documents reused by hash.
 
-A aplicação deve ter uma tela ou modo de diagnóstico para ajudar no desenvolvimento.
+The application should have a diagnostics screen or mode to help development.
 
-## Modelo de busca
+## Search model
 
-A aplicação deve suportar dois modos principais:
+The application must support two main modes.
 
-### Busca direta
+### Direct search
 
-Busca diretamente nos arquivos da árvore atual.
+Searches files directly in the current tree.
 
-Use este modo quando:
+Use this mode when:
 
-* O índice ainda não existe.
-* O usuário quer resultado imediatamente.
-* O diretório é pequeno.
-* A busca é específica.
-* O índice está desatualizado.
+- the index does not exist yet;
+- the user wants immediate results;
+- the directory is small;
+- the search is specific;
+- the index is stale.
 
-### Busca indexada
+### Indexed search
 
-Consulta índice persistente.
+Queries the persistent index.
 
-Use este modo quando:
+Use this mode when:
 
-* O repositório já foi indexado.
-* O usuário faz buscas repetidas.
-* A base de arquivos é grande.
-* O usuário deseja busca rápida por conteúdo, nome, extensão, símbolos ou metadados.
+- the repository has already been indexed;
+- the user performs repeated searches;
+- the file base is large;
+- the user wants fast search by content, name, extension, symbols, or metadata.
 
-A interface pode combinar os dois modos:
+The interface may combine both modes:
 
 ```txt
-1. Mostrar resultados rápidos vindos do índice.
-2. Continuar validando/refinando com leitura direta do estado atual.
-3. Atualizar ou remover resultados obsoletos.
+1. Show fast results from the index.
+2. Continue validating/refining against the direct current state.
+3. Update or remove stale results.
 ```
 
-## Git e versionamento
+## Git and versioning
 
-O índice deve ser consciente de versionamento.
+The index must be version-control aware.
 
-Conceitos importantes:
+Important concepts:
 
 ```txt
 Repository:
-  Repositório Git lógico.
+  Logical Git repository.
 
 Worktree:
-  Diretório físico atualmente aberto.
+  Currently opened physical directory.
 
 Commit:
-  Estado versionado.
+  Versioned state.
 
 Branch:
-  Ponteiro para commit.
+  Pointer to a commit.
 
 Blob:
-  Conteúdo versionado de um arquivo.
+  Versioned file content.
 
 Working tree overlay:
-  Alterações locais não commitadas, arquivos novos, arquivos modificados e arquivos deletados.
+  Uncommitted local changes, new files, modified files, and deleted files.
 ```
 
-Nunca assuma que `path` identifica unicamente o conteúdo de um documento.
+Never assume that `path` uniquely identifies a document's content.
 
-Use uma chave conceitual mais rica:
+Use a richer conceptual key:
 
 ```txt
 repositoryId
@@ -352,176 +352,170 @@ contentHash
 gitBlobHash
 ```
 
-Ao trocar de branch:
+When switching branches:
 
-* Detecte alteração de HEAD.
-* Detecte alteração em `.git/index`.
-* Faça rescan incremental.
-* Remova ou oculte arquivos que não existem mais.
-* Reutilize conteúdo já indexado por hash.
-* Reindexe apenas arquivos novos ou modificados.
-* Preserve histórico de buscas e preferências.
+- detect HEAD change;
+- detect changes in `.git/index`;
+- perform incremental rescan;
+- remove or hide files that no longer exist;
+- reuse content already indexed by hash;
+- reindex only new or modified files;
+- preserve search history and preferences.
 
-A busca deve refletir o estado atual da worktree, incluindo alterações locais não commitadas.
+Search must reflect the current worktree state, including uncommitted local changes.
 
-## Interface de usuário
+## User interface
 
-A interface deve ser rápida, limpa e produtiva.
+The interface must be fast, clean, and productive.
 
-A tela principal deve conter:
+The main screen should contain:
 
-* Campo de busca principal.
-* Seletor de diretório/repositório.
-* Opções de busca:
+- main search field;
+- directory/repository selector;
+- search options:
+  - literal text;
+  - regex;
+  - case-sensitive;
+  - whole word;
+  - include ignored;
+  - include hidden;
+  - include binaries;
+  - respect `.gitignore`;
+- extension filter;
+- directory filter;
+- size filter;
+- result list;
+- file preview;
+- occurrence highlight;
+- result count;
+- time to first result;
+- indexing status;
+- cancel button;
+- search history;
+- favorites or saved searches.
 
-  * texto literal
-  * regex
-  * case-sensitive
-  * palavra inteira
-  * incluir ignorados
-  * incluir ocultos
-  * incluir binários
-  * respeitar `.gitignore`
-* Filtro por extensão.
-* Filtro por diretório.
-* Filtro por tamanho.
-* Lista de resultados.
-* Preview do arquivo.
-* Highlight das ocorrências.
-* Contagem de resultados.
-* Tempo até o primeiro resultado.
-* Status da indexação.
-* Botão cancelar.
-* Histórico de buscas.
-* Favoritos ou buscas salvas.
+The UI must receive results progressively. Do not wait for search to finish before showing results.
 
-A UI deve receber resultados progressivamente. Não espere a busca terminar para mostrar resultados.
-
-A aplicação nunca deve travar a interface durante busca, indexação ou leitura de arquivos.
+The application must never freeze the interface during search, indexing, or file reading.
 
 ## Performance
 
-Regras obrigatórias:
+Mandatory rules:
 
-* Nunca processe busca pesada na thread da UI.
-* Use cancelamento cooperativo.
-* Use filas thread-safe para resultados.
-* Evite carregar arquivos enormes inteiros em memória.
-* Evite regex quando busca literal for suficiente.
-* Use PCRE2 JIT para regex quando disponível.
-* Faça batch de resultados enviados à UI.
-* Use debounce no campo de busca.
-* Use cache com invalidação explícita.
-* Evite reindexação total desnecessária.
-* Prefira indexação incremental.
-* Meça performance antes de otimizar agressivamente.
+- Never run heavy search work on the UI thread.
+- Use cooperative cancellation.
+- Use thread-safe result queues.
+- Avoid loading huge files entirely into memory.
+- Avoid regex when literal search is sufficient.
+- Use PCRE2 JIT for regex when available.
+- Batch results sent to the UI.
+- Debounce the search field.
+- Use cache with explicit invalidation.
+- Avoid unnecessary full reindexing.
+- Prefer incremental indexing.
+- Measure before optimizing aggressively.
 
-O tempo até o primeiro resultado é uma métrica de primeira classe.
+Time to first result is a first-class metric.
 
-## Concorrência
+## Concurrency
 
-O sistema deve ter design seguro para concorrência.
+The system must have a concurrency-safe design.
 
 Use:
 
-* Threads de worker.
-* Thread pool.
-* Fila de tarefas.
-* Tokens de cancelamento.
-* Result streaming.
-* Limites de memória.
-* Limites de profundidade.
-* Prioridade de tarefas.
+- worker threads;
+- thread pool;
+- task queue;
+- cancellation tokens;
+- result streaming;
+- memory limits;
+- depth limits;
+- task priority.
 
-Evite:
+Avoid:
 
-* Data races.
-* Bloqueios longos.
-* Atualização direta da UI a partir de threads de worker.
-* Uso excessivo de mutexes globais.
-* Estado compartilhado desnecessário.
+- data races;
+- long locks;
+- direct UI updates from worker threads;
+- excessive use of global mutexes;
+- unnecessary shared state.
 
-## Configurações
+## Settings
 
-Configurações globais:
+Global settings:
 
-* Tema claro/escuro/sistema.
-* Idioma.
-* Tamanho máximo de arquivo.
-* Diretórios ignorados por padrão.
-* Extensões ignoradas.
-* Incluir arquivos ocultos.
-* Respeitar `.gitignore`.
-* Número de threads.
-* Local do banco de índice.
-* Limite de resultados por busca.
+- light/dark/system theme;
+- language;
+- maximum file size;
+- default ignored directories;
+- ignored extensions;
+- include hidden files;
+- respect `.gitignore`;
+- number of threads;
+- index database location;
+- search result limit.
 
-Configurações por repositório:
+Per-repository settings:
 
-* Nome amigável.
-* Caminho.
-* Preferências de ignore.
-* Extensões relevantes.
-* Buscas salvas.
-* Estado de indexação.
-* Última branch aberta.
-* Último HEAD indexado.
+- friendly name;
+- path;
+- ignore preferences;
+- relevant extensions;
+- saved searches;
+- indexing state;
+- last opened branch;
+- last indexed HEAD.
 
-## Internacionalização
+## Internationalization
 
-Desde o início, a interface deve estar preparada para i18n.
+The interface must be prepared for i18n from the beginning.
 
-Idioma inicial obrigatório:
+Required initial language:
 
-* `pt-BR`
+- `pt-BR`
 
-Também preparar estrutura para:
+Also prepare structure for:
 
-* `en-US`
+- `en-US`
 
-Não escreva textos fixos diretamente em QML ou C++ quando forem visíveis ao usuário. Centralize mensagens traduzíveis.
+Do not write hardcoded visible user text directly in QML or C++. Centralize translatable messages.
 
-O português deve usar acentuação correta e norma culta.
+Portuguese must use correct accents and formal standard usage.
 
-## Qualidade de código
+## Code quality
 
-Use C++ moderno.
+Use modern C++.
 
-Preferir:
+Prefer:
 
-* RAII.
-* Tipos fortes.
-* `std::filesystem`.
-* `std::optional`.
-* `std::variant`, quando fizer sentido.
-* `std::string_view`, com cuidado.
-* `std::chrono`.
-* `std::jthread`, se disponível.
-* Separação clara entre interfaces e implementações.
-* Erros explícitos.
-* Testes automatizados.
+- RAII;
+- strong types;
+- `std::filesystem`;
+- `std::optional`;
+- `std::variant` when appropriate;
+- `std::string_view` carefully;
+- `std::chrono`;
+- `std::jthread` when available;
+- clear separation between interfaces and implementations;
+- explicit errors;
+- automated tests.
 
-Evitar:
+Avoid:
 
-* Estado global mutável.
-* Ponteiros crus sem necessidade.
-* Código acoplado à UI.
-* Funções gigantes.
-* Classes “Deus”.
-* Otimizações obscuras sem benchmark.
-* Silenciar erros importantes.
-* Misturar lógica de busca com renderização.
-* Números mágicos em lógica de domínio, parsing, protocolos, formatos binários, limites ou
-  algoritmos.
-* Trechos redundantes, branches desnecessários ou código cerimonial que pode ser expresso de forma
-  mais direta sem perder clareza.
+- mutable global state;
+- raw pointers without need;
+- code coupled to UI;
+- giant functions;
+- god classes;
+- obscure optimizations without benchmarks;
+- silencing important errors;
+- mixing search logic with rendering;
+- magic numbers in domain logic, parsing, protocols, binary formats, limits, or algorithms;
+- redundant snippets, unnecessary branches, or ceremonial code that can be expressed more directly without losing clarity.
 
-Quando um valor numérico possuir significado semântico, declare uma constante nomeada antes de
-usá-lo. Em C++, prefira `constexpr` ou `inline constexpr` com o menor escopo adequado, geralmente no
-namespace anônimo do `.cpp` quando o valor for detalhe interno da unidade de tradução. Use macros
-apenas quando forem exigidas por integração com pré-processador, plataforma ou biblioteca externa.
+When a numeric value has semantic meaning, declare a named constant before using it. In C++, prefer `constexpr` or `inline constexpr` with the smallest suitable scope, usually in the anonymous namespace of the `.cpp` when the value is internal to the translation unit. Use macros only when required by preprocessor, platform, or external-library integration.
 
-Exemplos preferidos:
+Preferred examples:
 
 ```cpp
 constexpr unsigned char utf8ContinuationTagMask = 0b1100'0000U;
@@ -529,36 +523,26 @@ constexpr char32_t maximumUnicodeScalar = 0x10FFFFU;
 constexpr std::size_t defaultPreviewContextLines = 3;
 ```
 
-O nome da constante deve explicar o significado do valor, não apenas repetir sua representação.
+The constant name must explain the value's meaning, not just repeat its representation.
 
-Prefira expressões diretas quando elas preservarem a semântica e forem mais legíveis do que uma
-sequência de branches. Ao simplificar booleanos, confira a equivalência lógica, especialmente quando
-duas ou mais condições podem estar ativas ao mesmo tempo. Não troque `&&` por `||`, nem aplique De
-Morgan mecanicamente, sem validar o comportamento com testes existentes ou novos.
+Prefer direct expressions when they preserve semantics and are more readable than a sequence of branches. When simplifying booleans, verify logical equivalence, especially when two or more conditions can be active at the same time. Do not switch `&&` to `||`, or apply De Morgan mechanically, without validating behavior with existing or new tests.
 
-Exemplo preferido:
+Preferred example:
 
 ```cpp
 return (!options.wholeWord || hasWordBoundary(match)) &&
        (!options.wholeIdentifier || hasIdentifierBoundary(match));
 ```
 
-Para legibilidade humana, separe visualmente declarações e blocos de controle:
+For human readability, visually separate declarations and control blocks:
 
-* Após uma declaração de variável sem atribuição, insira uma linha em branco antes da próxima
-  instrução, exceto quando a próxima linha também for outra declaração de variável relacionada.
-* Após blocos de controle como `if`, `else`, `for`, `while`, `switch` e blocos escopados auxiliares,
-  insira uma linha em branco antes da próxima instrução lógica.
-* Após um `return`, insira uma linha em branco apenas quando houver código seguinte no mesmo escopo.
-  Não adicione linha vazia artificial entre um `return` final e o `}` da função ou bloco.
-* Evite ternários multilinha com condições compostas dentro de inicializadores ou `return` agregados
-  quando o alinhamento ficar confuso. Prefira extrair a condição para uma função/variável semântica.
-  Quando o ternário multilinha for mantido, não alinhe `?` e `:` com muitos espaços até a condição;
-  avance apenas um nível visual em relação à expressão principal.
-* Ao comparar repetidamente a mesma variável, enum, status, ponteiro ou valor conceitual similar,
-  coloque cada comparação em uma linha separada para facilitar leitura, revisão e diffs futuros.
+- After a variable declaration without assignment, insert a blank line before the next instruction, except when the next line is another related declaration.
+- After control blocks such as `if`, `else`, `for`, `while`, `switch`, and auxiliary scoped blocks, insert a blank line before the next logical instruction.
+- After a `return`, insert a blank line only when there is following code in the same scope. Do not add an artificial blank line between a final `return` and the block/function `}`.
+- Avoid multiline ternaries with compound conditions inside initializers or aggregate `return` values when alignment becomes confusing. Prefer extracting the condition to a semantic function/variable. When a multiline ternary is kept, do not align `?` and `:` with many spaces up to the condition; advance only one visual level relative to the main expression.
+- When repeatedly comparing the same variable, enum, status, pointer, or similar conceptual value, put each comparison on its own line to ease reading, review, and future diffs.
 
-Exemplo:
+Example:
 
 ```cpp
 std::string message;
@@ -570,56 +554,56 @@ if (enabled) {
 return message;
 ```
 
-## Testes
+## Tests
 
-Criar testes para:
+Create tests for:
 
-* Busca literal.
-* Busca case-insensitive.
-* Busca regex.
-* Busca com palavra inteira.
-* Busca em arquivos UTF-8.
-* Busca em arquivos com CRLF.
-* Busca ignorando binários.
-* Busca respeitando `.gitignore`.
-* Scanner recursivo.
-* Symlinks.
-* Cancelamento.
-* Indexação incremental.
-* Troca de branch.
-* Arquivos deletados.
-* Arquivos modificados.
-* Arquivos não rastreados.
-* Worktrees.
-* Reutilização por hash.
-* Ordenação de resultados.
-* Highlight de ocorrências.
-* Extração de contexto.
+- literal search;
+- case-insensitive search;
+- regex search;
+- whole-word search;
+- UTF-8 files;
+- CRLF files;
+- binary skipping;
+- search respecting `.gitignore`;
+- recursive scanner;
+- symlinks;
+- cancellation;
+- incremental indexing;
+- branch switch;
+- deleted files;
+- modified files;
+- untracked files;
+- worktrees;
+- hash reuse;
+- result ordering;
+- occurrence highlighting;
+- context extraction.
 
-Use fixtures pequenas e determinísticas.
+Use small, deterministic fixtures.
 
 ## Benchmarks
 
-Criar benchmarks para:
+Create benchmarks for:
 
-* Scan de muitos arquivos pequenos.
-* Scan de poucos arquivos grandes.
-* Busca literal.
-* Busca regex.
-* Tempo até primeiro resultado.
-* Indexação inicial.
-* Reindexação incremental.
-* Troca de branch.
-* Reuso de documentos por hash.
-* Carga de resultados na UI.
+- scanning many small files;
+- scanning few large files;
+- literal search;
+- regex search;
+- time to first result;
+- initial indexing;
+- incremental reindexing;
+- branch switch;
+- document reuse by hash;
+- UI result loading.
 
-Benchmarks devem ser fáceis de executar e comparar.
+Benchmarks should be easy to run and compare.
 
-## Documentação
+## Documentation
 
-Manter documentação em `docs/`.
+Keep documentation in `docs/`.
 
-Arquivos esperados:
+Expected files:
 
 ```txt
 docs/architecture.md
@@ -633,44 +617,35 @@ docs/build.md
 docs/licenses.md
 ```
 
-Sempre que uma decisão arquitetural importante for tomada, registre em documentação.
+Whenever an important architectural decision is made, record it in documentation.
 
-## Estilo de desenvolvimento
+## Development style
 
-### Formatação de C++
+### C++ formatting
 
-Todo código C++ novo ou alterado em `apps/`, `src/` e `tests/` deve respeitar integralmente o
-`.clang-format` da raiz, configurado para C++23. Antes de concluir uma alteração:
+All new or modified C++ code in `apps/`, `src/`, and `tests/` must fully respect the root `.clang-format`, configured for C++23. Before finishing a change:
 
-* Use indentação de 2 espaços, nunca tabs.
-* Use indentação de continuação de 2 espaços; listas, inicializadores, chamadas quebradas e
-  expressões multilinha não devem ganhar recuo visual de 4 espaços.
-* Mantenha o limite de 120 colunas.
-* Use `Type* name` e `Type& name` para ponteiros e referências.
-* Preserve a ordenação case-sensitive de includes.
-* Formate com `cmake --build <diretório-de-build> --target format` ou execute `clang-format -i`
-  apenas nos arquivos C++ próprios alterados.
-* Não formate dependências vendorizadas nem arquivos gerados automaticamente.
+- Use 2-space indentation, never tabs.
+- Use 2-space continuation indentation; lists, initializers, broken calls, and multiline expressions must not gain a visual 4-space indentation.
+- Keep the 120-column limit.
+- Use `Type* name` and `Type& name` for pointers and references.
+- Preserve case-sensitive include ordering.
+- Format with `cmake --build <build-directory> --target format` or run `clang-format -i` only on project-owned C++ files you changed.
+- Do not format vendored dependencies or automatically generated files.
 
-Para assinaturas de funções, chamadas e declarações com parâmetros:
+For function signatures, calls, and declarations with parameters:
 
-* Não quebre linhas se todos os parâmetros ainda couberem confortavelmente dentro do limite de 120
-  colunas.
-* Quando a quebra for necessária por ultrapassar o limite de 120 colunas, coloque cada parâmetro em uma
-  linha separada, alinhado em bloco. Não mantenha o primeiro parâmetro na linha da função apenas para
-  ocupar mais espaço horizontal.
-* Evite quebras causadas apenas por alinhamento automático excessivo quando a linha ainda estiver
-  legível.
+- Do not break lines if all parameters still fit comfortably within the 120-column limit.
+- When a break is necessary because the line exceeds 120 columns, put each parameter on its own line, aligned as a block. Do not keep the first parameter on the function line merely to use more horizontal space.
+- Avoid breaks caused only by excessive automatic alignment when the line is still readable.
 
-O target `format` é auxiliar e nunca deve ser requisito para compilar o projeto.
+The `format` target is auxiliary and must never be required to build the project.
 
-### Nomes de identificadores C++
+### C++ identifier names
 
-Todo identificador próprio novo ou alterado em C++ deve usar `camelCase`, alinhado à convenção do Qt.
-Isso inclui funções, métodos, variáveis locais, membros de structs/classes, constantes internas e
-enumeradores próprios.
+Every new or modified project-owned C++ identifier must use `camelCase`, aligned with Qt convention. This includes functions, methods, local variables, struct/class members, internal constants, and project-owned enumerators.
 
-Exemplos preferidos:
+Preferred examples:
 
 ```cpp
 constexpr std::size_t maximumLineLength = 1024U * 1024U;
@@ -678,82 +653,71 @@ auto searchRoot = query.root;
 query.options.caseSensitive = true;
 ```
 
-Classes, structs, enums e aliases de tipo continuam em `PascalCase`, como `SearchQuery`,
-`SearchResult`, `GitService` e `IndexDocument`.
+Classes, structs, enums, and type aliases remain in `PascalCase`, such as `SearchQuery`, `SearchResult`, `GitService`, and `IndexDocument`.
 
-Arquivos continuam em `kebab-case`; não use `camelCase`, `PascalCase` ou `snake_case` no sistema de
-arquivos. APIs externas preservam sua convenção original, como `std::string_view`, `std::stop_token`,
-`std::filesystem::directory_options::follow_directory_symlink`, macros de sistema, Qt, PCRE2, libgit2
-e nomes exigidos por bibliotecas.
+Files remain in `kebab-case`; do not use `camelCase`, `PascalCase`, or `snake_case` in the filesystem. External APIs preserve their original convention, such as `std::string_view`, `std::stop_token`, `std::filesystem::directory_options::follow_directory_symlink`, system macros, Qt, PCRE2, libgit2, and names required by libraries.
 
-### Nomes de arquivos
+### File names
 
-Todo arquivo próprio novo ou renomeado deve usar `kebab-case`, somente com letras minúsculas,
-números e hífens entre palavras. Exemplos válidos: `search-engine.hpp`,
-`direct-search-engine-tests.cpp` e `git-awareness.md`.
+Every new or renamed project-owned file must use `kebab-case`, with only lowercase letters, numbers, and hyphens between words. Valid examples: `search-engine.hpp`, `direct-search-engine-tests.cpp`, and `git-awareness.md`.
 
-As únicas exceções são nomes canônicos exigidos ou amplamente convencionados pelas ferramentas:
-`CMakeLists.txt`, `README.md`, `AGENTS.md`, `TODO.md`, `.clang-format`, `.gitignore` e manifestos
-como `vcpkg.json`. Arquivos gerados automaticamente e dependências vendorizadas também preservam
-seus nomes originais.
+The only exceptions are canonical names required or widely conventioned by tools: `CMakeLists.txt`, `README.md`, `AGENTS.md`, `TODO.md`, `.clang-format`, `.gitignore`, and manifests such as `vcpkg.json`. Generated files and vendored dependencies also keep their original names.
 
-Ao renomear um arquivo, atualize no mesmo trabalho todos os includes, targets CMake, recursos,
-documentação e testes que o referenciem. Não introduza novos nomes em `snake_case`, `PascalCase` ou
-`camelCase` no sistema de arquivos.
+When renaming a file, update in the same work all includes, CMake targets, resources, documentation, and tests that reference it. Do not introduce new `snake_case`, `PascalCase`, or `camelCase` file names.
 
-Ao implementar algo:
+When implementing something:
 
-1. Entenda a arquitetura existente.
-2. Não quebre separação entre core e UI.
-3. Prefira interfaces pequenas.
-4. Escreva testes para comportamento central.
-5. Documente decisões relevantes.
-6. Meça quando a mudança envolver performance.
-7. Preserve compatibilidade multiplataforma.
-8. Evite atalhos que dificultem indexação avançada no futuro.
+1. Understand the existing architecture.
+2. Do not break the separation between core and UI.
+3. Prefer small interfaces.
+4. Write tests for central behavior.
+5. Document relevant decisions.
+6. Measure when the change involves performance.
+7. Preserve cross-platform compatibility.
+8. Avoid shortcuts that make advanced indexing harder in the future.
 
-## Definição de qualidade
+## Definition of quality
 
-Uma funcionalidade só deve ser considerada boa quando:
+A feature is good only when:
 
-* Funciona corretamente.
-* Tem tratamento de erro.
-* Não bloqueia a UI.
-* É testável.
-* É extensível.
-* Não piora a arquitetura.
-* Não assume apenas Windows.
-* Não ignora Git/worktree quando isso for relevante.
-* Não depende de comportamento acidental.
+- it works correctly;
+- it has error handling;
+- it does not block the UI;
+- it is testable;
+- it is extensible;
+- it does not worsen the architecture;
+- it does not assume Windows only;
+- it does not ignore Git/worktree when relevant;
+- it does not depend on accidental behavior.
 
-## Não fazer
+## Do not do
 
-Não criar uma aplicação Electron.
+Do not create an Electron application.
 
-Não criar o core de busca em JavaScript.
+Do not create the search core in JavaScript.
 
-Não acoplar a busca ao QML.
+Do not couple search to QML.
 
-Não depender exclusivamente de comandos externos como `grep`, `find` ou `rg`.
+Do not depend exclusively on external commands such as `grep`, `find`, or `rg`.
 
-Não indexar apenas por caminho.
+Do not index only by path.
 
-Não ignorar branch, HEAD, worktree e estado local do Git.
+Do not ignore branch, HEAD, worktree, and local Git state.
 
-Não reconstruir o índice inteiro sem necessidade.
+Do not rebuild the whole index unnecessarily.
 
-Não bloquear a UI durante operações longas.
+Do not block the UI during long operations.
 
-Não adicionar textos visíveis ao usuário sem passar pelo sistema de i18n.
+Do not add visible user text without going through i18n.
 
-Não aceitar código sem testes para partes críticas do core.
+Do not accept code without tests for critical core parts.
 
-Não tratar performance como detalhe secundário.
+Do not treat performance as a secondary detail.
 
-## Filosofia do produto
+## Product philosophy
 
-Este projeto deve ser tratado como uma ferramenta séria para desenvolvedores e usuários avançados.
+This project should be treated as a serious tool for developers and advanced users.
 
-O sistema deve ser rápido o suficiente para uso cotidiano, confiável o suficiente para substituir buscas manuais e inteligente o suficiente para entender repositórios versionados.
+The system should be fast enough for daily use, reliable enough to replace manual searches, and intelligent enough to understand versioned repositories.
 
-A meta de longo prazo é uma aplicação local de busca extremamente eficiente, com excelente experiência de usuário, capaz de lidar com bases de código grandes, múltiplas branches, worktrees, arquivos modificados e indexação incremental sem perder precisão.
+The long-term goal is an extremely efficient local search application with excellent user experience, capable of handling large codebases, multiple branches, worktrees, modified files, and incremental indexing without losing precision.

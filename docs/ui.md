@@ -1,303 +1,176 @@
 # Interface
 
-A UI Qt Quick é cliente da camada `app`. Ela contém somente apresentação e estado de interação. `SearchController` executa o serviço fora da thread gráfica, recebe ocorrências progressivas por queued connections e expõe um modelo para QML.
+The Qt Quick UI is a client of the `app` layer. It contains only presentation and interaction state. `SearchController` runs the service outside the graphics thread, receives progressive occurrences through queued connections, and exposes a model to QML.
 
-Textos visíveis usam `qsTr` ou `tr`, com catálogos `pt-BR` e `en-US`. A evolução deve acrescentar batching de resultados, preview contextual com highlight, filtros avançados, histórico, status do índice e diagnóstico sem mover regras para QML.
+Visible text uses `qsTr` or `tr`, with `pt-BR` and `en-US` catalogs. Evolution should add result batching, contextual preview with highlight, advanced filters, history, index status, and diagnostics without moving rules into QML.
 
-## Direção visual do Marco 8
+## Milestone 8 visual direction
 
-A tela principal deve comunicar velocidade, agilidade e eficiência sem parecer genérica. A primeira
-iteração do Marco 8 adota uma composição de comando técnico: topo compacto para busca e filtros,
-cartões de status com linguagem de instrumentação, lista de resultados em fluxo e preview lateral.
+The main screen should communicate speed, agility, and efficiency without looking generic. The first Milestone 8 iteration adopts a technical command composition: a compact top area for search and filters, status cards with instrumentation language, a streaming result list, and a side preview.
 
-O tema escuro inicial usa contraste controlado, azul como cor de ação e verde como acento pontual de
-confirmação para remeter a telemetria, baixa latência e ferramentas técnicas modernas sem tornar a UI
-excessivamente chamativa. Estados vazios devem ser claros e instrutivos, explicando o próximo passo
-sem bloquear a busca progressiva.
+The initial dark theme uses controlled contrast, blue as the action color, and green as a punctual confirmation accent to suggest telemetry, low latency, and modern technical tools without making the UI excessively flashy. Empty states should be clear and instructive, explaining the next step without blocking progressive search.
 
-O layout alterna para orientação vertical em larguras menores para manter a área de busca sempre
-prioritária e preservar leitura confortável da lista e do preview.
+The layout switches to vertical orientation at smaller widths to keep the search area prioritized and preserve comfortable reading of the list and preview.
 
-A tela principal deve permanecer como composição de alto nível. Componentes reutilizáveis do QML
-ficam em `apps/desktop/qml/components/`, preferencialmente com arquivos pequenos e responsabilidade
-única para evitar que `main.qml` concentre toda a evolução do Marco 8.
+The main screen must remain a high-level composition. Reusable QML components live in `apps/desktop/qml/components/`, preferably as small files with a single responsibility so `main.qml` does not concentrate all Milestone 8 evolution.
 
-## Filtros visíveis
+## Visible filters
 
-O cabeçalho expõe apenas filtros com comportamento real conectado ao core ou ao controller. Nesta fase,
-os filtros visuais cobrem regex, diferenciação de maiúsculas/minúsculas, palavra inteira, respeito a
-`.gitignore`, inclusão de arquivos ocultos, inclusão de binários, inclusão de subdiretórios e tipos de
-documento por extensão. Opções como alvo da busca e limite máximo de tamanho permanecem com defaults
-internos até a futura tela de configurações, evitando controles avançados demais na tela principal.
+The header exposes only filters with real behavior connected to the core or controller. At this stage, visible filters cover regex, case sensitivity, whole word, respecting `.gitignore`, including hidden files, including binaries, including subdirectories, and document types by extension. Options such as search target and maximum size keep internal defaults until the future settings screen, avoiding overly advanced controls on the main screen.
 
-## Escopos múltiplos
+## Multiple scopes
 
-O seletor visual de escopo permite acumular múltiplas raízes de busca. Selecionar uma pasta pelo
-diálogo, favoritos ou recentes adiciona a raiz ao conjunto atual; os chips em `Selecionados` mostram as
-raízes ativas e permitem removê-las sem apagar favoritos ou histórico. O `SearchController` monta um
-`SearchScope` com essas raízes antes de chamar o serviço de busca, preservando `SearchQuery::root`
-apenas como compatibilidade com chamadas de raiz única.
+The visual scope selector allows accumulating multiple search roots. Selecting a folder through the dialog, favorites, or recent entries adds the root to the current set; chips under `Selected` show active roots and allow removing them without deleting favorites or history. `SearchController` builds a `SearchScope` with those roots before calling the search service, preserving `SearchQuery::root` only as compatibility for single-root calls.
 
-Inclusões e exclusões de subdiretórios são associadas à raiz selecionada mais específica que contém a
-pasta escolhida. A UI mostra inclusões em `Incluídos` e exclusões em `Ignorados`, sempre como chips
-removíveis. O controller converte inclusões para `SearchRoot::includedDirectories` e exclusões para
-`SearchRoot::excludedDirectories`.
+Subdirectory inclusions and exclusions are associated with the most specific selected root containing the chosen folder. The UI shows inclusions under `Included` and exclusions under `Ignored`, always as removable chips. The controller converts inclusions to `SearchRoot::includedDirectories` and exclusions to `SearchRoot::excludedDirectories`.
 
-Quando uma raiz possui inclusões explícitas, a busca naquela raiz fica restrita às subárvores incluídas.
-Exclusões continuam removendo subárvores específicas do escopo final. Isso permite cenários como buscar
-em vários repositórios ao mesmo tempo, incluir apenas módulos relevantes e ignorar pastas volumosas como
-`node_modules`, `build` ou caches locais sem transformar esses filtros em regras globais.
+When a root has explicit inclusions, search in that root is restricted to the included subtrees. Exclusions still remove specific subtrees from the final scope. This enables scenarios such as searching several repositories at once, including only relevant modules, and ignoring large folders like `node_modules`, `build`, or local caches without turning those filters into global rules.
 
-## Métricas da busca na tela principal
+## Search metrics on the main screen
 
-O cabeçalho da busca deve expor métricas operacionais leves para reforçar a percepção de velocidade
-sem transformar a tela em painel de diagnóstico. As métricas visíveis no Marco 8 são:
+The search header should expose lightweight operational metrics to reinforce the perception of speed without turning the screen into a diagnostics panel. Visible Milestone 8 metrics are:
 
-- resultados visíveis;
-- arquivos lidos;
-- tempo até o primeiro resultado;
-- duração total da busca.
+- visible results;
+- files read;
+- time to first result;
+- total search duration.
 
-Esses valores são calculados pelo controller a partir do resumo retornado pelo `SearchService`. O QML
-apenas apresenta propriedades observáveis; não deve medir busca, inferir progresso do core nem acessar
-threads de worker diretamente.
+These values are computed by the controller from the summary returned by `SearchService`. QML only presents observable properties; it must not measure search, infer core progress, or access worker threads directly.
 
-O rodapé possui um ponto fixo para estado de indexação. Na integração desktop atual, a busca usa o
-motor direto e o status aparece como indexação inativa; quando o `IndexingService` for conectado à
-janela, esse mesmo ponto deve exibir progresso real sem bloquear a busca direta.
+The footer has a fixed spot for indexing state. In the current desktop integration, search uses the direct engine and the status appears as inactive indexing; when `IndexingService` is connected to the window, the same spot should display real progress without blocking direct search.
 
-## Lista de resultados
+## Result list
 
-A lista de resultados usa `ListView` com reutilização de delegates e cache visual limitado. Isso evita
-instanciar componentes QML para todos os resultados quando houver muitos itens, mantendo a renderização
-proporcional à área visível e a uma pequena margem de navegação.
+The result list uses `ListView` with delegate reuse and limited visual cache. This avoids instantiating QML components for every result when there are many items, keeping rendering proportional to the visible area and a small navigation margin.
 
-O modelo C++ ainda retém os resultados publicados pela busca. Otimizações futuras de memória devem
-evoluir o contrato do modelo, não substituir a virtualização visual por lógica manual em QML.
+The C++ model still retains results published by search. Future memory optimizations should evolve the model contract, not replace visual virtualization with manual QML logic.
 
-Durante a publicação progressiva de resultados, a lista preserva a seleção atual quando novos itens são
-anexados. Se a busca ainda não tiver seleção e chegar o primeiro resultado, a UI seleciona a primeira
-ocorrência automaticamente para carregar o preview sem exigir um clique extra. Navegação linear entre
-ocorrências visíveis usa `F4` para avançar e `Shift+F4` para voltar.
+During progressive result publication, the list preserves the current selection when new items are appended. If search has no selection yet and the first result arrives, the UI selects the first occurrence automatically to load preview without requiring an extra click. Linear navigation between visible occurrences uses `F4` to move forward and `Shift+F4` to move backward.
 
-Resultados consecutivos do mesmo arquivo são agrupados visualmente. O modelo C++ expõe roles
-específicos para início de grupo e rótulo do arquivo, mantendo o QML focado em renderização e evitando
-deduzir agrupamento por inspeção manual de itens vizinhos.
+Consecutive results from the same file are visually grouped. The C++ model exposes specific roles for group start and file label, keeping QML focused on rendering and avoiding manual grouping by inspecting neighboring items.
 
-## Preview de arquivo
+## File preview
 
-O preview da tela principal é carregado pelo `SearchController` em worker assíncrono, usando o leitor
-de texto do core. Ao selecionar outro resultado, a prévia anterior recebe cancelamento cooperativo e
-eventos atrasados são descartados pelo watcher ativo.
+The main-screen preview is loaded by `SearchController` in an asynchronous worker, using the core text reader. When another result is selected, the previous preview receives cooperative cancellation and late events are discarded by the active watcher.
 
-A prévia é limitada por janela de linhas ao redor da ocorrência e por orçamento de bytes para manter a
-UI responsiva. O QML exibe apenas o estado observável: arquivo selecionado, localização, texto da
-prévia e indicador de carregamento.
+The preview is limited by a line window around the occurrence and by a byte budget to keep the UI responsive. QML displays only observable state: selected file, location, preview text, and loading indicator.
 
-O controller também entrega uma versão HTML segura da prévia quando há ocorrência selecionada. Essa
-representação escapa o conteúdo do arquivo, destaca todas as ocorrências conhecidas na linha ativa e
-mantém números de linha alinhados em fonte monoespaçada. O `PreviewPane` preserva uma propriedade de
-largura de tabulação para futura exposição em preferências sem reescrever o componente.
+The controller also delivers a safe HTML preview when there is a selected occurrence. This representation escapes file content, highlights all known occurrences on the active line, and keeps line numbers aligned in a monospace font. `PreviewPane` preserves a tab-width property for future exposure in preferences without rewriting the component.
 
-## Interações com arquivos encontrados
+## Interactions with found files
 
-Resultados devem permitir operações diretas sobre o arquivo encontrado sem quebrar a separação entre
-UI e plataforma. O comportamento desejado para o Marco 8 é um menu próprio do Uburu com ações
-equivalentes às operações comuns do gerenciador de arquivos, não uma reprodução completa do menu
-nativo do Explorer/Finder/desktop Linux.
-
-O menu de contexto da lista de resultados encaminha intenções ao `SearchController`, mantendo QML sem
-lógica de plataforma. As ações iniciais são abrir arquivo, abrir com quando a plataforma oferecer um
-seletor de aplicativo, abrir local do arquivo, copiar caminho e copiar ocorrência. No Windows, a ação
-`Abrir com...` usa o seletor do sistema operacional. Em outras plataformas, ela deve evoluir por
-adaptadores específicos de Finder, portal ou desktop environment.
+Results should allow direct operations on the found file without breaking the separation between UI and platform. The desired Milestone 8 behavior is an Uburu-owned menu with actions equivalent to common file manager operations, not a full reproduction of the Explorer/Finder/Linux desktop native menu.
 
-Visualmente, menus de ação usam o mesmo vocabulário da tela principal: superfície elevada, borda
-discreta, realce azul suave no item ativo e atalhos alinhados à direita. O objetivo é parecer
-integrado ao produto sem imitar integralmente o menu nativo da plataforma. Esse padrão é compartilhado
-pelo menu de arquivos da lista de resultados e pelo menu de texto da pré-visualização.
+The result-list context menu forwards intentions to `SearchController`, keeping QML free of platform logic. Initial actions are open file, open with when the platform offers an application picker, open file location, copy path, and copy occurrence. On Windows, `Open with...` uses the operating-system picker. On other platforms, it should evolve through Finder, portal, or desktop-environment adapters.
 
-Na iteração inicial, abrir arquivo usa o aplicativo padrão configurado no sistema operacional. A lista
-também aceita duplo clique ou Enter para abrir o resultado selecionado, Ctrl+C para copiar o caminho
-absoluto e Ctrl+Shift+C para copiar a ocorrência com localização e trecho.
+Visually, action menus use the same vocabulary as the main screen: elevated surface, subtle border, soft blue highlight on the active item, and shortcuts aligned to the right. The goal is to feel integrated with the product without fully imitating the platform's native menu. This pattern is shared by the result-list file menu and the preview text menu.
 
-## Atalhos e paleta de comandos
+In the initial iteration, open file uses the default application configured in the operating system. The list also accepts double click or Enter to open the selected result, Ctrl+C to copy the absolute path, and Ctrl+Shift+C to copy the occurrence with location and snippet.
 
-A tela principal expõe uma paleta de comandos inicial por `Ctrl+K`, `Ctrl+Shift+P` e por um botão
-compacto `Comandos` no cabeçalho. A paleta é um componente QML de coordenação: ela lista comandos
-disponíveis e emite a escolha do usuário, enquanto as ações continuam delegadas aos componentes
-existentes e ao `SearchController`.
+## Shortcuts and command palette
 
-Atalhos essenciais disponíveis nesta fase:
+The main screen exposes an initial command palette through `Ctrl+K`, `Ctrl+Shift+P`, and a compact `Commands` button in the header. The palette is a QML coordination component: it lists available commands and emits the user's choice, while actions remain delegated to existing components and `SearchController`.
 
-- `Ctrl+F`: focar o campo de busca;
-- `Ctrl+O`: selecionar diretório ou repositório;
-- `Ctrl+K` / `Ctrl+Shift+P`: abrir paleta de comandos;
-- `Ctrl+D`: alternar favorito para o diretório atual;
-- `F4`: selecionar próxima ocorrência visível;
-- `Shift+F4`: selecionar ocorrência visível anterior;
-- `Esc`: cancelar busca em andamento;
-- `Enter`: executar busca ou abrir resultado selecionado conforme o foco;
-- `Ctrl+C`: copiar caminho do resultado quando a lista está focada;
-- `Ctrl+Shift+C`: copiar ocorrência do resultado quando a lista está focada.
+Essential shortcuts available at this stage:
 
-A paleta inclui ações de diagnóstico, histórico, buscas salvas e navegação entre ocorrências, sem mover
-regras de domínio para QML. A ação de diagnóstico copia status, contadores e tempos observáveis da
-busca atual para a área de transferência, servindo como ponte simples até uma tela de diagnóstico
-dedicada.
+- `Ctrl+F`: focus the search field;
+- `Ctrl+O`: select directory or repository;
+- `Ctrl+K` / `Ctrl+Shift+P`: open command palette;
+- `Ctrl+D`: toggle favorite for the current directory;
+- `F4`: select next visible occurrence;
+- `Shift+F4`: select previous visible occurrence;
+- `Esc`: cancel running search;
+- `Enter`: run search or open selected result depending on focus;
+- `Ctrl+C`: copy result path when the list is focused;
+- `Ctrl+Shift+C`: copy result occurrence when the list is focused.
 
-## Histórico e buscas salvas
+The palette includes diagnostics, history, saved searches, and occurrence navigation actions without moving domain rules to QML. The diagnostics action copies status, counters, and observable times from the current search to the clipboard, serving as a simple bridge until a dedicated diagnostics screen exists.
 
-A tela principal mantém histórico local das últimas consultas executadas e uma lista de buscas salvas
-manualmente pelo usuário. Ambas são persistidas em `Settings` no QML como estado de experiência, não
-como dado do core de busca. A consulta é normalizada por `trim`, movida para o topo ao ser reutilizada
-e limitada a um número pequeno de entradas para evitar crescimento indefinido.
+## History and saved searches
 
-O cabeçalho mostra chips compactos para as buscas salvas e recentes mais importantes. Selecionar um
-chip carrega a consulta e executa a busca quando houver escopo válido. A busca atual pode ser salva ou
-removida por botão no cabeçalho, atalho `Ctrl+S` ou command palette.
+The main screen keeps local history of the last executed queries and a list of searches manually saved by the user. Both are persisted in QML `Settings` as experience state, not as core search data. The query is normalized by `trim`, moved to the top when reused, and limited to a small number of entries to avoid unbounded growth.
 
-## Cancelamento visual
-
-O cancelamento da busca deve responder imediatamente à ação do usuário. Ao acionar `Esc` ou o botão de
-cancelar, o `SearchController` entra em estado `cancelling`, atualiza o status para `Cancelando...` e
-desabilita novas tentativas de cancelamento até o worker confirmar o encerramento.
-
-Enquanto `cancelling` estiver ativo, `running` continua verdadeiro para impedir uma nova busca
-concorrente sobre o mesmo controller. O estado visual deve indicar que o pedido foi aceito, mas a lista
-de resultados já publicada permanece disponível até a busca finalizar ou uma nova busca limpar o modelo.
-
-## Temas
-
-O Marco 8 introduz a infraestrutura de tema `system`, `dark` e `light`. O modo é persistido em
-`Settings` na camada QML e aplicado pelo singleton `Theme`, mantendo os componentes desacoplados de
-paletas locais e reduzindo inconsistências visuais.
-
-O modo `system` segue a preferência de cores do sistema operacional quando disponível. O controle visual
-dedicado de tema deve viver na futura área de configurações, não no cabeçalho principal de busca nem na
-paleta de comandos.
-
-A área de pré-visualização de conteúdo permanece em superfície escura mesmo no tema claro. Essa decisão
-preserva contraste para o HTML de highlight gerado pelo controller e evita alternar cores de código em
-duas camadas enquanto a renderização de preview ainda evolui.
-
-## Persistência de estado da janela
-
-O estado visual da janela principal é persistido em `Settings` no QML, pois pertence à camada de
-apresentação. Nesta fase, a aplicação restaura geometria da janela, tamanho preferido do painel de
-resultados e filtros visuais da busca. A consulta textual em si não é restaurada automaticamente para
-evitar reexecutar uma busca antiga ao abrir o aplicativo.
-
-O último diretório selecionado é restaurado pelo `SearchController`, junto do histórico de diretórios e
-favoritos já persistidos com `QSettings`. O controller só restaura um diretório recente quando ele ainda
-existe no sistema de arquivos.
-
-## Status de indexação
-
-O rodapé da tela principal reserva uma área permanente para o estado de indexação. No Marco 8, essa área
-recebe progresso real do `IndexingService`, acionado pela command palette com `Reindexar escopo`
-(`Ctrl+Alt+I`) e cancelável com `Cancelar indexação` (`Ctrl+Alt+Esc`).
-
-A reindexação roda fora da thread gráfica. O `SearchController` cria o serviço de indexação em worker,
-descobre a worktree Git de cada raiz selecionada quando existir, executa `requestManualReindex()` e
-encaminha eventos de `IndexUpdateProgress` por queued connection. A UI mostra status textual, barra
-compacta de progresso e resumo final com documentos indexados, reutilizados, removidos e falhas.
-
-Raízes que ainda não são repositórios Git são indexadas como diretórios comuns, com identidade sintética
-baseada no caminho normalizado e sem overlay Git. Isso preserva suporte a diretórios avulsos sem diluir
-o tratamento Git-aware para repositórios reais.
-
-## Ajuda contextual
-
-Controles potencialmente ambíguos devem expor ajuda curta e localizada por tooltip, sem transformar a
-tela principal em documentação longa. O Marco 8 usa `InfoIcon` para explicações de escopo e tipos de
-documento, além de tooltips diretos nos chips de filtro como regex, case-sensitive, palavra inteira,
-respeitar `.gitignore` e incluir subdiretórios.
-
-Essas mensagens são textos visíveis ao usuário e devem continuar passando por `qsTr`/catálogos de
-tradução.
-
-O chip de regex só fica habilitado quando o build expõe suporte a PCRE2 pelo `SearchController`. Mesmo
-assim, o core continua sendo a autoridade final e valida `SearchQuery` para impedir regex em builds sem
-backend compatível.
-
-## Acessibilidade inicial
-
-Componentes interativos reutilizáveis devem expor nomes acessíveis coerentes com o texto visível e com
-os atalhos documentados. Botões, chips de filtro, menus, campos de entrada, lista de resultados, paleta
-de comandos e pré-visualização possuem `Accessible.name` ou `Accessible.description` localizados para
-reduzir dependência de inferência visual.
-
-O fechamento do Marco 8 considera validada a base de acessibilidade da tela principal quando:
-
-- o campo de busca é acessível por `Ctrl+F` e mantém foco previsível após executar uma busca;
-- o seletor de pasta, botões de busca/cancelamento, filtros, chips de escopo, favoritos, recentes,
-  resultados, preview, menus e command palette possuem nome ou descrição acessível;
-- a navegação por teclado cobre os fluxos principais: abrir pasta, buscar, cancelar, abrir a paleta,
-  navegar entre resultados, abrir ações do resultado e copiar informações;
-- estados vazios, erros parciais, cancelamento e indexação inativa são expostos por texto visível, sem
-  depender exclusivamente de cor;
-- contraste visual da tela principal é suficiente para leitura confortável no tema escuro inicial.
-
-Auditorias completas com leitores de tela reais e verificações automatizadas de contraste entram no
-Marco 9 como testes de qualidade contínua. O Marco 8 deixa a estrutura pronta e documenta o checklist
-manual para impedir regressões óbvias.
-
-## DPI alto, monitores e responsividade
-
-A tela principal deve permanecer utilizável em janela reduzida, DPI alto e escalas fracionárias. O
-Marco 8 usa `Layout`, `Flow`, `SplitView`, textos com `elide`, listas virtualizadas e seções roláveis
-para evitar que controles compactos empurrem resultados e preview para fora da janela.
-
-Checklist manual recomendado antes de releases:
-
-- abrir a janela em tamanho reduzido e confirmar que cabeçalho, escopo, resultados, preview e status
-  continuam acessíveis;
-- validar escalas de 100%, 125%, 150% e 200% no Windows;
-- mover a janela entre monitores com escalas diferentes e confirmar que fontes, bordas, menus e
-  tooltips continuam proporcionais;
-- confirmar que nomes longos de arquivos e diretórios mostram o final relevante do caminho sem quebrar
-  o layout;
-- confirmar que histórico, favoritos, inclusões e exclusões usam rolagem ou menus quando não couberem
-  horizontalmente;
-- confirmar que resultados e preview continuam utilizáveis quando o layout alterna entre orientação
-  horizontal e vertical.
-
-## Pluralização, atalhos e strings técnicas
-
-Textos com contagem variável devem usar pluralização nativa do Qt com `%n` sempre que a frase depender
-do número de itens. Evite montar plural em QML por concatenação de sufixos como `s`, pois isso quebra
-idiomas futuros e torna o `pt-BR` artificial. Placeholders numéricos que não alteram a gramática podem
-continuar usando `%1`, como cartões compactos de métrica.
-
-Atalhos de teclado devem ser tratados como strings traduzíveis somente quando aparecem na interface,
-mas a sequência real deve permanecer centralizada no `Shortcut` ou no componente que executa a ação.
-Ao criar uma ação nova, atualize em conjunto: command palette, tooltip/menu quando existir, docs de UI e
-catálogos `pt-BR`/`en-US`.
-
-Strings técnicas amplamente reconhecidas por usuários avançados, como `Regex`, `.gitignore`, `Ctrl`,
-`Shift`, `PCRE2`, `HEAD` e nomes de formatos como `PDF` ou `DOCX`, devem permanecer estáveis. A frase
-ao redor delas deve ser localizada e explicar o impacto prático em português claro.
-
-## Erros parciais de busca
-
-Falhas isoladas de leitura, permissão ou arquivo removido durante a busca não devem interromper a
-entrega de resultados válidos. Quando o core marcar `SearchSummary::partialFailure`, a UI preserva a
-lista de ocorrências e transforma os erros em aviso no status da busca, mostrando a primeira ocorrência
-de erro como contexto curto.
-
-Erros que impedem a busca inteira, como validação da consulta ou backend indisponível, continuam sendo
-exibidos como erro final. O cancelamento explícito do usuário tem prioridade visual sobre avisos
-parciais para evitar feedback ambíguo.
-
-## Formatos com extração de conteúdo pendente
-
-A busca direta atual trata arquivos de texto puro como conteúdo pesquisável e pode encontrar arquivos
-binários ou empacotados pelo nome quando o alvo combina conteúdo e nome de arquivo. Formatos como PDF,
-DOCX, ODT, RTF e EPUB não devem ser apresentados como conteúdo pesquisável enquanto não houver
-extratores dedicados.
-
-A UI deve deixar essa limitação clara quando o usuário filtrar por esses tipos: o filtro seleciona os
-arquivos pelo nome/extensão, mas a busca dentro do conteúdo depende de uma futura camada de extração.
-Essa camada deve viver abaixo da UI, no core/text ou em adaptadores específicos, com limites de
-memória, cancelamento cooperativo e tratamento de arquivos hostis.
+The header shows compact chips for the most important saved and recent searches. Selecting a chip loads the query and runs search when there is a valid scope. The current search can be saved or removed by a header button, `Ctrl+S`, or the command palette.
+
+## Visual cancellation
+
+Search cancellation must respond immediately to the user's action. When `Esc` or the cancel button is used, `SearchController` enters the `cancelling` state, updates status to `Cancelling...`, and disables additional cancellation attempts until the worker confirms shutdown.
+
+While `cancelling` is active, `running` remains true to prevent a concurrent search on the same controller. Visual state should indicate that the request was accepted, but the already published result list remains available until search finishes or a new search clears the model.
+
+## Themes
+
+Milestone 8 introduces `system`, `dark`, and `light` theme infrastructure. The mode is persisted in QML `Settings` and applied by the `Theme` singleton, keeping components decoupled from local palettes and reducing visual inconsistencies.
+
+`system` follows the operating system color preference when available. A dedicated theme control should live in the future settings area, not in the main search header or command palette.
+
+The content preview area remains on a dark surface even in the light theme. This preserves contrast for the highlight HTML generated by the controller and avoids alternating code colors in two layers while preview rendering is still evolving.
+
+## Window state persistence
+
+The visual state of the main window is persisted in QML `Settings`, because it belongs to the presentation layer. At this stage, the application restores window geometry, preferred result-pane size, and visual search filters. The textual query itself is not restored automatically to avoid rerunning an old search when the application opens.
+
+The last selected directory is restored by `SearchController`, together with directory history and favorites already persisted through `QSettings`. The controller restores a recent directory only when it still exists in the filesystem.
+
+## Indexing status
+
+The main-screen footer reserves a permanent area for indexing state. In Milestone 8, this area receives real progress from `IndexingService`, triggered by the command palette with `Reindex scope` (`Ctrl+Alt+I`) and cancellable with `Cancel indexing` (`Ctrl+Alt+Esc`).
+
+Reindexing runs outside the graphics thread. `SearchController` creates the indexing service in a worker, discovers each selected root's Git worktree when one exists, runs `requestManualReindex()`, and forwards `IndexUpdateProgress` events through queued connection. The UI shows textual status, a compact progress bar, and a final summary with indexed, reused, removed, and failed documents.
+
+Roots that are not Git repositories yet are indexed as regular directories, with synthetic identity based on the normalized path and no Git overlay. This preserves support for standalone directories without diluting Git-aware treatment for real repositories.
+
+## Contextual help
+
+Potentially ambiguous controls should expose short localized help through tooltips, without turning the main screen into long-form documentation. Milestone 8 uses `InfoIcon` for scope and document-type explanations, plus direct tooltips on filter chips such as regex, case-sensitive, whole word, respect `.gitignore`, and include subdirectories.
+
+These messages are user-visible text and must continue to go through `qsTr`/translation catalogs.
+
+The regex chip is enabled only when the build exposes PCRE2 support through `SearchController`. Even so, the core remains the final authority and validates `SearchQuery` to prevent regex in builds without a compatible backend.
+
+## Initial accessibility
+
+Reusable interactive components should expose accessible names consistent with visible text and documented shortcuts. Buttons, filter chips, menus, input fields, result list, command palette, and preview have localized `Accessible.name` or `Accessible.description` values to reduce dependence on visual inference.
+
+Milestone 8 considers the main screen's accessibility base validated when:
+
+- the search field is reachable through `Ctrl+F` and keeps predictable focus after search execution;
+- folder selector, search/cancel buttons, filters, scope chips, favorites, recent entries, results, preview, menus, and command palette have accessible names or descriptions;
+- keyboard navigation covers the main flows: open folder, search, cancel, open palette, navigate results, open result actions, and copy information;
+- empty states, partial errors, cancellation, and inactive indexing are exposed through visible text, not only color;
+- visual contrast on the main screen is sufficient for comfortable reading in the initial dark theme.
+
+Full audits with real screen readers and automated contrast checks enter Milestone 9 as continuous quality tests. Milestone 8 leaves the structure ready and documents the manual checklist to prevent obvious regressions.
+
+## High DPI, monitors, and responsiveness
+
+The main screen must remain usable in reduced windows, high DPI, and fractional scales. Milestone 8 uses `Layout`, `Flow`, `SplitView`, elided text, virtualized lists, and scrollable sections to prevent compact controls from pushing results and preview out of the window.
+
+Recommended manual checklist before releases:
+
+- open the window at reduced size and confirm that header, scope, results, preview, and status remain accessible;
+- validate 100%, 125%, 150%, and 200% scales on Windows;
+- move the window between monitors with different scales and confirm that fonts, borders, menus, and tooltips remain proportional;
+- confirm that long file and directory names show the relevant path end without breaking layout;
+- confirm that history, favorites, inclusions, and exclusions use scrolling or menus when they do not fit horizontally;
+- confirm that results and preview remain usable when the layout switches between horizontal and vertical orientation.
+
+## Pluralization, shortcuts, and technical strings
+
+Texts with variable counts should use Qt native pluralization with `%n` whenever the sentence depends on item count. Avoid building plurals in QML by concatenating suffixes such as `s`, because that breaks future languages and makes `pt-BR` artificial. Numeric placeholders that do not alter grammar may continue to use `%1`, such as compact metric cards.
+
+Keyboard shortcuts should be treated as translatable strings only when they appear in the interface, but the actual sequence must remain centralized in the `Shortcut` or component that executes the action. When creating a new action, update together: command palette, tooltip/menu when present, UI docs, and `pt-BR`/`en-US` catalogs.
+
+Technical strings widely recognized by advanced users, such as `Regex`, `.gitignore`, `Ctrl`, `Shift`, `PCRE2`, `HEAD`, and format names like `PDF` or `DOCX`, should remain stable. The surrounding sentence should be localized and explain the practical impact clearly.
+
+## Partial search errors
+
+Isolated read, permission, or file-removed failures during search must not interrupt delivery of valid results. When the core marks `SearchSummary::partialFailure`, the UI preserves the occurrence list and turns errors into a warning in the search status, showing the first error occurrence as short context.
+
+Errors that prevent the whole search, such as query validation or unavailable backend, remain displayed as final errors. Explicit user cancellation has visual priority over partial warnings to avoid ambiguous feedback.
+
+## Formats pending content extraction
+
+Current direct search treats plain-text files as searchable content and can find binary or packaged files by name when the target combines content and file name. Formats such as PDF, DOCX, ODT, RTF, and EPUB must not be presented as searchable content until dedicated extractors exist.
+
+The UI should make this limitation clear when the user filters by those types: the filter selects files by name/extension, but searching inside content depends on a future extraction layer. That layer should live below the UI, in `core/text` or dedicated adapters, with memory limits, cooperative cancellation, and hostile-file handling.

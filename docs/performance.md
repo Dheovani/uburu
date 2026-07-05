@@ -1,67 +1,37 @@
 # Performance
 
-Tempo até o primeiro resultado é a métrica principal. A busca direta transmite resultados enquanto lê
-arquivos linha a linha e não espera a varredura terminar. O envio à UI usa batches adaptativos para
-reduzir overhead sem piorar a latência inicial.
+Time to first result is the primary metric. Direct search streams results while reading files line by line and does not wait for scanning to finish. UI delivery uses adaptive batches to reduce overhead without hurting initial latency.
 
-## Métricas mínimas
+## Minimum metrics
 
-- tempo de scan e tempo total;
-- tempo até o primeiro resultado;
-- arquivos e bytes por segundo;
-- tempo de matching;
-- arquivos ocultos filtrados pelo scanner;
-- arquivos ignorados por `.gitignore`, `.git/info/exclude` ou ignores globais configurados;
-- arquivos binários detectados pelo leitor de texto e arquivos binários efetivamente pulados;
-- pico aproximado de memória;
-- documentos indexados e reutilizados por hash.
+- scan time and total time;
+- time to first result;
+- files and bytes per second;
+- matching time;
+- hidden files filtered by the scanner;
+- files ignored by `.gitignore`, `.git/info/exclude`, or configured global ignores;
+- binary files detected by the text reader and binary files actually skipped;
+- approximate peak memory;
+- documents indexed and reused by hash.
 
-No estado atual, `SearchSummary::metrics` agrega contadores básicos da busca direta. O scanner
-incrementa arquivos ocultos e ignorados quando descarta entradas antes de publicá-las ao engine. O
-leitor de texto identifica binários por amostragem, e o engine registra esses arquivos como binários
-pulados quando `SearchOptions::includeBinary` não permite leitura textual. Diretórios ignorados
-podem impedir a enumeração de descendentes; por isso os contadores representam arquivos observados
-diretamente durante a varredura, não uma estimativa recursiva de tudo que havia sob o diretório.
+In the current state, `SearchSummary::metrics` aggregates basic direct-search counters. The scanner increments hidden and ignored files when it discards entries before publishing them to the engine. The text reader identifies binaries by sampling, and the engine records those files as skipped binaries when `SearchOptions::includeBinary` does not allow textual reading. Ignored directories may prevent descendant enumeration, so counters represent files directly observed during traversal, not a recursive estimate of everything under the directory.
 
-`SearchService::searchWithEvents()` mede `timeToFirstResult` e `totalTime` no nível da estratégia de
-busca selecionada. O serviço mede também a latência síncrona de entrega de cada batch ao sink e ajusta
-o próximo tamanho de lote dentro dos limites de `SearchExecutionOptions`. `StructuredMetricsSink` grava
-métricas de busca como evento estruturado de categoria `search`, com campos numéricos para tempos,
-arquivos, bytes e resultados.
+`SearchService::searchWithEvents()` measures `timeToFirstResult` and `totalTime` at the selected search strategy level. The service also measures the synchronous latency of delivering each batch to the sink and adjusts the next batch size within `SearchExecutionOptions` limits. `StructuredMetricsSink` writes search metrics as a structured event in the `search` category, with numeric fields for times, files, bytes, and results.
 
-O logger estruturado suporta filtragem por nível mínimo e categorias habilitadas. `FileStructuredLogger`
-grava JSON Lines e aplica rotação por tamanho, mantendo um número configurável de arquivos antigos. Campos
-marcados como sensíveis são mascarados por padrão; caminhos completos, conteúdo de linhas e expressões
-potencialmente privadas não devem ser adicionados como campos públicos sem uma decisão explícita da camada
-de aplicação.
+The structured logger supports filtering by minimum level and enabled categories. `FileStructuredLogger` writes JSON Lines and rotates by size, keeping a configurable number of old files. Fields marked as sensitive are masked by default; full paths, line content, and potentially private expressions should not be added as public fields without an explicit application-layer decision.
 
-As métricas de busca incluem throughput derivado (`filesPerSecond` e `bytesPerSecond`), contadores de
-espera de filas, hits/misses de cache do índice, reuso por catálogo/blob/hash e uma estimativa de memória
-ocupada pelos resultados emitidos. A estimativa de memória não substitui um profiler: ela soma o tamanho
-aproximado das estruturas de resultado e das capacidades observáveis de strings/vetores. O
-`SearchService` compara essa estimativa com a busca anterior para sinalizar crescimento entre execuções.
+Search metrics include derived throughput (`filesPerSecond` and `bytesPerSecond`), queue wait counters, index cache hits/misses, reuse by catalog/blob/hash, and an estimate of memory occupied by emitted results. The memory estimate does not replace a profiler: it sums approximate result structure sizes and observable string/vector capacities. `SearchService` compares that estimate with the previous search to signal growth between executions.
 
-`DiagnosticReport` define o formato exportável inicial para diagnósticos: logs estruturados, métricas de
-busca e eventos de tracing em JSON. Campos marcados como sensíveis continuam mascarados por padrão também
-no relatório exportado. A UI de diagnóstico do Marco 8 deve consumir esse contrato em vez de ler detalhes
-internos dos serviços diretamente.
+`DiagnosticReport` defines the initial exportable diagnostics format: structured logs, search metrics, and tracing events in JSON. Fields marked as sensitive remain masked by default in exported reports. The Milestone 8 diagnostics UI should consume this contract instead of reading internal service details directly.
 
-`SearchTraceRecorder` fornece tracing opt-in. Quando desabilitado, chamadas de `record()` retornam sem
-armazenar eventos e `SearchTraceScope` não publica spans ao sair do escopo. Quando habilitado, o recorder
-limita a quantidade de eventos, registra duração de spans e reutiliza `LogField` para manter a mesma
-política de mascaramento de dados sensíveis.
+`SearchTraceRecorder` provides opt-in tracing. When disabled, `record()` returns without storing events and `SearchTraceScope` does not publish spans when it leaves scope. When enabled, the recorder limits event count, records span durations, and reuses `LogField` to keep the same sensitive-data masking policy.
 
-O scanner futuro usará pool limitado, priorização de arquivos pequenos e backpressure. Otimizações deverão vir acompanhadas de benchmarks reproduzíveis para muitos arquivos pequenos, poucos arquivos grandes, literal, regex, indexação inicial e reconciliação incremental.
+The future scanner will use a bounded pool, small-file prioritization, and backpressure. Optimizations must come with reproducible benchmarks for many small files, few large files, literal search, regex, initial indexing, and incremental reconciliation.
 
-## Leitura de arquivos grandes
+## Large file reading
 
-O leitor de texto processa conteúdo em blocos e mantém apenas a linha corrente, bytes pendentes de
-decoding e o contexto configurado. Isso evita alocação proporcional ao tamanho total do arquivo para
-UTF-8, Latin-1 e UTF-16.
+The text reader processes content in chunks and keeps only the current line, pending decoding bytes, and configured context. This avoids allocation proportional to the whole file size for UTF-8, Latin-1, and UTF-16.
 
-`SearchOptions::maximumLineLength` limita linhas extremas para impedir crescimento não controlado
-de memória. `binarySampleSize` controla a amostragem usada para detectar binários antes do matching.
+`SearchOptions::maximumLineLength` limits extreme lines to prevent uncontrolled memory growth. `binarySampleSize` controls the sample used to detect binaries before matching.
 
-Quando `contextAfterLines` é maior que zero, resultados podem ser retidos por algumas linhas para
-preencher contexto posterior. O custo de memória é proporcional ao número de resultados pendentes e
-ao contexto configurado, não ao tamanho total do arquivo.
+When `contextAfterLines` is greater than zero, results may be retained for a few lines to fill following context. Memory cost is proportional to the number of pending results and configured context, not to the total file size.

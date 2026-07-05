@@ -1,52 +1,41 @@
-# Semântica de busca
+# Search semantics
 
-Este documento define o contrato observável da busca direta do Uburu. A busca indexada deve
-preservar a mesma semântica para que os resultados não mudem quando a fonte passar de leitura direta
-para índice persistente.
+This document defines the observable contract of Uburu's direct search. Indexed search must preserve the same semantics so results do not change when the source moves from direct reading to a persistent index.
 
-## Unidade de resultado
+## Result unit
 
-Um resultado representa uma ocorrência individual, não apenas uma linha que contém a expressão.
+A result represents one occurrence, not just a line containing the expression.
 
-Cada ocorrência deve conter:
+Each occurrence must contain:
 
-- caminho relativo ao diretório pesquisado;
-- linha em base 1;
-- coluna visual em base 1;
-- tamanho da ocorrência em bytes UTF-8;
-- texto da linha para preview;
-- spans de highlight da linha;
-- contexto anterior/posterior quando configurado.
+- path relative to the searched directory;
+- 1-based line;
+- 1-based visual column;
+- occurrence length in UTF-8 bytes;
+- line text for preview;
+- highlight spans for the line;
+- previous/following context when configured.
 
-Se uma linha contém mais de uma ocorrência, cada ocorrência é publicada como um `SearchResult`
-separado.
+If a line contains more than one occurrence, each occurrence is published as a separate `SearchResult`.
 
-## Escopo de busca
+## Search scope
 
-`SearchQuery` possui um `SearchScope` com zero ou mais `SearchRoot`. Cada root representa uma raiz
-física pesquisável e pode ter diretórios incluídos/excluídos próprios. Isso permite pesquisar
-simultaneamente em múltiplos repositórios ou diretórios avulsos e ignorar subárvores específicas, como
-`node_modules`, por raiz.
+`SearchQuery` has a `SearchScope` with zero or more `SearchRoot` values. Each root represents a physical searchable root and may have its own included/excluded directories. This allows searching multiple repositories or standalone directories at the same time and ignoring specific subtrees, such as `node_modules`, per root.
 
-`SearchQuery::root` permanece como compatibilidade temporária para chamadas antigas com raiz única. A
-busca direta resolve roots efetivos assim:
+`SearchQuery::root` remains as temporary compatibility for older single-root calls. Direct search resolves effective roots as follows:
 
-1. se `SearchScope::roots` não está vazio, usa esses roots;
-2. caso contrário, usa `SearchQuery::root` com os filtros globais de `SearchOptions`.
+1. if `SearchScope::roots` is not empty, use those roots;
+2. otherwise, use `SearchQuery::root` with global `SearchOptions` filters.
 
-`SearchResult::path` continua relativo ao root que produziu o resultado. Para desambiguar resultados
-com o mesmo caminho relativo em roots diferentes, `SearchResult::searchRoot` carrega a raiz física de
-origem.
+`SearchResult::path` remains relative to the root that produced the result. To disambiguate results with the same relative path in different roots, `SearchResult::searchRoot` carries the physical source root.
 
-## Validação da consulta
+## Query validation
 
-A busca valida `SearchQuery` antes de iniciar a varredura do filesystem. Consultas inválidas não
-devem chamar o scanner nem publicar resultados.
+Search validates `SearchQuery` before starting filesystem traversal. Invalid queries must not call the scanner or publish results.
 
-Erros de validação são retornados como códigos tipados em `SearchSummary::errors`, para que UI e
-serviços possam traduzir mensagens sem acoplar texto visível ao core.
+Validation errors are returned as typed codes in `SearchSummary::errors`, so UI and services can translate messages without coupling user-visible text to the core.
 
-Erros iniciais suportados:
+Initial supported errors:
 
 - `emptyRoot`;
 - `rootNotFound`;
@@ -63,245 +52,176 @@ Erros iniciais suportados:
 - `fileOpenFailed`;
 - `fileReadFailed`.
 
-O modo regex é reportado como `unsupportedSearchMode` quando o build não possui PCRE2. Quando
-PCRE2 está disponível, erros de compilação retornam `regexCompileFailed` com mensagem e offset
-fornecidos pelo backend.
+Regex mode is reported as `unsupportedSearchMode` when the build does not include PCRE2. When PCRE2 is available, compilation errors return `regexCompileFailed` with the backend-provided message and offset.
 
-## Busca literal
+## Literal search
 
-A busca literal interpreta a expressão como texto comum. Caracteres com significado especial em
-regex não possuem significado especial nesse modo.
+Literal search interprets the expression as plain text. Characters with special meaning in regex have no special meaning in this mode.
 
-Por padrão, a busca literal é case-insensitive. Quando `caseSensitive` está habilitado, os code
-points UTF-8 da linha e da expressão devem corresponder exatamente.
+By default, literal search is case-insensitive. When `caseSensitive` is enabled, UTF-8 code points in the line and expression must match exactly.
 
-A comparação case-insensitive usa case folding Unicode simples, limitado a transformações de um code
-point para um code point. Isso cobre ASCII e letras latinas pré-compostas comuns, como `AÇÃO` contra
-`ação` e `CAFÉ` contra `café`.
+Case-insensitive comparison uses simple Unicode case folding, limited to one-code-point to one-code-point transformations. This covers ASCII and common precomposed Latin letters, such as `AÇÃO` against `ação` and `CAFÉ` against `café`.
 
-Ainda não há normalização canônica. Portanto, `é` pré-composto e `e` + acento combinante podem ser
-tratados como sequências diferentes até introduzirmos uma etapa opcional de normalização com custo
-medido.
+The matcher works over UTF-8 text normalized by the text reader. Internal match offsets and lengths remain in UTF-8 bytes; `SearchResult::column` and `MatchSpan::column` are 1-based visual columns computed by UTF-8 code point.
 
-O matcher trabalha sobre texto UTF-8 normalizado pelo leitor de texto. Offsets e tamanhos internos de
-match permanecem em bytes UTF-8; `SearchResult::column` e `MatchSpan::column` são colunas visuais em
-base 1 calculadas por code point UTF-8.
+## Overlapping occurrences
 
-## Ocorrências sobrepostas
+Overlapping occurrences are preserved in literal search.
 
-Ocorrências sobrepostas são preservadas em busca literal.
-
-Exemplo:
+Example:
 
 ```txt
-texto:      aaaa
-expressão: aa
-colunas:   1, 2, 3
+text:       aaaa
+expression: aa
+columns:    1, 2, 3
 ```
 
-Esse comportamento evita esconder matches reais e mantém o contrato previsível para futuras
-estratégias de highlight, ranking e índice.
+This behavior avoids hiding real matches and keeps the contract predictable for future highlight, ranking, and index strategies.
 
-## Palavra inteira
+## Whole word
 
-`wholeWord` usa limites de palavra para texto natural. Letras ASCII, dígitos ASCII e letras latinas
-pré-compostas são considerados parte de uma palavra. Pontuação e `_` são limites de palavra nesse
-modo.
+`wholeWord` uses word boundaries for natural text. ASCII letters, ASCII digits, and precomposed Latin letters are considered part of a word. Punctuation and `_` are word boundaries in this mode.
 
-Exemplos:
+Examples:
 
-- `ação` casa em `pré-ação`;
-- `ação` não casa em `préação`;
-- `search` casa em `search_engine`, porque `_` é pontuação para texto natural.
+- `ação` matches `pré-ação`;
+- `ação` does not match `préação`;
+- `search` matches `search_engine`, because `_` is punctuation for natural text.
 
-Para código-fonte, `wholeIdentifier` usa limites de identificador. Letras ASCII, dígitos ASCII e `_`
-são considerados parte do identificador.
+For source code, `wholeIdentifier` uses identifier boundaries. ASCII letters, ASCII digits, and `_` are considered part of the identifier.
 
-Exemplos:
+Examples:
 
-- `search` não casa em `search_engine`;
-- `search` não casa em `searchEngine`;
-- `search` não casa em `search2`;
-- `search` casa em `call(search)`.
+- `search` does not match `search_engine`;
+- `search` does not match `searchEngine`;
+- `search` does not match `search2`;
+- `search` matches `call(search)`.
 
-Se `wholeWord` e `wholeIdentifier` forem habilitados ao mesmo tempo, a ocorrência precisa satisfazer
-as duas regras de boundary.
+If `wholeWord` and `wholeIdentifier` are enabled at the same time, the occurrence must satisfy both boundary rules.
 
 ## Regex
 
-Quando `SearchOptions::mode` estiver em `SearchMode::regex`, a expressão é compilada uma vez por
-busca com PCRE2 em modo UTF/UCP. A busca reutiliza a regex compilada em todas as linhas processadas,
-evitando recompilar o padrão dentro do loop de arquivos.
+When `SearchOptions::mode` is `SearchMode::regex`, the expression is compiled once per search with PCRE2 in UTF/UCP mode. The search reuses the compiled regex across all processed lines, avoiding recompilation inside the file loop.
 
-Por padrão, regex também respeita `caseSensitive`: quando desabilitado, o padrão é compilado com
-`PCRE2_CASELESS`.
+Regex also respects `caseSensitive` by default: when disabled, the pattern is compiled with `PCRE2_CASELESS`.
 
-O matcher tenta habilitar PCRE2 JIT com `PCRE2_JIT_COMPLETE`. Quando JIT é aceito, o resumo da busca
-registra `RegexExecutionMode::jit`. Quando PCRE2 está disponível mas JIT não é aceito para o padrão
-ou build corrente, a busca continua com fallback interpretado e registra
-`RegexExecutionMode::interpretedFallback`.
+The matcher tries to enable PCRE2 JIT with `PCRE2_JIT_COMPLETE`. When JIT is accepted, the search summary records `RegexExecutionMode::jit`. When PCRE2 is available but JIT is not accepted for the pattern or current build, the search continues with interpreted fallback and records `RegexExecutionMode::interpretedFallback`.
 
-Regex possui limites configuráveis em `SearchOptions`:
+Regex has configurable limits in `SearchOptions`:
 
 - `regexMatchLimit`;
 - `regexDepthLimit`;
 - `regexHeapLimitKib`;
 - `regexTimeout`.
 
-Os três primeiros são aplicados no `pcre2_match_context`. O timeout usa callouts automáticos do PCRE2
-e interrompe a tentativa de match quando o orçamento de tempo expira. Quando um limite é atingido, a
-busca para e retorna erro tipado, distinguindo `regexResourceLimitExceeded` de `regexTimeout`.
+The first three are applied in the `pcre2_match_context`. Timeout uses PCRE2 automatic callouts and interrupts the match attempt when the time budget expires. When a limit is reached, search stops and returns a typed error, distinguishing `regexResourceLimitExceeded` from `regexTimeout`.
 
-Regex preserva a mesma unidade de resultado da busca literal: cada ocorrência vira um resultado
-individual, com offset e tamanho em bytes UTF-8. `wholeWord` e `wholeIdentifier` também são
-aplicados sobre matches regex.
+Regex preserves the same result unit as literal search: each occurrence becomes an individual result, with offset and length in UTF-8 bytes. `wholeWord` and `wholeIdentifier` are also applied to regex matches.
 
-Erros de compilação retornam `regexCompileFailed` com:
+Compilation errors return `regexCompileFailed` with:
 
-- `translationKey`, para a UI traduzir a mensagem visível;
-- `context`, com a mensagem técnica fornecida pelo backend;
-- `offset`, quando o PCRE2 informa a posição do erro no padrão.
+- `translationKey`, so the UI can translate the visible message;
+- `context`, with the technical message provided by the backend;
+- `offset`, when PCRE2 reports the error position in the pattern.
 
-## Alvo da busca
+## Search target
 
-`SearchOptions::target` define onde a expressão será aplicada:
+`SearchOptions::target` defines where the expression is applied:
 
-- `content`: busca apenas no conteúdo dos arquivos;
-- `fileName`: busca apenas no caminho relativo do arquivo;
-- `contentAndFileName`: publica ocorrências tanto no caminho relativo quanto no conteúdo.
+- `content`: search only file content;
+- `fileName`: search only the relative file path;
+- `contentAndFileName`: publish occurrences from both the relative path and content.
 
-Resultados de nome de arquivo usam `SearchResultKind::fileName`, linha `0` e coluna em base 1 dentro
-do caminho relativo. Resultados de conteúdo usam `SearchResultKind::content` e linha em base 1.
+File-name results use `SearchResultKind::fileName`, line `0`, and a 1-based column inside the relative path. Content results use `SearchResultKind::content` and 1-based line.
 
-A busca por nome de arquivo não abre o arquivo, permitindo encontrar caminhos mesmo quando o conteúdo
-não está acessível naquele momento. Regex, case sensitivity e regras de palavra inteira também se
-aplicam ao caminho relativo.
+File-name search does not open the file, allowing paths to be found even when content is not accessible at that moment. Regex, case sensitivity, and whole-word rules also apply to the relative path.
 
-## Filtros de arquivos
+## File filters
 
-O scanner aplica filtros antes de entregar `FileEntry` ao motor de busca:
+The scanner applies filters before delivering `FileEntry` to the search engine:
 
-- tamanho máximo;
-- extensões permitidas;
-- diretórios incluídos;
-- diretórios excluídos;
-- globs incluídos;
-- globs excluídos;
-- arquivos ocultos, conforme `includeHidden`.
+- maximum size;
+- allowed extensions;
+- included directories;
+- excluded directories;
+- included globs;
+- excluded globs;
+- hidden files according to `includeHidden`.
 
-Exclusões têm precedência sobre inclusões. Portanto, um arquivo dentro de um diretório incluído ainda
-será ignorado se também cair em um diretório excluído ou glob excluído.
+Exclusions take precedence over inclusions. A file inside an included directory is still ignored if it also falls under an excluded directory or excluded glob.
 
-Extensões são comparadas sem o ponto inicial. No Windows, a comparação de extensões e globs é
-case-insensitive; nas demais plataformas, a comparação preserva a sensibilidade a maiúsculas e
-minúsculas do sistema.
+Extensions are compared without the leading dot. On Windows, extension and glob comparison is case-insensitive; on other platforms, comparison preserves the system's case sensitivity.
 
-Os globs iniciais suportam `*` e `?` sobre o caminho relativo normalizado com `/`. Eles são uma
-semântica simples de filtro do Marco 1, não uma implementação completa de `.gitignore`.
+Initial globs support `*` and `?` over the normalized relative path with `/`. They are a simple Milestone 1 filter semantics, not a complete `.gitignore` implementation.
 
-## Limites de resultados
+## Result limits
 
-`resultLimit` é um limite global da busca. Um resultado só pode ser publicado se ainda estiver dentro
-do limite.
+`resultLimit` is a global search limit. A result may be published only while still within the limit.
 
-Quando o limite é atingido:
+When the limit is reached:
 
-- nenhum resultado adicional deve ser emitido;
-- `SearchSummary::limitReached` deve ser `true`;
-- `SearchSummary::matches` deve contar apenas os resultados publicados.
+- no additional result should be emitted;
+- `SearchSummary::limitReached` must be `true`;
+- `SearchSummary::matches` must count only published results.
 
-`perFileResultLimit` limita a quantidade de resultados publicados para um mesmo arquivo. Quando o
-limite por arquivo é atingido:
+`perFileResultLimit` limits the number of results published for a single file. When the per-file limit is reached:
 
-- a busca para de publicar ocorrências daquele arquivo;
-- a varredura continua nos próximos arquivos;
-- `SearchSummary::filesWithMatchLimitReached` é incrementado;
-- `SearchSummary::limitReached` permanece reservado para o limite global.
+- the search stops publishing occurrences from that file;
+- traversal continues to the next files;
+- `SearchSummary::filesWithMatchLimitReached` is incremented;
+- `SearchSummary::limitReached` remains reserved for the global limit.
 
-## Ordem determinística
+## Deterministic order
 
-A busca direta publica arquivos em ordem determinística de caminho. O scanner ordena as entradas de
-cada diretório pelo caminho normalizado antes de visitar arquivos e subdiretórios.
+Direct search publishes files in deterministic path order. The scanner sorts entries in each directory by normalized path before visiting files and subdirectories.
 
-A estratégia inicial de relevância é deliberadamente simples: em buscas combinadas, ocorrências no
-nome/caminho relativo são publicadas antes das ocorrências de conteúdo do mesmo arquivo. Ranking mais
-sofisticado deve ser introduzido depois com métricas e sem quebrar a estabilidade da ordem final.
+The initial relevance strategy is deliberately simple: in combined searches, occurrences in the name/relative path are published before content occurrences from the same file. More sophisticated ranking should be introduced later with metrics and without breaking final order stability.
 
-## Resultados progressivos
+## Progressive results
 
-A busca direta publica resultados assim que cada ocorrência é encontrada. Ela não espera a varredura
-inteira terminar para entregar o primeiro resultado ao consumidor. A ordenação determinística é feita
-por diretório, não por materialização antecipada da árvore inteira.
+Direct search publishes results as soon as each occurrence is found. It does not wait for the whole traversal to finish before delivering the first result to the consumer. Deterministic ordering is done per directory, not by materializing the whole tree in advance.
 
-Quando `contextAfterLines` é maior que zero, resultados de conteúdo podem ser retidos por até esse
-número de linhas para preencher o contexto posterior. Esse atraso é local ao arquivo e não exige
-carregar o arquivo inteiro.
+When `contextAfterLines` is greater than zero, content results may be held for up to that number of lines to fill following context. This delay is local to the file and does not require loading the whole file.
 
-## Encoding, binários e linhas
+## Encoding, binaries, and lines
 
-O leitor de texto do core detecta BOM e suporta:
+The core text reader detects BOM and supports:
 
-- UTF-8 com ou sem BOM;
-- UTF-16 LE com BOM;
-- UTF-16 BE com BOM;
-- fallback configurável para Latin-1 ou UTF-8 sem BOM.
+- UTF-8 with or without BOM;
+- UTF-16 LE with BOM;
+- UTF-16 BE with BOM;
+- configurable fallback to Latin-1 or UTF-8 without BOM.
 
-UTF-8 inválido segue `SearchOptions::invalidUtf8Policy`: substituir por U+FFFD, ignorar o byte
-inválido ou falhar a leitura. A política padrão substitui sequências inválidas para preservar busca
-em arquivos parcialmente corrompidos sem abortar todo o diretório.
+Invalid UTF-8 follows `SearchOptions::invalidUtf8Policy`: replace with U+FFFD, skip the invalid byte, or fail reading. The default policy replaces invalid sequences to preserve search in partially corrupted files without aborting the whole directory.
 
-Arquivos binários são detectados por amostra configurável antes da leitura linha a linha. A detecção
-considera byte NUL e proporção de bytes de controle, mas não classifica UTF-16 com BOM como binário
-apenas por conter NULs alternados.
+Binary files are detected by configurable sample before line-by-line reading. Detection considers NUL bytes and the ratio of control bytes, but does not classify UTF-16 with BOM as binary only because it contains alternating NUL bytes.
 
-## Finais de linha
+## Line endings
 
-A leitura linha a linha suporta `LF`, `CRLF`, `CR` isolado, linhas vazias e arquivo sem newline final.
-Os marcadores de fim de linha não fazem parte de `SearchResult::lineText`, e o leitor registra o tipo
-de final de linha em `TextLine` para uso futuro por preview, offsets e diagnósticos.
+Line-by-line reading supports `LF`, `CRLF`, standalone `CR`, empty lines, and files without a final newline. Line-ending markers are not part of `SearchResult::lineText`, and the reader records the line ending type in `TextLine` for future preview, offsets, and diagnostics.
 
-## Cancelamento e falhas parciais
+## Cancellation and partial failures
 
-Cancelamento é cooperativo. A busca deve parar assim que possível depois que o token de cancelamento
-for sinalizado.
+Cancellation is cooperative. Search must stop as soon as possible after the cancellation token is signaled.
 
-O resumo distingue explicitamente:
+The summary explicitly distinguishes:
 
-- conclusão normal;
-- cancelamento;
-- limite atingido;
-- falha parcial de leitura;
-- query inválida.
+- normal completion;
+- cancellation;
+- limit reached;
+- partial read failure;
+- invalid query.
 
-Falhas ao abrir ou ler um arquivo não interrompem silenciosamente toda a busca. O resumo marca
-`partialFailure`, incrementa `filesWithReadErrors` e adiciona um erro tipado com o caminho relativo
-no contexto. Resultados já publicados continuam válidos.
+Failures opening or reading a file do not silently stop the whole search. The summary marks `partialFailure`, increments `filesWithReadErrors`, and adds a typed error with the relative path in context. Already published results remain valid.
 
-Falhas de permissão, arquivos removidos entre scan e leitura, e falhas de stream são normalizadas como
-falhas parciais tipadas. O erro concreto pode variar por plataforma, mas a busca não deve descartá-lo
-silenciosamente.
+Permission failures, files removed between scan and read, and stream failures are normalized as typed partial failures. The concrete error may vary by platform, but search must not silently discard it.
 
-## Arquivos alterados durante a busca
+## Files changed during search
 
-A busca direta representa o estado observado no momento em que cada arquivo é aberto. Se um arquivo
-for alterado entre o scan e a leitura, o conteúdo lido depois da abertura é a fonte da verdade para
-aquela ocorrência.
+Direct search represents the state observed when each file is opened. If a file changes between scan and read, the content read after opening is the source of truth for that occurrence.
 
-Se o arquivo for removido, ficar inacessível ou falhar durante a leitura, a busca registra falha
-parcial tipada e continua nos demais arquivos. O Marco 1 não tenta criar snapshots consistentes da
-árvore inteira; essa garantia pertence ao desenho futuro de índice, overlay e integração com Git.
+If the file is removed, becomes inaccessible, or fails during reading, search records a typed partial failure and continues with other files. Milestone 1 does not try to create consistent snapshots of the whole tree; that guarantee belongs to the future index, overlay, and Git integration design.
 
-## Ownership e cópias
+## Ownership and copies
 
-`SearchResult` possui o texto publicado para garantir segurança quando o consumidor processar
-resultados de forma assíncrona. O engine evita cópias intermediárias no caminho quente sempre que não
-precisa transferir ownership, mas materializa a linha/caminho ao construir o resultado publicado.
-
-## Comportamentos ainda pendentes no Marco 1
-
-Esta primeira versão do documento registra o contrato inicial e as lacunas conhecidas. Ainda faltam:
-
-- erros traduzíveis para query inválida;
-- filtros por nome, glob, extensão, diretório e tamanho;
-- ordenação determinística formal;
-- estratégia inicial de relevância.
+`SearchResult` owns the published text to remain safe when consumers process results asynchronously. The engine avoids intermediate copies in the hot path whenever it does not need to transfer ownership, but materializes the line/path when building the published result.

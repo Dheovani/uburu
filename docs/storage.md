@@ -1,178 +1,120 @@
 # Storage
 
-SQLite armazena catálogos de repositórios, worktrees, caminhos e gerações do índice, além de
-preferências, histórico de buscas, buscas salvas e métricas operacionais. Conteúdo indexado é
-referenciado por hash; caminhos apontam para documentos e não constituem sua identidade.
+SQLite stores catalogs for repositories, worktrees, paths, and index generations, as well as preferences, search history, saved searches, and operational metrics. Indexed content is referenced by hash; paths point to documents and do not constitute their identity.
 
-O backend usa transações curtas, WAL, migrations versionadas e prepared statements. Escritas de uma nova
-geração são atômicas. FTS5 pode acelerar partes da consulta no futuro, mas deve permanecer atrás de uma
-interface substituível e não será a única representação do índice.
+The backend uses short transactions, WAL, versioned migrations, and prepared statements. Writes of a new generation are atomic. FTS5 may accelerate parts of the query in the future, but it must remain behind a replaceable interface and must not be the only representation of the index.
 
-## Backend inicial
+## Initial backend
 
-`SQLiteStorageService` é o primeiro backend concreto de `StorageService`. Ele mantém o cabeçalho livre de
-`sqlite3.h`, abre a conexão por RAII, fecha a conexão no destrutor e falha explicitamente quando usado
-antes de `initialize()`. A implementação usa prepared statements para escrita e leitura, além de
-transações curtas nas operações que precisam atualizar mais de uma tabela.
+`SQLiteStorageService` is the first concrete `StorageService` backend. It keeps `sqlite3.h` out of the header, opens the connection through RAII, closes it in the destructor, and fails explicitly when used before `initialize()`. The implementation uses prepared statements for reads and writes, plus short transactions for operations that update more than one table.
 
-Na inicialização, o backend configura e expõe por `pragmaSnapshot()`:
+During initialization, the backend configures and exposes through `pragmaSnapshot()`:
 
 - `PRAGMA foreign_keys = ON`;
 - `PRAGMA journal_mode = WAL`;
 - `PRAGMA synchronous = NORMAL`;
-- `sqlite3_busy_timeout` com timeout inicial de 5 segundos;
+- `sqlite3_busy_timeout` with an initial 5-second timeout;
 - `PRAGMA user_version = 7`;
-- tabela `schema_migrations` para registrar versões aplicadas.
+- the `schema_migrations` table to record applied versions.
 
-Esses pragmas são parte do contrato operacional do storage. Testes automatizados verificam que o banco
-abre com foreign keys habilitadas, WAL ativo, busy timeout configurado e integridade reportada como
-válida.
+These pragmas are part of the storage operational contract. Automated tests verify that the database opens with foreign keys enabled, WAL active, busy timeout configured, and integrity reported as valid.
 
-## Localização do banco e migração
+## Database location and migration
 
-`defaultStorageDatabasePath()` escolhe uma localização padrão por plataforma:
+`defaultStorageDatabasePath()` chooses a default location per platform:
 
-- Windows: `%LOCALAPPDATA%/uburu/uburu.db`, com fallback para `%APPDATA%`, `%USERPROFILE%` e diretório
-  temporário;
+- Windows: `%LOCALAPPDATA%/uburu/uburu.db`, falling back to `%APPDATA%`, `%USERPROFILE%`, and the temporary directory;
 - macOS: `$HOME/Library/Application Support/uburu/uburu.db`;
-- Linux e outros Unix: `$XDG_DATA_HOME/uburu/uburu.db` ou `$HOME/.local/share/uburu/uburu.db`.
+- Linux and other Unix systems: `$XDG_DATA_HOME/uburu/uburu.db` or `$HOME/.local/share/uburu/uburu.db`.
 
-`migrateStorageDatabase()` copia o banco de origem para o destino e preserva os sidecars `-wal` e `-shm`
-quando existirem. A migração é uma cópia segura: cria o diretório de destino, sobrescreve o destino
-quando solicitado pela aplicação e não apaga o banco de origem. A decisão de remover ou arquivar o banco
-antigo pertence à camada de aplicação/configuração, não ao helper de baixo nível.
+`migrateStorageDatabase()` copies the source database to the destination and preserves `-wal` and `-shm` sidecars when they exist. Migration is a safe copy: it creates the destination directory, overwrites the destination when requested by the application, and does not delete the source database. Removing or archiving the old database belongs to the application/configuration layer, not to the low-level helper.
 
 ## Schema
 
-O schema evolui por migrations idempotentes:
+The schema evolves through idempotent migrations:
 
-1. `repositories`, `worktrees`, `generations`, `documents`, `files` e `overlays`;
-2. algoritmos explícitos para hash de conteúdo e blob Git;
-3. identidade persistente de documento por `(content_hash_algorithm, content_hash)`;
-4. metadados de produto: `preferences`, `search_history`, `saved_searches` e `indexing_metrics`.
-5. versão explícita do formato interno de documentos indexados em `documents` e `files`.
-6. `mtime` persistido em `files` para permitir reuso incremental conservador por catálogo.
-7. texto indexado normalizado em `documents.indexed_text` para busca de conteúdo sem reler arquivos.
+1. `repositories`, `worktrees`, `generations`, `documents`, `files`, and `overlays`;
+2. explicit algorithms for content hash and Git blob hash;
+3. persistent document identity by `(content_hash_algorithm, content_hash)`;
+4. product metadata: `preferences`, `search_history`, `saved_searches`, and `indexing_metrics`;
+5. explicit internal indexed-document format version in `documents` and `files`;
+6. persisted `mtime` in `files` for conservative incremental reuse by catalog;
+7. normalized indexed text in `documents.indexed_text` for content search without rereading files.
 
-Tabelas principais:
+Main tables:
 
-- `schema_migrations`: versões de migration já aplicadas;
-- `repositories`: repositórios Git lógicos;
-- `worktrees`: worktrees físicas, incluindo estados `locked`, `prunable` e motivo de lock;
-- `generations`: gerações do índice separadas por repositório, worktree, HEAD e branch;
-- `documents`: documentos endereçados por algoritmo e hash de conteúdo;
-- `files`: associação entre caminho relativo na worktree e documento indexado;
-- `overlays`: contrato persistente para overlay da working tree sobre conteúdo versionado;
-- `preferences`: preferências globais e por repositório;
-- `search_history`: histórico recente de buscas com retenção limitada;
-- `saved_searches`: buscas nomeadas pelo usuário;
-- `indexing_metrics`: métricas recentes de indexação com retenção limitada.
+- `schema_migrations`: migration versions already applied;
+- `repositories`: logical Git repositories;
+- `worktrees`: physical worktrees, including `locked`, `prunable`, and lock reason states;
+- `generations`: index generations separated by repository, worktree, HEAD, and branch;
+- `documents`: documents addressed by content hash algorithm and value;
+- `files`: association between relative path in the worktree and indexed document;
+- `overlays`: persistent contract for working tree overlay over versioned content;
+- `preferences`: global and per-repository preferences;
+- `search_history`: recent search history with limited retention;
+- `saved_searches`: user-named searches;
+- `indexing_metrics`: recent indexing metrics with limited retention.
 
-Mesmo nesta etapa, caminho e conteúdo não são a mesma identidade: `files` aponta para `documents` por
-`content_hash`. O mesmo documento poderá ser reutilizado por múltiplos caminhos, worktrees ou branches
-quando o indexador começar a preencher gerações reais.
+Even at this stage, path and content are not the same identity: `files` points to `documents` by `content_hash`. The same document can be reused by multiple paths, worktrees, or branches once the indexer starts filling real generations.
 
-`documents` e `files` armazenam o algoritmo junto com o valor do hash. Para conteúdo próprio do Uburu, o
-domínio usa `ContentHashAlgorithm`; para blob Git, usa `GitObjectHashAlgorithm`. A chave primária de
-`documents` inclui o algoritmo e o valor do hash, evitando colisões semânticas entre algoritmos
-diferentes que produzam a mesma representação textual.
+`documents` and `files` store the algorithm together with the hash value. For Uburu-owned content, the domain uses `ContentHashAlgorithm`; for Git blobs, it uses `GitObjectHashAlgorithm`. The primary key of `documents` includes algorithm and hash value, avoiding semantic collisions between different algorithms that produce the same textual representation.
 
-`documents` e `files` também armazenam `format_version`. Essa versão descreve o formato interno do
-documento indexado, não a versão do schema SQLite. Ela permite que versões futuras do Uburu migrem,
-reutilizem ou descartem documentos de cache com segurança sem depender apenas da estrutura das tabelas.
+`documents` and `files` also store `format_version`. This version describes the internal indexed document format, not the SQLite schema version. It allows future Uburu versions to migrate, reuse, or discard cached documents safely without relying only on table structure.
 
-`documents.indexed_text` armazena a primeira representação textual persistida do conteúdo. O campo é
-endereçado pelo mesmo hash do documento, então múltiplos caminhos, branches ou worktrees podem reutilizar
-o mesmo texto indexado quando apontarem para conteúdo idêntico. A representação inicial é texto
-normalizado por linha e ainda não substitui tokenização, FTS ou compactação futuras.
+`documents.indexed_text` stores the first persisted textual representation of content. The field is addressed by the same document hash, so multiple paths, branches, or worktrees can reuse the same indexed text when they point to identical content. The initial representation is normalized line text and does not replace future tokenization, FTS, or compression.
 
-`files` armazena o `mtime` como ticks nativos de `std::filesystem::file_time_type`. Esse valor não é
-tratado como data de usuário nem como timestamp Unix; ele existe para round-trip local e comparação
-incremental entre o catálogo persistido e o próximo `FileEntry` observado pela varredura.
+`files` stores `mtime` as native `std::filesystem::file_time_type` ticks. This value is not treated as a user-facing date or Unix timestamp; it exists for local round-trip and incremental comparison between the persisted catalog and the next `FileEntry` observed by scanning.
 
-## Publicação de gerações
+## Publishing generations
 
-`StorageService::publishGeneration()` publica uma visão completa da worktree em uma transação
-`BEGIN IMMEDIATE`. A operação:
+`StorageService::publishGeneration()` publishes a complete worktree view in a `BEGIN IMMEDIATE` transaction. The operation:
 
-1. cria uma linha em `generations` ainda não publicada;
-2. remove a visão anterior de `files` para a worktree;
-3. insere ou reutiliza documentos por `content_hash`;
-4. recria os caminhos da geração em `files`;
-5. marca a geração como publicada;
-6. confirma a transação.
+1. creates a row in `generations` that is not yet published;
+2. removes the previous `files` view for the worktree;
+3. inserts or reuses documents by `content_hash`;
+4. recreates the generation paths in `files`;
+5. marks the generation as published;
+6. commits the transaction.
 
-Se qualquer documento pertencer a outro repositório ou worktree, ou se qualquer escrita falhar, a
-transação é revertida. Assim, o índice nunca deve observar metade da geração nova e metade da anterior.
-Testes cobrem publicação atômica, rollback de geração inválida e consistência entre conexão leitora e
-conexão escritora.
+If any document belongs to another repository or worktree, or if any write fails, the transaction is rolled back. The index should therefore never observe half of the new generation and half of the previous one. Tests cover atomic publication, rollback of invalid generations, and consistency between reader and writer connections.
 
-## Recuperação, integridade e reconstrução
+## Recovery, integrity, and rebuild
 
-As migrations rodam dentro de transações explícitas. Se uma migration falhar, a transação é revertida e
-o banco não deve avançar `user_version`. Durante `initialize()`, o backend também remove registros de
-`generations` que ficaram com `published = 0`, representando publicações interrompidas antes de se
-tornarem visíveis.
+Migrations run inside explicit transactions. If a migration fails, the transaction is rolled back and the database must not advance `user_version`. During `initialize()`, the backend also removes `generations` records left with `published = 0`, representing interrupted publications before they became visible.
 
-`StorageService::recoverIncompleteGenerations()` expõe a mesma limpeza para chamadas controladas pelo
-indexador. O método remove somente metadados de gerações não publicadas; ele não remove documentos nem a
-visão publicada anterior.
+`StorageService::recoverIncompleteGenerations()` exposes the same cleanup for indexer-controlled calls. The method removes only unpublished generation metadata; it does not remove documents or the previously published view.
 
-`StorageService::validateIntegrity()` executa `PRAGMA integrity_check` e retorna um relatório explícito.
-Quando a estrutura do índice precisar ser descartada sem apagar metadados de produto,
-`StorageService::rebuildIndexCatalog()` remove `overlays`, `files`, `documents` e `generations` em uma
-transação. Essa reconstrução preserva repositórios, worktrees, preferências, histórico, buscas salvas e
-métricas.
+`StorageService::validateIntegrity()` runs `PRAGMA integrity_check` and returns an explicit report. When the index structure must be discarded without deleting product metadata, `StorageService::rebuildIndexCatalog()` removes `overlays`, `files`, `documents`, and `generations` in a transaction. This rebuild preserves repositories, worktrees, preferences, history, saved searches, and metrics.
 
-`StorageService::collectOrphanDocuments()` remove documentos que não são mais referenciados por nenhum
-caminho em `files`, usando a identidade composta `(content_hash_algorithm, content_hash)`. Essa coleta é
-separada da publicação de geração para permitir políticas futuras de retenção, orçamento de disco e
-diagnóstico antes de apagar cache reaproveitável.
+`StorageService::collectOrphanDocuments()` removes documents no longer referenced by any path in `files`, using the composite identity `(content_hash_algorithm, content_hash)`. This collection is separate from generation publication to allow future retention, disk-budget, and diagnostics policies before reusable cache is deleted.
 
-`StorageService::enforceDocumentBudget()` aplica a primeira política de orçamento de disco do índice. A
-política é conservadora: calcula o total de bytes armazenados em `documents` e remove apenas documentos
-órfãos, começando pelos mais antigos, até o total ficar dentro do limite solicitado. Documentos ainda
-referenciados por `files` nunca são removidos por essa rotina. Se o orçamento continuar excedido porque
-todo o conteúdo restante ainda está vivo, o método retorna `budgetExceeded = true` para que uma camada de
-aplicação decida entre reconfigurar o limite, pedir uma limpeza explícita ou reconstruir o índice.
+`StorageService::enforceDocumentBudget()` applies the first disk-budget policy for the index. The policy is conservative: it computes total bytes stored in `documents` and removes only orphan documents, starting with the oldest, until the total fits the requested limit. Documents still referenced by `files` are never removed by this routine. If the budget remains exceeded because all remaining content is still live, the method returns `budgetExceeded = true` so an application layer can decide between reconfiguring the limit, requesting explicit cleanup, or rebuilding the index.
 
-## Preferências, histórico e métricas
+## Preferences, history, and metrics
 
-Preferências usam uma chave textual e um escopo:
+Preferences use a textual key and a scope:
 
-- escopo vazio: preferência global;
-- `RepositoryId`: preferência específica de repositório.
+- empty scope: global preference;
+- `RepositoryId`: repository-specific preference.
 
-Histórico de buscas e métricas de indexação recebem um limite de retenção no momento da escrita. O
-backend insere o novo registro e remove os mais antigos que excedam o orçamento, evitando crescimento
-ilimitado. Buscas salvas são identificadas por nome e podem ser atualizadas sem duplicar registros.
+Search history and indexing metrics receive a retention limit at write time. The backend inserts the new record and removes the oldest records that exceed the budget, avoiding unbounded growth. Saved searches are identified by name and can be updated without duplicating records.
 
-Essas tabelas são deliberadamente simples nesta etapa. A validação semântica de chaves, tipos de
-preferência, privacidade do histórico e políticas de exportação/importação pertencem a marcos futuros de
-configuração e UX.
+These tables are deliberately simple at this stage. Semantic validation of keys, preference types, history privacy, and export/import policies belong to future configuration and UX milestones.
 
-## Avaliação inicial de FTS5
+## Initial FTS5 evaluation
 
-O Marco 5 introduziu `uburu-storage-fts5-benchmark`, um benchmark de desenvolvedor desligado do build
-padrão. Ele cria um dataset determinístico em SQLite, compara uma consulta textual simples por `LIKE`
-contra uma consulta equivalente por FTS5 e valida que ambas retornam a mesma contagem.
+Milestone 5 introduced `uburu-storage-fts5-benchmark`, a developer benchmark disabled from the default build. It creates a deterministic SQLite dataset, compares a simple textual query through `LIKE` with an equivalent FTS5 query, and validates that both return the same count.
 
-Resultado local inicial no preset `core-windows-msvc-debug`:
+Initial local result on the `core-windows-msvc-debug` preset:
 
-- documentos: 20.000;
-- documentos correspondentes: 2.858;
-- repetições por estratégia: 30;
-- `LIKE`: 228.924 µs;
-- FTS5: 9.993 µs.
+- documents: 20,000;
+- matching documents: 2,858;
+- repetitions per strategy: 30;
+- `LIKE`: 228,924 us;
+- FTS5: 9,993 us.
 
-Essa medição justifica manter FTS5 como candidato forte para aceleração de consultas textuais indexadas,
-mas não muda o contrato do storage: o índice persistente continua content-addressed e Git-aware, e FTS5
-deve ser tratado como backend/estrutura auxiliar substituível.
+This measurement justifies keeping FTS5 as a strong candidate for accelerating indexed textual queries, but does not change the storage contract: the persistent index remains content-addressed and Git-aware, and FTS5 must be treated as a replaceable auxiliary backend/structure.
 
-## Escopo desta etapa
+## Scope of this stage
 
-Esta etapa persiste e recupera `RepositoryInfo`, `WorktreeInfo` e `IndexDocument`, incluindo remoção
-lógica por caminho, publicação atômica de gerações, recuperação de publicações interrompidas, coleta de
-documentos órfãos, pragmas medidos, relatório de integridade, reconstrução segura do catálogo,
-preferências, histórico, buscas salvas, métricas recentes, localização/migração básica do banco e
-avaliação inicial de FTS5 por benchmark.
+This stage persists and retrieves `RepositoryInfo`, `WorktreeInfo`, and `IndexDocument`, including logical removal by path, atomic generation publication, interrupted-publication recovery, orphan document collection, measured pragmas, integrity reports, safe catalog rebuild, preferences, history, saved searches, recent metrics, basic database location/migration, and an initial FTS5 benchmark evaluation.

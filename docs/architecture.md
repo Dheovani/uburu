@@ -1,6 +1,6 @@
-# Arquitetura
+# Architecture
 
-## Direção de dependências
+## Dependency direction
 
 ```text
 QML
@@ -13,128 +13,54 @@ SearchEngine -> FileScanner -> TextFileReader -> Text matcher
 IndexService -> GitService / StorageService / FileScanner
 ```
 
-`uburu_core` é uma biblioteca C++23 sem dependência de Qt. A aplicação desktop conhece o core por interfaces e converte resultados em um `QAbstractListModel`; QML nunca executa busca nem acessa arquivos diretamente.
+`uburu_core` is a C++23 library with no Qt dependency. The desktop application knows the core through interfaces and converts results into a `QAbstractListModel`; QML never runs searches or accesses files directly.
 
-Os tipos compartilhados ficam em `src/shared/types`. Eles modelam identidade lógica de repositório e worktree, caminho relativo e identidade de conteúdo separadamente. Isso evita transformar caminho em identidade de documento.
+Shared types live in `src/shared/types`. They model logical repository and worktree identity, relative path, and content identity separately. This prevents turning a path into a document identity.
 
-## Estratégias de busca
+## Search strategies
 
-`SearchService` é o ponto de orquestração entre busca direta, busca indexada e busca híbrida. A escolha
-não é inferida implicitamente pela presença de um índice: `SearchServiceOptions::strategy` define se a
-execução usa apenas `SearchEngine`, apenas `IndexService` ou a combinação híbrida.
+`SearchService` is the orchestration point between direct search, indexed search, and hybrid search. The choice is not inferred implicitly from the presence of an index: `SearchServiceOptions::strategy` defines whether execution uses only `SearchEngine`, only `IndexService`, or a hybrid combination.
 
-Na estratégia híbrida, o serviço valida a query uma vez, emite resultados rápidos vindos do índice e
-depois executa a busca direta para confirmar e refinar a visão. A reconciliação usa
-`search::refineSearchResults()`, que classifica resultados como confirmados, adicionados ou removidos e
-mantém uma ordenação determinística. A camada de UI ainda recebe somente resultados progressivos nesta
-fase; eventos explícitos de confirmação/remoção pertencem ao canal de eventos do Marco 7.
+In the hybrid strategy, the service validates the query once, emits fast results from the index, and then runs direct search to confirm and refine the view. Reconciliation uses `search::refineSearchResults()`, which classifies results as confirmed, added, or removed and keeps deterministic ordering. At this stage, the UI layer still receives only progressive results; explicit confirmation/removal events belong to the Milestone 7 event channel.
 
-`SearchService::searchWithEvents()` é o contrato inicial desse canal. Cada execução recebe um
-`SearchRunId`, emite um evento `started`, publica resultados em batches e finaliza com `completed`,
-`cancelled` ou `failed`. O `runId` permite que controllers descartem eventos atrasados de buscas antigas
-sem depender de estado global. O serviço mede `timeToFirstResult` e `totalTime` no nível da estratégia
-selecionada, cobrindo busca direta, indexada e híbrida.
+`SearchService::searchWithEvents()` is the initial contract for that channel. Each execution receives a `SearchRunId`, emits a `started` event, publishes results in batches, and ends with `completed`, `cancelled`, or `failed`. The `runId` lets controllers discard late events from old searches without global state. The service measures `timeToFirstResult` and `totalTime` at the selected strategy level, covering direct, indexed, and hybrid search.
 
-O canal de eventos publica DTOs da camada de aplicação (`SearchEventDto`, `SearchResultDto` e
-`SearchSummaryDto`). Isso impede que a UI dependa de detalhes dos engines, de enums internos de erro ou
-de formatos de persistência. A conversão fica em `src/app/dto`, mantendo o core reutilizável por CLI,
-testes e futuras interfaces sem Qt.
+The event channel publishes application-layer DTOs (`SearchEventDto`, `SearchResultDto`, and `SearchSummaryDto`). This prevents the UI from depending on engine details, internal error enums, or persistence formats. Conversion lives in `src/app/dto`, keeping the core reusable by CLI, tests, and future non-Qt interfaces.
 
-O tamanho dos batches de resultado é controlado por `AdaptiveResultBatcher`. Cada execução começa com
-`SearchExecutionOptions::resultBatchSize`, respeita limites mínimo e máximo configuráveis e ajusta o
-próximo lote conforme a latência observada ao entregar o evento ao sink. Entregas baratas aumentam o
-lote para reduzir overhead; entregas caras reduzem o lote para preservar responsividade da UI.
+Result batch size is controlled by `AdaptiveResultBatcher`. Each execution starts with `SearchExecutionOptions::resultBatchSize`, respects configurable minimum and maximum limits, and adjusts the next batch according to the observed latency when delivering the event to the sink. Cheap deliveries increase the batch to reduce overhead; expensive deliveries reduce it to preserve UI responsiveness.
 
-## Concorrência
+## Concurrency
 
-O `SearchController` agenda a busca no pool de `QtConcurrent`. Resultados são devolvidos progressivamente à thread da UI por eventos enfileirados. O core usa `std::stop_token`, permitindo que CLI, testes ou outras interfaces usem o mesmo cancelamento sem Qt.
+`SearchController` schedules search on the `QtConcurrent` pool. Results are returned progressively to the UI thread through queued events. The core uses `std::stop_token`, allowing CLI, tests, or other interfaces to use the same cancellation model without Qt.
 
-Os próximos serviços concretos devem ser construídos atrás das interfaces existentes. Operações de filesystem, Git ou SQLite não devem migrar para o controller.
+Future concrete services must be built behind the existing interfaces. Filesystem, Git, or SQLite operations must not migrate into the controller.
 
-## Leitura de texto
+## Text reading
 
-`core/text` possui um leitor de arquivos orientado a linhas que entrega texto UTF-8 ao motor de
-busca. O `SearchEngine` não interpreta BOM, UTF-16, Latin-1, binários ou finais de linha diretamente;
-ele consome `TextLine` e delega matching para `text-matcher` ou `regex-matcher`.
+`core/text` contains a line-oriented file reader that delivers UTF-8 text to the search engine. The `SearchEngine` does not interpret BOM, UTF-16, Latin-1, binaries, or line endings directly; it consumes `TextLine` and delegates matching to `text-matcher` or `regex-matcher`.
 
-Essa separação mantém encoding, política de binários, limites de linha e contexto de preview fora da
-lógica de busca, preservando a possibilidade de evoluir para leitores mais especializados sem mudar
-o contrato público do engine.
+This separation keeps encoding, binary policy, line limits, and preview context outside search logic, preserving the ability to evolve specialized readers without changing the engine's public contract.
 
-## Filesystem e ignore
+## Filesystem and ignore rules
 
-`core/filesystem` contém o scanner recursivo e as regras de ignore. O scanner aplica filtros antes de
-entregar `FileEntry` ao motor de busca, mantendo o `SearchEngine` livre de detalhes de diretório,
-arquivos ocultos, globs e `.gitignore`.
+`core/filesystem` contains the recursive scanner and ignore rules. The scanner applies filters before delivering `FileEntry` to the search engine, keeping `SearchEngine` free from directory, hidden-file, glob, and `.gitignore` details.
 
-Normalização de caminhos fica centralizada em `path-normalization`. Caminhos relativos são
-convertidos para representação genérica com `/`, segmentos léxicos redundantes são removidos e
-caminhos absolutos são rejeitados quando uma API exige caminho relativo. Chaves de comparação seguem
-a plataforma: no Windows, comparações ASCII de caminhos são case-insensitive; em plataformas POSIX,
-mantêm sensibilidade a maiúsculas e minúsculas. Isso mantém filtros, globs, ordenação determinística
-e regras de ignore usando a mesma semântica.
+Path normalization is centralized in `path-normalization`. Relative paths are converted to generic `/` representation, redundant lexical segments are removed, and absolute paths are rejected when an API requires a relative path. Comparison keys follow the platform: on Windows, ASCII path comparisons are case-insensitive; on POSIX platforms, they remain case-sensitive. This keeps filters, globs, deterministic ordering, and ignore rules using the same semantics.
 
-No Windows, a normalização não impõe limites do legado `MAX_PATH` e preserva prefixos UNC e
-extended-length (`\\servidor\share` e `\\?\...`) como parte da chave normalizada. Backends nativos
-futuros ainda podem precisar de adaptação específica para APIs Win32, mas o core não deve truncar,
-descartar ou comparar esses caminhos como strings comuns sensíveis a caixa.
+On Windows, normalization does not impose legacy `MAX_PATH` limits and preserves UNC and extended-length prefixes (`\\server\share` and `\\?\...`) as part of the normalized key. Future native backends may still need specific adaptations for Win32 APIs, but the core must not truncate, discard, or compare these paths as ordinary case-sensitive strings.
 
-O scanner detecta arquivos esparsos quando a plataforma expõe essa informação. No Windows, a
-detecção usa `FILE_ATTRIBUTE_SPARSE_FILE`; em plataformas POSIX compatíveis, compara blocos alocados
-com tamanho lógico reportado por `stat`. A política inicial é conservadora: `FileEntry::sparse`
-apenas sinaliza o atributo e a busca direta ainda aplica os mesmos limites de tamanho e leitura dos
-demais arquivos. Otimizações ou restrições específicas para sparse files devem ser adicionadas
-somente com benchmarks e sem perder resultados por padrão.
+The scanner detects sparse files when the platform exposes that information. On Windows, detection uses `FILE_ATTRIBUTE_SPARSE_FILE`; on compatible POSIX platforms, it compares allocated blocks with the logical size reported by `stat`. The initial policy is conservative: `FileEntry::sparse` only signals the attribute, and direct search still applies the same size and reading limits as for other files. Sparse-file optimizations or restrictions must be added only with benchmarks and without losing results by default.
 
-Dentro de cada diretório, o scanner usa prioridade determinística: diretórios são visitados antes de
-arquivos, arquivos menores são publicados antes de arquivos maiores e o caminho normalizado desempata
-entradas equivalentes. Isso melhora tempo até primeiro resultado em árvores comuns sem introduzir
-aleatoriedade. Priorização global entre subárvores e ranking por probabilidade de match devem ser
-tratados por uma etapa futura de filas/workers.
+Within each directory, the scanner uses deterministic priority: directories are visited before files, smaller files are published before larger files, and the normalized path breaks ties. This improves time to first result in common trees without introducing randomness. Global prioritization between subtrees and probability-based ranking should be handled by a future queue/worker stage.
 
-Diretórios symlink, junctions e reparse points são tratados como fronteiras explícitas de
-travessia. Por padrão, o scanner não entra nesses diretórios. Quando `SearchOptions::followSymlinks`
-está ativo, o scanner pode atravessá-los, mas registra identidades canônicas dos diretórios visitados
-para evitar ciclos. Mount points são tratados como diretórios normais nesta fase; uma política futura
-para bloquear cruzamento de volumes deve ser adicionada como opção explícita, não como efeito
-colateral da varredura.
+Symlink directories, junctions, and reparse points are explicit traversal boundaries. By default, the scanner does not enter them. When `SearchOptions::followSymlinks` is enabled, the scanner may traverse them, but records canonical identities of visited directories to avoid cycles. Mount points are treated as normal directories at this stage; a future policy for blocking volume crossing should be added as an explicit option, not as a traversal side effect.
 
-Watchers de filesystem usam a interface `FileWatcher`, que emite lotes de eventos relativos de criação,
-modificação e remoção. O backend inicial é `PollingFileWatcher`: ele mantém snapshots normalizados e
-compara tamanho, timestamp e tipo da entrada a cada `poll()`. Esse fallback é portátil e simples, mas
-não substitui backends nativos eficientes. `WindowsFileWatcher`, `LinuxFileWatcher` e
-`MacosFileWatcher` implementam os backends nativos iniciais com `ReadDirectoryChangesW`, `inotify` e
-`FSEvents`, respectivamente, preservando o mesmo contrato. O retorno é um `FileChangeBatch`; quando um
-backend detectar overflow, perda de eventos ou snapshot incompleto, ele deve marcar
-`events_may_be_incomplete` e `requiresRescan`. Chamadores devem tratar esse sinal como invalidação da
-sequência incremental e executar um rescan de reconciliação antes de confiar em novos deltas. A escolha
-automática entre backend nativo e fallback deve ser feita por uma factory quando o monitoramento for
-conectado ao pipeline incremental.
+Filesystem watchers use the `FileWatcher` interface, which emits batches of relative create, modify, and remove events. The initial backend is `PollingFileWatcher`: it keeps normalized snapshots and compares size, timestamp, and entry type on each `poll()`. This fallback is portable and simple, but it does not replace efficient native backends. `WindowsFileWatcher`, `LinuxFileWatcher`, and `MacosFileWatcher` implement initial native backends with `ReadDirectoryChangesW`, `inotify`, and `FSEvents`, preserving the same contract. The return value is a `FileChangeBatch`; when a backend detects overflow, lost events, or an incomplete snapshot, it must mark `events_may_be_incomplete` and `requiresRescan`. Callers must treat that signal as invalidation of the incremental sequence and run a reconciliation rescan before trusting new deltas. A factory should choose between native backend and fallback when monitoring is connected to the incremental pipeline.
 
-Pipelines concorrentes devem usar `concurrency::BoundedQueue` para comunicar etapas de scan, leitura,
-matching e publicação. A fila tem capacidade fixa, bloqueia produtores quando cheia, acorda
-consumidores sob demanda, suporta fechamento explícito e respeita `std::stop_token` em operações
-bloqueantes. Isso fornece o mecanismo comum de backpressure antes de ligar pools de workers no motor
-de busca direta ou no indexador. Cada fila possui seu próprio mutex interno; não há mutex global no
-pipeline. A fila também mantém métricas simples de espera de produtores e consumidores para expor
-contenção real quando o pipeline paralelo começar a publicar diagnósticos.
+Concurrent pipelines should use `concurrency::BoundedQueue` to communicate scan, read, match, and publish stages. The queue has fixed capacity, blocks producers when full, wakes consumers on demand, supports explicit closure, and respects `std::stop_token` in blocking operations. This provides the common backpressure mechanism before worker pools are connected to direct search or indexing. Each queue has its own internal mutex; there is no global pipeline mutex. The queue also keeps simple producer and consumer wait metrics so real contention can be exposed when the parallel pipeline starts publishing diagnostics.
 
-`concurrency::WorkerPool` fornece o pool configurável inicial. Ele normaliza zero workers para um,
-executa tarefas submetidas em `std::jthread`, fecha a fila de trabalho de forma explícita e propaga
-`std::stop_token` para cada tarefa. `close()` é drenagem ordenada: não aceita novas tarefas, mas
-permite finalizar o que já foi enfileirado e aguarda os workers terminarem. `request_stop()` é
-cancelamento cooperativo: sinaliza os workers, fecha a fila e aguarda a parada. O scanner, a fila, o
-leitor de texto, regex e matching já aceitam cancelamento
-cooperativo; a etapa seguinte é conectar essas peças em um pipeline paralelo de busca direta sem perder
-ordenação determinística ou resultados progressivos.
+`concurrency::WorkerPool` provides the initial configurable worker pool. It normalizes zero workers to one, executes submitted tasks in `std::jthread`, closes the work queue explicitly, and propagates `std::stop_token` to each task. `close()` is ordered draining: it accepts no new tasks, lets already queued tasks finish, and waits for workers. `request_stop()` is cooperative cancellation: it signals workers, closes the queue, and waits for shutdown. The scanner, queue, text reader, regex, and matcher already accept cooperative cancellation; the next step is connecting those pieces into a parallel direct search pipeline without losing deterministic ordering or progressive results.
 
-As regras de `.gitignore` são carregadas por diretório. Arquivos `.gitignore` em subdiretórios
-acrescentam regras com maior precedência para aquela subárvore. A implementação inicial cobre
-comentários, padrões por basename, padrões com caminho, regras ancoradas, diretórios, negação e
-desativação por `SearchOptions::respectGitignore`.
+`.gitignore` rules are loaded per directory. `.gitignore` files in subdirectories add higher-precedence rules for that subtree. The initial implementation covers comments, basename patterns, path patterns, anchored rules, directories, negation, and disabling through `SearchOptions::respectGitignore`.
 
-O scanner também carrega `.git/info/exclude` a partir da raiz pesquisada e arquivos globais de
-ignore passados explicitamente em `SearchOptions::globalGitIgnoreFiles`. A descoberta automática
-do caminho global configurado no Git fica fora do scanner e deve entrar pelo `GitService` ou pela
-camada de configuração, para não misturar leitura de configuração Git com varredura genérica de
-filesystem.
+The scanner also loads `.git/info/exclude` from the searched root and global ignore files passed explicitly through `SearchOptions::globalGitIgnoreFiles`. Automatic discovery of the global Git ignore path stays outside the scanner and should enter through `GitService` or the configuration layer, so Git configuration reading is not mixed with generic filesystem traversal.

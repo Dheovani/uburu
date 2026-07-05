@@ -1,25 +1,21 @@
-# Código de conduta
+# Code of Conduct
 
-O Uburu deve ser um espaço de colaboração técnica exigente, mas respeitoso.
+Uburu should be a demanding technical collaboration space, but also a respectful one.
 
-## Compromisso
+## Commitment
 
-Participantes devem agir com respeito, boa-fé e abertura a revisão. Discordâncias técnicas são
-bem-vindas quando ajudam o projeto a ficar mais correto, rápido e sustentável.
+Participants should act with respect, good faith, and openness to review. Technical disagreements are welcome when they help the project become more correct, faster, and more sustainable.
 
-## Comportamentos esperados
+## Expected behavior
 
-- Criticar ideias e código, não pessoas.
-- Explicar decisões técnicas importantes.
-- Receber revisão como parte normal do trabalho.
-- Evitar sarcasmo hostil, ataques pessoais, assédio ou discriminação.
-- Preservar privacidade de caminhos, dados e ambientes locais de outros colaboradores.
+- Criticize ideas and code, not people.
+- Explain important technical decisions.
+- Treat review as a normal part of the work.
+- Avoid hostile sarcasm, personal attacks, harassment, or discrimination.
+- Preserve the privacy of other contributors' paths, data, and local environments.
 
-## Aplicação
+## Enforcement
 
-Problemas de conduta devem ser reportados de forma privada aos mantenedores do projeto. Enquanto o
-projeto não tiver canal público definitivo, use o canal privado acordado entre os colaboradores
-ativos.
+Conduct issues should be reported privately to the project maintainers. Until the project has a definitive public channel, use the private channel agreed upon by active contributors.
 
-Mantenedores podem remover comentários, bloquear interações ou recusar contribuições que prejudiquem
-a segurança, a privacidade ou a colaboração do projeto.
+Maintainers may remove comments, block interactions, or reject contributions that harm the project's safety, privacy, or collaboration.

@@ -1,19 +1,18 @@
-# Contribuindo
+# Contributing
 
-Obrigado por considerar contribuir com o Uburu. O projeto ainda está em fase de fundação, então a
-prioridade é preservar arquitetura, correção e reprodutibilidade.
+Thank you for considering contributing to Uburu. The project is still in its foundation phase, so the priority is to preserve architecture, correctness, and reproducibility.
 
-## Fluxo recomendado
+## Recommended flow
 
-1. Abra ou escolha um item do `TODO.md`.
-2. Crie uma branch curta a partir de `main`.
-3. Mantenha a mudança pequena e revisável.
-4. Atualize documentação quando comportamento, arquitetura ou comandos mudarem.
-5. Rode build, testes e `format-check` antes de abrir uma revisão.
+1. Open or choose an item from `TODO.md`.
+2. Create a short branch from `main`.
+3. Keep the change small and reviewable.
+4. Update documentation when behavior, architecture, or commands change.
+5. Run build, tests, and `format-check` before opening a review.
 
-## Comandos locais mínimos
+## Minimum local commands
 
-No Windows/MinGW validado:
+On the validated Windows/MSVC flow:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
@@ -22,26 +21,26 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check
 ```
 
-Para trabalhar sem Qt, use o preset `core-windows-mingw-debug`.
+To work without Qt, use the `core-windows-msvc-debug` preset.
 
-## Estilo
+## Style
 
-- Código C++ deve seguir o `.clang-format` da raiz.
-- Arquivos próprios novos devem usar `kebab-case`, salvo nomes canônicos de ferramentas.
-- Não introduza texto visível ao usuário sem passar por i18n.
-- Não acople lógica de busca ao QML.
-- Evite números mágicos; prefira constantes nomeadas com escopo mínimo.
-- Prefira código direto, mas preserve clareza e equivalência semântica.
+- C++ code must follow the root `.clang-format`.
+- New project-owned files must use `kebab-case`, except canonical tool names.
+- Do not introduce user-visible text without going through i18n.
+- Do not couple search logic to QML.
+- Avoid magic numbers; prefer named constants with the smallest suitable scope.
+- Prefer direct code, while preserving clarity and semantic equivalence.
 
 ## Commits
 
-Use o formato documentado em `docs/development.md`:
+Use the format documented in `docs/development.md`:
 
 ```txt
-tipo(escopo): resumo imperativo curto
+type(scope): short imperative summary
 ```
 
-Exemplo:
+Example:
 
 ```txt
 build: add core ci quality gates

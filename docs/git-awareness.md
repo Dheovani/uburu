@@ -1,83 +1,55 @@
-# Consciência de Git
+# Git awareness
 
-`RepositoryInfo` representa o repositório lógico, seu diretório Git comum e, quando disponível, a raiz 
-da worktree descoberta. `WorktreeInfo` representa uma árvore física, seu diretório Git específico, seu
-HEAD e sua branch opcional. Branch ausente com HEAD válido representa detached HEAD.
+`RepositoryInfo` represents the logical repository, its common Git directory, and, when available, the discovered worktree root. `WorktreeInfo` represents a physical tree, its worktree-specific Git directory, its HEAD, and its optional branch. A missing branch with a valid HEAD represents detached HEAD.
 
-O backend `Libgit2GitService` é a implementação inicial de `GitService`. Ele descobre repositórios via
-libgit2, resolve diretório Git comum, raiz da worktree, branch atual, detached HEAD, OID de `HEAD`,
-worktrees linked, status de arquivos e OID de blobs rastreados. O status já diferencia arquivos limpos,
-adicionados ao índice, não rastreados, ignorados, modificados, deletados e conflitantes. As operações
-retornam `GitResult<T>` com `GitErrorCode` tipado, para diferenciar ausência de repositório, falha de
-leitura e backend indisponível. O fallback por Git CLI existe somente como `GitCliGitService`, um
-adapter explícito que não é usado implicitamente pelo core. Mudanças em `HEAD`, no index e nas refs
-relevantes disparam reconciliação incremental.
+`Libgit2GitService` is the initial `GitService` implementation. It discovers repositories through libgit2, resolves the common Git directory, worktree root, current branch, detached HEAD, `HEAD` OID, linked worktrees, file status, and tracked blob OIDs. Status already differentiates clean files, index additions, untracked files, ignored files, modified files, deleted files, and conflicts. Operations return `GitResult<T>` with a typed `GitErrorCode`, making it possible to distinguish missing repositories, read failures, and unavailable backends. The Git CLI fallback exists only as `GitCliGitService`, an explicit adapter that is not used implicitly by the core. Changes in `HEAD`, the index, and relevant refs trigger incremental reconciliation.
 
-`GitService::changeState()` expõe um snapshot comparável do estado Git visível para uma worktree:
-branch atual, `HEAD`, detached HEAD e assinaturas de `HEAD`, `index`, ref da branch e `packed-refs`.
-Esse snapshot não substitui watchers de filesystem; ele define o estado que os watchers devem comparar
-para decidir quando invalidar deltas e iniciar reconciliação incremental.
+`GitService::changeState()` exposes a comparable snapshot of the Git state visible for a worktree: current branch, `HEAD`, detached HEAD, and signatures for `HEAD`, `index`, the branch ref, and `packed-refs`. This snapshot does not replace filesystem watchers; it defines the state that watchers compare to decide when to invalidate deltas and start incremental reconciliation.
 
-`planReconciliation()` compara dois snapshots de `GitChangeState` e transforma diferenças em um plano
-explícito. Mudança de branch, mudança de `HEAD`, entrada ou saída de detached HEAD e alteração de refs
-relevantes exigem reconciliação estrutural, mas ainda permitem reutilizar documentos por blob hash. Uma
-mudança apenas no index exige reconciliação do overlay local, sem tratar a geração versionada como
-estruturalmente obsoleta.
+`planReconciliation()` compares two `GitChangeState` snapshots and turns differences into an explicit plan. Branch changes, `HEAD` changes, entering or leaving detached HEAD, and relevant-ref changes require structural reconciliation, while still allowing document reuse by blob hash. An index-only change requires local overlay reconciliation without treating the versioned generation as structurally stale.
 
-A visão pesquisável é sempre:
+The searchable view is always:
 
 ```text
-conteúdo do commit/índice + overlay da árvore de trabalho
+commit/index content + working tree overlay
 ```
 
-Assim, arquivos modificados e não rastreados substituem a versão indexada, enquanto arquivos deletados
-são ocultados. Submodules são fronteiras explícitas: podem ser ignorados ou indexados como repositórios
-próprios, nunca percorridos acidentalmente.
+Modified and untracked files replace indexed content, while deleted files are hidden. Submodules are explicit boundaries: they can be ignored or indexed as their own repositories, but must never be walked accidentally.
 
-## Overlay da working tree
+## Working tree overlay
 
-`GitService::workingTreeOverlay()` materializa a diferença entre a geração versionada e a árvore de
-trabalho visível ao usuário. Cada `GitOverlayEntry` carrega:
+`GitService::workingTreeOverlay()` materializes the difference between the versioned generation and the working tree visible to the user. Each `GitOverlayEntry` carries:
 
-- `relativePath`, o caminho atual que deve aparecer na busca;
-- `previousRelativePath`, quando libgit2 identifica rename ou move;
-- `status`, o estado Git bruto normalizado para os tipos do Uburu;
-- `disposition`, a decisão de busca/indexação sobre a geração versionada;
-- `reusableBlob`, quando o conteúdo versionado pode ser reaproveitado por hash de blob.
+- `relativePath`, the current path that should appear in search;
+- `previousRelativePath`, when libgit2 identifies a rename or move;
+- `status`, the raw Git state normalized to Uburu types;
+- `disposition`, the search/indexing decision for the versioned generation;
+- `reusableBlob`, when versioned content can be reused by blob hash.
 
-As disposições iniciais são:
+Initial dispositions are:
 
-- `useIndexedContent`: o documento versionado continua válido;
-- `replaceWithWorkingTree`: a worktree substitui o conteúdo versionado;
-- `addWorkingTreeFile`: arquivo novo deve entrar como overlay local;
-- `hideIndexedContent`: arquivo deletado localmente não deve aparecer como resultado obsoleto;
-- `conflict`: arquivo em conflito deve ser tratado de forma conservadora.
+- `useIndexedContent`: the versioned document remains valid;
+- `replaceWithWorkingTree`: the working tree replaces versioned content;
+- `addWorkingTreeFile`: a new file should enter as local overlay;
+- `hideIndexedContent`: a locally deleted file should not appear as a stale result;
+- `conflict`: a conflicted file should be handled conservatively.
 
-Renames e moves não são tratados como exclusão seguida de adição quando libgit2 fornece o caminho
-anterior. O overlay preserva `previousRelativePath` e tenta resolver `reusableBlob` no caminho antigo,
-permitindo que o futuro índice reutilize documentos por blob hash em vez de reler conteúdo já conhecido.
+Renames and moves are not treated as deletion followed by addition when libgit2 provides the previous path. The overlay preserves `previousRelativePath` and tries to resolve `reusableBlob` on the old path, allowing the future index to reuse documents by blob hash instead of rereading known content.
 
-## Fronteiras de repositório
+## Repository boundaries
 
-`GitService::repositoryBoundary()` diferencia três casos:
+`GitService::repositoryBoundary()` differentiates three cases:
 
-- `none`: o caminho pertence normalmente à worktree atual;
-- `submodule`: o caminho é registrado como submodule do repositório atual;
-- `nestedRepository`: o caminho contém um `.git` próprio, mas não é submodule registrado.
+- `none`: the path belongs normally to the current worktree;
+- `submodule`: the path is registered as a submodule of the current repository;
+- `nestedRepository`: the path contains its own `.git`, but is not a registered submodule.
 
-Submodules e repositórios aninhados são fronteiras explícitas. O scanner e o índice podem oferecer uma
-política para ignorar, atravessar conscientemente ou indexar como outro escopo, mas não devem entrar
-nesses repositórios por acidente como se fossem diretórios comuns.
+Submodules and nested repositories are explicit boundaries. The scanner and index may offer a policy to ignore them, traverse them deliberately, or index them as another scope, but they must not enter those repositories by accident as if they were regular directories.
 
-## Worktrees indisponíveis
+## Unavailable worktrees
 
-`WorktreeInfo` representa também worktrees linked bloqueadas ou prunable. Uma worktree bloqueada expõe
-`locked` e `lockReason`; uma worktree removida fisicamente, mas ainda registrada pelo Git, expõe
-`prunable`. O índice deve tratar esses estados como metadados estruturais: não apagar histórico nem cache
-imediatamente, mas também não presumir que a árvore física pode ser escaneada.
+`WorktreeInfo` also represents locked or prunable linked worktrees. A locked worktree exposes `locked` and `lockReason`; a physically removed worktree that is still registered by Git exposes `prunable`. The index should treat these states as structural metadata: it should not immediately erase history or cache, but it also should not assume that the physical tree can be scanned.
 
-## Algoritmo de hash Git
+## Git hash algorithm
 
-Hashes de objetos Git são representados por `GitObjectId`, que carrega o algoritmo (`sha1`, `sha256` ou
-`unknown`) junto com o valor textual. O libgit2 atualmente valida o caminho SHA-1 nos testes e o contrato
-já está preparado para repositórios SHA-256 quando o ambiente e as dependências expuserem esse modo.
+Git object hashes are represented by `GitObjectId`, which carries the algorithm (`sha1`, `sha256`, or `unknown`) together with the textual value. libgit2 currently validates the SHA-1 path in tests, and the contract is already prepared for SHA-256 repositories when the environment and dependencies expose that mode.

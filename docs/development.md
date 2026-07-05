@@ -1,14 +1,12 @@
-# Desenvolvimento
+# Development
 
-Este documento registra as regras operacionais do repositório. Ele complementa o `AGENTS.md`, que
-define a visão técnica e as normas de implementação.
+This document records the repository's operational rules. It complements `AGENTS.md`, which defines the technical vision and implementation standards.
 
-## Branch principal
+## Main branch
 
-A branch principal do projeto é `main`.
+The project's main branch is `main`.
 
-Trabalhos maiores devem acontecer em branches curtas e descritivas, preferencialmente com o prefixo
-da área afetada:
+Larger work should happen in short, descriptive branches, preferably with a prefix for the affected area:
 
 - `build/...`
 - `search/...`
@@ -16,16 +14,15 @@ da área afetada:
 - `docs/...`
 - `git/...`
 
-## Política de commits
+## Commit policy
 
-Use commits pequenos, revisáveis e orientados a uma intenção clara. A mensagem deve seguir este
-formato:
+Use small, reviewable commits oriented around a clear intent. The message should follow this format:
 
 ```txt
-tipo(escopo): resumo imperativo curto
+type(scope): short imperative summary
 ```
 
-Exemplos:
+Examples:
 
 ```txt
 feat(search): add deterministic direct search ordering
@@ -33,19 +30,19 @@ build: add reproducible CMake presets
 docs: document direct search semantics
 ```
 
-Tipos recomendados:
+Recommended types:
 
-- `feat`: comportamento novo.
-- `fix`: correção de bug.
-- `test`: testes.
-- `docs`: documentação.
-- `build`: CMake, vcpkg, scripts, CI e tooling.
-- `refactor`: mudança interna sem comportamento novo.
-- `chore`: manutenção sem impacto funcional direto.
+- `feat`: new behavior.
+- `fix`: bug fix.
+- `test`: tests.
+- `docs`: documentation.
+- `build`: CMake, vcpkg, scripts, CI, and tooling.
+- `refactor`: internal change without new behavior.
+- `chore`: maintenance without direct functional impact.
 
-## Antes de commitar
+## Before committing
 
-Para o fluxo Windows/MSVC validado:
+For the validated Windows/MSVC flow:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
@@ -54,13 +51,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format-check
 ```
 
-Quando a alteração tocar código C++, rode `format` antes do `format-check`:
+When a change touches C++ code, run `format` before `format-check`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command format
 ```
 
-Para validar o core com a mesma régua inicial de CI:
+To validate the core with the same initial CI bar:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-msvc-werror-debug
@@ -68,20 +65,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-msvc-werror-debug
 ```
 
-No Linux, rode também `core-linux-sanitize-debug` antes de mudanças sensíveis em parsing, regex,
-filesystem, concorrência ou armazenamento.
+On Linux, also run `core-linux-sanitize-debug` before sensitive changes in parsing, regex, filesystem, concurrency, or storage.
 
-## O que não commitar
+## What not to commit
 
-Não commite:
+Do not commit:
 
-- diretórios `build/`, `build-*`, `dist/` ou `out/`;
+- `build/`, `build-*`, `dist/`, or `out/` directories;
 - `.env`;
 - `CMakeUserPresets.json`;
-- bancos locais, logs ou artefatos gerados;
-- dependências vendorizadas sem decisão explícita.
+- local databases, logs, or generated artifacts;
+- vendored dependencies without an explicit decision.
 
-## Relação com o TODO
+## Relationship with TODO
 
-O `TODO.md` é o plano operacional do projeto. Quando uma mudança concluir um item do TODO, marque o
-item na mesma alteração e valide conforme o critério descrito no próprio arquivo.
+`TODO.md` is the project's operational plan. When a change completes a TODO item, mark that item in the same change and validate according to the criteria described in the file itself.

@@ -1,55 +1,52 @@
-# Licenças e redistribuição
+# Licenses and redistribution
 
-Este documento registra a política inicial de licenças do Uburu. Ele não substitui revisão jurídica
-antes de distribuir builds públicos, mas evita que o projeto trate licenças como uma surpresa tardia.
+This document records Uburu's initial licensing policy. It does not replace legal review before public builds are distributed, but it prevents the project from treating licenses as a late surprise.
 
-## Licença do projeto
+## Project license
 
-O código próprio do Uburu é distribuído sob a licença MIT, conforme o arquivo `LICENSE` na raiz do
-repositório.
+Uburu's own code is distributed under the MIT license, as stated in the root `LICENSE` file.
 
-## Dependências principais
+## Main dependencies
 
-| Dependência | Uso no projeto | Observação inicial |
+| Dependency | Project use | Initial note |
 | --- | --- | --- |
-| Qt 6 | Interface desktop Qt Quick/QML | Verificar módulos usados e modo de licenciamento antes de distribuir. |
-| Catch2 | Testes automatizados | Dependência de desenvolvimento. |
-| SQLite | Persistência local | Pode ser fornecido pelo sistema ou vcpkg. |
-| PCRE2 | Regex com JIT quando disponível | Deve permanecer opcional no core. |
-| libgit2 | Integração Git futura | Deve permanecer atrás de adapter explícito. |
+| Qt 6 | Qt Quick/QML desktop interface | Verify used modules and licensing mode before distribution. |
+| Catch2 | Automated tests | Development dependency. |
+| SQLite | Local persistence | May be provided by the system or vcpkg. |
+| PCRE2 | Regex with JIT when available | Must remain optional in the core. |
+| libgit2 | Git integration | Must remain behind an explicit adapter. |
 
 ## Qt
 
-O Qt é disponibilizado com opções comerciais e open source. A documentação oficial do Qt informa que:
+Qt is available under commercial and open-source options. The official Qt documentation states that:
 
-- licenças comerciais são indicadas quando o projeto não quer ou não pode cumprir os termos da
-  LGPL/GPL;
-- Qt sob LGPLv3 pode ser apropriado quando todos os requisitos da LGPLv3 forem cumpridos;
-- alguns módulos Qt open source são GPL-only e exigem cuidado especial;
-- Qt inclui código de terceiros com licenças próprias;
-- Qt 6.8+ publica SBOMs para componentes de terceiros.
+- commercial licenses are appropriate when the project does not want to, or cannot, comply with LGPL/GPL terms;
+- Qt under LGPLv3 can be appropriate when all LGPLv3 requirements are met;
+- some open-source Qt modules are GPL-only and require special care;
+- Qt includes third-party code with its own licenses;
+- Qt 6.8+ publishes SBOMs for third-party components.
 
-Política inicial do Uburu:
+Uburu's initial policy:
 
-1. Usar apenas módulos Qt necessários à aplicação desktop.
-2. Evitar módulos GPL-only salvo decisão explícita.
-3. Preferir ligação dinâmica com Qt nas builds redistribuíveis.
-4. Distribuir avisos de licença e textos exigidos junto dos artefatos.
-5. Registrar a versão do Qt e os módulos empacotados em cada release.
-6. Revisar obrigações de LGPL/comercial antes de publicar instaladores.
+1. Use only the Qt modules required by the desktop application.
+2. Avoid GPL-only modules unless explicitly decided.
+3. Prefer dynamic linking with Qt in redistributable builds.
+4. Distribute required license notices and texts with artifacts.
+5. Record the Qt version and packaged modules in each release.
+6. Review LGPL/commercial obligations before publishing installers.
 
-Fontes oficiais:
+Official sources:
 
 - https://doc.qt.io/qt-6/licensing.html
 - https://www.qt.io/development/open-source-lgpl-obligations
 
-## Checklist para releases
+## Release checklist
 
-Antes de publicar um release:
+Before publishing a release:
 
-- gerar lista de DLLs/bibliotecas empacotadas;
-- registrar versões e licenças das dependências;
-- incluir textos de licença exigidos por Qt e demais dependências;
-- revisar se algum módulo Qt usado é GPL-only;
-- gerar SBOM quando o pipeline de release estiver disponível;
-- validar se o modo de distribuição permite cumprir LGPLv3 ou usar licença comercial.
+- generate a list of packaged DLLs/libraries;
+- record dependency versions and licenses;
+- include license texts required by Qt and other dependencies;
+- review whether any used Qt module is GPL-only;
+- generate an SBOM when the release pipeline is available;
+- validate whether the distribution mode can comply with LGPLv3 or requires a commercial license.

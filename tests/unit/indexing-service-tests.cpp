@@ -234,8 +234,10 @@ TEST_CASE("default indexing service scans files and passes git overlay to the in
   scanner->files.push_back(fileEntry(worktree, "src/main.cpp"));
   gitService->overlay.push_back(uburu::GitOverlayEntry{
     .relativePath = "src/main.cpp",
+    .previousRelativePath = {},
     .status = uburu::GitFileStatus::modified,
     .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree,
+    .reusableBlob = {},
   });
 
   uburu::app::DefaultIndexingService service(scanner, gitService, indexService);

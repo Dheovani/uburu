@@ -44,8 +44,10 @@ TEST_CASE("index overlay marks scanned modified files as working tree candidates
   };
   const std::vector overlay{
     uburu::GitOverlayEntry{.relativePath = "src/modified.cpp",
+                           .previousRelativePath = {},
                            .status = uburu::GitFileStatus::modified,
-                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree},
+                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree,
+                           .reusableBlob = {}},
   };
 
   const auto plan = uburu::index::buildOverlayIndexCandidates(worktree, scannedFiles, overlay);
@@ -64,8 +66,10 @@ TEST_CASE("index overlay creates tombstones for deleted indexed paths")
   const std::vector<uburu::FileEntry> scannedFiles;
   const std::vector overlay{
     uburu::GitOverlayEntry{.relativePath = "src/deleted.cpp",
+                           .previousRelativePath = {},
                            .status = uburu::GitFileStatus::deleted,
-                           .disposition = uburu::GitOverlayDisposition::hideIndexedContent},
+                           .disposition = uburu::GitOverlayDisposition::hideIndexedContent,
+                           .reusableBlob = {}},
   };
 
   const auto plan = uburu::index::buildOverlayIndexCandidates(worktree, scannedFiles, overlay);
@@ -114,8 +118,10 @@ TEST_CASE("index overlay reports missing working tree files without fabricating 
   const std::vector<uburu::FileEntry> scannedFiles;
   const std::vector overlay{
     uburu::GitOverlayEntry{.relativePath = "src/missing.cpp",
+                           .previousRelativePath = {},
                            .status = uburu::GitFileStatus::modified,
-                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree},
+                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree,
+                           .reusableBlob = {}},
   };
 
   const auto plan = uburu::index::buildOverlayIndexCandidates(worktree, scannedFiles, overlay);

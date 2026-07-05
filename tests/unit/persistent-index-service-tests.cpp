@@ -235,7 +235,7 @@ TEST_CASE("persistent index service reindexes git modified files even when size 
   const std::vector modifiedCandidates{
     uburu::index::IndexFileCandidate{
       .file = modifiedFile,
-      .metadata = uburu::index::IndexFileMetadata{.status = uburu::GitFileStatus::modified},
+      .metadata = uburu::index::IndexFileMetadata{.status = uburu::GitFileStatus::modified, .gitBlob = {}},
     },
   };
 
@@ -281,7 +281,7 @@ TEST_CASE("persistent index service publishes deleted git overlay tombstones")
   const std::vector deletedCandidates{
     uburu::index::IndexFileCandidate{
       .file = trackedFile,
-      .metadata = uburu::index::IndexFileMetadata{.status = uburu::GitFileStatus::deleted},
+      .metadata = uburu::index::IndexFileMetadata{.status = uburu::GitFileStatus::deleted, .gitBlob = {}},
     },
   };
 
@@ -333,7 +333,8 @@ TEST_CASE("persistent index service updates from scanned files and git overlay e
     uburu::GitOverlayEntry{.relativePath = "src/current.cpp",
                            .previousRelativePath = std::filesystem::path("src/previous.cpp"),
                            .status = uburu::GitFileStatus::modified,
-                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree},
+                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree,
+                           .reusableBlob = {}},
   };
 
   const auto overlaySummary = indexService.update(worktreeInfo(root), scannedFiles, overlay);
@@ -386,12 +387,13 @@ TEST_CASE("persistent index search hides deleted paths and returns modified repl
     uburu::GitOverlayEntry{.relativePath = "src/current.cpp",
                            .previousRelativePath = std::filesystem::path("src/previous.cpp"),
                            .status = uburu::GitFileStatus::modified,
-                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree},
+                           .disposition = uburu::GitOverlayDisposition::replaceWithWorkingTree,
+                           .reusableBlob = {}},
   };
 
   const auto overlaySummary = indexService.update(worktreeInfo(root), scannedFiles, overlay);
 
-  uburu::SearchQuery query{.root = root, .expression = "cpp", .options = {}};
+  uburu::SearchQuery query{.root = root, .scope = {}, .expression = "cpp", .options = {}};
   query.options.target = uburu::SearchTarget::fileName;
 
   const auto results = indexService.search(query);
@@ -428,7 +430,7 @@ TEST_CASE("persistent index search returns indexed content matches")
 
   const auto summary = indexService.update(worktreeInfo(root), files);
 
-  uburu::SearchQuery query{.root = root, .expression = "needle", .options = {}};
+  uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
   const auto results = indexService.search(query);

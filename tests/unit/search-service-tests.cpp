@@ -285,7 +285,7 @@ TEST_CASE("default search service validates hybrid queries before consulting sou
   auto indexService = std::make_shared<FakeIndexService>();
   const uburu::app::DefaultSearchService service(directEngine, indexService);
 
-  uburu::SearchQuery query{.root = "missing-root", .expression = "needle", .options = {}};
+  uburu::SearchQuery query{.root = "missing-root", .scope = {}, .expression = "needle", .options = {}};
   const auto summary = service.search(query, [](uburu::SearchResult) { return true; });
 
   CHECK_FALSE(summary.errors.empty());
@@ -389,7 +389,7 @@ TEST_CASE("default search service emits failed events for invalid hybrid queries
   const uburu::app::DefaultSearchService service(
     directEngine, indexService, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::hybrid});
 
-  uburu::SearchQuery query{.root = "missing-root", .expression = "needle", .options = {}};
+  uburu::SearchQuery query{.root = "missing-root", .scope = {}, .expression = "needle", .options = {}};
   const auto summary = service.searchWithEvents(
     query,
     [&](const uburu::app::SearchEventDto& event) {

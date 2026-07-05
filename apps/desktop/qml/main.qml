@@ -380,6 +380,8 @@ ApplicationWindow {
             recentSearches: root.recentSearches
             savedSearches: root.savedSearches
             selectedDirectories: searchController.selectedDirectories
+            includedDirectories: searchController.includedDirectories
+            excludedDirectories: searchController.excludedDirectories
             recentDirectories: searchController.recentDirectories
             favoriteDirectories: searchController.favoriteDirectories
             currentSearchSaved: root.isSearchSaved(queryText)

@@ -47,8 +47,51 @@ Item {
         return root.favoriteDirectories.indexOf(path) !== -1
     }
 
+    function scopeFilterText(entries, prefix) {
+        const paths = []
+
+        for (const entry of entries) {
+            if (entry.scopeRoot !== root.directory)
+                continue
+
+            paths.push(prefix + entry.absolutePath)
+        }
+
+        return paths
+    }
+
+    function scopeDisplayText() {
+        if (root.directory.length === 0)
+            return ""
+
+        const scopedPaths = scopeFilterText(root.includedDirectories, "+")
+                            .concat(scopeFilterText(root.excludedDirectories, "-"))
+
+        if (scopedPaths.length === 0)
+            return root.directory
+
+        return root.directory + " (" + scopedPaths.join(",") + ")"
+    }
+
+    function editableScopePath(text) {
+        const normalizedText = text.trim()
+        const generatedText = root.scopeDisplayText()
+
+        if (generatedText.length > 0 && normalizedText === generatedText)
+            return root.directory
+
+        if (root.directory.length > 0 && normalizedText.startsWith(root.directory + " ("))
+            return root.directory
+
+        return normalizedText
+    }
+
+    function refreshScopeText() {
+        scopeField.text = root.scopeDisplayText()
+    }
+
     function acceptScopeText() {
-        const path = scopeField.text.trim()
+        const path = root.editableScopePath(scopeField.text)
 
         if (path.length === 0)
             return
@@ -63,7 +106,9 @@ Item {
         root.selectDirectory(path)
     }
 
-    onDirectoryChanged: scopeField.text = root.directory
+    onDirectoryChanged: root.refreshScopeText()
+    onIncludedDirectoriesChanged: root.refreshScopeText()
+    onExcludedDirectoriesChanged: root.refreshScopeText()
 
     RowLayout {
         anchors.fill: parent
@@ -71,6 +116,7 @@ Item {
 
         MutedLabel {
             text: qsTr("Escopo")
+            width: 60
         }
 
         InfoIcon {
@@ -82,7 +128,7 @@ Item {
 
             Layout.fillWidth: true
             Layout.preferredHeight: 34
-            text: root.directory
+            text: root.scopeDisplayText()
             placeholderText: qsTr("Escolha ou digite um escopo")
             verticalAlignment: TextInput.AlignVCenter
             selectByMouse: true
@@ -222,7 +268,7 @@ Item {
 
     }
 
-    Component.onCompleted: scopeField.text = root.directory
+    Component.onCompleted: root.refreshScopeText()
 
     component ScopeDropdownRow: Rectangle {
         id: scopeRow

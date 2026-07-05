@@ -1,10 +1,12 @@
+﻿pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
 import "../theme"
 
-Rectangle {
+Item {
     id: root
 
     property string directory: ""
@@ -15,30 +17,22 @@ Rectangle {
     property var favoriteDirectories: []
     property bool currentDirectoryFavorite: false
     property bool hasSavedScopes: recentDirectories.length > 0 || favoriteDirectories.length > 0
-    property bool hasSelectedScopes: selectedDirectories.length > 0
-    property bool hasIncludedScopes: includedDirectories.length > 0
-    property bool hasExcludedScopes: excludedDirectories.length > 0
 
     signal selectDirectory(string path)
+    signal browseDirectory()
     signal removeDirectory(string path)
     signal addIncludedDirectory()
     signal removeIncludedDirectory(string root, string relativePath)
     signal addExcludedDirectory()
     signal removeExcludedDirectory(string root, string relativePath)
     signal toggleCurrentFavorite()
+    signal toggleFavorite(string path)
 
     Layout.fillWidth: true
-    Layout.preferredHeight: implicitHeight
-
-    implicitHeight: contentColumn.implicitHeight + 16
-
-    radius: Theme.radius
-    color: Theme.surface
-    border.color: Theme.border
-    border.width: 1
+    Layout.preferredHeight: 40
 
     function shortPath(path) {
-        if (path.length <= 42)
+        if (path.length <= 78)
             return path
 
         const parts = path.replace(/\\/g, "/").split("/")
@@ -46,527 +40,426 @@ Rectangle {
         if (parts.length <= 2)
             return path
 
-        return parts[0] + "/…/" + parts[parts.length - 1]
+        return parts[0] + "/.../" + parts[parts.length - 1]
     }
 
-    function scopeEntryRoot(entry) {
-        return entry && entry.scopeRoot ? entry.scopeRoot : ""
+    function isFavorite(path) {
+        return root.favoriteDirectories.indexOf(path) !== -1
     }
 
-    function scopeEntryRelativePath(entry) {
-        return entry && entry.relativePath ? entry.relativePath : ""
+    function acceptScopeText() {
+        const path = scopeField.text.trim()
+
+        if (path.length === 0)
+            return
+
+        scopePopup.close()
+        root.selectDirectory(path)
     }
 
-    function scopeEntryDisplayPath(entry) {
-        const absolutePath = entry && entry.absolutePath ? entry.absolutePath : ""
-
-        if (absolutePath.length > 0)
-            return absolutePath
-
-        return root.scopeEntryRelativePath(entry)
+    function useScope(path) {
+        scopeField.text = path
+        scopePopup.close()
+        root.selectDirectory(path)
     }
 
-    ColumnLayout {
-        id: contentColumn
+    onDirectoryChanged: scopeField.text = root.directory
 
+    RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
-        anchors.topMargin: 8
-        anchors.bottomMargin: 8
-        spacing: 8
+        spacing: 10
 
-        RowLayout {
+        MutedLabel {
+            text: qsTr("Escopo")
+        }
+
+        InfoIcon {
+            text: qsTr("Define a pasta usada na busca. Digite um caminho, pressione Enter ou escolha favoritos e recentes.")
+        }
+
+        TextField {
+            id: scopeField
+
             Layout.fillWidth: true
-            spacing: 10
-
-            Label {
-                text: qsTr("Escopo")
-                color: Theme.textMuted
-                font.pixelSize: Theme.fontSizeTiny
-                font.bold: true
+            Layout.preferredHeight: 34
+            text: root.directory
+            placeholderText: qsTr("Escolha ou digite um escopo")
+            verticalAlignment: TextInput.AlignVCenter
+            selectByMouse: true
+            color: Theme.text
+            placeholderTextColor: Theme.textMuted
+            selectionColor: Theme.primary
+            selectedTextColor: "white"
+            font.pixelSize: Theme.fontSizeSmall
+            leftPadding: 12
+            rightPadding: 126
+            Accessible.name: qsTr("Escopo de busca")
+            Accessible.description: qsTr("Digite um caminho ou escolha uma pasta recente ou favorita.")
+            onAccepted: root.acceptScopeText()
+            onActiveFocusChanged: {
+                if (activeFocus)
+                    scopePopup.open()
             }
+            onPressed: scopePopup.open()
 
-            InfoIcon {
-                text: qsTr("Define as pastas usadas na busca. Favoritos e recentes ajudam a alternar escopos.")
-            }
-
-            Label {
-                Layout.fillWidth: true
-                text: root.selectedDirectories.length > 1
-                      ? qsTr("%1 diretórios selecionados").arg(root.selectedDirectories.length)
-                      : root.directory.length > 0
-                        ? root.directory
-                        : qsTr("Nenhum diretório selecionado")
-                color: root.hasSelectedScopes ? Theme.text : Theme.textMuted
-                font.pixelSize: Theme.fontSizeSmall
-                elide: Text.ElideLeft
-            }
-
-            Rectangle {
-                Layout.preferredHeight: 24
-                Layout.preferredWidth: favoriteLabel.implicitWidth + 20
-                radius: 12
-                color: favoriteMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
-                border.color: root.currentDirectoryFavorite ? Theme.warning : Theme.border
+            background: Rectangle {
+                radius: Theme.radius
+                color: Theme.surfaceSunken
+                border.color: scopeField.activeFocus || scopePopup.opened ? Theme.primary : Theme.border
                 border.width: 1
-                visible: root.directory.length > 0
-                Accessible.role: Accessible.Button
-                Accessible.name: root.currentDirectoryFavorite ? qsTr("Remover favorito") : qsTr("Adicionar favorito")
-                Accessible.description: root.directory
-
-                Text {
-                    id: favoriteLabel
-
-                    anchors.centerIn: parent
-                    text: root.currentDirectoryFavorite ? qsTr("★ Favorito") : qsTr("☆ Favoritar")
-                    color: root.currentDirectoryFavorite ? Theme.warning : Theme.textMuted
-                    font.pixelSize: Theme.fontSizeTiny
-                    font.bold: true
-                }
-
-                HoverHandler {
-                    cursorShape: Qt.PointingHandCursor
-                }
-
-                ToolTip.visible: favoriteMouseArea.containsMouse
-                ToolTip.delay: 450
-                ToolTip.timeout: 7000
-                ToolTip.text: root.currentDirectoryFavorite
-                              ? qsTr("Remover este diretório dos favoritos.")
-                              : qsTr("Adicionar este diretório aos favoritos.")
-
-                MouseArea {
-                    id: favoriteMouseArea
-
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: root.toggleCurrentFavorite()
-                }
             }
 
-            Rectangle {
-                Layout.preferredHeight: 24
-                Layout.preferredWidth: includeLabel.implicitWidth + 20
-                radius: 12
-                color: includeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
-                border.color: Theme.border
-                border.width: 1
-                visible: root.hasSelectedScopes
-                Accessible.role: Accessible.Button
-                Accessible.name: qsTr("Incluir subpasta")
 
-                Text {
-                    id: includeLabel
+            Row {
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
 
-                    anchors.centerIn: parent
-                    text: qsTr("Incluir")
-                    color: Theme.textMuted
-                    font.pixelSize: Theme.fontSizeTiny
-                    font.bold: true
+                InlineScopeButton {
+                    icon: "folder"
+                    toolTipText: qsTr("Selecionar pasta")
+                    onClicked: root.browseDirectory()
                 }
 
-                HoverHandler {
-                    cursorShape: Qt.PointingHandCursor
-                }
-
-                ToolTip.visible: includeMouseArea.containsMouse
-                ToolTip.delay: 450
-                ToolTip.timeout: 7000
-                ToolTip.text: qsTr("Escolha uma subpasta de um escopo selecionado para pesquisar apenas nela.")
-
-                MouseArea {
-                    id: includeMouseArea
-
-                    anchors.fill: parent
-                    hoverEnabled: true
+                InlineScopeButton {
+                    icon: "include"
+                    enabled: root.directory.length > 0
+                    toolTipText: qsTr("Incluir subpasta")
                     onClicked: root.addIncludedDirectory()
                 }
-            }
 
-            Rectangle {
-                Layout.preferredHeight: 24
-                Layout.preferredWidth: excludeLabel.implicitWidth + 20
-                radius: 12
-                color: excludeMouseArea.containsMouse ? Theme.surfaceRaised : Theme.surfaceSunken
-                border.color: Theme.border
-                border.width: 1
-                visible: root.hasSelectedScopes
-                Accessible.role: Accessible.Button
-                Accessible.name: qsTr("Ignorar subpasta")
-
-                Text {
-                    id: excludeLabel
-
-                    anchors.centerIn: parent
-                    text: qsTr("Ignorar")
-                    color: Theme.textMuted
-                    font.pixelSize: Theme.fontSizeTiny
-                    font.bold: true
-                }
-
-                HoverHandler {
-                    cursorShape: Qt.PointingHandCursor
-                }
-
-                ToolTip.visible: excludeMouseArea.containsMouse
-                ToolTip.delay: 450
-                ToolTip.timeout: 7000
-                ToolTip.text: qsTr("Escolha uma subpasta de um escopo selecionado para ignorar.")
-
-                MouseArea {
-                    id: excludeMouseArea
-
-                    anchors.fill: parent
-                    hoverEnabled: true
+                InlineScopeButton {
+                    icon: "ignore"
+                    enabled: root.directory.length > 0
+                    toolTipText: qsTr("Ignorar subpasta")
                     onClicked: root.addExcludedDirectory()
                 }
-            }
-        }
 
-        RowLayout {
-            Layout.fillWidth: true
-            visible: root.hasSelectedScopes
-            spacing: 12
-
-            Label {
-                text: qsTr("Selecionados")
-                color: Theme.textMuted
-                font.pixelSize: Theme.fontSizeTiny
-                font.bold: true
+                InlineScopeButton {
+                    icon: scopePopup.opened ? "chevronUp" : "chevronDown"
+                    toolTipText: scopePopup.opened ? qsTr("Fechar escopos") : qsTr("Mostrar escopos")
+                    onClicked: scopePopup.opened ? scopePopup.close() : scopePopup.open()
+                }
             }
 
-            Flickable {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 28
-                contentWidth: selectedChipsRow.implicitWidth
-                contentHeight: height
-                clip: true
-                Accessible.role: Accessible.List
-                Accessible.name: qsTr("Diretórios selecionados")
+            Popup {
+                id: scopePopup
 
-                Row {
-                    id: selectedChipsRow
+                x: 0
+                y: scopeField.height + 6
+                width: scopeField.width
+                padding: 8
+                modal: false
+                focus: false
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
-                    spacing: 6
-                    height: parent.height
+                background: Rectangle {
+                    radius: Theme.radius
+                    color: Theme.surface
+                    border.color: Theme.border
+                    border.width: 1
+                }
+
+                contentItem: Column {
+                    spacing: 8
+
+                    MutedLabel {
+                        text: qsTr("Favoritos")
+                        visible: root.favoriteDirectories.length > 0
+                    }
 
                     Repeater {
-                        model: root.selectedDirectories
+                        model: root.favoriteDirectories
 
-                        delegate: Rectangle {
-                            height: 26
-                            width: Math.min(
-                                260,
-                                selectedScopeText.implicitWidth + removeSelectedScopeText.implicitWidth + 28
-                            )
-                            radius: 13
-                            color: selectedScopeMouseArea.containsMouse
-                                   ? Theme.surfaceRaised
-                                   : Theme.surfaceSunken
-                            border.color: modelData === root.directory ? Theme.primary : Theme.border
-                            border.width: 1
-                            Accessible.role: Accessible.Button
-                            Accessible.name: qsTr("Remover diretório selecionado: %1").arg(modelData)
+                        delegate: ScopeDropdownRow {
+                            required property string modelData
 
-                            Row {
-                                anchors.centerIn: parent
-                                spacing: 6
-
-                                Text {
-                                    id: selectedScopeText
-
-                                    width: Math.min(210, implicitWidth)
-                                    text: root.shortPath(modelData)
-                                    color: Theme.text
-                                    font.pixelSize: Theme.fontSizeTiny
-                                    elide: Text.ElideLeft
-                                }
-
-                                Text {
-                                    id: removeSelectedScopeText
-
-                                    text: qsTr("Remover")
-                                    color: Theme.textMuted
-                                    font.pixelSize: Theme.fontSizeTiny
-                                }
-                            }
-
-                            HoverHandler {
-                                cursorShape: Qt.PointingHandCursor
-                            }
-
-                            MouseArea {
-                                id: selectedScopeMouseArea
-
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                onClicked: root.removeDirectory(modelData)
-                            }
+                            width: scopePopup.contentItem.width
+                            path: modelData
+                            favorite: root.isFavorite(modelData)
+                            onSelected: root.useScope(modelData)
+                            onFavoriteToggled: root.toggleFavorite(modelData)
                         }
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 1
+                        color: Theme.border
+                        visible: root.favoriteDirectories.length > 0 && root.recentDirectories.length > 0
+                    }
+
+                    MutedLabel {
+                        text: qsTr("Recentes")
+                        visible: root.recentDirectories.length > 0
+                    }
+
+                    Repeater {
+                        model: root.recentDirectories
+
+                        delegate: ScopeDropdownRow {
+                            required property string modelData
+
+                            width: scopePopup.contentItem.width
+                            path: modelData
+                            favorite: root.isFavorite(modelData)
+                            onSelected: root.useScope(modelData)
+                            onFavoriteToggled: root.toggleFavorite(modelData)
+                        }
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Nenhum escopo recente ou favorito")
+                        color: Theme.textMuted
+                        font.pixelSize: Theme.fontSizeSmall
+                        visible: !root.hasSavedScopes
                     }
                 }
             }
         }
 
-        GridLayout {
-            Layout.fillWidth: true
-            visible: root.hasIncludedScopes
-                    || root.hasExcludedScopes
-                    || root.hasSavedScopes
+    }
 
-            columns: 2
-            columnSpacing: 12
-            rowSpacing: 8
+    Component.onCompleted: scopeField.text = root.directory
 
-            ScopeChipRow {
-                Layout.fillWidth: true
-                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
-                visible: root.hasIncludedScopes
+    component ScopeDropdownRow: Rectangle {
+        id: scopeRow
 
-                title: qsTr("Incluídos")
-                emptyText: qsTr("Nenhuma subpasta incluída")
-                entries: root.includedDirectories
-                removeAccessibleTemplate: qsTr("Remover subpasta incluída: %1")
-                onRemoveRequested: (scopeRoot, relativePath) =>
-                    root.removeIncludedDirectory(scopeRoot, relativePath)
+        property string path: ""
+        property bool favorite: false
+
+        signal selected()
+        signal favoriteToggled()
+
+        height: 36
+        radius: 10
+        color: rowMouseArea.containsMouse ? Theme.surfaceRaised : "transparent"
+        border.color: "transparent"
+        border.width: 1
+        Accessible.role: Accessible.Button
+        Accessible.name: path
+
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.right: favoriteButton.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.shortPath(scopeRow.path)
+            color: Theme.text
+            font.pixelSize: Theme.fontSizeSmall
+            elide: Text.ElideLeft
+        }
+
+        Rectangle {
+            id: favoriteButton
+
+            anchors.right: parent.right
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            width: 28
+            height: 28
+            radius: 14
+            color: favoriteMouseArea.containsMouse ? Theme.surfaceSunken : "transparent"
+            Accessible.role: Accessible.Button
+            Accessible.name: scopeRow.favorite ? qsTr("Remover favorito") : qsTr("Adicionar favorito")
+
+            Canvas {
+                id: favoriteIcon
+
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                antialiasing: true
+
+                onPaint: {
+                    const context = getContext("2d")
+                    const centerX = width / 2
+                    const centerY = height / 2 + 0.5
+                    const outerRadius = 6.6
+                    const innerRadius = 2.8
+                    const pointCount = 5
+                    const startAngle = -Math.PI / 2
+
+                    context.clearRect(0, 0, width, height)
+                    context.beginPath()
+
+                    for (let point = 0; point < pointCount * 2; ++point) {
+                        const radius = point % 2 === 0 ? outerRadius : innerRadius
+                        const angle = startAngle + point * Math.PI / pointCount
+                        const x = centerX + Math.cos(angle) * radius
+                        const y = centerY + Math.sin(angle) * radius
+
+                        if (point === 0) {
+                            context.moveTo(x, y)
+                        } else {
+                            context.lineTo(x, y)
+                        }
+                    }
+
+                    context.closePath()
+                    context.lineJoin = "round"
+                    context.lineWidth = 1.6
+                    context.strokeStyle = scopeRow.favorite ? Theme.warning : Theme.textMuted
+                    context.fillStyle = scopeRow.favorite ? Theme.warning : "transparent"
+
+                    if (scopeRow.favorite) {
+                        context.fill()
+                    }
+
+                    context.stroke()
+                }
+
+                Connections {
+                    target: scopeRow
+
+                    function onFavoriteChanged() {
+                        favoriteIcon.requestPaint()
+                    }
+                }
             }
 
-            ScopeChipRow {
-                Layout.fillWidth: true
-                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
-                visible: root.hasExcludedScopes
-
-                title: qsTr("Ignorados")
-                emptyText: qsTr("Nenhuma subpasta ignorada")
-                entries: root.excludedDirectories
-                removeAccessibleTemplate: qsTr("Remover subpasta ignorada: %1")
-                onRemoveRequested: (scopeRoot, relativePath) =>
-                    root.removeExcludedDirectory(scopeRoot, relativePath)
+            HoverHandler {
+                cursorShape: Qt.PointingHandCursor
             }
 
-            SavedScopeRow {
-                Layout.fillWidth: true
-                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
-                visible: root.favoriteDirectories.length > 0
+            MouseArea {
+                id: favoriteMouseArea
 
-                title: qsTr("Favoritos")
-                directories: root.favoriteDirectories
-                emptyText: qsTr("Nenhum favorito")
-                onSelected: path => root.selectDirectory(path)
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: mouse => {
+                    mouse.accepted = true
+                    scopeRow.favoriteToggled()
+                }
             }
+        }
 
-            SavedScopeRow {
-                Layout.fillWidth: true
-                Layout.preferredWidth: (parent.width - parent.columnSpacing) / 2
-                visible: root.recentDirectories.length > 0
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
 
-                title: qsTr("Recentes")
-                directories: root.recentDirectories
-                emptyText: qsTr("Nenhum recente")
-                onSelected: path => root.selectDirectory(path)
-            }
+        MouseArea {
+            id: rowMouseArea
+
+            anchors.left: parent.left
+            anchors.right: favoriteButton.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            hoverEnabled: true
+            onClicked: scopeRow.selected()
         }
     }
 
-    component ScopeChipRow: ColumnLayout {
-        id: scopeChipRow
+    component InlineScopeButton: Rectangle {
+        id: inlineButton
 
-        Layout.fillWidth: true
-        Layout.alignment: Qt.AlignLeft
+        property string icon: ""
+        property string toolTipText: ""
 
-        property string title: ""
-        property string emptyText: ""
-        property string removeAccessibleTemplate: ""
-        property var entries: []
+        signal clicked()
 
-        signal removeRequested(string scopeRoot, string relativePath)
+        width: 28
+        height: 28
+        radius: 8
+        color: inlineMouseArea.containsMouse ? Theme.surfaceRaised : "transparent"
+        opacity: enabled ? 1.0 : 0.45
+        Accessible.role: Accessible.Button
+        Accessible.name: toolTipText
 
-        spacing: 4
+        Canvas {
+            id: iconCanvas
 
-        Label {
-            text: scopeChipRow.title
-            color: Theme.textMuted
-            font.pixelSize: Theme.fontSizeTiny
-            font.bold: true
-        }
+            anchors.centerIn: parent
+            width: 16
+            height: 16
+            antialiasing: true
 
-        Flickable {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 28
-            contentWidth: ignoredChipsRow.implicitWidth
-            contentHeight: height
-            clip: true
-            Accessible.role: Accessible.List
-            Accessible.name: scopeChipRow.title
+            onPaint: {
+                const context = getContext("2d")
+                const accent = inlineButton.enabled ? Theme.primary : Theme.textMuted
+                const muted = inlineButton.enabled ? Theme.textMuted : Theme.textFaint
 
-            Row {
-                id: ignoredChipsRow
+                context.clearRect(0, 0, width, height)
+                context.lineCap = "round"
+                context.lineJoin = "round"
+                context.lineWidth = 1.6
 
-                spacing: 6
-                height: parent.height
-
-                Repeater {
-                    model: scopeChipRow.entries
-
-                    delegate: Rectangle {
-                        required property var modelData
-
-                        height: 26
-                        width: Math.min(
-                            260,
-                            ignoredScopeText.implicitWidth + removeIgnoredScopeText.implicitWidth + 28
-                        )
-                        radius: 13
-                        color: ignoredScopeMouseArea.containsMouse
-                               ? Theme.surfaceRaised
-                               : Theme.surfaceSunken
-                        border.color: Theme.border
-                        border.width: 1
-                        Accessible.role: Accessible.Button
-                        Accessible.name: scopeChipRow.removeAccessibleTemplate.arg(
-                            root.scopeEntryDisplayPath(modelData)
-                        )
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-
-                            Text {
-                                id: ignoredScopeText
-
-                                width: Math.min(210, implicitWidth)
-                                text: root.shortPath(root.scopeEntryDisplayPath(modelData))
-                                color: Theme.text
-                                font.pixelSize: Theme.fontSizeTiny
-                                elide: Text.ElideLeft
-                            }
-
-                            Text {
-                                id: removeIgnoredScopeText
-
-                                text: qsTr("Remover")
-                                color: Theme.textMuted
-                                font.pixelSize: Theme.fontSizeTiny
-                            }
-                        }
-
-                        HoverHandler {
-                            cursorShape: Qt.PointingHandCursor
-                        }
-
-                        MouseArea {
-                            id: ignoredScopeMouseArea
-
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: scopeChipRow.removeRequested(
-                                root.scopeEntryRoot(modelData),
-                                root.scopeEntryRelativePath(modelData)
-                            )
-                        }
-                    }
+                if (inlineButton.icon === "folder") {
+                    context.strokeStyle = accent
+                    context.beginPath()
+                    context.moveTo(1.5, 5.5)
+                    context.lineTo(6.0, 5.5)
+                    context.lineTo(7.4, 7.0)
+                    context.lineTo(14.5, 7.0)
+                    context.lineTo(13.4, 13.0)
+                    context.lineTo(2.5, 13.0)
+                    context.closePath()
+                    context.stroke()
+                    return
                 }
 
-                Text {
-                    height: parent.height
-                    text: scopeChipRow.emptyText
-                    color: Theme.textFaint
-                    font.pixelSize: Theme.fontSizeTiny
-                    verticalAlignment: Text.AlignVCenter
-                    visible: scopeChipRow.entries.length === 0
+                if (inlineButton.icon === "include" || inlineButton.icon === "ignore") {
+                    context.strokeStyle = muted
+                    context.strokeRect(2.0, 3.0, 12.0, 10.0)
+                    context.strokeStyle = inlineButton.icon === "include" ? Theme.primary : Theme.warning
+                    context.beginPath()
+                    context.moveTo(5.0, 8.0)
+                    context.lineTo(11.0, 8.0)
+                    if (inlineButton.icon === "include") {
+                        context.moveTo(8.0, 5.0)
+                        context.lineTo(8.0, 11.0)
+                    }
+                    context.stroke()
+                    return
+                }
+
+                context.strokeStyle = muted
+                context.beginPath()
+                if (inlineButton.icon === "chevronUp") {
+                    context.moveTo(4.0, 10.0)
+                    context.lineTo(8.0, 6.0)
+                    context.lineTo(12.0, 10.0)
+                } else {
+                    context.moveTo(4.0, 6.0)
+                    context.lineTo(8.0, 10.0)
+                    context.lineTo(12.0, 6.0)
+                }
+                context.stroke()
+            }
+
+            Connections {
+                target: inlineButton
+
+                function onIconChanged() {
+                    iconCanvas.requestPaint()
+                }
+
+                function onEnabledChanged() {
+                    iconCanvas.requestPaint()
                 }
             }
         }
-    }
 
-    component SavedScopeRow: ColumnLayout {
-        id: savedScopeRow
-
-        Layout.fillWidth: true
-        Layout.alignment: Qt.AlignLeft
-
-        property string title: ""
-        property string emptyText: ""
-        property var directories: []
-
-        signal selected(string path)
-
-        spacing: 4
-
-        Label {
-            text: savedScopeRow.title
-            color: Theme.textMuted
-            font.pixelSize: Theme.fontSizeTiny
-            font.bold: true
+        HoverHandler {
+            cursorShape: inlineButton.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         }
 
-        Flickable {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 28
-            contentWidth: chipsRow.implicitWidth
-            contentHeight: height
-            clip: true
-            Accessible.role: Accessible.List
-            Accessible.name: savedScopeRow.title
+        ToolTip.visible: inlineMouseArea.containsMouse && inlineButton.toolTipText.length > 0
+        ToolTip.delay: 450
+        ToolTip.text: inlineButton.toolTipText
 
-            Row {
-                id: chipsRow
+        MouseArea {
+            id: inlineMouseArea
 
-                spacing: 6
-                height: parent.height
-
-                Repeater {
-                    model: savedScopeRow.directories
-
-                    delegate: Rectangle {
-                        required property string modelData
-
-                        height: 26
-                        width: Math.min(220, scopeText.implicitWidth + 20)
-                        radius: 13
-                        color: scopeMouseArea.containsMouse
-                               ? Theme.surfaceRaised
-                               : Theme.surfaceSunken
-                        border.color: Theme.border
-                        border.width: 1
-                        Accessible.role: Accessible.Button
-                        Accessible.name: modelData
-
-                        Text {
-                            id: scopeText
-
-                            anchors.centerIn: parent
-                            width: parent.width - 18
-                            text: root.shortPath(modelData)
-                            color: Theme.text
-                            font.pixelSize: Theme.fontSizeTiny
-                            elide: Text.ElideLeft
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-
-                        HoverHandler {
-                            cursorShape: Qt.PointingHandCursor
-                        }
-
-                        MouseArea {
-                            id: scopeMouseArea
-
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: savedScopeRow.selected(modelData)
-                        }
-                    }
-                }
-
-                Text {
-                    height: parent.height
-                    text: savedScopeRow.emptyText
-                    color: Theme.textFaint
-                    font.pixelSize: Theme.fontSizeTiny
-                    verticalAlignment: Text.AlignVCenter
-                    visible: savedScopeRow.directories.length === 0
-                }
+            anchors.fill: parent
+            enabled: inlineButton.enabled
+            hoverEnabled: true
+            onClicked: mouse => {
+                mouse.accepted = true
+                inlineButton.clicked()
             }
         }
     }

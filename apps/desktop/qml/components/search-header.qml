@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -23,7 +25,11 @@ Panel {
     property bool pendingAutoSearch: false
     property var recentSearches: []
     property var savedSearches: []
+    property var selectedDirectories: []
+    property var recentDirectories: []
+    property var favoriteDirectories: []
     property bool currentSearchSaved: false
+    property bool currentDirectoryFavorite: false
     property alias queryText: searchField.text
     property alias documentTypes: documentTypesField.text
     property alias regexEnabled: regex.checked
@@ -35,6 +41,8 @@ Panel {
     property alias includeSubdirectoriesEnabled: includeSubdirectories.checked
 
     signal selectDirectory()
+    signal addIncludedDirectory()
+    signal addExcludedDirectory()
     signal startSearch(string query,
                        bool regex,
                        bool caseSensitive,
@@ -46,11 +54,13 @@ Panel {
                        string documentTypes)
     signal cancelSearch()
     signal selectSearch(string query)
+    signal selectScopeDirectory(string path)
+    signal toggleFavoriteDirectory(string path)
     signal toggleCurrentSearchSaved()
     signal openCommandPalette()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: (compact ? 218 : 178) + Math.max(0, filterFlow.implicitHeight - 34)
+    Layout.preferredHeight: (compact ? 266 : 226) + Math.max(0, filterFlow.implicitHeight - 34)
                             + (hasDocumentContentExtractorGap ? 30 : 0)
     color: Theme.surface
 
@@ -332,6 +342,8 @@ Panel {
                                 model: root.savedSearches
 
                                 delegate: SearchMemoryRow {
+                                    required property string modelData
+
                                     width: searchMemoryPopup.contentItem.width
                                     text: root.shortSearch(modelData)
                                     detail: qsTr("Salva")
@@ -352,6 +364,8 @@ Panel {
                                 model: root.recentSearches
 
                                 delegate: SearchMemoryRow {
+                                    required property string modelData
+
                                     width: searchMemoryPopup.contentItem.width
                                     text: root.shortSearch(modelData)
                                     detail: qsTr("Recente")
@@ -364,11 +378,6 @@ Panel {
                             }
                         }
                     }
-                }
-
-                SecondaryButton {
-                    text: qsTr("Pasta")
-                    onClicked: root.selectDirectory()
                 }
 
                 PrimaryButton {
@@ -384,6 +393,19 @@ Panel {
                     enabled: root.running && !root.cancelling
                     onClicked: root.cancelSearch()
                 }
+            }
+
+            ScopeBar {
+                directory: root.directory
+                selectedDirectories: root.selectedDirectories
+                recentDirectories: root.recentDirectories
+                favoriteDirectories: root.favoriteDirectories
+                currentDirectoryFavorite: root.currentDirectoryFavorite
+                onBrowseDirectory: root.selectDirectory()
+                onSelectDirectory: path => root.selectScopeDirectory(path)
+                onToggleFavorite: path => root.toggleFavoriteDirectory(path)
+                onAddIncludedDirectory: root.addIncludedDirectory()
+                onAddExcludedDirectory: root.addExcludedDirectory()
             }
 
             RowLayout {

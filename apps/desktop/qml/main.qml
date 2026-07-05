@@ -379,11 +379,19 @@ ApplicationWindow {
             regexAvailable: searchController.regexAvailable
             recentSearches: root.recentSearches
             savedSearches: root.savedSearches
+            selectedDirectories: searchController.selectedDirectories
+            recentDirectories: searchController.recentDirectories
+            favoriteDirectories: searchController.favoriteDirectories
             currentSearchSaved: root.isSearchSaved(queryText)
+            currentDirectoryFavorite: searchController.currentDirectoryFavorite
             onOpenCommandPalette: commandPalette.openPalette()
             onSelectDirectory: folderDialog.open()
+            onAddIncludedDirectory: includedDirectoryDialog.open()
+            onAddExcludedDirectory: excludedDirectoryDialog.open()
             onCancelSearch: searchController.cancel()
             onSelectSearch: query => root.useStoredSearch(query)
+            onSelectScopeDirectory: path => searchController.selectSavedDirectory(path)
+            onToggleFavoriteDirectory: path => searchController.toggleFavoriteDirectory(path)
             onToggleCurrentSearchSaved: root.toggleSavedSearch(searchHeader.queryText)
             onStartSearch: (
                 query,
@@ -409,29 +417,6 @@ ApplicationWindow {
                 )
                 root.recordSearch(query)
             }
-        }
-
-        ScopeBar {
-            directory: searchController.directory
-            selectedDirectories: searchController.selectedDirectories
-            includedDirectories: searchController.includedDirectories
-            excludedDirectories: searchController.excludedDirectories
-            recentDirectories: searchController.recentDirectories
-            favoriteDirectories: searchController.favoriteDirectories
-            currentDirectoryFavorite: searchController.currentDirectoryFavorite
-            onSelectDirectory: path => searchController.selectSavedDirectory(path)
-            onRemoveDirectory: path => searchController.removeSelectedDirectory(path)
-            onAddIncludedDirectory: includedDirectoryDialog.open()
-            onRemoveIncludedDirectory: (scopeRoot, relativePath) => searchController.removeIncludedDirectory(
-                scopeRoot,
-                relativePath
-            )
-            onAddExcludedDirectory: excludedDirectoryDialog.open()
-            onRemoveExcludedDirectory: (scopeRoot, relativePath) => searchController.removeExcludedDirectory(
-                scopeRoot,
-                relativePath
-            )
-            onToggleCurrentFavorite: searchController.toggleCurrentDirectoryFavorite()
         }
 
         SplitView {

@@ -1,41 +1,40 @@
 # Uburu
 
-Uburu é uma aplicação desktop de busca avançada em arquivos e repositórios de software. A base atual oferece uma busca literal direta e progressiva, uma UI Qt Quick não bloqueante e contratos para a futura indexação persistente e consciente de Git.
+English | [Português do Brasil](README.pt-BR.md)
 
-O planejamento completo de evolução e os critérios para a versão 1.0 estão em [TODO.md](TODO.md).
-Regras de branch, commits e validação local ficam em [docs/development.md](docs/development.md).
+Uburu is a desktop application for advanced search across files and software repositories. The current base provides direct and progressive literal search, a non-blocking Qt Quick UI, and contracts for future persistent, Git-aware indexing.
 
-## Dependências
+The complete evolution plan and the criteria for version 1.0 are in [TODO.md](TODO.md). Branch, commit, and local validation rules are in [docs/development.md](docs/development.md).
+
+## Dependencies
 
 - CMake 3.25+
-- compilador com suporte a C++23
-- Visual Studio 2026/MSVC no Windows; Ninja continua suportado para fluxos específicos
+- compiler with C++23 support
+- Visual Studio 2026/MSVC on Windows; Ninja remains supported for specific flows
 - Qt 6.5+ (`Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Concurrent`, `LinguistTools`)
-- Catch2 3 para os testes
-- SQLite, PCRE2 e libgit2 são detectados opcionalmente pelo core nesta etapa
+- Catch2 3 for tests
+- SQLite, PCRE2, and libgit2 are detected by the core at this stage
 
-O manifesto `vcpkg.json` fornece as dependências não Qt. O Qt pode ser instalado pelo gerenciador preferido do sistema ou por uma feature de overlay do vcpkg.
+The `vcpkg.json` manifest provides non-Qt dependencies. Qt may be installed through the system's preferred package manager or through a vcpkg overlay feature.
 
-## Política inicial de versões
+## Initial version policy
 
-- CMake mínimo: 3.25, por causa de `CMakePresets.json` e recursos modernos de build.
-- C++: C++23 sem extensões de compilador.
-- Qt mínimo: 6.5.
-- Windows/MSVC validado: Visual Studio 18 2026 com Qt 6.11.1 `msvc2022_64`.
-- vcpkg: obrigatório para dependências não Qt; o baseline está fixado em `vcpkg.json`.
+- Minimum CMake: 3.25, because of `CMakePresets.json` and modern build features.
+- C++: C++23 without compiler extensions.
+- Minimum Qt: 6.5.
+- Validated Windows/MSVC: Visual Studio 18 2026 with Qt 6.11.1 `msvc2022_64`.
+- vcpkg: required for non-Qt dependencies; the baseline is pinned in `vcpkg.json`.
 
-## Build recomendado por presets
+## Recommended preset build
 
-Configure estas variáveis de ambiente:
+Configure these environment variables:
 
-- `VCPKG_ROOT`: raiz do vcpkg.
-- `QT_ROOT`: prefixo do Qt usado pelo CMake, por exemplo `C:\Qt\6.11.1\msvc2022_64`.
+- `VCPKG_ROOT`: vcpkg root.
+- `QT_ROOT`: Qt prefix used by CMake, for example `C:\Qt\6.11.1\msvc2022_64`.
 
-Use `.env.example` como referência para criar um `.env` local. O arquivo `.env` é ignorado pelo Git.
-Os scripts PowerShell em `scripts/` carregam `.env` automaticamente; os presets do CMake ainda leem
-variáveis do ambiente do processo, então defina-as no terminal antes de executar `cmake --preset ...`.
+Use `.env.example` as a reference to create a local `.env`. The `.env` file is ignored by Git. PowerShell scripts in `scripts/` load `.env` automatically; CMake presets still read variables from the process environment, so define them in the terminal before running `cmake --preset ...`.
 
-No Windows com Qt/MSVC:
+On Windows with Qt/MSVC:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
@@ -45,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 .\scripts\deploy-windows-msvc-desktop.ps1
 ```
 
-Para trabalhar apenas no core sem uma instalação do Qt:
+To work only on the core without a Qt installation:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-msvc-debug
@@ -53,9 +52,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-msvc-debug
 ```
 
-No Windows, o fluxo local principal usa MSVC e Qt.
+On Windows, the main local flow uses MSVC and Qt.
 
-## Build manual no Windows com PowerShell
+## Manual Windows build with PowerShell
 
 ```powershell
 cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
@@ -63,10 +62,9 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Confirme a configuração do vcpkg com `Write-Output $env:VCPKG_ROOT`. No PowerShell, use sempre
-`$env:VCPKG_ROOT`; a forma `$VCPKG_ROOT` pertence a shells POSIX.
+Confirm the vcpkg configuration with `Write-Output $env:VCPKG_ROOT`. In PowerShell, always use `$env:VCPKG_ROOT`; `$VCPKG_ROOT` belongs to POSIX shells.
 
-## Build no Linux ou macOS
+## Linux or macOS build
 
 ```sh
 cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -74,9 +72,9 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-O preset local `local-windows-msvc-debug` usa o gerador do Visual Studio e não exige Developer Prompt.
+The local `local-windows-msvc-debug` preset uses the Visual Studio generator and does not require a Developer Prompt.
 
-## Formatação
+## Formatting
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure
@@ -85,9 +83,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command tidy
 ```
 
-## Qualidade e CI
+## Quality and CI
 
-Os gates iniciais do core usam presets sem Qt:
+Initial core gates use Qt-free presets:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command configure -Preset core-windows-msvc-werror-debug
@@ -95,17 +93,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test -Preset core-windows-msvc-werror-debug
 ```
 
-No Linux, os presets equivalentes são `core-linux-werror-debug` e
-`core-linux-sanitize-debug`. O workflow em `.github/workflows/ci.yml` executa configure, build,
-testes, sanitizers e `format-check` para o core.
+On Linux, the equivalent presets are `core-linux-werror-debug` and `core-linux-sanitize-debug`. The workflow in `.github/workflows/ci.yml` runs configure, build, tests, sanitizers, and `format-check` for the core.
 
-Consulte também:
+See also:
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [SECURITY.md](SECURITY.md)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - [docs/licenses.md](docs/licenses.md)
 
-## Estado atual
+## Current state
 
-A busca literal lê arquivos linha a linha, respeita limite de tamanho, extensão, arquivos ocultos, cancelamento e limite de resultados. Regex, `.gitignore`, detecção completa de encoding/binários, storage SQLite, índice e backend libgit2 estão explicitamente reservados pelos contratos e pela documentação; a UI informa quando regex ainda não está disponível.
+Literal search reads files line by line and respects size limit, extension filtering, hidden files, cancellation, and result limit. Regex, `.gitignore`, complete encoding/binary detection, SQLite storage, indexing, and the libgit2 backend are explicitly reserved by contracts and documentation; the UI informs the user when regex is not available yet.

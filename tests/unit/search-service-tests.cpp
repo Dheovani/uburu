@@ -133,12 +133,15 @@ namespace
                                .column = 1,
                                .matchLength = 6,
                                .lineText = std::move(lineText),
+                               .highlights = {},
+                               .contextBefore = {},
+                               .contextAfter = {},
                                .searchRoot = "repo"};
   }
 
   [[nodiscard]] uburu::SearchQuery validQuery(const std::filesystem::path& root)
   {
-    return uburu::SearchQuery{.root = root, .expression = "needle", .options = {}};
+    return uburu::SearchQuery{.root = root, .scope = {}, .expression = "needle", .options = {}};
   }
 
 } // namespace

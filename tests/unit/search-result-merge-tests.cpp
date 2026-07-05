@@ -23,6 +23,9 @@ namespace
                                .column = column,
                                .matchLength = fixtureMatchLength,
                                .lineText = std::move(lineText),
+                               .highlights = {},
+                               .contextBefore = {},
+                               .contextAfter = {},
                                .searchRoot = "repo"};
   }
 

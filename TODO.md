@@ -46,7 +46,7 @@ This document is the project's operational plan. Milestone order represents real
 ### Exit criteria
 
 - [x] A clean clone can be configured and tested through presets without manually editing paths.
-- [ ] CI green on at least Windows/MinGW and Linux.
+- [x] CI green on at least Windows/MinGW and Linux.
 
 ## Milestone 1 — Correct direct-search semantics (P0)
 

@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QLocale>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -41,6 +42,7 @@ int main(int argc, char* argv[])
   QGuiApplication application(argc, argv);
   application.setOrganizationName(QStringLiteral("Uburu"));
   application.setApplicationName(QStringLiteral("Uburu"));
+  application.setWindowIcon(QIcon(QStringLiteral(":/assets/logo-uburu.png")));
 
   QTranslator translator;
   const auto locale = QLocale::system().name().replace('_', '-').toLower();

@@ -2,6 +2,10 @@
 
 English | [Português do Brasil](README.pt-BR.md)
 
+<p align="center">
+  <img src="apps/desktop/assets/logo-uburu.png" alt="Uburu logo" width="160">
+</p>
+
 Uburu is a desktop application for advanced search across files and software repositories. The current base provides direct and progressive literal search, a non-blocking Qt Quick UI, and contracts for future persistent, Git-aware indexing.
 
 The complete evolution plan and the criteria for version 1.0 are in [TODO.md](TODO.md). Branch, commit, and local validation rules are in [docs/development.md](docs/development.md).

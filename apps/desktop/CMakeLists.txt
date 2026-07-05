@@ -8,10 +8,15 @@ qt_add_executable(uburu_desktop
   src/search-controller.hpp
 )
 
+if(WIN32)
+  target_sources(uburu_desktop PRIVATE windows/uburu.rc)
+endif()
+
 qt_add_resources(uburu_desktop "uburu_qml"
   PREFIX "/"
   BASE "${CMAKE_CURRENT_SOURCE_DIR}"
   FILES
+    assets/logo-uburu.png
     qml/main.qml
     qml/components/action-menu.qml
     qml/components/action-menu-item.qml

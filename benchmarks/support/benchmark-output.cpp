@@ -1,6 +1,7 @@
 #include "benchmark-output.hpp"
 
 #include <chrono>
+#include <string_view>
 
 namespace uburu::benchmarks
 {
@@ -8,6 +9,7 @@ namespace uburu::benchmarks
   {
 
     constexpr double counterOne = 1.0;
+    constexpr std::string_view regexJitExecutionMode = "jit";
 
     [[nodiscard]] double asDouble(std::uint64_t value)
     {
@@ -56,6 +58,9 @@ namespace uburu::benchmarks
 
     if (summary.cancelled)
       state.counters["cancelled"] = counterOne;
+
+    if (summary.regexExecutionMode == regexJitExecutionMode)
+      state.counters["regex_jit_enabled"] = counterOne;
   }
 
 } // namespace uburu::benchmarks

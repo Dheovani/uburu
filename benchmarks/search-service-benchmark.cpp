@@ -37,6 +37,21 @@ namespace
     runSearchServiceScenario(state, uburu::benchmarks::makeRegexHeavyContentDataset);
   }
 
+  void BM_SearchService_Direct_LiteralCaseInsensitive(benchmark::State& state)
+  {
+    runSearchServiceScenario(state, uburu::benchmarks::makeCaseInsensitiveLiteralDataset);
+  }
+
+  void BM_SearchService_Direct_LiteralCaseSensitive(benchmark::State& state)
+  {
+    runSearchServiceScenario(state, uburu::benchmarks::makeCaseSensitiveLiteralDataset);
+  }
+
+  void BM_SearchService_Direct_LiteralWholeWord(benchmark::State& state)
+  {
+    runSearchServiceScenario(state, uburu::benchmarks::makeWholeWordLiteralDataset);
+  }
+
   void BM_SearchService_Direct_GitignoreHeavy_Literal(benchmark::State& state)
   {
     runSearchServiceScenario(state, uburu::benchmarks::makeGitignoreHeavyDataset);
@@ -52,5 +67,8 @@ namespace
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal);
 BENCHMARK(BM_SearchService_Direct_FewLargeFiles_Literal);
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Regex);
+BENCHMARK(BM_SearchService_Direct_LiteralCaseInsensitive);
+BENCHMARK(BM_SearchService_Direct_LiteralCaseSensitive);
+BENCHMARK(BM_SearchService_Direct_LiteralWholeWord);
 BENCHMARK(BM_SearchService_Direct_GitignoreHeavy_Literal);
 BENCHMARK(BM_SearchService_Direct_BinaryAndHiddenFiltering);

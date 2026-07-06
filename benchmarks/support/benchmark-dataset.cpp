@@ -23,6 +23,8 @@ namespace uburu::benchmarks
     constexpr std::size_t hiddenTextFileCount = 12;
     constexpr std::size_t gitignoreDirectoryCount = 16;
     constexpr std::size_t gitignoreFilesPerDirectory = 12;
+    constexpr std::size_t semanticFileCount = 192;
+    constexpr std::size_t semanticMatchModulo = 3;
     constexpr std::size_t regexFileCount = 96;
     constexpr std::uint64_t uniqueNameMultiplier = 1'315'423'911U;
     constexpr unsigned char binaryPayloadByte = 0x00U;
@@ -83,6 +85,11 @@ namespace uburu::benchmarks
     void addNonMatchingLine(std::string& content)
     {
       content += "ordinary deterministic benchmark text without the target token\n";
+    }
+
+    void writeSemanticLiteralFile(BenchmarkDataset& dataset, std::size_t index, std::string_view content)
+    {
+      writeTextFile(dataset.root / "semantic" / ("file-" + std::to_string(index) + ".txt"), content, dataset);
     }
 
   } // namespace
@@ -225,6 +232,75 @@ namespace uburu::benchmarks
       ++dataset.expectedMatches;
       ++dataset.expectedMatchingFiles;
       writeTextFile(dataset.root / "visible" / ("kept-" + std::to_string(index) + ".txt"), content, dataset);
+    }
+
+    return TemporaryBenchmarkDataset(dataset.name, std::move(dataset));
+  }
+
+  TemporaryBenchmarkDataset makeCaseInsensitiveLiteralDataset()
+  {
+    BenchmarkDataset dataset;
+    dataset.name = "case-insensitive-literal";
+    dataset.root = uniqueDatasetRoot("uburu-benchmark-case-insensitive-literal");
+    dataset.expression = "needle";
+    dataset.options = defaultContentOptions();
+    dataset.options.extensions = {"txt"};
+    dataset.options.caseSensitive = false;
+
+    for (std::size_t index = 0; index < semanticFileCount; ++index) {
+      if (index % semanticMatchModulo == 0) {
+        writeSemanticLiteralFile(dataset, index, "prefix NEEDLE suffix with upper-case benchmark token\n");
+        ++dataset.expectedMatches;
+        ++dataset.expectedMatchingFiles;
+      } else {
+        writeSemanticLiteralFile(dataset, index, "ordinary text with n33dle lookalike but no match\n");
+      }
+    }
+
+    return TemporaryBenchmarkDataset(dataset.name, std::move(dataset));
+  }
+
+  TemporaryBenchmarkDataset makeCaseSensitiveLiteralDataset()
+  {
+    BenchmarkDataset dataset;
+    dataset.name = "case-sensitive-literal";
+    dataset.root = uniqueDatasetRoot("uburu-benchmark-case-sensitive-literal");
+    dataset.expression = "NeedleExact";
+    dataset.options = defaultContentOptions();
+    dataset.options.extensions = {"txt"};
+    dataset.options.caseSensitive = true;
+
+    for (std::size_t index = 0; index < semanticFileCount; ++index) {
+      if (index % semanticMatchModulo == 0) {
+        writeSemanticLiteralFile(dataset, index, "prefix NeedleExact suffix with exact-case benchmark token\n");
+        ++dataset.expectedMatches;
+        ++dataset.expectedMatchingFiles;
+      } else {
+        writeSemanticLiteralFile(dataset, index, "prefix needleexact suffix should not match exact-case search\n");
+      }
+    }
+
+    return TemporaryBenchmarkDataset(dataset.name, std::move(dataset));
+  }
+
+  TemporaryBenchmarkDataset makeWholeWordLiteralDataset()
+  {
+    BenchmarkDataset dataset;
+    dataset.name = "whole-word-literal";
+    dataset.root = uniqueDatasetRoot("uburu-benchmark-whole-word-literal");
+    dataset.expression = "needle";
+    dataset.options = defaultContentOptions();
+    dataset.options.extensions = {"txt"};
+    dataset.options.wholeWord = true;
+
+    for (std::size_t index = 0; index < semanticFileCount; ++index) {
+      if (index % semanticMatchModulo == 0) {
+        writeSemanticLiteralFile(dataset, index, "prefix needle suffix with whole-word benchmark token\n");
+        ++dataset.expectedMatches;
+        ++dataset.expectedMatchingFiles;
+      } else {
+        writeSemanticLiteralFile(dataset, index, "prefix needled and preneedle suffix should not match whole word\n");
+      }
     }
 
     return TemporaryBenchmarkDataset(dataset.name, std::move(dataset));

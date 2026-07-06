@@ -282,7 +282,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Choose benchmark framework and integrate it into CMake without affecting the default build.
 - [x] Create deterministic dataset generator.
 - [x] Measure many small files and few large files.
-- [ ] Measure literal case-sensitive, case-insensitive, whole word, and regex/JIT.
+- [x] Measure literal case-sensitive, case-insensitive, whole word, and regex/JIT.
 - [ ] Measure optional Unicode normalization cost before enabling it on the hot path.
 - [x] Measure time to first result separately from total time.
 - [ ] Measure cold/hot scan and operating-system cache effects.

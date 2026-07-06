@@ -45,6 +45,9 @@ namespace uburu::benchmarks
   [[nodiscard]] TemporaryBenchmarkDataset makeFewLargeFilesDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeMixedTextAndBinaryDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeGitignoreHeavyDataset();
+  [[nodiscard]] TemporaryBenchmarkDataset makeCaseInsensitiveLiteralDataset();
+  [[nodiscard]] TemporaryBenchmarkDataset makeCaseSensitiveLiteralDataset();
+  [[nodiscard]] TemporaryBenchmarkDataset makeWholeWordLiteralDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeUnicodeContentDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeRegexHeavyContentDataset();
 

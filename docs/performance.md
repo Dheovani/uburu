@@ -32,7 +32,7 @@ The future scanner will use a bounded pool, small-file prioritization, and backp
 
 Uburu uses Google Benchmark for developer performance measurements. Benchmarks are disabled by default and can be enabled with `UBURU_BUILD_BENCHMARKS=ON`.
 
-The initial benchmark target is `uburu-search-service-benchmark`. It measures direct search scenarios through `DefaultSearchService`, using deterministic temporary datasets and Uburu-specific counters such as time to first result, total time, throughput, ignored files, binary skips, emitted results, and approximate memory usage.
+The initial benchmark target is `uburu-search-service-benchmark`. It measures direct search scenarios through `DefaultSearchService`, using deterministic temporary datasets and Uburu-specific counters such as time to first result, total time, throughput, ignored files, binary skips, emitted results, approximate memory usage, and PCRE2 JIT activation for regex scenarios.
 
 Benchmarks are intentionally separate from CTest correctness tests. Run them explicitly:
 
@@ -50,7 +50,7 @@ Export JSON results with:
   --benchmark_out=benchmark-results.json
 ```
 
-Initial scenarios cover many small files, few large files, regex-heavy content, `.gitignore`-heavy trees, and mixed text/binary filtering. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
+Initial scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, regex/JIT-heavy content, `.gitignore`-heavy trees, and mixed text/binary filtering. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
 
 ## Large file reading
 

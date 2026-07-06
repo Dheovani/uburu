@@ -1,5 +1,6 @@
 #include "benchmark-dataset.hpp"
 #include "benchmark-output.hpp"
+#include "index-benchmark-runner.hpp"
 #include "search-benchmark-runner.hpp"
 
 #include <benchmark/benchmark.h>
@@ -89,6 +90,50 @@ namespace
     runRepeatedSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset);
   }
 
+  void BM_IndexService_Initial_ManySmallFiles(benchmark::State& state)
+  {
+    const auto dataset = uburu::benchmarks::makeManySmallFilesDataset();
+
+    for (auto _ : state) {
+      auto context = uburu::benchmarks::makeIndexBenchmarkContext(dataset.get());
+      const auto result = context->update(context->worktree());
+
+      uburu::benchmarks::publishIndexCounters(state, dataset.get(), result);
+    }
+  }
+
+  void BM_IndexService_Incremental_ManySmallFiles(benchmark::State& state)
+  {
+    const auto dataset = uburu::benchmarks::makeManySmallFilesDataset();
+
+    for (auto _ : state) {
+      state.PauseTiming();
+      auto context = uburu::benchmarks::makeIndexBenchmarkContext(dataset.get());
+      static_cast<void>(context->update(context->worktree()));
+      state.ResumeTiming();
+
+      const auto result = context->update(context->worktree());
+
+      uburu::benchmarks::publishIndexCounters(state, dataset.get(), result);
+    }
+  }
+
+  void BM_IndexService_BranchSwitch_ManySmallFiles(benchmark::State& state)
+  {
+    const auto dataset = uburu::benchmarks::makeManySmallFilesDataset();
+
+    for (auto _ : state) {
+      state.PauseTiming();
+      auto context = uburu::benchmarks::makeIndexBenchmarkContext(dataset.get());
+      static_cast<void>(context->update(context->worktree()));
+      state.ResumeTiming();
+
+      const auto result = context->updateAfterBranchSwitch();
+
+      uburu::benchmarks::publishIndexCounters(state, dataset.get(), result);
+    }
+  }
+
 } // namespace
 
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal);
@@ -101,3 +146,6 @@ BENCHMARK(BM_SearchService_Direct_UnicodeNormalization);
 BENCHMARK(BM_SearchService_Direct_GitignoreHeavy_Literal);
 BENCHMARK(BM_SearchService_Direct_BinaryAndHiddenFiltering);
 BENCHMARK(BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect);
+BENCHMARK(BM_IndexService_Initial_ManySmallFiles);
+BENCHMARK(BM_IndexService_Incremental_ManySmallFiles);
+BENCHMARK(BM_IndexService_BranchSwitch_ManySmallFiles);

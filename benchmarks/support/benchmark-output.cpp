@@ -103,4 +103,34 @@ namespace uburu::benchmarks
       state.counters["cancelled"] = counterOne;
   }
 
+  void
+  publishIndexCounters(benchmark::State& state, const BenchmarkDataset& dataset, const IndexBenchmarkResult& result)
+  {
+    state.counters["dataset_files"] = asDouble(dataset.fileCount);
+    state.counters["dataset_bytes"] = asDouble(dataset.byteCount);
+    state.counters["indexed"] = asDouble(static_cast<std::uint64_t>(result.summary.indexed));
+    state.counters["reused_by_catalog"] = asDouble(static_cast<std::uint64_t>(result.summary.reusedByCatalog));
+    state.counters["reused_by_blob"] = asDouble(static_cast<std::uint64_t>(result.summary.reusedByBlob));
+    state.counters["reused_by_hash"] = asDouble(static_cast<std::uint64_t>(result.summary.reusedByHash));
+    state.counters["removed"] = asDouble(static_cast<std::uint64_t>(result.summary.removed));
+    state.counters["failed"] = asDouble(static_cast<std::uint64_t>(result.summary.failed));
+    state.counters["progress_events"] = asDouble(static_cast<std::uint64_t>(result.progressEvents));
+    state.counters["index_update_time_ns"] = nanoseconds(result.elapsed);
+
+    if (result.summary.cancelled)
+      state.counters["cancelled"] = counterOne;
+
+    if (result.stalenessChecked)
+      state.counters["staleness_checked"] = counterOne;
+
+    if (result.stale)
+      state.counters["stale_generation"] = counterOne;
+
+    if (result.headChanged)
+      state.counters["head_changed"] = counterOne;
+
+    if (result.branchChanged)
+      state.counters["branch_changed"] = counterOne;
+  }
+
 } // namespace uburu::benchmarks

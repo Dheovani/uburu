@@ -4,6 +4,7 @@ find_package(benchmark CONFIG REQUIRED)
 add_library(uburu_benchmark_support
   support/benchmark-dataset.cpp
   support/benchmark-output.cpp
+  support/index-benchmark-runner.cpp
   support/search-benchmark-runner.cpp
 )
 

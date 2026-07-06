@@ -14,6 +14,8 @@ namespace uburu::benchmarks
     std::uint64_t resultBatches{0};
     std::uint64_t consumedResults{0};
     std::uint64_t consumedBytes{0};
+    std::uint64_t peakBatchResults{0};
+    std::uint64_t peakBatchBytes{0};
   };
 
   [[nodiscard]] SearchBenchmarkResult runDefaultSearchServiceBenchmark(const BenchmarkDataset& dataset);

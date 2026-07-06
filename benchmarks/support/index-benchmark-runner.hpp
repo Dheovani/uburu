@@ -22,6 +22,8 @@ namespace uburu::benchmarks
     bool stale{false};
     bool headChanged{false};
     bool branchChanged{false};
+    std::uint64_t approximateCatalogMemoryBytes{0};
+    std::uint64_t databaseBytes{0};
   };
 
   class IndexBenchmarkContext
@@ -51,6 +53,7 @@ namespace uburu::benchmarks
     index::PersistentIndexService indexService;
     RepositoryInfo repository;
     WorktreeInfo currentWorktree;
+    std::uint64_t approximateCatalogMemoryBytes{0};
   };
 
   [[nodiscard]] std::unique_ptr<IndexBenchmarkContext> makeIndexBenchmarkContext(const BenchmarkDataset& dataset);

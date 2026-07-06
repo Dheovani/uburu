@@ -56,10 +56,13 @@ namespace uburu::benchmarks
     state.counters["binary_files"] = asDouble(metrics.binaryFiles);
     state.counters["binary_files_skipped"] = asDouble(metrics.binaryFilesSkipped);
     state.counters["approximate_memory_bytes"] = asDouble(metrics.approximateMemoryBytes);
+    state.counters["result_memory_bytes"] = asDouble(metrics.approximateMemoryBytes);
     state.counters["result_batches"] = asDouble(result.resultBatches);
     state.counters["consumed_results"] = asDouble(result.consumedResults);
     state.counters["consumed_bytes"] =
       benchmark::Counter(asDouble(result.consumedBytes), benchmark::Counter::kAvgIterations);
+    state.counters["result_queue_peak_items"] = asDouble(result.peakBatchResults);
+    state.counters["result_queue_peak_bytes"] = asDouble(result.peakBatchBytes);
 
     if (summary.partialFailure)
       state.counters["partial_failure"] = counterOne;
@@ -116,6 +119,8 @@ namespace uburu::benchmarks
     state.counters["failed"] = asDouble(static_cast<std::uint64_t>(result.summary.failed));
     state.counters["progress_events"] = asDouble(static_cast<std::uint64_t>(result.progressEvents));
     state.counters["index_update_time_ns"] = nanoseconds(result.elapsed);
+    state.counters["index_catalog_memory_bytes"] = asDouble(result.approximateCatalogMemoryBytes);
+    state.counters["index_database_bytes"] = asDouble(result.databaseBytes);
 
     if (result.summary.cancelled)
       state.counters["cancelled"] = counterOne;

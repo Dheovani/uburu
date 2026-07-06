@@ -19,6 +19,7 @@ namespace uburu::benchmarks
     constexpr std::string_view reusableBlobHash = "benchmark-reusable-blob";
     constexpr std::string_view reusableContentHash = "benchmark-reusable-content";
     constexpr std::uintmax_t reusableDocumentSize = 42;
+    constexpr std::uint64_t pathCharacterSize = sizeof(std::filesystem::path::value_type);
 
     [[nodiscard]] std::filesystem::path uniqueDatabasePath(std::string_view datasetName)
     {
@@ -78,6 +79,37 @@ namespace uburu::benchmarks
       return files;
     }
 
+    [[nodiscard]] std::uint64_t approximateFileEntryMemoryBytes(const FileEntry& file)
+    {
+      auto bytes = static_cast<std::uint64_t>(sizeof(FileEntry));
+      bytes += static_cast<std::uint64_t>(file.absolutePath.native().capacity()) * pathCharacterSize;
+      bytes += static_cast<std::uint64_t>(file.relativePath.native().capacity()) * pathCharacterSize;
+      bytes += static_cast<std::uint64_t>(file.searchRoot.native().capacity()) * pathCharacterSize;
+
+      return bytes;
+    }
+
+    [[nodiscard]] std::uint64_t approximateFileCatalogMemoryBytes(const std::vector<FileEntry>& files)
+    {
+      auto bytes = static_cast<std::uint64_t>(files.capacity() * sizeof(FileEntry));
+
+      for (const auto& file : files)
+        bytes += approximateFileEntryMemoryBytes(file);
+
+      return bytes;
+    }
+
+    [[nodiscard]] std::uint64_t existingFileSize(const std::filesystem::path& path)
+    {
+      std::error_code error;
+      const auto size = std::filesystem::file_size(path, error);
+
+      if (error)
+        return 0;
+
+      return static_cast<std::uint64_t>(size);
+    }
+
     [[nodiscard]] IndexDocument makeReusableBlobDocument(const WorktreeInfo& worktree)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
@@ -119,7 +151,8 @@ namespace uburu::benchmarks
   IndexBenchmarkContext::IndexBenchmarkContext(const BenchmarkDataset& dataset)
     : benchmarkDataset(&dataset), databasePath(uniqueDatabasePath(dataset.name)), files(collectFiles(dataset)),
       storage(databasePath), indexService(storage), repository(makeRepositoryInfo(dataset)),
-      currentWorktree(makeWorktreeInfo(dataset))
+      currentWorktree(makeWorktreeInfo(dataset)),
+      approximateCatalogMemoryBytes(approximateFileCatalogMemoryBytes(files))
   {
     storage.initialize();
     storage.upsertRepository(repository);
@@ -161,6 +194,9 @@ namespace uburu::benchmarks
 
     result.summary = indexService.update(targetWorktree, files, [&](const auto&) { ++result.progressEvents; });
     result.elapsed = std::chrono::steady_clock::now() - before;
+    result.approximateCatalogMemoryBytes = approximateCatalogMemoryBytes;
+    result.databaseBytes = existingFileSize(databasePath) + existingFileSize(databasePath.string() + "-wal") +
+                           existingFileSize(databasePath.string() + "-shm");
 
     return result;
   }
@@ -195,6 +231,9 @@ namespace uburu::benchmarks
                                          std::span<const index::IndexFileCandidate>{candidates},
                                          [&](const auto&) { ++result.progressEvents; });
     result.elapsed = std::chrono::steady_clock::now() - before;
+    result.approximateCatalogMemoryBytes = approximateCatalogMemoryBytes;
+    result.databaseBytes = existingFileSize(databasePath) + existingFileSize(databasePath.string() + "-wal") +
+                           existingFileSize(databasePath.string() + "-shm");
 
     return result;
   }

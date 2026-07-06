@@ -50,7 +50,7 @@ Export JSON results with:
   --benchmark_out=benchmark-results.json
 ```
 
-Initial scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, regex/JIT-heavy content, `.gitignore`-heavy trees, and mixed text/binary filtering. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
+Initial scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, precomposed-versus-decomposed Unicode normalization cost, regex/JIT-heavy content, `.gitignore`-heavy trees, and mixed text/binary filtering. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
 
 ## Large file reading
 

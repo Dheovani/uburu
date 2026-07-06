@@ -283,7 +283,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Create deterministic dataset generator.
 - [x] Measure many small files and few large files.
 - [x] Measure literal case-sensitive, case-insensitive, whole word, and regex/JIT.
-- [ ] Measure optional Unicode normalization cost before enabling it on the hot path.
+- [x] Measure optional Unicode normalization cost before enabling it on the hot path.
 - [x] Measure time to first result separately from total time.
 - [ ] Measure cold/hot scan and operating-system cache effects.
 - [ ] Measure initial indexing, incremental indexing, and branch switch.

@@ -48,6 +48,7 @@ namespace uburu::benchmarks
   [[nodiscard]] TemporaryBenchmarkDataset makeCaseInsensitiveLiteralDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeCaseSensitiveLiteralDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeWholeWordLiteralDataset();
+  [[nodiscard]] TemporaryBenchmarkDataset makeUnicodeNormalizationDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeUnicodeContentDataset();
   [[nodiscard]] TemporaryBenchmarkDataset makeRegexHeavyContentDataset();
 

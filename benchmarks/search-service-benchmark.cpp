@@ -52,6 +52,11 @@ namespace
     runSearchServiceScenario(state, uburu::benchmarks::makeWholeWordLiteralDataset);
   }
 
+  void BM_SearchService_Direct_UnicodeNormalization(benchmark::State& state)
+  {
+    runSearchServiceScenario(state, uburu::benchmarks::makeUnicodeNormalizationDataset);
+  }
+
   void BM_SearchService_Direct_GitignoreHeavy_Literal(benchmark::State& state)
   {
     runSearchServiceScenario(state, uburu::benchmarks::makeGitignoreHeavyDataset);
@@ -70,5 +75,6 @@ BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Regex);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseInsensitive);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseSensitive);
 BENCHMARK(BM_SearchService_Direct_LiteralWholeWord);
+BENCHMARK(BM_SearchService_Direct_UnicodeNormalization);
 BENCHMARK(BM_SearchService_Direct_GitignoreHeavy_Literal);
 BENCHMARK(BM_SearchService_Direct_BinaryAndHiddenFiltering);

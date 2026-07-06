@@ -28,6 +28,15 @@ namespace uburu::benchmarks
     constexpr std::size_t regexFileCount = 96;
     constexpr std::uint64_t uniqueNameMultiplier = 1'315'423'911U;
     constexpr unsigned char binaryPayloadByte = 0x00U;
+    constexpr std::string_view precomposedPortugueseNeedle = "gera"
+                                                             "\xC3\xA7"
+                                                             "\xC3\xA3"
+                                                             "o";
+    constexpr std::string_view decomposedPortugueseNeedle = "gerac"
+                                                            "\xCC\xA7"
+                                                            "a"
+                                                            "\xCC\x83"
+                                                            "o";
 
     [[nodiscard]] std::filesystem::path uniqueDatasetRoot(std::string_view name)
     {
@@ -300,6 +309,31 @@ namespace uburu::benchmarks
         ++dataset.expectedMatchingFiles;
       } else {
         writeSemanticLiteralFile(dataset, index, "prefix needled and preneedle suffix should not match whole word\n");
+      }
+    }
+
+    return TemporaryBenchmarkDataset(dataset.name, std::move(dataset));
+  }
+
+  TemporaryBenchmarkDataset makeUnicodeNormalizationDataset()
+  {
+    BenchmarkDataset dataset;
+    dataset.name = "unicode-normalization";
+    dataset.root = uniqueDatasetRoot("uburu-benchmark-unicode-normalization");
+    dataset.expression = std::string{precomposedPortugueseNeedle};
+    dataset.options = defaultContentOptions();
+    dataset.options.extensions = {"txt"};
+
+    for (std::size_t index = 0; index < semanticFileCount; ++index) {
+      if (index % semanticMatchModulo == 0) {
+        std::string content = "prefix ";
+        content += decomposedPortugueseNeedle;
+        content += " suffix with decomposed Unicode benchmark token\n";
+        writeSemanticLiteralFile(dataset, index, content);
+        ++dataset.expectedMatches;
+        ++dataset.expectedMatchingFiles;
+      } else {
+        writeSemanticLiteralFile(dataset, index, "ordinary text with geracao without accents and no canonical match\n");
       }
     }
 

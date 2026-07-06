@@ -10,7 +10,7 @@ The current scenarios cover many small files, few large files, case-insensitive 
 
 The repeated-scan scenario does not flush the operating-system cache. It compares the first observed pass with an immediate second pass and publishes `first_pass_*`, `second_pass_*`, and `second_pass_speedup` counters. Treat it as a practical cache-effect signal, not as a laboratory-grade cold-cache measurement.
 
-The persistent-index scenarios use a disposable SQLite database and deterministic temporary files. Initial indexing measures a fresh generation. Incremental indexing prepares the first generation with benchmark timing paused, then measures the unchanged second update. Branch-switch indexing also prepares the first generation with timing paused, then measures staleness detection plus update against a changed branch and HEAD.
+The persistent-index scenarios use a disposable SQLite database and deterministic temporary files. Initial indexing measures a fresh generation. Incremental indexing prepares the first generation with benchmark timing paused, then measures the unchanged second update. Branch-switch indexing also prepares the first generation with timing paused, then measures staleness detection plus update against a changed branch and HEAD. Dedicated reuse scenarios measure content-hash deduplication and Git blob-hash reuse for a renamed file candidate.
 
 ```powershell
 cmake --preset core-windows-msvc-debug -DUBURU_BUILD_BENCHMARKS=ON

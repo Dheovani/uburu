@@ -287,7 +287,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Measure time to first result separately from total time.
 - [x] Measure cold/hot scan and operating-system cache effects.
 - [x] Measure initial indexing, incremental indexing, and branch switch.
-- [ ] Measure reuse by content hash and blob hash.
+- [x] Measure reuse by content hash and blob hash.
 - [ ] Measure memory for queues, results, and index.
 - [ ] Measure batching and UI rendering cost.
 - [ ] Define baselines by hardware/dataset and store versioned results.

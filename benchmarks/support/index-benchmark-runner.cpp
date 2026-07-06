@@ -1,6 +1,7 @@
 #include "index-benchmark-runner.hpp"
 
 #include <chrono>
+#include <span>
 #include <system_error>
 
 namespace uburu::benchmarks
@@ -15,6 +16,9 @@ namespace uburu::benchmarks
     constexpr std::string_view featureBranch = "feature/benchmark";
     constexpr std::string_view mainHeadOid = "1111111111111111111111111111111111111111";
     constexpr std::string_view featureHeadOid = "2222222222222222222222222222222222222222";
+    constexpr std::string_view reusableBlobHash = "benchmark-reusable-blob";
+    constexpr std::string_view reusableContentHash = "benchmark-reusable-content";
+    constexpr std::uintmax_t reusableDocumentSize = 42;
 
     [[nodiscard]] std::filesystem::path uniqueDatabasePath(std::string_view datasetName)
     {
@@ -72,6 +76,42 @@ namespace uburu::benchmarks
       }
 
       return files;
+    }
+
+    [[nodiscard]] IndexDocument makeReusableBlobDocument(const WorktreeInfo& worktree)
+    {
+      return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
+                           .repositoryId = worktree.repositoryId,
+                           .worktreeId = worktree.id,
+                           .relativePath = std::filesystem::path{"src/original.txt"},
+                           .contentHash = std::string{reusableContentHash},
+                           .contentHashAlgorithm = ContentHashAlgorithm::sha256,
+                           .gitBlobHash = std::string{reusableBlobHash},
+                           .gitBlobHashAlgorithm = GitObjectHashAlgorithm::sha1,
+                           .status = GitFileStatus::clean,
+                           .size = reusableDocumentSize,
+                           .modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{1}},
+                           .indexedAt = std::chrono::system_clock::now(),
+                           .deleted = false,
+                           .indexedText = std::string{"reusable indexed text"}};
+    }
+
+    [[nodiscard]] index::IndexFileCandidate makeReusableBlobCandidate(const BenchmarkDataset& dataset)
+    {
+      const auto relativePath = std::filesystem::path{"src/renamed-from-blob.txt"};
+
+      return index::IndexFileCandidate{
+        .file = FileEntry{.absolutePath = dataset.root / relativePath,
+                          .relativePath = relativePath,
+                          .size = reusableDocumentSize,
+                          .modifiedAt = std::filesystem::file_time_type{std::chrono::seconds{2}},
+                          .searchRoot = dataset.root},
+        .metadata =
+          index::IndexFileMetadata{
+            .status = GitFileStatus::clean,
+            .gitBlob = GitObjectId{.algorithm = GitObjectHashAlgorithm::sha1, .value = std::string{reusableBlobHash}},
+          },
+      };
     }
 
   } // namespace
@@ -134,6 +174,27 @@ namespace uburu::benchmarks
     result.stale = report.state == index::IndexStalenessState::stale;
     result.headChanged = report.headChanged;
     result.branchChanged = report.branchChanged;
+
+    return result;
+  }
+
+  IndexBenchmarkResult IndexBenchmarkContext::updateWithBlobReuseCandidate()
+  {
+    storage.publishGeneration(IndexGeneration{.repositoryId = currentWorktree.repositoryId,
+                                              .worktreeId = currentWorktree.id,
+                                              .headOid = currentWorktree.headOid,
+                                              .branch = currentWorktree.branch,
+                                              .createdAt = std::chrono::system_clock::now(),
+                                              .documents = {makeReusableBlobDocument(currentWorktree)}});
+
+    const std::vector<index::IndexFileCandidate> candidates{makeReusableBlobCandidate(dataset())};
+    IndexBenchmarkResult result;
+    const auto before = std::chrono::steady_clock::now();
+
+    result.summary = indexService.update(currentWorktree,
+                                         std::span<const index::IndexFileCandidate>{candidates},
+                                         [&](const auto&) { ++result.progressEvents; });
+    result.elapsed = std::chrono::steady_clock::now() - before;
 
     return result;
   }

@@ -41,6 +41,7 @@ namespace uburu::benchmarks
 
     [[nodiscard]] IndexBenchmarkResult update(const WorktreeInfo& targetWorktree);
     [[nodiscard]] IndexBenchmarkResult updateAfterBranchSwitch();
+    [[nodiscard]] IndexBenchmarkResult updateWithBlobReuseCandidate();
 
   private:
     const BenchmarkDataset* benchmarkDataset{nullptr};

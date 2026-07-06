@@ -134,6 +134,30 @@ namespace
     }
   }
 
+  void BM_IndexService_ContentHashReuse_ManySmallFiles(benchmark::State& state)
+  {
+    const auto dataset = uburu::benchmarks::makeManySmallFilesDataset();
+
+    for (auto _ : state) {
+      auto context = uburu::benchmarks::makeIndexBenchmarkContext(dataset.get());
+      const auto result = context->update(context->worktree());
+
+      uburu::benchmarks::publishIndexCounters(state, dataset.get(), result);
+    }
+  }
+
+  void BM_IndexService_BlobHashReuse_RenamedFile(benchmark::State& state)
+  {
+    const auto dataset = uburu::benchmarks::makeManySmallFilesDataset();
+
+    for (auto _ : state) {
+      auto context = uburu::benchmarks::makeIndexBenchmarkContext(dataset.get());
+      const auto result = context->updateWithBlobReuseCandidate();
+
+      uburu::benchmarks::publishIndexCounters(state, dataset.get(), result);
+    }
+  }
+
 } // namespace
 
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal);
@@ -149,3 +173,5 @@ BENCHMARK(BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect);
 BENCHMARK(BM_IndexService_Initial_ManySmallFiles);
 BENCHMARK(BM_IndexService_Incremental_ManySmallFiles);
 BENCHMARK(BM_IndexService_BranchSwitch_ManySmallFiles);
+BENCHMARK(BM_IndexService_ContentHashReuse_ManySmallFiles);
+BENCHMARK(BM_IndexService_BlobHashReuse_RenamedFile);

@@ -63,3 +63,39 @@ set_property(TARGET uburu_core_tests
     ${CMAKE_COMMAND} -E env GIT_CONFIG_COUNT=0 GIT_CONFIG_KEY_0= GIT_CONFIG_VALUE_0=
 )
 catch_discover_tests(uburu_core_tests)
+
+if(UBURU_BUILD_DESKTOP)
+  find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Concurrent)
+  qt6_wrap_cpp(UBURU_DESKTOP_TEST_MOC_SOURCES ../apps/desktop/src/search-controller.hpp)
+
+  qt_add_executable(uburu_desktop_tests
+    desktop/search-controller-tests.cpp
+    ../apps/desktop/src/search-controller.cpp
+    ../apps/desktop/src/search-controller.hpp
+    ${UBURU_DESKTOP_TEST_MOC_SOURCES}
+  )
+
+  target_include_directories(uburu_desktop_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/apps/desktop/src
+  )
+
+  target_link_libraries(uburu_desktop_tests PRIVATE
+    Uburu::App
+    Uburu::Core
+    Uburu::ProjectOptions
+    Catch2::Catch2WithMain
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Concurrent
+  )
+
+  if(WIN32)
+    add_custom_command(TARGET uburu_desktop_tests POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:uburu_desktop_tests> $<TARGET_RUNTIME_DLLS:uburu_desktop_tests>
+      COMMAND_EXPAND_LISTS
+    )
+  endif()
+
+  catch_discover_tests(uburu_desktop_tests)
+endif()

@@ -90,6 +90,7 @@ namespace uburu::text
     {
       const SearchOptions& options;
       const TextLineSink& sink;
+      std::stop_token stopToken;
       TextReadSummary& summary;
       std::string line;
       std::size_t lineNumber{0};
@@ -120,11 +121,17 @@ namespace uburu::text
 
       [[nodiscard]] bool emit(LineEnding ending, std::uintmax_t endingByteWidth)
       {
+        if (stopToken.stop_requested())
+          return false;
+
         ++lineNumber;
         ++summary.linesRead;
 
         const TextLine textLine{.text = line, .lineNumber = lineNumber, .byteOffset = lineOffset, .ending = ending};
         if (!sink(textLine))
+          return false;
+
+        if (stopToken.stop_requested())
           return false;
 
         line.clear();
@@ -346,6 +353,7 @@ namespace uburu::text
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
+                          .stopToken = stop_token,
                           .summary = summary,
                           .line = {},
                           .lineNumber = 0,
@@ -395,7 +403,7 @@ namespace uburu::text
             break;
 
           if (!processDecodedScalar(emitter, decoded.scalar, decoded.bytesConsumed))
-            return TextReadStatus::lineTooLong;
+            return stop_token.stop_requested() ? TextReadStatus::cancelled : TextReadStatus::lineTooLong;
 
           offset += decoded.bytesConsumed;
         }
@@ -420,6 +428,7 @@ namespace uburu::text
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
+                          .stopToken = stop_token,
                           .summary = summary,
                           .line = {},
                           .lineNumber = 0,
@@ -506,6 +515,7 @@ namespace uburu::text
     {
       LineEmitter emitter{.options = options,
                           .sink = sink,
+                          .stopToken = stop_token,
                           .summary = summary,
                           .line = {},
                           .lineNumber = 0,
@@ -567,7 +577,7 @@ namespace uburu::text
           }
 
           if (!processDecodedScalar(emitter, scalar, byteWidth))
-            return TextReadStatus::lineTooLong;
+            return stop_token.stop_requested() ? TextReadStatus::cancelled : TextReadStatus::lineTooLong;
 
           offset += static_cast<std::size_t>(byteWidth);
         }

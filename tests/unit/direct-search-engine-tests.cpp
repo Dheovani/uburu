@@ -258,6 +258,8 @@ TEST_CASE("a pre-cancelled search reports cancellation")
   const auto summary = engine.search(query, [](uburu::SearchResult) { return true; }, cancellation.get_token());
 
   CHECK(summary.cancelled);
+  CHECK(scanner->calls == 0);
+  CHECK(summary.filesScanned == 0);
 }
 
 TEST_CASE("a pre-cancelled regex search reports cancellation")
@@ -278,6 +280,69 @@ TEST_CASE("a pre-cancelled regex search reports cancellation")
   REQUIRE(summary.errors.size() == 1);
   CHECK(summary.errors.front().code == uburu::search::SearchErrorCode::unsupportedSearchMode);
 #endif
+}
+
+TEST_CASE("direct search observes cancellation while scanning entries")
+{
+  const uburu::tests::TemporaryFile firstFile("uburu-search-cancel-scan-first.txt");
+  const uburu::tests::TemporaryFile secondFile("uburu-search-cancel-scan-second.txt");
+  const auto& firstPath = firstFile.path();
+  const auto& secondPath = secondFile.path();
+  uburu::tests::writeFile(firstPath, "needle\n");
+  uburu::tests::writeFile(secondPath, "needle\n");
+
+  std::stop_source cancellation;
+  auto scanner = std::make_shared<ObservingScanner>(firstPath, secondPath, [&] { cancellation.request_stop(); });
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(firstPath.parent_path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(
+    query,
+    [&](uburu::SearchResult result) {
+      results.push_back(std::move(result));
+
+      return true;
+    },
+    cancellation.get_token());
+
+  CHECK(summary.cancelled);
+  CHECK(summary.filesScanned == 1);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == std::filesystem::path("first.txt"));
+}
+
+TEST_CASE("direct search observes cancellation while reading file content")
+{
+  const uburu::tests::TemporaryFile file("uburu-search-cancel-read.txt");
+  const auto& path = file.path();
+  std::string content;
+
+  for (int line = 0; line < 128; ++line)
+    content += "needle on a cancellable line\n";
+
+  uburu::tests::writeFile(path, content);
+
+  std::stop_source cancellation;
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(path.parent_path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(
+    query,
+    [&](uburu::SearchResult result) {
+      results.push_back(std::move(result));
+      cancellation.request_stop();
+
+      return true;
+    },
+    cancellation.get_token());
+
+  CHECK(summary.cancelled);
+  CHECK(summary.filesScanned == 1);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().line == 1);
 }
 
 TEST_CASE("direct search streams a match with one-based line and column")

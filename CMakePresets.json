@@ -101,6 +101,17 @@
         "UBURU_ENABLE_SANITIZERS": "ON",
         "UBURU_WARNINGS_AS_ERRORS": "ON"
       }
+    },
+    {
+      "name": "core-linux-tsan-debug",
+      "displayName": "Core-only Linux Debug with ThreadSanitizer",
+      "description": "Core build with ThreadSanitizer enabled for repeated concurrency validation.",
+      "inherits": "core-linux-debug",
+      "binaryDir": "${sourceDir}/build/core-linux-tsan-debug",
+      "cacheVariables": {
+        "UBURU_ENABLE_THREAD_SANITIZER": "ON",
+        "UBURU_WARNINGS_AS_ERRORS": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -136,6 +147,10 @@
       "configurePreset": "core-linux-sanitize-debug"
     },
     {
+      "name": "core-linux-tsan-debug",
+      "configurePreset": "core-linux-tsan-debug"
+    },
+    {
       "name": "format",
       "configurePreset": "windows-msvc-debug",
       "configuration": "Debug",
@@ -159,6 +174,9 @@
       "name": "windows-msvc-debug",
       "configurePreset": "windows-msvc-debug",
       "configuration": "Debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -166,6 +184,9 @@
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -174,6 +195,9 @@
       "name": "core-windows-msvc-debug",
       "configurePreset": "core-windows-msvc-debug",
       "configuration": "Debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -182,6 +206,9 @@
       "name": "core-windows-msvc-werror-debug",
       "configurePreset": "core-windows-msvc-werror-debug",
       "configuration": "Debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -189,6 +216,9 @@
     {
       "name": "core-linux-debug",
       "configurePreset": "core-linux-debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -196,6 +226,9 @@
     {
       "name": "core-linux-werror-debug",
       "configurePreset": "core-linux-werror-debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -203,6 +236,19 @@
     {
       "name": "core-linux-sanitize-debug",
       "configurePreset": "core-linux-sanitize-debug",
+      "execution": {
+        "jobs": 4
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-linux-tsan-debug",
+      "configurePreset": "core-linux-tsan-debug",
+      "execution": {
+        "jobs": 4
+      },
       "output": {
         "outputOnFailure": true
       }

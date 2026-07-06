@@ -14,6 +14,7 @@ option(UBURU_ENABLE_LIBGIT2 "Enable the future libgit2 backend" ON)
 option(UBURU_ENABLE_FORMAT_TARGET "Add the optional clang-format target" ON)
 option(UBURU_ENABLE_TIDY_TARGET "Add the optional clang-tidy target" ON)
 option(UBURU_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer where supported" OFF)
+option(UBURU_ENABLE_THREAD_SANITIZER "Enable ThreadSanitizer where supported" OFF)
 option(UBURU_WARNINGS_AS_ERRORS "Treat compiler warnings as build errors for project targets" OFF)
 option(UBURU_BUILD_BENCHMARKS "Build developer benchmarks" OFF)
 
@@ -36,6 +37,10 @@ else()
   endif()
 endif()
 
+if(UBURU_ENABLE_SANITIZERS AND UBURU_ENABLE_THREAD_SANITIZER)
+  message(FATAL_ERROR "UBURU_ENABLE_SANITIZERS and UBURU_ENABLE_THREAD_SANITIZER cannot be enabled together")
+endif()
+
 if(UBURU_ENABLE_SANITIZERS)
   if(MSVC)
     message(WARNING "UBURU_ENABLE_SANITIZERS is not configured for MSVC yet")
@@ -45,6 +50,18 @@ if(UBURU_ENABLE_SANITIZERS)
       -fno-omit-frame-pointer
     )
     target_link_options(uburu_project_options INTERFACE -fsanitize=address,undefined)
+  endif()
+endif()
+
+if(UBURU_ENABLE_THREAD_SANITIZER)
+  if(MSVC)
+    message(WARNING "UBURU_ENABLE_THREAD_SANITIZER is not configured for MSVC")
+  else()
+    target_compile_options(uburu_project_options INTERFACE
+      -fsanitize=thread
+      -fno-omit-frame-pointer
+    )
+    target_link_options(uburu_project_options INTERFACE -fsanitize=thread)
   endif()
 endif()
 

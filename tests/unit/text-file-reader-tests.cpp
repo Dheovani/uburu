@@ -156,6 +156,35 @@ TEST_CASE("text reader reports extremely long lines")
   CHECK(summary.status == uburu::text::TextReadStatus::lineTooLong);
 }
 
+TEST_CASE("text reader observes cancellation requested by the line sink")
+{
+  TemporaryFile file("uburu-text-reader-sink-cancellation.txt");
+  std::string content;
+
+  for (int line = 0; line < 64; ++line)
+    content += "line\n";
+
+  const std::vector<unsigned char> bytes(content.begin(), content.end());
+  writeBytes(file.path(), bytes);
+
+  std::stop_source cancellation;
+  std::vector<uburu::text::TextLine> lines;
+  const auto summary = uburu::text::readTextFileLines(
+    file.path(),
+    uburu::SearchOptions{},
+    [&](const uburu::text::TextLine& line) {
+      lines.push_back(line);
+      cancellation.request_stop();
+
+      return true;
+    },
+    cancellation.get_token());
+
+  CHECK(summary.status == uburu::text::TextReadStatus::cancelled);
+  REQUIRE(lines.size() == 1);
+  CHECK(lines.front().lineNumber == 1);
+}
+
 TEST_CASE("visual columns count UTF-8 scalars instead of raw bytes")
 {
   const std::string text{"pr\303\251-a\303\247\303\243o"};

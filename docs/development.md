@@ -67,6 +67,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 
 On Linux, also run `core-linux-sanitize-debug` before sensitive changes in parsing, regex, filesystem, concurrency, or storage.
 
+## Coverage
+
+Coverage is optional and intentionally isolated from normal developer builds. Use the Linux core coverage preset when validating broad test-suite changes:
+
+```bash
+cmake --preset core-linux-coverage-debug
+cmake --build --preset core-linux-coverage-debug
+cmake --build --preset coverage
+```
+
+The `coverage` target runs the test suite and generates per-module reports under `build/core-linux-coverage-debug/coverage`, currently split between `src/core` and `src/app`. CI publishes this directory as the `linux-coverage-report` artifact. Thresholds should be attached to critical behavior only, not to cosmetic line-count goals.
+
 ## What not to commit
 
 Do not commit:

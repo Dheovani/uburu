@@ -114,3 +114,41 @@ jobs:
 
       - name: Test
         run: ctest --preset core-linux-sanitize-debug
+
+  linux-coverage:
+    name: Linux coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare vcpkg cache directory
+        run: mkdir -p .vcpkg-cache
+
+      - name: Cache vcpkg binary artifacts
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-cache
+          key: vcpkg-linux-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-linux-
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y gcovr ninja-build
+
+      - name: Configure
+        env:
+          VCPKG_ROOT: /usr/local/share/vcpkg
+        run: cmake --preset core-linux-coverage-debug
+
+      - name: Build
+        run: cmake --build --preset core-linux-coverage-debug
+
+      - name: Coverage
+        run: cmake --build --preset coverage
+
+      - name: Publish coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-coverage-report
+          path: build/core-linux-coverage-debug/coverage

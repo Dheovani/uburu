@@ -112,6 +112,16 @@
         "UBURU_ENABLE_THREAD_SANITIZER": "ON",
         "UBURU_WARNINGS_AS_ERRORS": "ON"
       }
+    },
+    {
+      "name": "core-linux-coverage-debug",
+      "displayName": "Core-only Linux Debug with coverage",
+      "description": "Core build with gcov-compatible coverage instrumentation and per-module reports.",
+      "inherits": "core-linux-debug",
+      "binaryDir": "${sourceDir}/build/core-linux-coverage-debug",
+      "cacheVariables": {
+        "UBURU_ENABLE_COVERAGE": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -149,6 +159,15 @@
     {
       "name": "core-linux-tsan-debug",
       "configurePreset": "core-linux-tsan-debug"
+    },
+    {
+      "name": "core-linux-coverage-debug",
+      "configurePreset": "core-linux-coverage-debug"
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "core-linux-coverage-debug",
+      "targets": ["coverage"]
     },
     {
       "name": "format",
@@ -246,6 +265,16 @@
     {
       "name": "core-linux-tsan-debug",
       "configurePreset": "core-linux-tsan-debug",
+      "execution": {
+        "jobs": 4
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-linux-coverage-debug",
+      "configurePreset": "core-linux-coverage-debug",
       "execution": {
         "jobs": 4
       },

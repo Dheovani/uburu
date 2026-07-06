@@ -96,6 +96,7 @@ namespace uburu::app
 
   public:
     explicit SearchController(QObject* parent = nullptr);
+    explicit SearchController(std::shared_ptr<const SearchService> searchService, QObject* parent = nullptr);
     ~SearchController() override;
     [[nodiscard]] QString directory() const;
     [[nodiscard]] QString status() const;

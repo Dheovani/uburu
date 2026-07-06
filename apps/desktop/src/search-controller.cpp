@@ -703,6 +703,12 @@ namespace uburu::app
       return extensions;
     }
 
+    std::shared_ptr<const SearchService> createDefaultSearchService()
+    {
+      return std::make_shared<DefaultSearchService>(
+        std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>()));
+    }
+
   } // namespace
 
   SearchResultModel::SearchResultModel(QObject* parent) : QAbstractListModel(parent) {}
@@ -770,12 +776,16 @@ namespace uburu::app
     endInsertRows();
   }
 
-  SearchController::SearchController(QObject* parent)
+  SearchController::SearchController(QObject* parent) : SearchController(createDefaultSearchService(), parent) {}
+
+  SearchController::SearchController(std::shared_ptr<const SearchService> searchService, QObject* parent)
     : QObject(parent), statusValue(tr("Pronto")), timeToFirstResultValue(QStringLiteral("—")),
       searchDurationValue(QStringLiteral("—")), indexingStatusValue(tr("Indexação inativa")), resultsModel(this),
-      searchService(std::make_shared<DefaultSearchService>(
-        std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>())))
+      searchService(std::move(searchService))
   {
+    if (!this->searchService)
+      throw std::invalid_argument("SearchController requires a search service");
+
     loadScopeHistory();
   }
 

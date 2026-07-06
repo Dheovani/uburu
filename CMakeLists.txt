@@ -15,6 +15,7 @@ option(UBURU_ENABLE_FORMAT_TARGET "Add the optional clang-format target" ON)
 option(UBURU_ENABLE_TIDY_TARGET "Add the optional clang-tidy target" ON)
 option(UBURU_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer where supported" OFF)
 option(UBURU_ENABLE_THREAD_SANITIZER "Enable ThreadSanitizer where supported" OFF)
+option(UBURU_ENABLE_COVERAGE "Enable coverage instrumentation and report targets where supported" OFF)
 option(UBURU_WARNINGS_AS_ERRORS "Treat compiler warnings as build errors for project targets" OFF)
 option(UBURU_BUILD_BENCHMARKS "Build developer benchmarks" OFF)
 
@@ -41,6 +42,10 @@ if(UBURU_ENABLE_SANITIZERS AND UBURU_ENABLE_THREAD_SANITIZER)
   message(FATAL_ERROR "UBURU_ENABLE_SANITIZERS and UBURU_ENABLE_THREAD_SANITIZER cannot be enabled together")
 endif()
 
+if(UBURU_ENABLE_COVERAGE AND (UBURU_ENABLE_SANITIZERS OR UBURU_ENABLE_THREAD_SANITIZER))
+  message(FATAL_ERROR "UBURU_ENABLE_COVERAGE cannot be enabled together with sanitizer instrumentation")
+endif()
+
 if(UBURU_ENABLE_SANITIZERS)
   if(MSVC)
     message(WARNING "UBURU_ENABLE_SANITIZERS is not configured for MSVC yet")
@@ -62,6 +67,19 @@ if(UBURU_ENABLE_THREAD_SANITIZER)
       -fno-omit-frame-pointer
     )
     target_link_options(uburu_project_options INTERFACE -fsanitize=thread)
+  endif()
+endif()
+
+if(UBURU_ENABLE_COVERAGE)
+  if(MSVC)
+    message(FATAL_ERROR "UBURU_ENABLE_COVERAGE is not supported with MSVC")
+  else()
+    target_compile_options(uburu_project_options INTERFACE
+      -O0
+      -g
+      --coverage
+    )
+    target_link_options(uburu_project_options INTERFACE --coverage)
   endif()
 endif()
 
@@ -169,6 +187,66 @@ if(UBURU_BUILD_TESTS)
   include(CTest)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
+  find_program(UBURU_GCOVR_EXECUTABLE NAMES gcovr)
+
+  if(UBURU_GCOVR_EXECUTABLE)
+    set(UBURU_COVERAGE_DIRECTORY "${CMAKE_BINARY_DIR}/coverage")
+
+    add_custom_target(coverage-core
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${UBURU_COVERAGE_DIRECTORY}"
+      COMMAND "${UBURU_GCOVR_EXECUTABLE}"
+        --root "${PROJECT_SOURCE_DIR}"
+        --filter "${PROJECT_SOURCE_DIR}/src/core"
+        --exclude "${PROJECT_SOURCE_DIR}/tests"
+        --html-details "${UBURU_COVERAGE_DIRECTORY}/core.html"
+        --xml "${UBURU_COVERAGE_DIRECTORY}/core.xml"
+        --print-summary
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+      COMMENT "Generating core coverage report"
+      VERBATIM
+    )
+
+    add_custom_target(coverage-app
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${UBURU_COVERAGE_DIRECTORY}"
+      COMMAND "${UBURU_GCOVR_EXECUTABLE}"
+        --root "${PROJECT_SOURCE_DIR}"
+        --filter "${PROJECT_SOURCE_DIR}/src/app"
+        --exclude "${PROJECT_SOURCE_DIR}/tests"
+        --html-details "${UBURU_COVERAGE_DIRECTORY}/app.html"
+        --xml "${UBURU_COVERAGE_DIRECTORY}/app.xml"
+        --print-summary
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+      COMMENT "Generating application-service coverage report"
+      VERBATIM
+    )
+
+    add_custom_target(coverage
+      COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${CMAKE_BINARY_DIR}" --output-on-failure
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${UBURU_COVERAGE_DIRECTORY}"
+      COMMAND "${UBURU_GCOVR_EXECUTABLE}"
+        --root "${PROJECT_SOURCE_DIR}"
+        --filter "${PROJECT_SOURCE_DIR}/src/core"
+        --exclude "${PROJECT_SOURCE_DIR}/tests"
+        --html-details "${UBURU_COVERAGE_DIRECTORY}/core.html"
+        --xml "${UBURU_COVERAGE_DIRECTORY}/core.xml"
+        --print-summary
+      COMMAND "${UBURU_GCOVR_EXECUTABLE}"
+        --root "${PROJECT_SOURCE_DIR}"
+        --filter "${PROJECT_SOURCE_DIR}/src/app"
+        --exclude "${PROJECT_SOURCE_DIR}/tests"
+        --html-details "${UBURU_COVERAGE_DIRECTORY}/app.html"
+        --xml "${UBURU_COVERAGE_DIRECTORY}/app.xml"
+        --print-summary
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+      COMMENT "Running tests and generating per-module coverage reports"
+      VERBATIM
+    )
+  else()
+    message(STATUS "gcovr not found; the optional coverage targets are unavailable")
+  endif()
 endif()
 
 if(UBURU_BUILD_BENCHMARKS)

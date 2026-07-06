@@ -270,11 +270,11 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Test backpressure and memory limits.
 - [x] Test concurrency repeatedly and under ThreadSanitizer where available.
 - [x] Add Qt tests for controller/model and observable UI states.
-- [ ] Add a few end-to-end tests for selecting folder, searching, cancelling, and opening result.
+- [x] Add a few end-to-end tests for selecting folder, searching, cancelling, and opening result.
 - [x] Enable safe parallel CTest execution.
-- [ ] Configure per-module coverage and publish report in CI.
+- [x] Configure per-module coverage and publish report in CI.
 - [ ] Define thresholds by critical behavior, without chasing cosmetic coverage.
-- [ ] Create regression suite with real bugs found.
+- [x] Create regression suite with real bugs found.
 - [ ] Add fuzzing for matcher, ignore parser, encoding, and paths.
 
 ## Milestone 10 — Benchmarks and performance targets (P1)

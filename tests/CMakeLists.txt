@@ -2,6 +2,7 @@ find_package(Catch2 3 CONFIG REQUIRED)
 
 add_executable(uburu_core_tests
   integration/libgit2-git-service-integration-tests.cpp
+  regression/search-regression-tests.cpp
   unit/adaptive-result-batcher-tests.cpp
   unit/bounded-queue-tests.cpp
   unit/content-hash-tests.cpp
@@ -74,6 +75,8 @@ if(UBURU_BUILD_DESKTOP)
     ../apps/desktop/src/search-controller.hpp
     ${UBURU_DESKTOP_TEST_MOC_SOURCES}
   )
+
+  set_target_properties(uburu_desktop_tests PROPERTIES AUTOMOC ON)
 
   target_include_directories(uburu_desktop_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

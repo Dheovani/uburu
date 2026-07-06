@@ -3,17 +3,24 @@
 #include "helpers/temporary-paths.hpp"
 
 #include <QCoreApplication>
+#include <QDesktopServices>
 #include <QDir>
+#include <QEventLoop>
+#include <QObject>
 #include <QSettings>
 #include <QString>
+#include <QUrl>
 #include <QVariantMap>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <thread>
 
 namespace
 {
@@ -50,7 +57,68 @@ namespace
     return values.front().toMap();
   }
 
+  template <typename Predicate>
+  bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = std::chrono::seconds(2))
+  {
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+
+    while (std::chrono::steady_clock::now() < deadline) {
+      testApplication().processEvents(QEventLoop::AllEvents, 10);
+
+      if (predicate())
+        return true;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds{1});
+    }
+
+    testApplication().processEvents(QEventLoop::AllEvents, 10);
+
+    return predicate();
+  }
+
+  class BlockingSearchService final : public uburu::app::SearchService
+  {
+  public:
+    [[nodiscard]] uburu::search::SearchSummary
+    search(const uburu::SearchQuery&, uburu::search::ResultSink, std::stop_token stopToken = {}) const override
+    {
+      started = true;
+
+      while (!stopToken.stop_requested())
+        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+
+      observedStop = true;
+
+      return uburu::search::SearchSummary{.cancelled = true};
+    }
+
+    [[nodiscard]] uburu::search::SearchSummary searchWithEvents(const uburu::SearchQuery&,
+                                                                const uburu::app::SearchEventSink&,
+                                                                uburu::app::SearchExecutionOptions = {},
+                                                                std::stop_token = {}) const override
+    {
+      return {};
+    }
+
+    mutable std::atomic_bool started{false};
+    mutable std::atomic_bool observedStop{false};
+  };
+
 } // namespace
+
+class UrlCapture final : public QObject
+{
+  Q_OBJECT
+
+public:
+  QUrl openedUrl;
+
+public slots:
+  void open(const QUrl& url)
+  {
+    openedUrl = url;
+  }
+};
 
 TEST_CASE("search controller exposes selected scope and favorite state")
 {
@@ -103,6 +171,68 @@ TEST_CASE("search controller exposes included and excluded scope entries")
   CHECK(excluded.value(QStringLiteral("absolutePath")).toString() == qtPath(excludePath));
 }
 
+TEST_CASE("desktop search flow selects a folder and finds a result")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-e2e-search-settings-test");
+  uburu::tests::TemporaryDirectory scopeDirectory("uburu-controller-e2e-search-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("e2e-search-test"));
+
+  const auto filePath = scopeDirectory.path() / "notes" / "sample.txt";
+  uburu::tests::writeFile(filePath, "first line\nneedle in the selected folder\n");
+
+  uburu::app::SearchController controller;
+  controller.selectDirectory(qtPath(scopeDirectory.path()));
+  controller.startSearch(
+    QStringLiteral("needle"), false, false, false, true, false, false, true, QStringLiteral("txt"));
+
+  REQUIRE(waitUntil([&] { return !controller.running() && controller.results()->rowCount() == 1; }));
+
+  const auto index = controller.results()->index(0, 0);
+  REQUIRE(index.isValid());
+  CHECK(controller.results()
+          ->data(index, uburu::app::SearchResultModel::PathRole)
+          .toString()
+          .endsWith(QStringLiteral("sample.txt")));
+  CHECK(controller.matchesFound() == 1);
+}
+
+TEST_CASE("desktop search flow can cancel a running search")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-e2e-cancel-settings-test");
+  uburu::tests::TemporaryDirectory scopeDirectory("uburu-controller-e2e-cancel-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("e2e-cancel-test"));
+
+  auto service = std::make_shared<BlockingSearchService>();
+  uburu::app::SearchController controller(service);
+  controller.selectDirectory(qtPath(scopeDirectory.path()));
+  controller.startSearch(QStringLiteral("needle"), false, false, false, true, false, false, true, QString{});
+
+  REQUIRE(waitUntil([&] { return service->started.load() && controller.running(); }));
+
+  controller.cancel();
+
+  REQUIRE(waitUntil([&] { return !controller.running() && service->observedStop.load(); }));
+  CHECK_FALSE(controller.cancelling());
+}
+
+TEST_CASE("desktop result action opens a selected file URL")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-e2e-open-settings-test");
+  uburu::tests::TemporaryFile file("uburu-controller-e2e-open-result.txt");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("e2e-open-test"));
+  uburu::tests::writeFile(file.path(), "needle\n");
+
+  UrlCapture capture;
+  QDesktopServices::setUrlHandler(QStringLiteral("file"), &capture, "open");
+
+  uburu::app::SearchController controller;
+  controller.openFile(qtPath(file.path()));
+
+  QDesktopServices::unsetUrlHandler(QStringLiteral("file"));
+
+  CHECK(capture.openedUrl == QUrl::fromLocalFile(qtPath(file.path())));
+}
+
 TEST_CASE("search result model exposes result roles")
 {
   auto& application = testApplication();
@@ -128,3 +258,5 @@ TEST_CASE("search result model exposes result roles")
   CHECK(model.data(index, uburu::app::SearchResultModel::FileGroupLabelRole).toString() ==
         QStringLiteral("C:/project/src/main.cpp"));
 }
+
+#include "search-controller-tests.moc"

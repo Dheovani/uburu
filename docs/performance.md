@@ -28,6 +28,30 @@ Search metrics include derived throughput (`filesPerSecond` and `bytesPerSecond`
 
 The future scanner will use a bounded pool, small-file prioritization, and backpressure. Optimizations must come with reproducible benchmarks for many small files, few large files, literal search, regex, initial indexing, and incremental reconciliation.
 
+## Developer benchmarks
+
+Uburu uses Google Benchmark for developer performance measurements. Benchmarks are disabled by default and can be enabled with `UBURU_BUILD_BENCHMARKS=ON`.
+
+The initial benchmark target is `uburu-search-service-benchmark`. It measures direct search scenarios through `DefaultSearchService`, using deterministic temporary datasets and Uburu-specific counters such as time to first result, total time, throughput, ignored files, binary skips, emitted results, and approximate memory usage.
+
+Benchmarks are intentionally separate from CTest correctness tests. Run them explicitly:
+
+```powershell
+cmake --preset core-windows-msvc-debug -DUBURU_BUILD_BENCHMARKS=ON
+cmake --build build/core-windows-msvc-debug --config Debug --target uburu-search-service-benchmark
+.\build\core-windows-msvc-debug\benchmarks\Debug\uburu-search-service-benchmark.exe
+```
+
+Export JSON results with:
+
+```powershell
+.\build\core-windows-msvc-debug\benchmarks\Debug\uburu-search-service-benchmark.exe `
+  --benchmark_format=json `
+  --benchmark_out=benchmark-results.json
+```
+
+Initial scenarios cover many small files, few large files, regex-heavy content, `.gitignore`-heavy trees, and mixed text/binary filtering. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
+
 ## Large file reading
 
 The text reader processes content in chunks and keeps only the current line, pending decoding bytes, and configured context. This avoids allocation proportional to the whole file size for UTF-8, Latin-1, and UTF-16.

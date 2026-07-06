@@ -2,6 +2,27 @@
 
 This directory contains reproducible development benchmarks. They stay outside the default build so they do not slow down compilation, tests, or CI.
 
+## Search service
+
+`uburu-search-service-benchmark` uses Google Benchmark to measure `DefaultSearchService` through deterministic direct-search scenarios. It records Google Benchmark timings and Uburu-specific counters for matches, scanned files, processed bytes, throughput, time to first result, binary skips, ignored files, result batches, and approximate memory.
+
+```powershell
+cmake --preset core-windows-msvc-debug -DUBURU_BUILD_BENCHMARKS=ON
+cmake --build build/core-windows-msvc-debug --config Debug --target uburu-search-service-benchmark
+
+.\build\core-windows-msvc-debug\benchmarks\Debug\uburu-search-service-benchmark.exe
+```
+
+For JSON output:
+
+```powershell
+.\build\core-windows-msvc-debug\benchmarks\Debug\uburu-search-service-benchmark.exe `
+  --benchmark_format=json `
+  --benchmark_out=benchmark-results.json
+```
+
+Benchmarks are developer tools, not correctness tests, and should not be registered as normal CTest cases.
+
 ## Storage FTS5
 
 `uburu-storage-fts5-benchmark` compares a simple textual query in the SQLite catalog using `LIKE` against an equivalent FTS5 query. The goal is to evaluate FTS5 as an auxiliary structure for indexed search without coupling the `StorageService` contract to that backend.

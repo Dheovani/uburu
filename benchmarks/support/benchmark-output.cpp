@@ -21,6 +21,14 @@ namespace uburu::benchmarks
       return static_cast<double>(value.count());
     }
 
+    [[nodiscard]] double ratio(std::chrono::nanoseconds numerator, std::chrono::nanoseconds denominator)
+    {
+      if (denominator.count() == 0)
+        return 0.0;
+
+      return static_cast<double>(numerator.count()) / static_cast<double>(denominator.count());
+    }
+
   } // namespace
 
   void
@@ -61,6 +69,38 @@ namespace uburu::benchmarks
 
     if (summary.regexExecutionMode == regexJitExecutionMode)
       state.counters["regex_jit_enabled"] = counterOne;
+  }
+
+  void publishRepeatedSearchCounters(benchmark::State& state,
+                                     const BenchmarkDataset& dataset,
+                                     const SearchBenchmarkResult& firstPass,
+                                     const SearchBenchmarkResult& secondPass)
+  {
+    const auto& firstSummary = firstPass.summary;
+    const auto& firstMetrics = firstSummary.metrics;
+    const auto& secondSummary = secondPass.summary;
+    const auto& secondMetrics = secondSummary.metrics;
+
+    state.counters["dataset_files"] = asDouble(dataset.fileCount);
+    state.counters["dataset_bytes"] = asDouble(dataset.byteCount);
+    state.counters["expected_matches"] = asDouble(dataset.expectedMatches);
+    state.counters["first_pass_matches"] = asDouble(static_cast<std::uint64_t>(firstSummary.matches));
+    state.counters["second_pass_matches"] = asDouble(static_cast<std::uint64_t>(secondSummary.matches));
+    state.counters["first_pass_total_time_ns"] = nanoseconds(firstMetrics.totalTime);
+    state.counters["second_pass_total_time_ns"] = nanoseconds(secondMetrics.totalTime);
+    state.counters["first_pass_time_to_first_result_ns"] = nanoseconds(firstMetrics.timeToFirstResult);
+    state.counters["second_pass_time_to_first_result_ns"] = nanoseconds(secondMetrics.timeToFirstResult);
+    state.counters["first_pass_bytes_per_second"] = asDouble(firstMetrics.bytesPerSecond);
+    state.counters["second_pass_bytes_per_second"] = asDouble(secondMetrics.bytesPerSecond);
+    state.counters["second_pass_speedup"] = ratio(firstMetrics.totalTime, secondMetrics.totalTime);
+    state.counters["first_pass_result_batches"] = asDouble(firstPass.resultBatches);
+    state.counters["second_pass_result_batches"] = asDouble(secondPass.resultBatches);
+
+    if (firstSummary.partialFailure || secondSummary.partialFailure)
+      state.counters["partial_failure"] = counterOne;
+
+    if (firstSummary.cancelled || secondSummary.cancelled)
+      state.counters["cancelled"] = counterOne;
   }
 
 } // namespace uburu::benchmarks

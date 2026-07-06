@@ -6,7 +6,9 @@ This directory contains reproducible development benchmarks. They stay outside t
 
 `uburu-search-service-benchmark` uses Google Benchmark to measure `DefaultSearchService` through deterministic direct-search scenarios. It records Google Benchmark timings and Uburu-specific counters for matches, scanned files, processed bytes, throughput, time to first result, binary skips, ignored files, result batches, approximate memory, and whether a regex scenario used PCRE2 JIT.
 
-The current scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, precomposed-versus-decomposed Unicode normalization cost, regex/JIT search, `.gitignore`-heavy traversal, and mixed text/binary filtering.
+The current scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, precomposed-versus-decomposed Unicode normalization cost, regex/JIT search, `.gitignore`-heavy traversal, mixed text/binary filtering, and repeated scans over the same dataset.
+
+The repeated-scan scenario does not flush the operating-system cache. It compares the first observed pass with an immediate second pass and publishes `first_pass_*`, `second_pass_*`, and `second_pass_speedup` counters. Treat it as a practical cache-effect signal, not as a laboratory-grade cold-cache measurement.
 
 ```powershell
 cmake --preset core-windows-msvc-debug -DUBURU_BUILD_BENCHMARKS=ON

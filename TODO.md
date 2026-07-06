@@ -46,7 +46,7 @@ This document is the project's operational plan. Milestone order represents real
 ### Exit criteria
 
 - [x] A clean clone can be configured and tested through presets without manually editing paths.
-- [x] CI green on at least Windows/MinGW and Linux.
+- [ ] CI green on at least Windows/MinGW and Linux.
 
 ## Milestone 1 — Correct direct-search semantics (P0)
 
@@ -285,7 +285,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Measure literal case-sensitive, case-insensitive, whole word, and regex/JIT.
 - [x] Measure optional Unicode normalization cost before enabling it on the hot path.
 - [x] Measure time to first result separately from total time.
-- [ ] Measure cold/hot scan and operating-system cache effects.
+- [x] Measure cold/hot scan and operating-system cache effects.
 - [ ] Measure initial indexing, incremental indexing, and branch switch.
 - [ ] Measure reuse by content hash and blob hash.
 - [ ] Measure memory for queues, results, and index.

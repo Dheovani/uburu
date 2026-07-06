@@ -22,6 +22,23 @@ namespace
     }
   }
 
+  template <typename DatasetFactory>
+  void runRepeatedSearchServiceScenario(benchmark::State& state, DatasetFactory factory)
+  {
+    const auto dataset = factory();
+
+    for (auto _ : state) {
+      const auto firstPass = uburu::benchmarks::runDefaultSearchServiceBenchmark(dataset.get());
+      const auto secondPass = uburu::benchmarks::runDefaultSearchServiceBenchmark(dataset.get());
+      auto consumedResults = firstPass.consumedResults + secondPass.consumedResults;
+      auto consumedBytes = firstPass.consumedBytes + secondPass.consumedBytes;
+
+      benchmark::DoNotOptimize(consumedResults);
+      benchmark::DoNotOptimize(consumedBytes);
+      uburu::benchmarks::publishRepeatedSearchCounters(state, dataset.get(), firstPass, secondPass);
+    }
+  }
+
   void BM_SearchService_Direct_ManySmallFiles_Literal(benchmark::State& state)
   {
     runSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset);
@@ -67,6 +84,11 @@ namespace
     runSearchServiceScenario(state, uburu::benchmarks::makeMixedTextAndBinaryDataset);
   }
 
+  void BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect(benchmark::State& state)
+  {
+    runRepeatedSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset);
+  }
+
 } // namespace
 
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal);
@@ -78,3 +100,4 @@ BENCHMARK(BM_SearchService_Direct_LiteralWholeWord);
 BENCHMARK(BM_SearchService_Direct_UnicodeNormalization);
 BENCHMARK(BM_SearchService_Direct_GitignoreHeavy_Literal);
 BENCHMARK(BM_SearchService_Direct_BinaryAndHiddenFiltering);
+BENCHMARK(BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect);

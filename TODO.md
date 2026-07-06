@@ -273,9 +273,9 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Add a few end-to-end tests for selecting folder, searching, cancelling, and opening result.
 - [x] Enable safe parallel CTest execution.
 - [x] Configure per-module coverage and publish report in CI.
-- [ ] Define thresholds by critical behavior, without chasing cosmetic coverage.
+- [x] Define thresholds by critical behavior, without chasing cosmetic coverage.
 - [x] Create regression suite with real bugs found.
-- [ ] Add fuzzing for matcher, ignore parser, encoding, and paths.
+- [x] Add fuzzing for matcher, ignore parser, encoding, and paths.
 
 ## Milestone 10 — Benchmarks and performance targets (P1)
 

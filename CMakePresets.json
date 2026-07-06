@@ -122,6 +122,19 @@
       "cacheVariables": {
         "UBURU_ENABLE_COVERAGE": "ON"
       }
+    },
+    {
+      "name": "core-linux-fuzz-debug",
+      "displayName": "Core-only Linux Debug with fuzzers",
+      "description": "Core build with Clang/libFuzzer smoke targets.",
+      "inherits": "core-linux-debug",
+      "binaryDir": "${sourceDir}/build/core-linux-fuzz-debug",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "UBURU_BUILD_FUZZERS": "ON",
+        "UBURU_BUILD_TESTS": "OFF",
+        "UBURU_ENABLE_FUZZING": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -168,6 +181,15 @@
       "name": "coverage",
       "configurePreset": "core-linux-coverage-debug",
       "targets": ["coverage"]
+    },
+    {
+      "name": "core-linux-fuzz-debug",
+      "configurePreset": "core-linux-fuzz-debug"
+    },
+    {
+      "name": "fuzz-smoke",
+      "configurePreset": "core-linux-fuzz-debug",
+      "targets": ["fuzz-smoke"]
     },
     {
       "name": "format",
@@ -275,6 +297,16 @@
     {
       "name": "core-linux-coverage-debug",
       "configurePreset": "core-linux-coverage-debug",
+      "execution": {
+        "jobs": 4
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-linux-fuzz-debug",
+      "configurePreset": "core-linux-fuzz-debug",
       "execution": {
         "jobs": 4
       },

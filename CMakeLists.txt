@@ -16,8 +16,14 @@ option(UBURU_ENABLE_TIDY_TARGET "Add the optional clang-tidy target" ON)
 option(UBURU_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer where supported" OFF)
 option(UBURU_ENABLE_THREAD_SANITIZER "Enable ThreadSanitizer where supported" OFF)
 option(UBURU_ENABLE_COVERAGE "Enable coverage instrumentation and report targets where supported" OFF)
+option(UBURU_ENABLE_FUZZING "Enable libFuzzer instrumentation where supported" OFF)
 option(UBURU_WARNINGS_AS_ERRORS "Treat compiler warnings as build errors for project targets" OFF)
 option(UBURU_BUILD_BENCHMARKS "Build developer benchmarks" OFF)
+option(UBURU_BUILD_FUZZERS "Build fuzz targets" OFF)
+set(UBURU_COVERAGE_CORE_LINE_THRESHOLD "30" CACHE STRING "Minimum line coverage percentage for src/core")
+set(UBURU_COVERAGE_CORE_BRANCH_THRESHOLD "15" CACHE STRING "Minimum branch coverage percentage for src/core")
+set(UBURU_COVERAGE_APP_LINE_THRESHOLD "30" CACHE STRING "Minimum line coverage percentage for src/app")
+set(UBURU_COVERAGE_APP_BRANCH_THRESHOLD "15" CACHE STRING "Minimum branch coverage percentage for src/app")
 
 add_library(uburu_project_options INTERFACE)
 add_library(Uburu::ProjectOptions ALIAS uburu_project_options)
@@ -44,6 +50,14 @@ endif()
 
 if(UBURU_ENABLE_COVERAGE AND (UBURU_ENABLE_SANITIZERS OR UBURU_ENABLE_THREAD_SANITIZER))
   message(FATAL_ERROR "UBURU_ENABLE_COVERAGE cannot be enabled together with sanitizer instrumentation")
+endif()
+
+if(UBURU_ENABLE_FUZZING AND (UBURU_ENABLE_COVERAGE OR UBURU_ENABLE_SANITIZERS OR UBURU_ENABLE_THREAD_SANITIZER))
+  message(FATAL_ERROR "UBURU_ENABLE_FUZZING cannot be enabled together with coverage or sanitizer presets")
+endif()
+
+if(UBURU_BUILD_FUZZERS AND NOT UBURU_ENABLE_FUZZING)
+  message(FATAL_ERROR "UBURU_BUILD_FUZZERS requires UBURU_ENABLE_FUZZING")
 endif()
 
 if(UBURU_ENABLE_SANITIZERS)
@@ -81,6 +95,18 @@ if(UBURU_ENABLE_COVERAGE)
     )
     target_link_options(uburu_project_options INTERFACE --coverage)
   endif()
+endif()
+
+if(UBURU_ENABLE_FUZZING)
+  if(MSVC OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "UBURU_ENABLE_FUZZING requires Clang/libFuzzer")
+  endif()
+
+  target_compile_options(uburu_project_options INTERFACE
+    -fsanitize=fuzzer-no-link,address,undefined
+    -fno-omit-frame-pointer
+  )
+  target_link_options(uburu_project_options INTERFACE -fsanitize=address,undefined)
 endif()
 
 if(UBURU_ENABLE_FORMAT_TARGET)
@@ -204,6 +230,8 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/core.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/core.xml"
         --print-summary
+        --fail-under-line "${UBURU_COVERAGE_CORE_LINE_THRESHOLD}"
+        --fail-under-branch "${UBURU_COVERAGE_CORE_BRANCH_THRESHOLD}"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       COMMENT "Generating core coverage report"
       VERBATIM
@@ -218,6 +246,8 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/app.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/app.xml"
         --print-summary
+        --fail-under-line "${UBURU_COVERAGE_APP_LINE_THRESHOLD}"
+        --fail-under-branch "${UBURU_COVERAGE_APP_BRANCH_THRESHOLD}"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       COMMENT "Generating application-service coverage report"
       VERBATIM
@@ -233,6 +263,8 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/core.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/core.xml"
         --print-summary
+        --fail-under-line "${UBURU_COVERAGE_CORE_LINE_THRESHOLD}"
+        --fail-under-branch "${UBURU_COVERAGE_CORE_BRANCH_THRESHOLD}"
       COMMAND "${UBURU_GCOVR_EXECUTABLE}"
         --root "${PROJECT_SOURCE_DIR}"
         --filter "${PROJECT_SOURCE_DIR}/src/app"
@@ -240,6 +272,8 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/app.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/app.xml"
         --print-summary
+        --fail-under-line "${UBURU_COVERAGE_APP_LINE_THRESHOLD}"
+        --fail-under-branch "${UBURU_COVERAGE_APP_BRANCH_THRESHOLD}"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       COMMENT "Running tests and generating per-module coverage reports"
       VERBATIM
@@ -247,6 +281,10 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
   else()
     message(STATUS "gcovr not found; the optional coverage targets are unavailable")
   endif()
+endif()
+
+if(UBURU_BUILD_FUZZERS)
+  add_subdirectory(tests/fuzzers)
 endif()
 
 if(UBURU_BUILD_BENCHMARKS)

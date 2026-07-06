@@ -77,7 +77,21 @@ cmake --build --preset core-linux-coverage-debug
 cmake --build --preset coverage
 ```
 
-The `coverage` target runs the test suite and generates per-module reports under `build/core-linux-coverage-debug/coverage`, currently split between `src/core` and `src/app`. CI publishes this directory as the `linux-coverage-report` artifact. Thresholds should be attached to critical behavior only, not to cosmetic line-count goals.
+The `coverage` target runs the test suite and generates per-module reports under `build/core-linux-coverage-debug/coverage`, currently split between `src/core` and `src/app`. CI publishes this directory as the `linux-coverage-report` artifact.
+
+The initial thresholds are intentionally modest and behavior-oriented: `src/core` and `src/app` both require 30% line coverage and 15% branch coverage. They are not a vanity score; their job is to prevent accidental collapse while the regression suite grows. Raise them only when a critical behavior is covered by deterministic tests and the new value is sustainable in CI.
+
+## Fuzzing
+
+Fuzzing is optional and isolated in a Clang/libFuzzer preset:
+
+```bash
+cmake --preset core-linux-fuzz-debug
+cmake --build --preset core-linux-fuzz-debug
+cmake --build --preset fuzz-smoke
+```
+
+The smoke target currently exercises literal matching, `.gitignore` parsing and matching, text-file reading/encoding, and path normalization. CI runs a short smoke pass to catch obvious crashes. Longer exploratory runs should be launched manually from the individual fuzzer executables in `build/core-linux-fuzz-debug/tests/fuzzers`.
 
 ## What not to commit
 

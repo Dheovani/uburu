@@ -152,3 +152,35 @@ jobs:
         with:
           name: linux-coverage-report
           path: build/core-linux-coverage-debug/coverage
+
+  linux-fuzz-smoke:
+    name: Linux fuzz smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare vcpkg cache directory
+        run: mkdir -p .vcpkg-cache
+
+      - name: Cache vcpkg binary artifacts
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-cache
+          key: vcpkg-linux-clang-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-linux-clang-
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y clang ninja-build
+
+      - name: Configure
+        env:
+          VCPKG_ROOT: /usr/local/share/vcpkg
+        run: cmake --preset core-linux-fuzz-debug
+
+      - name: Build
+        run: cmake --build --preset core-linux-fuzz-debug
+
+      - name: Fuzz smoke
+        run: cmake --build --preset fuzz-smoke

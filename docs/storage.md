@@ -105,6 +105,8 @@ Milestone 11 introduces `app::SettingsService` as the typed boundary above the t
 
 Repository preferences use the same storage table with `RepositoryId` scope. `RepositorySettings` stores only explicit overrides, while `EffectiveRepositorySettings` resolves the predictable chain `internal defaults -> global settings -> repository overrides`. Repository overrides currently cover friendly name, thread count, file-size limit, result limit, memory budget, disk budget, `.gitignore` behavior, hidden-file behavior, and relevant extensions. Telemetry is intentionally inherited only from global settings so a repository cannot silently opt into it by itself.
 
+Typed settings normalize persisted values before they reach the search or indexing services. `0` keeps its explicit meaning for automatic thread count or unlimited budgets where the UI has not configured a concrete value. Non-zero values are clamped to defensive product limits: 256 threads, 1 TiB maximum file size, 1,000,000 results, 1 TiB memory budget, and 16 TiB disk budget. These limits protect future import/export, repository overrides, and hand-edited databases from accidentally creating pathological runs while still leaving room for large local repositories.
+
 ## Initial FTS5 evaluation
 
 Milestone 5 introduced `uburu-storage-fts5-benchmark`, a developer benchmark disabled from the default build. It creates a deterministic SQLite dataset, compares a simple textual query through `LIKE` with an equivalent FTS5 query, and validates that both return the same count.

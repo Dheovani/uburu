@@ -31,6 +31,11 @@ namespace uburu::app
     constexpr std::string_view repositoryIncludeHiddenFilesKey = "repository.includeHiddenFiles";
     constexpr std::string_view repositoryRelevantExtensionsKey = "repository.relevantExtensions";
     constexpr std::size_t defaultResultLimit = 10000;
+    constexpr std::size_t maximumThreadCountLimit = 256;
+    constexpr std::uintmax_t maximumFileSizeLimitBytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+    constexpr std::size_t maximumResultLimit = 1000000;
+    constexpr std::uintmax_t maximumMemoryBudgetLimitBytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+    constexpr std::uintmax_t maximumDiskBudgetLimitBytes = 16ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
     constexpr bool defaultRespectGitignore = true;
     constexpr bool defaultIncludeHiddenFiles = false;
 
@@ -128,6 +133,40 @@ namespace uburu::app
       return value.value_or("");
     }
 
+    [[nodiscard]] std::size_t limitedSize(std::size_t value, std::size_t maximumValue)
+    {
+      if (value > maximumValue)
+        return maximumValue;
+
+      return value;
+    }
+
+    [[nodiscard]] std::optional<std::size_t> limitedOptionalSize(std::optional<std::size_t> value,
+                                                                 std::size_t maximumValue)
+    {
+      if (!value)
+        return std::nullopt;
+
+      return limitedSize(*value, maximumValue);
+    }
+
+    [[nodiscard]] std::uintmax_t limitedUnsignedMax(std::uintmax_t value, std::uintmax_t maximumValue)
+    {
+      if (value > maximumValue)
+        return maximumValue;
+
+      return value;
+    }
+
+    [[nodiscard]] std::optional<std::uintmax_t> limitedOptionalUnsignedMax(std::optional<std::uintmax_t> value,
+                                                                           std::uintmax_t maximumValue)
+    {
+      if (!value)
+        return std::nullopt;
+
+      return limitedUnsignedMax(*value, maximumValue);
+    }
+
   } // namespace
 
   GlobalSettings defaultGlobalSettings()
@@ -149,8 +188,15 @@ namespace uburu::app
 
     normalized.schemaVersion = currentGlobalSettingsSchemaVersion;
 
+    normalized.maximumThreadCount = limitedSize(normalized.maximumThreadCount, maximumThreadCountLimit);
+    normalized.maximumFileSizeBytes = limitedUnsignedMax(normalized.maximumFileSizeBytes, maximumFileSizeLimitBytes);
+    normalized.memoryBudgetBytes = limitedUnsignedMax(normalized.memoryBudgetBytes, maximumMemoryBudgetLimitBytes);
+    normalized.diskBudgetBytes = limitedUnsignedMax(normalized.diskBudgetBytes, maximumDiskBudgetLimitBytes);
+
     if (normalized.resultLimit == 0)
       normalized.resultLimit = defaultResultLimit;
+
+    normalized.resultLimit = limitedSize(normalized.resultLimit, maximumResultLimit);
 
     return normalized;
   }
@@ -170,9 +216,17 @@ namespace uburu::app
     auto normalized = settings;
 
     normalized.schemaVersion = currentGlobalSettingsSchemaVersion;
+    normalized.maximumThreadCount = limitedOptionalSize(normalized.maximumThreadCount, maximumThreadCountLimit);
+    normalized.maximumFileSizeBytes =
+      limitedOptionalUnsignedMax(normalized.maximumFileSizeBytes, maximumFileSizeLimitBytes);
+    normalized.memoryBudgetBytes =
+      limitedOptionalUnsignedMax(normalized.memoryBudgetBytes, maximumMemoryBudgetLimitBytes);
+    normalized.diskBudgetBytes = limitedOptionalUnsignedMax(normalized.diskBudgetBytes, maximumDiskBudgetLimitBytes);
 
     if (normalized.resultLimit == 0)
       normalized.resultLimit.reset();
+
+    normalized.resultLimit = limitedOptionalSize(normalized.resultLimit, maximumResultLimit);
 
     return normalized;
   }

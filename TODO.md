@@ -300,7 +300,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Implement per-repository settings with predictable inheritance.
 - [x] Separate real indexing failures from files ignored by unsupported format, binary, size, filter, or temporary parser limitation in indexing status.
 - [ ] Add determinate or indeterminate bottom progress bars for active search and indexing, using exact progress when the total work is known and a clearly marked ongoing state when scanning still cannot estimate the remaining work.
-- [ ] Validate limits for threads, files, results, memory, and disk.
+- [x] Validate limits for threads, files, results, memory, and disk.
 - [ ] Add import/export for settings and saved searches.
 - [ ] Define telemetry policy: disabled by default and opt-in only, if it exists.
 - [ ] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.

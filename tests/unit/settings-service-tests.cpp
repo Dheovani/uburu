@@ -109,6 +109,39 @@ TEST_CASE("settings service ignores invalid persisted values")
 #endif
 }
 
+TEST_CASE("settings service clamps excessive global limits")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory directory("uburu-settings-service-global-limits-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  uburu::app::StorageSettingsService settingsService(storage);
+  auto settings = uburu::app::defaultGlobalSettings();
+
+  settings.maximumThreadCount = 1000;
+  settings.maximumFileSizeBytes = 2ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  settings.resultLimit = 2000000;
+  settings.memoryBudgetBytes = 2ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  settings.diskBudgetBytes = 32ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+
+  settingsService.saveGlobalSettings(settings);
+
+  const auto loaded = settingsService.loadGlobalSettings();
+
+  CHECK(loaded.maximumThreadCount == 256);
+  CHECK(loaded.maximumFileSizeBytes == 1024ULL * 1024ULL * 1024ULL * 1024ULL);
+  CHECK(loaded.resultLimit == 1000000);
+  CHECK(loaded.memoryBudgetBytes == 1024ULL * 1024ULL * 1024ULL * 1024ULL);
+  CHECK(loaded.diskBudgetBytes == 16ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL);
+  CHECK(storage.preference(std::nullopt, "global.maximumThreadCount") == "256");
+  CHECK(storage.preference(std::nullopt, "global.resultLimit") == "1000000");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("settings service resolves repository settings from global settings")
 {
 #if defined(UBURU_HAS_SQLITE)
@@ -200,6 +233,44 @@ TEST_CASE("settings service applies repository overrides over global settings")
   CHECK(effective.relevantExtensions == "cpp,hpp,qml");
   CHECK(effective.telemetryEnabled);
   CHECK(storage.preference("repository-id", "repository.maximumThreadCount") == "2");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("settings service clamps excessive repository overrides")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory directory("uburu-settings-service-repository-limits-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  uburu::app::StorageSettingsService settingsService(storage);
+  auto repositorySettings = uburu::app::defaultRepositorySettings("repository-id");
+
+  repositorySettings.maximumThreadCount = 1000;
+  repositorySettings.maximumFileSizeBytes = 2ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  repositorySettings.resultLimit = 2000000;
+  repositorySettings.memoryBudgetBytes = 2ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  repositorySettings.diskBudgetBytes = 32ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+
+  settingsService.saveRepositorySettings(repositorySettings);
+
+  const auto loaded = settingsService.loadRepositorySettings("repository-id");
+
+  REQUIRE(loaded.maximumThreadCount.has_value());
+  REQUIRE(loaded.maximumFileSizeBytes.has_value());
+  REQUIRE(loaded.resultLimit.has_value());
+  REQUIRE(loaded.memoryBudgetBytes.has_value());
+  REQUIRE(loaded.diskBudgetBytes.has_value());
+  CHECK(*loaded.maximumThreadCount == 256);
+  CHECK(*loaded.maximumFileSizeBytes == 1024ULL * 1024ULL * 1024ULL * 1024ULL);
+  CHECK(*loaded.resultLimit == 1000000);
+  CHECK(*loaded.memoryBudgetBytes == 1024ULL * 1024ULL * 1024ULL * 1024ULL);
+  CHECK(*loaded.diskBudgetBytes == 16ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL);
+  CHECK(storage.preference("repository-id", "repository.maximumThreadCount") == "256");
+  CHECK(storage.preference("repository-id", "repository.resultLimit") == "1000000");
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

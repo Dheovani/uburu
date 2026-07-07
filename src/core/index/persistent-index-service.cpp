@@ -250,20 +250,44 @@ namespace uburu::index
         },
         stopToken);
 
-      if (summary.status == text::TextReadStatus::completed)
-        return IndexedTextReadResult{.text = std::move(indexedText)};
+      if (summary.status == text::TextReadStatus::completed) {
+        IndexedTextReadResult result;
 
-      if (summary.status == text::TextReadStatus::cancelled)
-        return IndexedTextReadResult{.cancelled = true};
+        result.text = std::move(indexedText);
 
-      if (summary.status == text::TextReadStatus::binarySkipped)
-        return IndexedTextReadResult{.skipReason = IndexSkipReason::binary};
+        return result;
+      }
+
+      if (summary.status == text::TextReadStatus::cancelled) {
+        IndexedTextReadResult result;
+
+        result.cancelled = true;
+
+        return result;
+      }
+
+      if (summary.status == text::TextReadStatus::binarySkipped) {
+        IndexedTextReadResult result;
+
+        result.skipReason = IndexSkipReason::binary;
+
+        return result;
+      }
 
       if (summary.status == text::TextReadStatus::invalidEncoding ||
-          summary.status == text::TextReadStatus::lineTooLong)
-        return IndexedTextReadResult{.skipReason = IndexSkipReason::temporaryLimitation};
+          summary.status == text::TextReadStatus::lineTooLong) {
+        IndexedTextReadResult result;
 
-      return IndexedTextReadResult{.failed = true};
+        result.skipReason = IndexSkipReason::temporaryLimitation;
+
+        return result;
+      }
+
+      IndexedTextReadResult result;
+
+      result.failed = true;
+
+      return result;
     }
 
     [[nodiscard]] std::vector<text::MatchPosition> indexedPathMatches(std::string_view pathText,

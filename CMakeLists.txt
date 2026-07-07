@@ -167,13 +167,35 @@ if(UBURU_ENABLE_TIDY_TARGET)
 
   if(UBURU_CLANG_TIDY_EXECUTABLE)
     file(GLOB_RECURSE UBURU_TIDY_SOURCES CONFIGURE_DEPENDS
-      "${PROJECT_SOURCE_DIR}/benchmarks/*.cpp"
       "${PROJECT_SOURCE_DIR}/src/*.cpp"
       "${PROJECT_SOURCE_DIR}/tests/*.cpp"
     )
 
-    if(NOT UBURU_BUILD_DESKTOP)
-      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/src/app/")
+    if(NOT UBURU_BUILD_TESTS)
+      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/tests/")
+    endif()
+
+    if(NOT UBURU_BUILD_FUZZERS)
+      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/tests/fuzzers/")
+    endif()
+
+    if(NOT WIN32)
+      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/filesystem/windows-file-watcher\\.cpp$")
+    endif()
+
+    if(NOT APPLE)
+      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/filesystem/macos-file-watcher\\.cpp$")
+    endif()
+
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/filesystem/linux-file-watcher\\.cpp$")
+    endif()
+
+    if(UBURU_BUILD_BENCHMARKS)
+      file(GLOB_RECURSE UBURU_TIDY_BENCHMARK_SOURCES CONFIGURE_DEPENDS
+        "${PROJECT_SOURCE_DIR}/benchmarks/*.cpp"
+      )
+      list(APPEND UBURU_TIDY_SOURCES ${UBURU_TIDY_BENCHMARK_SOURCES})
     endif()
 
     if(UBURU_BUILD_DESKTOP)
@@ -181,6 +203,8 @@ if(UBURU_ENABLE_TIDY_TARGET)
         "${PROJECT_SOURCE_DIR}/apps/*.cpp"
       )
       list(APPEND UBURU_TIDY_SOURCES ${UBURU_TIDY_DESKTOP_SOURCES})
+    else()
+      list(FILTER UBURU_TIDY_SOURCES EXCLUDE REGEX "/tests/desktop/")
     endif()
 
     set(UBURU_TIDY_RELATIVE_SOURCES)

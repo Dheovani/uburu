@@ -311,7 +311,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Handle inaccessible paths, removable media, and unstable network locations.
 - [x] Recover state after crash without corrupting index or preferences.
 - [x] Implement local, exportable crash reports.
-- [ ] Add limits against decompression bombs and special formats when supported.
+- [x] Add limits against decompression bombs and special formats when supported.
 - [x] Create a threat model for regex, hostile files, symlinks, and local database.
 
 ## Milestone 12 — Document extractors and rich file formats (P1)

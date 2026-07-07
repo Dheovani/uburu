@@ -225,6 +225,10 @@ Direct search represents the state observed when each file is opened. If a file 
 
 If the file is removed, becomes inaccessible, or fails during reading, search records a typed partial failure and continues with other files. Milestone 1 does not try to create consistent snapshots of the whole tree; that guarantee belongs to the future index, overlay, and Git integration design.
 
+## Rich document safety
+
+The direct text reader does not extract packaged or binary document formats yet. Formats such as DOCX, XLSX, PPTX, ODT, EPUB, and similar archive-backed documents must pass `RichFormatSafetyLimits` before any future extractor exposes their content to search or indexing. The initial safety contract caps total expanded bytes, single expanded entry size, entry count, nesting depth, and compression ratio. Until an extractor exists and passes those limits, such files remain searchable by name only.
+
 ## Ownership and copies
 
 `SearchResult` owns the published text to remain safe when consumers process results asynchronously. The engine avoids intermediate copies in the hot path whenever it does not need to transfer ownership, but materializes the line/path when building the published result.

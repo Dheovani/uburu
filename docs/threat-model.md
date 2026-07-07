@@ -24,7 +24,7 @@ Regex search can cause high CPU usage, deep recursion, excessive heap use, or lo
 
 ## Hostile files and formats
 
-Files may be binary, malformed, extremely large, sparse, encoded unexpectedly, or modified during reading. Uburu should sample for binary content, apply size and line-length limits, stream text instead of loading whole files, handle read errors as partial failures, and never let one bad file stop a valid search. Future archive, PDF, DOCX, or other document extractors must add decompression and parser limits before becoming default behavior.
+Files may be binary, malformed, extremely large, sparse, encoded unexpectedly, or modified during reading. Uburu should sample for binary content, apply size and line-length limits, stream text instead of loading whole files, handle read errors as partial failures, and never let one bad file stop a valid search. Future archive, PDF, DOCX, or other document extractors must use `RichFormatSafetyLimits` before becoming default behavior, including caps for total expanded bytes, single expanded entry size, entry count, nesting depth, and compression ratio.
 
 ## Symlinks and filesystem traversal
 

@@ -19,6 +19,7 @@ add_executable(uburu_core_tests
   unit/polling-file-watcher-tests.cpp
   unit/recursive-file-scanner-tests.cpp
   unit/regex-matcher-tests.cpp
+  unit/rich-format-safety-tests.cpp
   unit/search-query-validation-tests.cpp
   unit/search-dto-tests.cpp
   unit/search-result-merge-tests.cpp

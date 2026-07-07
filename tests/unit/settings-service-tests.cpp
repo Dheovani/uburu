@@ -4,9 +4,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 
 TEST_CASE("settings service returns versioned defaults when storage is empty")
 {
@@ -307,6 +309,74 @@ TEST_CASE("settings service ignores invalid repository overrides")
   CHECK(effective.resultLimit == 300);
   CHECK(effective.respectGitignore);
   CHECK_FALSE(effective.includeHiddenFiles);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("settings service exports and imports global settings with saved searches")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory sourceDirectory("uburu-settings-service-export-source-test");
+  uburu::tests::TemporaryDirectory targetDirectory("uburu-settings-service-export-target-test");
+  uburu::storage::SQLiteStorageService sourceStorage(sourceDirectory.path() / "uburu.db");
+  uburu::storage::SQLiteStorageService targetStorage(targetDirectory.path() / "uburu.db");
+
+  sourceStorage.initialize();
+  targetStorage.initialize();
+
+  uburu::app::StorageSettingsService sourceSettingsService(sourceStorage);
+  uburu::app::StorageSettingsService targetSettingsService(targetStorage);
+  auto settings = uburu::app::defaultGlobalSettings();
+
+  settings.themeMode = uburu::app::ThemeMode::dark;
+  settings.language = uburu::app::UiLanguage::enUs;
+  settings.maximumThreadCount = 4;
+  settings.resultLimit = 512;
+  settings.telemetryEnabled = true;
+
+  sourceSettingsService.saveGlobalSettings(settings);
+  sourceStorage.saveSearch(
+    uburu::SavedSearch{.name = "code search",
+                       .root = sourceDirectory.path(),
+                       .expression = "needle \"with quotes\"",
+                       .savedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{42}}});
+
+  const auto exportedSettings = sourceSettingsService.exportSettingsAndSavedSearches();
+
+  REQUIRE(exportedSettings.find("uburu-settings-export") != std::string::npos);
+
+  targetSettingsService.importSettingsAndSavedSearches(exportedSettings);
+
+  const auto importedSettings = targetSettingsService.loadGlobalSettings();
+  const auto importedSearches = targetStorage.savedSearches();
+
+  CHECK(importedSettings.themeMode == uburu::app::ThemeMode::dark);
+  CHECK(importedSettings.language == uburu::app::UiLanguage::enUs);
+  CHECK(importedSettings.maximumThreadCount == 4);
+  CHECK(importedSettings.resultLimit == 512);
+  CHECK(importedSettings.telemetryEnabled);
+  REQUIRE(importedSearches.size() == 1);
+  CHECK(importedSearches.front().name == "code search");
+  CHECK(importedSearches.front().root == sourceDirectory.path());
+  CHECK(importedSearches.front().expression == "needle \"with quotes\"");
+  CHECK(importedSearches.front().savedAt == std::chrono::system_clock::time_point{std::chrono::milliseconds{42}});
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("settings service rejects unsupported settings exports")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory directory("uburu-settings-service-import-invalid-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  uburu::app::StorageSettingsService settingsService(storage);
+
+  CHECK_THROWS(settingsService.importSettingsAndSavedSearches("{\"format\":\"other\",\"version\":1}"));
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

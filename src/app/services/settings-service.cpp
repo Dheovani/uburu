@@ -1,9 +1,14 @@
 #include "app/services/settings-service.hpp"
 
 #include <charconv>
+#include <chrono>
+#include <filesystem>
+#include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace uburu::app
 {
@@ -38,13 +43,186 @@ namespace uburu::app
     constexpr std::uintmax_t maximumDiskBudgetLimitBytes = 16ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
     constexpr bool defaultRespectGitignore = true;
     constexpr bool defaultIncludeHiddenFiles = false;
+    constexpr std::string_view exportFormatName = "uburu-settings-export";
+    constexpr int exportFormatVersion = 1;
 
-    [[nodiscard]] std::string key(std::string_view value)
+    struct SettingsExportPayload
+    {
+      GlobalSettings globalSettings;
+      std::vector<SavedSearch> savedSearches;
+    };
+
+    class JsonReader
+    {
+    public:
+      explicit JsonReader(std::string_view source) : text(source) {}
+
+      void expect(char expected)
+      {
+        skipWhitespace();
+
+        if (position >= text.size() || text[position] != expected)
+          throw std::invalid_argument("Invalid settings export format");
+
+        ++position;
+      }
+
+      [[nodiscard]]
+      bool consume(char expected)
+      {
+        skipWhitespace();
+
+        if (position >= text.size() || text[position] != expected)
+          return false;
+
+        ++position;
+
+        return true;
+      }
+
+      void expectEnd()
+      {
+        skipWhitespace();
+
+        if (position != text.size())
+          throw std::invalid_argument("Invalid trailing data in settings export");
+      }
+
+      void expectKey(std::string_view expected)
+      {
+        const auto actual = readString();
+
+        if (actual != expected)
+          throw std::invalid_argument("Unexpected settings export key");
+
+        expect(':');
+      }
+
+      [[nodiscard]]
+      std::string readString()
+      {
+        expect('"');
+
+        std::string value;
+
+        while (position < text.size()) {
+          const auto current = text[position++];
+
+          if (current == '"')
+            return value;
+
+          if (current != '\\') {
+            value.push_back(current);
+            continue;
+          }
+
+          if (position >= text.size())
+            throw std::invalid_argument("Invalid escaped string in settings export");
+
+          const auto escaped = text[position++];
+
+          switch (escaped) {
+          case '"':
+          case '\\':
+          case '/':
+            value.push_back(escaped);
+            break;
+          case 'n':
+            value.push_back('\n');
+            break;
+          case 'r':
+            value.push_back('\r');
+            break;
+          case 't':
+            value.push_back('\t');
+            break;
+          default:
+            throw std::invalid_argument("Unsupported escaped string in settings export");
+          }
+        }
+
+        throw std::invalid_argument("Unterminated string in settings export");
+      }
+
+      [[nodiscard]]
+      std::uintmax_t readUnsignedMax()
+      {
+        skipWhitespace();
+
+        const auto begin = position;
+
+        while (position < text.size() && text[position] >= '0' && text[position] <= '9')
+          ++position;
+
+        if (begin == position)
+          throw std::invalid_argument("Expected unsigned integer in settings export");
+
+        std::uintmax_t value{0};
+        const auto* first = text.data() + begin;
+        const auto* last = text.data() + position;
+        const auto [parsedPosition, error] = std::from_chars(first, last, value);
+
+        if (error != std::errc{} || parsedPosition != last)
+          throw std::invalid_argument("Invalid unsigned integer in settings export");
+
+        return value;
+      }
+
+      [[nodiscard]]
+      int readInt()
+      {
+        const auto value = readUnsignedMax();
+
+        if (value > static_cast<std::uintmax_t>(std::numeric_limits<int>::max()))
+          throw std::invalid_argument("Integer is too large in settings export");
+
+        return static_cast<int>(value);
+      }
+
+      [[nodiscard]]
+      bool readBool()
+      {
+        skipWhitespace();
+
+        if (startsWith("true")) {
+          position += std::string_view("true").size();
+          return true;
+        }
+
+        if (startsWith("false")) {
+          position += std::string_view("false").size();
+          return false;
+        }
+
+        throw std::invalid_argument("Expected boolean in settings export");
+      }
+
+    private:
+      [[nodiscard]]
+      bool startsWith(std::string_view value) const
+      {
+        return text.substr(position, value.size()) == value;
+      }
+
+      void skipWhitespace()
+      {
+        while (position < text.size() &&
+               (text[position] == ' ' || text[position] == '\n' || text[position] == '\r' || text[position] == '\t'))
+          ++position;
+      }
+
+      std::string_view text;
+      std::size_t position{0};
+    };
+
+    [[nodiscard]]
+    std::string key(std::string_view value)
     {
       return std::string(value);
     }
 
-    [[nodiscard]] std::optional<std::size_t> parseSize(std::string_view value)
+    [[nodiscard]]
+    std::optional<std::size_t> parseSize(std::string_view value)
     {
       std::size_t parsedValue{0};
 
@@ -58,7 +236,8 @@ namespace uburu::app
       return parsedValue;
     }
 
-    [[nodiscard]] std::optional<std::uintmax_t> parseUnsignedMax(std::string_view value)
+    [[nodiscard]]
+    std::optional<std::uintmax_t> parseUnsignedMax(std::string_view value)
     {
       std::uintmax_t parsedValue{0};
 
@@ -72,7 +251,8 @@ namespace uburu::app
       return parsedValue;
     }
 
-    [[nodiscard]] std::optional<int> parseInt(std::string_view value)
+    [[nodiscard]]
+    std::optional<int> parseInt(std::string_view value)
     {
       int parsedValue{0};
 
@@ -86,12 +266,14 @@ namespace uburu::app
       return parsedValue;
     }
 
-    [[nodiscard]] bool parseBool(std::string_view value)
+    [[nodiscard]]
+    bool parseBool(std::string_view value)
     {
       return value == "true" || value == "1";
     }
 
-    [[nodiscard]] std::optional<bool> parseOptionalBool(std::string_view value)
+    [[nodiscard]]
+    std::optional<bool> parseOptionalBool(std::string_view value)
     {
       if (value == "true" || value == "1")
         return true;
@@ -102,8 +284,8 @@ namespace uburu::app
       return std::nullopt;
     }
 
-    [[nodiscard]] std::optional<std::string> preference(const storage::StorageService& storage,
-                                                        std::string_view keyValue)
+    [[nodiscard]]
+    std::optional<std::string> preference(const storage::StorageService& storage, std::string_view keyValue)
     {
       return storage.preference(std::nullopt, key(keyValue));
     }
@@ -113,9 +295,10 @@ namespace uburu::app
       storage.setPreference(std::nullopt, key(keyValue), value);
     }
 
-    [[nodiscard]] std::optional<std::string> repositoryPreference(const storage::StorageService& storage,
-                                                                  const RepositoryId& repositoryId,
-                                                                  std::string_view keyValue)
+    [[nodiscard]]
+    std::optional<std::string> repositoryPreference(const storage::StorageService& storage,
+                                                    const RepositoryId& repositoryId,
+                                                    std::string_view keyValue)
     {
       return storage.preference(repositoryId, key(keyValue));
     }
@@ -128,12 +311,14 @@ namespace uburu::app
       storage.setPreference(repositoryId, key(keyValue), value);
     }
 
-    [[nodiscard]] std::string valueOrEmpty(const std::optional<std::string>& value)
+    [[nodiscard]]
+    std::string valueOrEmpty(const std::optional<std::string>& value)
     {
       return value.value_or("");
     }
 
-    [[nodiscard]] std::size_t limitedSize(std::size_t value, std::size_t maximumValue)
+    [[nodiscard]]
+    std::size_t limitedSize(std::size_t value, std::size_t maximumValue)
     {
       if (value > maximumValue)
         return maximumValue;
@@ -141,8 +326,8 @@ namespace uburu::app
       return value;
     }
 
-    [[nodiscard]] std::optional<std::size_t> limitedOptionalSize(std::optional<std::size_t> value,
-                                                                 std::size_t maximumValue)
+    [[nodiscard]]
+    std::optional<std::size_t> limitedOptionalSize(std::optional<std::size_t> value, std::size_t maximumValue)
     {
       if (!value)
         return std::nullopt;
@@ -150,7 +335,8 @@ namespace uburu::app
       return limitedSize(*value, maximumValue);
     }
 
-    [[nodiscard]] std::uintmax_t limitedUnsignedMax(std::uintmax_t value, std::uintmax_t maximumValue)
+    [[nodiscard]]
+    std::uintmax_t limitedUnsignedMax(std::uintmax_t value, std::uintmax_t maximumValue)
     {
       if (value > maximumValue)
         return maximumValue;
@@ -158,13 +344,284 @@ namespace uburu::app
       return value;
     }
 
-    [[nodiscard]] std::optional<std::uintmax_t> limitedOptionalUnsignedMax(std::optional<std::uintmax_t> value,
-                                                                           std::uintmax_t maximumValue)
+    [[nodiscard]]
+    std::optional<std::uintmax_t> limitedOptionalUnsignedMax(std::optional<std::uintmax_t> value,
+                                                             std::uintmax_t maximumValue)
     {
       if (!value)
         return std::nullopt;
 
       return limitedUnsignedMax(*value, maximumValue);
+    }
+
+    [[nodiscard]]
+    std::uintmax_t toUnixMilliseconds(std::chrono::system_clock::time_point timePoint)
+    {
+      const auto duration = timePoint.time_since_epoch();
+      const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+      const auto count = milliseconds.count();
+
+      if (count < 0)
+        return 0;
+
+      return static_cast<std::uintmax_t>(count);
+    }
+
+    [[nodiscard]]
+    std::chrono::system_clock::time_point fromUnixMilliseconds(std::uintmax_t milliseconds)
+    {
+      using MillisecondsRep = std::chrono::milliseconds::rep;
+
+      constexpr auto maximumMilliseconds = static_cast<std::uintmax_t>(std::numeric_limits<MillisecondsRep>::max());
+      const auto safeMilliseconds = milliseconds > maximumMilliseconds ? maximumMilliseconds : milliseconds;
+
+      return std::chrono::system_clock::time_point(
+        std::chrono::milliseconds(static_cast<MillisecondsRep>(safeMilliseconds)));
+    }
+
+    [[nodiscard]]
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+    }
+
+    [[nodiscard]]
+    std::filesystem::path pathFromUtf8(std::string_view value)
+    {
+      std::u8string text;
+
+      text.reserve(value.size());
+
+      for (const auto character : value)
+        text.push_back(static_cast<char8_t>(static_cast<unsigned char>(character)));
+
+      return std::filesystem::path(text);
+    }
+
+    [[nodiscard]]
+    std::string escapedJsonString(std::string_view value)
+    {
+      std::string escaped;
+
+      escaped.reserve(value.size() + 2);
+      escaped.push_back('"');
+
+      for (const auto character : value) {
+        switch (character) {
+        case '"':
+          escaped += "\\\"";
+          break;
+        case '\\':
+          escaped += "\\\\";
+          break;
+        case '\n':
+          escaped += "\\n";
+          break;
+        case '\r':
+          escaped += "\\r";
+          break;
+        case '\t':
+          escaped += "\\t";
+          break;
+        default:
+          escaped.push_back(character);
+          break;
+        }
+      }
+
+      escaped.push_back('"');
+
+      return escaped;
+    }
+
+    void appendJsonStringField(std::string& output, std::string_view keyValue, std::string_view value)
+    {
+      output += escapedJsonString(keyValue);
+      output += ':';
+      output += escapedJsonString(value);
+    }
+
+    void appendJsonUnsignedField(std::string& output, std::string_view keyValue, std::uintmax_t value)
+    {
+      output += escapedJsonString(keyValue);
+      output += ':';
+      output += std::to_string(value);
+    }
+
+    void appendJsonBoolField(std::string& output, std::string_view keyValue, bool value)
+    {
+      output += escapedJsonString(keyValue);
+      output += ':';
+      output += value ? std::string_view("true") : std::string_view("false");
+    }
+
+    [[nodiscard]]
+    GlobalSettings readGlobalSettings(JsonReader& reader)
+    {
+      GlobalSettings settings;
+
+      reader.expect('{');
+      reader.expectKey("schemaVersion");
+      settings.schemaVersion = reader.readInt();
+      reader.expect(',');
+      reader.expectKey("themeMode");
+      settings.themeMode = themeModeFromPreferenceValue(reader.readString());
+      reader.expect(',');
+      reader.expectKey("language");
+      settings.language = uiLanguageFromPreferenceValue(reader.readString());
+      reader.expect(',');
+      reader.expectKey("maximumThreadCount");
+      settings.maximumThreadCount = static_cast<std::size_t>(reader.readUnsignedMax());
+      reader.expect(',');
+      reader.expectKey("maximumFileSizeBytes");
+      settings.maximumFileSizeBytes = reader.readUnsignedMax();
+      reader.expect(',');
+      reader.expectKey("resultLimit");
+      settings.resultLimit = static_cast<std::size_t>(reader.readUnsignedMax());
+      reader.expect(',');
+      reader.expectKey("memoryBudgetBytes");
+      settings.memoryBudgetBytes = reader.readUnsignedMax();
+      reader.expect(',');
+      reader.expectKey("diskBudgetBytes");
+      settings.diskBudgetBytes = reader.readUnsignedMax();
+      reader.expect(',');
+      reader.expectKey("telemetryEnabled");
+      settings.telemetryEnabled = reader.readBool();
+      reader.expect('}');
+
+      return normalizedGlobalSettings(settings);
+    }
+
+    [[nodiscard]]
+    SavedSearch readSavedSearch(JsonReader& reader)
+    {
+      SavedSearch search;
+
+      reader.expect('{');
+      reader.expectKey("name");
+      search.name = reader.readString();
+      reader.expect(',');
+      reader.expectKey("root");
+      search.root = pathFromUtf8(reader.readString());
+      reader.expect(',');
+      reader.expectKey("expression");
+      search.expression = reader.readString();
+      reader.expect(',');
+      reader.expectKey("savedAtUnixMs");
+      search.savedAt = fromUnixMilliseconds(reader.readUnsignedMax());
+      reader.expect('}');
+
+      return search;
+    }
+
+    [[nodiscard]]
+    std::vector<SavedSearch> readSavedSearches(JsonReader& reader)
+    {
+      std::vector<SavedSearch> searches;
+
+      reader.expect('[');
+
+      if (reader.consume(']'))
+        return searches;
+
+      do {
+        searches.push_back(readSavedSearch(reader));
+      } while (reader.consume(','));
+
+      reader.expect(']');
+
+      return searches;
+    }
+
+    [[nodiscard]]
+    SettingsExportPayload readSettingsExport(std::string_view text)
+    {
+      JsonReader reader(text);
+      SettingsExportPayload payload;
+
+      reader.expect('{');
+      reader.expectKey("format");
+
+      if (reader.readString() != exportFormatName)
+        throw std::invalid_argument("Unsupported settings export format");
+
+      reader.expect(',');
+      reader.expectKey("version");
+
+      if (reader.readInt() != exportFormatVersion)
+        throw std::invalid_argument("Unsupported settings export version");
+
+      reader.expect(',');
+      reader.expectKey("global");
+      payload.globalSettings = readGlobalSettings(reader);
+      reader.expect(',');
+      reader.expectKey("savedSearches");
+      payload.savedSearches = readSavedSearches(reader);
+      reader.expect('}');
+      reader.expectEnd();
+
+      return payload;
+    }
+
+    [[nodiscard]]
+    std::string writeSettingsExport(const GlobalSettings& settings, const std::vector<SavedSearch>& savedSearches)
+    {
+      const auto normalized = normalizedGlobalSettings(settings);
+      std::string output;
+
+      output.reserve(512 + savedSearches.size() * 128);
+      output += "{\n";
+      output += "  ";
+      appendJsonStringField(output, "format", exportFormatName);
+      output += ",\n  ";
+      appendJsonUnsignedField(output, "version", static_cast<std::uintmax_t>(exportFormatVersion));
+      output += ",\n  \"global\": {\n";
+      output += "    ";
+      appendJsonUnsignedField(output, "schemaVersion", static_cast<std::uintmax_t>(normalized.schemaVersion));
+      output += ",\n    ";
+      appendJsonStringField(output, "themeMode", toPreferenceValue(normalized.themeMode));
+      output += ",\n    ";
+      appendJsonStringField(output, "language", toPreferenceValue(normalized.language));
+      output += ",\n    ";
+      appendJsonUnsignedField(output, "maximumThreadCount", normalized.maximumThreadCount);
+      output += ",\n    ";
+      appendJsonUnsignedField(output, "maximumFileSizeBytes", normalized.maximumFileSizeBytes);
+      output += ",\n    ";
+      appendJsonUnsignedField(output, "resultLimit", normalized.resultLimit);
+      output += ",\n    ";
+      appendJsonUnsignedField(output, "memoryBudgetBytes", normalized.memoryBudgetBytes);
+      output += ",\n    ";
+      appendJsonUnsignedField(output, "diskBudgetBytes", normalized.diskBudgetBytes);
+      output += ",\n    ";
+      appendJsonBoolField(output, "telemetryEnabled", normalized.telemetryEnabled);
+      output += "\n  },\n  \"savedSearches\": [";
+
+      for (std::size_t index = 0; index < savedSearches.size(); ++index) {
+        const auto& search = savedSearches[index];
+
+        if (index > 0)
+          output += ',';
+
+        output += "\n    {";
+        appendJsonStringField(output, "name", search.name);
+        output += ", ";
+        appendJsonStringField(output, "root", pathToUtf8(search.root));
+        output += ", ";
+        appendJsonStringField(output, "expression", search.expression);
+        output += ", ";
+        appendJsonUnsignedField(output, "savedAtUnixMs", toUnixMilliseconds(search.savedAt));
+        output += '}';
+      }
+
+      if (!savedSearches.empty())
+        output += '\n';
+
+      output += "  ]\n";
+      output += "}\n";
+
+      return output;
     }
 
   } // namespace
@@ -441,6 +898,21 @@ namespace uburu::app
     if (normalized.relevantExtensions)
       setRepositoryPreference(
         *storageService, normalized.repositoryId, repositoryRelevantExtensionsKey, *normalized.relevantExtensions);
+  }
+
+  std::string StorageSettingsService::exportSettingsAndSavedSearches() const
+  {
+    return writeSettingsExport(loadGlobalSettings(), storageService->savedSearches());
+  }
+
+  void StorageSettingsService::importSettingsAndSavedSearches(std::string_view text)
+  {
+    const auto payload = readSettingsExport(text);
+
+    saveGlobalSettings(payload.globalSettings);
+
+    for (const auto& savedSearch : payload.savedSearches)
+      storageService->saveSearch(savedSearch);
   }
 
 } // namespace uburu::app

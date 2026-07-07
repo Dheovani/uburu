@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -38,8 +39,10 @@ TEST_CASE("regression: literal phrases with spaces are found in txt files")
                           "The first line is irrelevant.\n"
                           "This exact phrase should be found inside a text document.\n");
 
-  uburu::SearchQuery query{
-    .root = directory.path(), .expression = "exact phrase should be found", .options = {.extensions = {"txt"}}};
+  uburu::SearchQuery query;
+  query.root = directory.path();
+  query.expression = "exact phrase should be found";
+  query.options.extensions = {"txt"};
 
   const auto results = runDirectSearch(query);
 
@@ -61,12 +64,17 @@ TEST_CASE("regression: per-root exclusions do not leak across selected search ro
   uburu::tests::writeFile(secondRoot.path() / "included" / "second.txt", "needle\n");
   uburu::tests::writeFile(secondExcluded / "kept.txt", "needle\n");
 
-  uburu::SearchQuery query{
-    .scope = {.roots = {{.path = firstRoot.path(), .excludedDirectories = {firstExcluded}},
-                        {.path = secondRoot.path(), .excludedDirectories = {}}}},
-    .expression = "needle",
-    .options = {.extensions = {"txt"}},
-  };
+  uburu::SearchRoot firstSearchRoot;
+  firstSearchRoot.path = firstRoot.path();
+  firstSearchRoot.excludedDirectories = {firstExcluded};
+
+  uburu::SearchRoot secondSearchRoot;
+  secondSearchRoot.path = secondRoot.path();
+
+  uburu::SearchQuery query;
+  query.scope.roots = {std::move(firstSearchRoot), std::move(secondSearchRoot)};
+  query.expression = "needle";
+  query.options.extensions = {"txt"};
 
   const auto results = runDirectSearch(query);
   std::vector<std::string> fileNames;

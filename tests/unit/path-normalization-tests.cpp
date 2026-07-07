@@ -10,6 +10,11 @@ TEST_CASE("path normalization uses generic separators")
   CHECK(uburu::filesystem::normalizePathSeparators(R"(src\core\file.cpp)") == "src/core/file.cpp");
 }
 
+TEST_CASE("absolute path normalization treats an empty path as empty")
+{
+  CHECK(uburu::filesystem::normalizedAbsolutePath({}).empty());
+}
+
 TEST_CASE("relative path normalization removes lexical dot segments")
 {
   const auto path = std::filesystem::path("src") / "." / "core" / ".." / "main.cpp";

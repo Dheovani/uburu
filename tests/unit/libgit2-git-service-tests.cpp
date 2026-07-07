@@ -223,20 +223,13 @@ namespace
                     const std::filesystem::path& submoduleRepositoryRoot,
                     std::string_view relativePath)
   {
-    git_libgit2_init();
+    const auto path = std::string(relativePath);
+    auto gitmodules = std::string("[submodule \"") + path + "\"]\n";
+    gitmodules += "\tpath = " + path + "\n";
+    gitmodules += "\turl = " + submoduleRepositoryRoot.generic_string() + "\n";
 
-    git_repository* repository = nullptr;
-    REQUIRE(git_repository_open(&repository, (repositoryRoot / ".git").string().c_str()) == 0);
-
-    git_submodule* submodule = nullptr;
-    REQUIRE(
-      git_submodule_add_setup(
-        &submodule, repository, submoduleRepositoryRoot.string().c_str(), std::string(relativePath).c_str(), true) ==
-      0);
-
-    git_submodule_free(submodule);
-    git_repository_free(repository);
-    git_libgit2_shutdown();
+    std::filesystem::create_directories(repositoryRoot / relativePath);
+    writeFile(repositoryRoot / ".gitmodules", gitmodules);
   }
 
   void detachHead(const std::filesystem::path& repositoryRoot)

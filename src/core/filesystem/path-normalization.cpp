@@ -91,6 +91,9 @@ namespace uburu::filesystem
 
   std::string normalizedAbsolutePath(const std::filesystem::path& path)
   {
+    if (path.empty())
+      return {};
+
     return genericNormalizedPath(std::filesystem::absolute(path));
   }
 

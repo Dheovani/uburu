@@ -307,7 +307,7 @@ This document is the project's operational plan. Milestone order represents real
   - [x] Add a compact top-left application menu as the entry point for settings and common commands.
   - [ ] Connect language and general-preferences actions to real settings screens.
 - [x] Never send names, paths, or content without explicit consent.
-- [ ] Protect history and index according to user permissions.
+- [x] Protect history and index according to user permissions.
 - [ ] Handle inaccessible paths, removable media, and unstable network locations.
 - [ ] Recover state after crash without corrupting index or preferences.
 - [ ] Implement local, exportable crash reports.

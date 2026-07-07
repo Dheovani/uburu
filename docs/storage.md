@@ -107,6 +107,8 @@ Repository preferences use the same storage table with `RepositoryId` scope. `Re
 
 Typed settings normalize persisted values before they reach the search or indexing services. `0` keeps its explicit meaning for automatic thread count or unlimited budgets where the UI has not configured a concrete value. Non-zero values are clamped to defensive product limits: 256 threads, 1 TiB maximum file size, 1,000,000 results, 1 TiB memory budget, and 16 TiB disk budget. These limits protect future import/export, repository overrides, and hand-edited databases from accidentally creating pathological runs while still leaving room for large local repositories.
 
+Local state directories are created through `ensurePrivateStorageDirectory()`. On POSIX platforms, Uburu applies owner-only permissions to storage directories before opening or migrating databases, protecting the local index, history, saved searches, and settings from group/other access. On Windows, storage is placed under the user's local application data profile and relies on the operating system's user-profile ACLs instead of trying to rewrite inherited ACLs from portable C++.
+
 ## Initial FTS5 evaluation
 
 Milestone 5 introduced `uburu-storage-fts5-benchmark`, a developer benchmark disabled from the default build. It creates a deterministic SQLite dataset, compares a simple textual query through `LIKE` with an equivalent FTS5 query, and validates that both return the same count.

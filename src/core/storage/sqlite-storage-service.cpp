@@ -1,5 +1,7 @@
 #include "core/storage/sqlite-storage-service.hpp"
 
+#include "core/storage/storage-paths.hpp"
+
 #include <chrono>
 #include <cstdint>
 #include <optional>
@@ -967,6 +969,8 @@ namespace uburu::storage
   {
 #if defined(UBURU_HAS_SQLITE)
     if (databaseHandle == nullptr) {
+      ensurePrivateStorageDirectory(databasePath.parent_path());
+
       sqlite3* openedDatabase = nullptr;
       const auto flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
       const auto result = sqlite3_open_v2(databasePath.string().c_str(), &openedDatabase, flags, nullptr);

@@ -1011,6 +1011,24 @@ TEST_CASE("storage paths provide default database location")
   CHECK(path.filename() == "uburu.db");
 }
 
+TEST_CASE("storage paths create private storage directory")
+{
+  TemporaryDirectory directory("uburu-storage-private-directory-test");
+  const auto privateDirectory = directory.path() / "state";
+
+  uburu::storage::ensurePrivateStorageDirectory(privateDirectory);
+
+  CHECK(std::filesystem::is_directory(privateDirectory));
+
+#if !defined(_WIN32)
+  const auto permissions = std::filesystem::status(privateDirectory).permissions();
+  constexpr auto groupOrOtherPermissions = std::filesystem::perms::group_all | std::filesystem::perms::others_all;
+
+  CHECK((permissions & std::filesystem::perms::owner_all) == std::filesystem::perms::owner_all);
+  CHECK((permissions & groupOrOtherPermissions) == std::filesystem::perms::none);
+#endif
+}
+
 TEST_CASE("storage paths migrate database files without deleting the source")
 {
   TemporaryDirectory directory("uburu-storage-paths-migration-test");

@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace uburu::storage
@@ -83,13 +84,33 @@ namespace uburu::storage
       if (!std::filesystem::exists(source))
         return false;
 
-      std::filesystem::create_directories(target.parent_path());
+      ensurePrivateStorageDirectory(target.parent_path());
       std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing);
 
       return true;
     }
 
   } // namespace
+
+  void ensurePrivateStorageDirectory(const std::filesystem::path& directory)
+  {
+    if (directory.empty())
+      return;
+
+    std::error_code error;
+    std::filesystem::create_directories(directory, error);
+
+    if (error)
+      throw std::runtime_error("failed to create private storage directory: " + error.message());
+
+#if !defined(_WIN32)
+    constexpr auto privateDirectoryPermissions = std::filesystem::perms::owner_all;
+    std::filesystem::permissions(directory, privateDirectoryPermissions, std::filesystem::perm_options::replace, error);
+
+    if (error)
+      throw std::runtime_error("failed to apply private storage directory permissions: " + error.message());
+#endif
+  }
 
   std::filesystem::path defaultStorageDatabasePath()
   {

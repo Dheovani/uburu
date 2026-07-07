@@ -7,6 +7,7 @@
 #include "core/search/direct-search-engine.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/storage/sqlite-storage-service.hpp"
+#include "core/storage/storage-paths.hpp"
 #include "core/text/text-file-reader.hpp"
 
 #ifdef UBURU_HAS_LIBGIT2
@@ -164,7 +165,7 @@ namespace uburu::app
       const auto fallbackLocation = QDir::current().absoluteFilePath(QStringLiteral(".uburu"));
       const auto directory = location.isEmpty() ? fallbackLocation : location;
 
-      QDir().mkpath(directory);
+      storage::ensurePrivateStorageDirectory(nativePath(directory));
 
       return nativePath(QDir(directory).filePath(QStringLiteral("uburu.sqlite3")));
     }
@@ -1387,11 +1388,11 @@ namespace uburu::app
         const auto reusedDocuments = summary.reusedByCatalog + summary.reusedByBlob + summary.reusedByHash;
         auto status =
           tr("Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 ignorado(s), %5 falha(s)");
-        status = status.arg(summary.indexed)
-          .arg(reusedDocuments)
-          .arg(summary.removed)
-          .arg(skippedIndexingFiles(summary))
-          .arg(summary.failed);
+        status = status.arg(summary.indexed);
+        status = status.arg(reusedDocuments);
+        status = status.arg(summary.removed);
+        status = status.arg(skippedIndexingFiles(summary));
+        status = status.arg(summary.failed);
 
         setIndexingProgress(status, completeProgressPercentage);
       }

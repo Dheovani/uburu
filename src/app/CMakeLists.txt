@@ -3,6 +3,7 @@ add_library(uburu_app STATIC
   services/adaptive-result-batcher.cpp
   services/indexing-service.cpp
   services/search-service.cpp
+  services/settings-service.cpp
 )
 add_library(Uburu::App ALIAS uburu_app)
 target_include_directories(uburu_app PUBLIC ${PROJECT_SOURCE_DIR}/src)

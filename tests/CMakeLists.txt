@@ -24,6 +24,7 @@ add_executable(uburu_core_tests
   unit/search-result-merge-tests.cpp
   unit/search-scope-tests.cpp
   unit/search-service-tests.cpp
+  unit/settings-service-tests.cpp
   unit/sqlite-storage-service-tests.cpp
   unit/text-file-reader-tests.cpp
   unit/text-matcher-tests.cpp

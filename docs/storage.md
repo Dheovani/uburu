@@ -101,6 +101,8 @@ Search history and indexing metrics receive a retention limit at write time. The
 
 These tables are deliberately simple at this stage. Semantic validation of keys, preference types, history privacy, and export/import policies belong to future configuration and UX milestones.
 
+Milestone 11 introduces `app::SettingsService` as the typed boundary above the textual preference table. Storage still persists scoped strings so migrations stay simple, but the application layer now loads and saves a versioned `GlobalSettings` object with normalized defaults for theme, language, thread count, file-size limit, result limit, memory budget, disk budget, and telemetry opt-in. Invalid or unknown persisted values fall back to safe defaults; telemetry remains disabled unless the typed settings explicitly enable it.
+
 ## Initial FTS5 evaluation
 
 Milestone 5 introduced `uburu-storage-fts5-benchmark`, a developer benchmark disabled from the default build. It creates a deterministic SQLite dataset, compares a simple textual query through `LIKE` with an equivalent FTS5 query, and validates that both return the same count.

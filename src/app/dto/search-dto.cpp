@@ -18,6 +18,8 @@ namespace uburu::app
         return "rootNotFound";
       case search::SearchErrorCode::rootNotDirectory:
         return "rootNotDirectory";
+      case search::SearchErrorCode::rootUnavailable:
+        return "rootUnavailable";
       case search::SearchErrorCode::emptyExpression:
         return "emptyExpression";
       case search::SearchErrorCode::unsupportedSearchMode:

@@ -14,6 +14,8 @@ namespace uburu::search
       return "search.error.rootNotFound";
     case SearchErrorCode::rootNotDirectory:
       return "search.error.rootNotDirectory";
+    case SearchErrorCode::rootUnavailable:
+      return "search.error.rootUnavailable";
     case SearchErrorCode::emptyExpression:
       return "search.error.emptyExpression";
     case SearchErrorCode::unsupportedSearchMode:

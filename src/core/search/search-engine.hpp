@@ -19,6 +19,7 @@ namespace uburu::search
     emptyRoot,
     rootNotFound,
     rootNotDirectory,
+    rootUnavailable,
     emptyExpression,
     unsupportedSearchMode,
     regexCompileFailed,

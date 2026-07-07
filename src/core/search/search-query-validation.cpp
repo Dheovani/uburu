@@ -26,15 +26,42 @@ namespace uburu::search
       return {reinterpret_cast<const char*>(text.data()), text.size()};
     }
 
+    std::string rootUnavailableContext(const std::filesystem::path& root, const std::error_code& error)
+    {
+      if (!error)
+        return pathToUtf8(root);
+
+      return pathToUtf8(root) + ": " + error.message();
+    }
+
+    bool isMissingPathError(const std::error_code& error)
+    {
+      return error.default_error_condition() == std::errc::no_such_file_or_directory;
+    }
+
+    bool canOpenRootDirectory(const std::filesystem::path& root, std::error_code& error)
+    {
+      const std::filesystem::directory_iterator iterator(root, error);
+      (void)iterator;
+
+      return !error;
+    }
+
     void validateRoot(const std::filesystem::path& root, std::vector<SearchError>& errors)
     {
       std::error_code error;
-      const auto exists = std::filesystem::exists(root, error);
+      const auto status = std::filesystem::status(root, error);
 
-      if (error || !exists) {
+      if (error && isMissingPathError(error)) {
         errors.push_back(makeSearchError(SearchErrorCode::rootNotFound, pathToUtf8(root)));
-      } else if (!std::filesystem::is_directory(root, error) || error) {
+      } else if (error) {
+        errors.push_back(makeSearchError(SearchErrorCode::rootUnavailable, rootUnavailableContext(root, error)));
+      } else if (!std::filesystem::exists(status)) {
+        errors.push_back(makeSearchError(SearchErrorCode::rootNotFound, pathToUtf8(root)));
+      } else if (!std::filesystem::is_directory(status)) {
         errors.push_back(makeSearchError(SearchErrorCode::rootNotDirectory, pathToUtf8(root)));
+      } else if (!canOpenRootDirectory(root, error)) {
+        errors.push_back(makeSearchError(SearchErrorCode::rootUnavailable, rootUnavailableContext(root, error)));
       }
     }
 

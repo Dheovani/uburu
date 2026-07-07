@@ -75,6 +75,30 @@ TEST_CASE("search query validation reports a root that is not a directory")
   CHECK(errors.front().code == uburu::search::SearchErrorCode::rootNotDirectory);
 }
 
+#if !defined(_WIN32)
+TEST_CASE("search query validation reports a root that exists but cannot be opened")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-validation-unavailable-root-test");
+  const auto protectedRoot = directory.path() / "protected";
+  std::error_code error;
+  std::filesystem::create_directories(protectedRoot, error);
+  REQUIRE_FALSE(error);
+  std::filesystem::permissions(
+    protectedRoot, std::filesystem::perms::none, std::filesystem::perm_options::replace, error);
+  REQUIRE_FALSE(error);
+
+  const uburu::SearchQuery query{.root = protectedRoot, .scope = {}, .expression = "needle", .options = {}};
+
+  const auto errors = uburu::search::validateSearchQuery(query);
+
+  std::filesystem::permissions(
+    protectedRoot, std::filesystem::perms::owner_all, std::filesystem::perm_options::replace, error);
+
+  REQUIRE(errors.size() == 1);
+  CHECK(errors.front().code == uburu::search::SearchErrorCode::rootUnavailable);
+}
+#endif
+
 TEST_CASE("search query validation reports incompatible options")
 {
   uburu::SearchQuery query{

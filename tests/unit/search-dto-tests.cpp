@@ -62,9 +62,9 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
 
   uburu::search::SearchError error;
 
-  error.code = uburu::search::SearchErrorCode::regexCompileFailed;
-  error.translationKey = "search.error.regex.compile";
-  error.context = "bad regex";
+  error.code = uburu::search::SearchErrorCode::rootUnavailable;
+  error.translationKey = "search.error.rootUnavailable";
+  error.context = "missing network share";
   error.offset = 3;
   summary.errors.push_back(std::move(error));
 
@@ -87,9 +87,9 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   CHECK(dto.metrics.memoryGrowthBytes == 64);
   CHECK(dto.metrics.memoryIncreased);
   REQUIRE(dto.errors.size() == 1);
-  CHECK(dto.errors.front().code == "regexCompileFailed");
-  CHECK(dto.errors.front().translationKey == "search.error.regex.compile");
-  CHECK(dto.errors.front().context == "bad regex");
+  CHECK(dto.errors.front().code == "rootUnavailable");
+  CHECK(dto.errors.front().translationKey == "search.error.rootUnavailable");
+  CHECK(dto.errors.front().context == "missing network share");
   CHECK(dto.errors.front().hasOffset);
   CHECK(dto.errors.front().offset == 3);
 }

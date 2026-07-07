@@ -308,7 +308,7 @@ This document is the project's operational plan. Milestone order represents real
   - [ ] Connect language and general-preferences actions to real settings screens.
 - [x] Never send names, paths, or content without explicit consent.
 - [x] Protect history and index according to user permissions.
-- [ ] Handle inaccessible paths, removable media, and unstable network locations.
+- [x] Handle inaccessible paths, removable media, and unstable network locations.
 - [ ] Recover state after crash without corrupting index or preferences.
 - [ ] Implement local, exportable crash reports.
 - [ ] Add limits against decompression bombs and special formats when supported.

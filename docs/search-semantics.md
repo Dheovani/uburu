@@ -40,6 +40,7 @@ Initial supported errors:
 - `emptyRoot`;
 - `rootNotFound`;
 - `rootNotDirectory`;
+- `rootUnavailable`;
 - `emptyExpression`;
 - `unsupportedSearchMode`;
 - `regexCompileFailed`;
@@ -51,6 +52,8 @@ Initial supported errors:
 - `invalidMaximumFileSize`;
 - `fileOpenFailed`;
 - `fileReadFailed`.
+
+`rootNotFound` means the configured root does not exist. `rootNotDirectory` means the path exists but is not a directory. `rootUnavailable` means the root exists or was requested, but the operating system returned an access or availability error while checking or opening it. This covers permission-denied directories and also gives removable media or unstable network locations a distinct recoverable error instead of misreporting them as missing roots.
 
 Regex mode is reported as `unsupportedSearchMode` when the build does not include PCRE2. When PCRE2 is available, compilation errors return `regexCompileFailed` with the backend-provided message and offset.
 

@@ -312,7 +312,7 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Recover state after crash without corrupting index or preferences.
 - [ ] Implement local, exportable crash reports.
 - [ ] Add limits against decompression bombs and special formats when supported.
-- [ ] Create a threat model for regex, hostile files, symlinks, and local database.
+- [x] Create a threat model for regex, hostile files, symlinks, and local database.
 
 ## Milestone 12 — CLI and extensibility (P2)
 

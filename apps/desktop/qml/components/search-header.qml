@@ -26,6 +26,8 @@ Panel {
     property var recentSearches: []
     property var savedSearches: []
     property var selectedDirectories: []
+    property var includedDirectories: []
+    property var excludedDirectories: []
     property var recentDirectories: []
     property var favoriteDirectories: []
     property bool currentSearchSaved: false
@@ -398,6 +400,8 @@ Panel {
             ScopeBar {
                 directory: root.directory
                 selectedDirectories: root.selectedDirectories
+                includedDirectories: root.includedDirectories
+                excludedDirectories: root.excludedDirectories
                 recentDirectories: root.recentDirectories
                 favoriteDirectories: root.favoriteDirectories
                 currentDirectoryFavorite: root.currentDirectoryFavorite

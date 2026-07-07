@@ -5,6 +5,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace uburu::filesystem
@@ -248,8 +249,14 @@ namespace uburu::filesystem
     std::optional<bool> ignored;
 
     for (const auto& rule : rules) {
-      if (ruleMatches(rule, relativePath, is_directory))
+      try {
+        if (!ruleMatches(rule, relativePath, is_directory))
+          continue;
+
         ignored = !rule.negated;
+      } catch (const std::invalid_argument&) {
+        return false;
+      }
     }
 
     return ignored.value_or(false);

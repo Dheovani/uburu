@@ -55,3 +55,14 @@ TEST_CASE("git ignore rules support directory-only patterns")
   CHECK(rules.ignores(std::filesystem::path("build") / "output.o", false));
   CHECK_FALSE(rules.ignores("build.txt", false));
 }
+
+TEST_CASE("git ignore rules treat absolute query paths as non-matches")
+{
+  uburu::tests::TemporaryFile temporaryFile("uburu-git-ignore-absolute-path-test.gitignore");
+  uburu::tests::writeFile(temporaryFile.path(), "*.tmp\n");
+
+  uburu::filesystem::GitIgnoreRules rules;
+  rules.appendFile(temporaryFile.path(), {});
+
+  CHECK_FALSE(rules.ignores(std::filesystem::temp_directory_path() / "cache.tmp", false));
+}

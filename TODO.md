@@ -309,7 +309,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Never send names, paths, or content without explicit consent.
 - [x] Protect history and index according to user permissions.
 - [x] Handle inaccessible paths, removable media, and unstable network locations.
-- [ ] Recover state after crash without corrupting index or preferences.
+- [x] Recover state after crash without corrupting index or preferences.
 - [x] Implement local, exportable crash reports.
 - [ ] Add limits against decompression bombs and special formats when supported.
 - [x] Create a threat model for regex, hostile files, symlinks, and local database.

@@ -19,6 +19,15 @@ namespace uburu::storage
     bool budgetExceeded{false};
   };
 
+  struct StartupRecoveryReport
+  {
+    StorageIntegrityReport integrity;
+    std::size_t incompleteGenerationsRemoved{0};
+    bool indexCatalogUsable{true};
+    bool rebuildRecommended{false};
+    std::string message;
+  };
+
   class StorageService
   {
   public:
@@ -29,6 +38,7 @@ namespace uburu::storage
     virtual void upsertDocument(const IndexDocument& document) = 0;
     virtual void publishGeneration(const IndexGeneration& generation) = 0;
     [[nodiscard]] virtual std::size_t recoverIncompleteGenerations() = 0;
+    [[nodiscard]] virtual StartupRecoveryReport recoverStartupState() = 0;
     [[nodiscard]] virtual std::size_t collectOrphanDocuments() = 0;
     [[nodiscard]] virtual StorageBudgetReport enforceDocumentBudget(std::uintmax_t maximumBytes) = 0;
     [[nodiscard]] virtual StoragePragmaSnapshot pragmaSnapshot() const = 0;

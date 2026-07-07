@@ -80,9 +80,9 @@ If any document belongs to another repository or worktree, or if any write fails
 
 ## Recovery, integrity, and rebuild
 
-Migrations run inside explicit transactions. If a migration fails, the transaction is rolled back and the database must not advance `user_version`. During `initialize()`, the backend also removes `generations` records left with `published = 0`, representing interrupted publications before they became visible.
+Migrations run inside explicit transactions. If a migration fails, the transaction is rolled back and the database must not advance `user_version`. During `initialize()`, the backend also runs startup recovery. `StartupRecoveryReport` validates storage integrity and removes `generations` records left with `published = 0`, representing interrupted publications before they became visible.
 
-`StorageService::recoverIncompleteGenerations()` exposes the same cleanup for indexer-controlled calls. The method removes only unpublished generation metadata; it does not remove documents or the previously published view.
+`StorageService::recoverIncompleteGenerations()` exposes the same cleanup for indexer-controlled calls. The method removes only unpublished generation metadata; it does not remove documents or the previously published view. Startup recovery preserves preferences, search history, saved searches, metrics, repositories, and worktrees. If integrity validation fails, recovery reports that the index catalog is not usable and recommends rebuild instead of silently deleting user state.
 
 `StorageService::validateIntegrity()` runs `PRAGMA integrity_check` and returns an explicit report. When the index structure must be discarded without deleting product metadata, `StorageService::rebuildIndexCatalog()` removes `overlays`, `files`, `documents`, and `generations` in a transaction. This rebuild preserves repositories, worktrees, preferences, history, saved searches, and metrics.
 

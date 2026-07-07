@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -866,6 +867,9 @@ TEST_CASE("sqlite storage recovers incomplete generations on initialization")
     storage.initialize();
     storage.upsertRepository(repositoryInfo(directory.path()));
     storage.upsertWorktree(worktreeInfo(directory.path()));
+    storage.setPreference(std::nullopt, "ui.theme", "dark");
+    storage.recordSearch(uburu::SearchHistoryEntry{.root = directory.path(), .expression = "needle", .searchedAt = {}},
+                         10);
   }
 
   insertIncompleteGeneration(databasePath);
@@ -874,6 +878,36 @@ TEST_CASE("sqlite storage recovers incomplete generations on initialization")
   uburu::storage::SQLiteStorageService storage(databasePath);
   storage.initialize();
 
+  CHECK(unpublishedGenerationCount(databasePath) == 0);
+  CHECK(storage.preference(std::nullopt, "ui.theme") == "dark");
+  REQUIRE(storage.recentSearches(10).size() == 1);
+  CHECK(storage.recentSearches(10).front().expression == "needle");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage startup recovery reports cleaned crash leftovers")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-startup-recovery-report-test");
+  const auto databasePath = directory.path() / "uburu.db";
+
+  uburu::storage::SQLiteStorageService storage(databasePath);
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+
+  insertIncompleteGeneration(databasePath);
+  REQUIRE(unpublishedGenerationCount(databasePath) == 1);
+
+  const auto report = storage.recoverStartupState();
+
+  CHECK(report.integrity.ok);
+  CHECK(report.indexCatalogUsable);
+  CHECK_FALSE(report.rebuildRecommended);
+  CHECK(report.incompleteGenerationsRemoved == 1);
+  CHECK(report.message == "removed incomplete index generations");
   CHECK(unpublishedGenerationCount(databasePath) == 0);
 #else
   SUCCEED("SQLite is not available in this build");

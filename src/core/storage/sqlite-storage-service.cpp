@@ -997,7 +997,7 @@ namespace uburu::storage
     applyInitialSchema(database);
     applyMigrations(database);
     ensureLookupIndexes(database);
-    static_cast<void>(recoverIncompleteGenerationRecords(database));
+    static_cast<void>(recoverStartupState());
 #else
     throw std::runtime_error("SQLite support is not available in this build");
 #endif
@@ -1119,6 +1119,40 @@ namespace uburu::storage
     auto* database = requireDatabase(databaseHandle);
 
     return recoverIncompleteGenerationRecords(database);
+#else
+    throw std::runtime_error("SQLite support is not available in this build");
+#endif
+  }
+
+  StartupRecoveryReport SQLiteStorageService::recoverStartupState()
+  {
+#if defined(UBURU_HAS_SQLITE)
+    auto* database = requireDatabase(databaseHandle);
+    StartupRecoveryReport report;
+    report.integrity = validateIntegrity();
+
+    if (!report.integrity.ok) {
+      report.indexCatalogUsable = false;
+      report.rebuildRecommended = true;
+      report.message = "storage integrity check failed";
+
+      return report;
+    }
+
+    execute(database, "BEGIN IMMEDIATE");
+    try {
+      report.incompleteGenerationsRemoved = recoverIncompleteGenerationRecords(database);
+      execute(database, "COMMIT");
+    } catch (...) {
+      execute(database, "ROLLBACK");
+
+      throw;
+    }
+
+    report.message =
+      report.incompleteGenerationsRemoved > 0 ? "removed incomplete index generations" : "storage state is clean";
+
+    return report;
 #else
     throw std::runtime_error("SQLite support is not available in this build");
 #endif

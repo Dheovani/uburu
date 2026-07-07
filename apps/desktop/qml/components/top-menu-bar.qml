@@ -17,6 +17,7 @@ Rectangle {
     property bool hasQuery: false
     property bool hasCurrentResult: false
     property string themeMode: "system"
+    property var openedMenuButton: null
 
     signal actionTriggered(string action)
 
@@ -25,6 +26,12 @@ Rectangle {
     color: "transparent"
 
     function openMenu(anchor, items) {
+        if (openedMenuButton && openedMenuButton !== anchor)
+            openedMenuButton.menuOpen = false
+
+        openedMenuButton = anchor
+        openedMenuButton.menuOpen = true
+
         menuPopup.activeItems = items
         menuPopup.x = anchor.x
         menuPopup.y = anchor.y + anchor.height + 3
@@ -147,6 +154,13 @@ Rectangle {
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+        onClosed: {
+            if (root.openedMenuButton) {
+                root.openedMenuButton.menuOpen = false
+                root.openedMenuButton = null
+            }
+        }
+
         background: Rectangle {
             radius: Theme.radius
             color: Theme.surface
@@ -243,6 +257,8 @@ Rectangle {
     component MenuButton: Button {
         id: menuButton
 
+        property bool menuOpen: false
+
         implicitHeight: 28
         implicitWidth: contentText.implicitWidth + 22
         hoverEnabled: true
@@ -255,7 +271,7 @@ Rectangle {
             id: contentText
 
             text: menuButton.text
-            color: menuButton.hovered ? Theme.text : Theme.textMuted
+            color: menuButton.hovered || menuButton.menuOpen ? Theme.text : Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
@@ -263,8 +279,8 @@ Rectangle {
 
         background: Rectangle {
             radius: 7
-            color: menuButton.down || menuButton.hovered ? Theme.surfaceRaised : "transparent"
-            border.color: menuButton.down || menuButton.hovered ? Theme.border : "transparent"
+            color: menuButton.down || menuButton.hovered || menuButton.menuOpen ? Theme.surfaceRaised : "transparent"
+            border.color: menuButton.down || menuButton.hovered || menuButton.menuOpen ? Theme.border : "transparent"
             border.width: 1
         }
     }

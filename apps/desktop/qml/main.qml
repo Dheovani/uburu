@@ -23,6 +23,7 @@ ApplicationWindow {
     property int resultsPanePreferredHeight: 260
     property int maximumStoredSearches: 8
     property var recentSearches: []
+    property var recentDocumentTypes: []
     property var savedSearches: []
     property var commandPaletteItems: [
         {
@@ -204,6 +205,20 @@ ApplicationWindow {
         return query.trim()
     }
 
+    function normalizedDocumentTypesText(text) {
+        const documentTypes = text.toLowerCase().split(/[,;\s]+/)
+        const normalizedTypes = []
+
+        for (const documentType of documentTypes) {
+            const normalizedType = documentType.replace(/^\.+/, "").trim()
+
+            if (normalizedType.length > 0 && normalizedTypes.indexOf(normalizedType) === -1)
+                normalizedTypes.push(normalizedType)
+        }
+
+        return normalizedTypes.join(", ")
+    }
+
     function parseStoredList(text) {
         if (!text || text.length === 0)
             return []
@@ -232,6 +247,18 @@ ApplicationWindow {
         return nextSearches.slice(0, root.maximumStoredSearches)
     }
 
+    function withDocumentTypesAtFront(documentTypes, text) {
+        const normalizedText = normalizedDocumentTypesText(text)
+
+        if (normalizedText.length === 0)
+            return documentTypes
+
+        const nextDocumentTypes = documentTypes.filter(value => value !== normalizedText)
+        nextDocumentTypes.unshift(normalizedText)
+
+        return nextDocumentTypes.slice(0, root.maximumStoredSearches)
+    }
+
     function isSearchSaved(query) {
         const normalizedQuery = normalizedSearchText(query)
 
@@ -240,11 +267,17 @@ ApplicationWindow {
 
     function persistSearchMemory() {
         mainWindowSettings.recentSearches = JSON.stringify(root.recentSearches)
+        mainWindowSettings.recentDocumentTypes = JSON.stringify(root.recentDocumentTypes)
         mainWindowSettings.savedSearches = JSON.stringify(root.savedSearches)
     }
 
     function recordSearch(query) {
         root.recentSearches = withSearchAtFront(root.recentSearches, query)
+        root.persistSearchMemory()
+    }
+
+    function recordDocumentTypes(text) {
+        root.recentDocumentTypes = withDocumentTypesAtFront(root.recentDocumentTypes, text)
         root.persistSearchMemory()
     }
 
@@ -456,6 +489,7 @@ ApplicationWindow {
             searchDuration: searchController.searchDuration
             regexAvailable: searchController.regexAvailable
             recentSearches: root.recentSearches
+            recentDocumentTypes: root.recentDocumentTypes
             savedSearches: root.savedSearches
             selectedDirectories: searchController.selectedDirectories
             includedDirectories: searchController.includedDirectories
@@ -495,6 +529,7 @@ ApplicationWindow {
                     documentTypes
                 )
                 root.recordSearch(query)
+                root.recordDocumentTypes(documentTypes)
             }
         }
 
@@ -572,6 +607,7 @@ ApplicationWindow {
         category: "main-window"
         property string themeMode: "system"
         property string recentSearches: "[]"
+        property string recentDocumentTypes: "[]"
         property string savedSearches: "[]"
         property alias windowX: root.x
         property alias windowY: root.y
@@ -592,6 +628,7 @@ ApplicationWindow {
     Component.onCompleted: {
         Theme.mode = root.normalizeThemeMode(mainWindowSettings.themeMode)
         root.recentSearches = root.parseStoredList(mainWindowSettings.recentSearches)
+        root.recentDocumentTypes = root.parseStoredList(mainWindowSettings.recentDocumentTypes)
         root.savedSearches = root.parseStoredList(mainWindowSettings.savedSearches)
     }
 

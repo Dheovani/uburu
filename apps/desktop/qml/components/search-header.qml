@@ -20,10 +20,12 @@ Panel {
     property bool regexAvailable: true
     property bool hasDocumentContentExtractorGap: hasUnsupportedDocumentContentTypes(documentTypesField.text)
     property bool hasSearchMemory: recentSearches.length > 0 || savedSearches.length > 0 || queryText.length > 0
+    property bool hasDocumentTypesMemory: recentDocumentTypes.length > 0
     property bool autoSearchEnabled: true
     property int debounceIntervalMs: 450
     property bool pendingAutoSearch: false
     property var recentSearches: []
+    property var recentDocumentTypes: []
     property var savedSearches: []
     property var selectedDirectories: []
     property var includedDirectories: []
@@ -93,6 +95,20 @@ Panel {
             return text
 
         return text.slice(0, 77) + "..."
+    }
+
+    function shortDocumentTypes(text) {
+        if (text.length <= 92)
+            return text
+
+        return text.slice(0, 89) + "..."
+    }
+
+    function useStoredDocumentTypes(text) {
+        documentTypesField.text = text
+        documentTypesMemoryPopup.close()
+        documentTypesField.forceActiveFocus()
+        root.requestDebouncedSearch()
     }
 
     function requestDebouncedSearch() {
@@ -376,7 +392,20 @@ Panel {
                     Layout.preferredHeight: 34
                     placeholderText: qsTr("Ex.: pdf, docx, txt")
                     verticalAlignment: TextInput.AlignVCenter
-                    onTextEdited: root.requestDebouncedSearch()
+                    onTextEdited: {
+                        root.requestDebouncedSearch()
+
+                        if (root.hasDocumentTypesMemory)
+                            documentTypesMemoryPopup.open()
+                    }
+                    onActiveFocusChanged: {
+                        if (activeFocus && root.hasDocumentTypesMemory)
+                            documentTypesMemoryPopup.open()
+                    }
+                    onPressed: {
+                        if (root.hasDocumentTypesMemory)
+                            documentTypesMemoryPopup.open()
+                    }
                     Accessible.name: qsTr("Tipos de documento")
                     Accessible.description: qsTr("Filtre por extensões separadas por vírgula ou espaço.")
 
@@ -391,8 +420,51 @@ Panel {
                     background: Rectangle {
                         radius: Theme.radius
                         color: Theme.surfaceSunken
-                        border.color: documentTypesField.activeFocus ? Theme.primary : Theme.border
+                        border.color: documentTypesField.activeFocus || documentTypesMemoryPopup.opened
+                                      ? Theme.primary
+                                      : Theme.border
                         border.width: 1
+                    }
+
+                    Popup {
+                        id: documentTypesMemoryPopup
+
+                        x: 0
+                        y: documentTypesField.height + 6
+                        width: documentTypesField.width
+                        padding: 8
+                        modal: false
+                        focus: false
+                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                        background: Rectangle {
+                            radius: Theme.radius
+                            color: Theme.surface
+                            border.color: Theme.border
+                            border.width: 1
+                        }
+
+                        contentItem: Column {
+                            spacing: 6
+
+                            MutedLabel {
+                                text: qsTr("Tipos recentes")
+                            }
+
+                            Repeater {
+                                model: root.recentDocumentTypes
+
+                                delegate: SearchMemoryRow {
+                                    required property string modelData
+
+                                    width: documentTypesMemoryPopup.contentItem.width
+                                    text: root.shortDocumentTypes(modelData)
+                                    detail: qsTr("Filtro de tipos")
+                                    accessibleName: qsTr("Filtro de tipos recente: %1").arg(modelData)
+                                    onClicked: root.useStoredDocumentTypes(modelData)
+                                }
+                            }
+                        }
                     }
                 }
             }

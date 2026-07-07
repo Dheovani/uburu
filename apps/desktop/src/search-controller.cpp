@@ -961,7 +961,7 @@ namespace uburu::app
       return;
 
     setDirectory(directory);
-    addSelectedDirectory(directory);
+    setSelectedDirectory(directory);
     addRecentDirectory(directory);
     saveScopeHistory();
   }
@@ -1505,7 +1505,9 @@ namespace uburu::app
       [](const QString& directory) { return directory.isEmpty() || !QFileInfo::exists(directory); });
 
     if (!selectedDirectoryValues.empty()) {
-      directoryValue = selectedDirectoryValues.front();
+      const auto directory = selectedDirectoryValues.back();
+      directoryValue = directory;
+      selectedDirectoryValues = {directory};
       return;
     }
 
@@ -1542,10 +1544,14 @@ namespace uburu::app
     emit scopeHistoryChanged();
   }
 
-  void SearchController::addSelectedDirectory(const QString& directory)
+  void SearchController::setSelectedDirectory(const QString& directory)
   {
-    selectedDirectoryValues.removeAll(directory);
-    selectedDirectoryValues.push_back(directory);
+    const auto nextDirectories = directory.isEmpty() ? QStringList{} : QStringList{directory};
+
+    if (selectedDirectoryValues == nextDirectories)
+      return;
+
+    selectedDirectoryValues = nextDirectories;
     emit scopeHistoryChanged();
   }
 

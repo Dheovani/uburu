@@ -143,6 +143,69 @@ TEST_CASE("search controller exposes selected scope and favorite state")
   CHECK_FALSE(controller.currentDirectoryFavorite());
 }
 
+TEST_CASE("search controller replaces the active scope instead of accumulating roots")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-replace-scope-settings-test");
+  uburu::tests::TemporaryDirectory firstDirectory("uburu-controller-replace-scope-first-test");
+  uburu::tests::TemporaryDirectory secondDirectory("uburu-controller-replace-scope-second-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("replace-scope-test"));
+
+  const auto firstPath = qtPath(firstDirectory.path());
+  const auto secondPath = qtPath(secondDirectory.path());
+
+  uburu::app::SearchController controller;
+  controller.selectDirectory(firstPath);
+  controller.selectDirectory(secondPath);
+
+  CHECK(controller.directory() == secondPath);
+  CHECK(controller.selectedDirectories() == QStringList{secondPath});
+  CHECK(controller.recentDirectories().contains(firstPath));
+  CHECK(controller.recentDirectories().contains(secondPath));
+}
+
+TEST_CASE("search controller migrates saved multi-root scopes to the latest selection")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-migrate-scope-settings-test");
+  uburu::tests::TemporaryDirectory firstDirectory("uburu-controller-migrate-scope-first-test");
+  uburu::tests::TemporaryDirectory secondDirectory("uburu-controller-migrate-scope-second-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("migrate-scope-test"));
+
+  const auto firstPath = qtPath(firstDirectory.path());
+  const auto secondPath = qtPath(secondDirectory.path());
+
+  QSettings settings;
+  settings.beginGroup(QStringLiteral("scope"));
+  settings.setValue(QStringLiteral("selectedDirectories"), QStringList{firstPath, secondPath});
+  settings.endGroup();
+
+  uburu::app::SearchController controller;
+
+  CHECK(controller.directory() == secondPath);
+  CHECK(controller.selectedDirectories() == QStringList{secondPath});
+}
+
+TEST_CASE("desktop search flow does not scan previously selected scopes")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-no-scope-leak-settings-test");
+  uburu::tests::TemporaryDirectory firstDirectory("uburu-controller-no-scope-leak-first-test");
+  uburu::tests::TemporaryDirectory secondDirectory("uburu-controller-no-scope-leak-second-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("no-scope-leak-test"));
+
+  uburu::tests::writeFile(firstDirectory.path() / "outside.qml", "verdade fora do escopo\n");
+  uburu::tests::writeFile(secondDirectory.path() / "inside.qml", "texto sem correspondencia\n");
+
+  uburu::app::SearchController controller;
+  controller.selectDirectory(qtPath(firstDirectory.path()));
+  controller.selectDirectory(qtPath(secondDirectory.path()));
+  controller.startSearch(
+    QStringLiteral("verdade"), false, false, false, true, false, false, true, QStringLiteral("qml"));
+
+  REQUIRE(waitUntil([&] { return !controller.running(); }));
+
+  CHECK(controller.results()->rowCount() == 0);
+  CHECK(controller.matchesFound() == 0);
+}
+
 TEST_CASE("search controller exposes included and excluded scope entries")
 {
   uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-scope-settings-test");

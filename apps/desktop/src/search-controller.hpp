@@ -174,7 +174,7 @@ namespace uburu::app
     void loadScopeHistory();
     void saveScopeHistory() const;
     void setDirectory(QString directory);
-    void addSelectedDirectory(const QString& directory);
+    void setSelectedDirectory(const QString& directory);
     void addRecentDirectory(const QString& directory);
     void setStatus(QString status);
     void setRunning(bool running);

@@ -108,3 +108,135 @@ TEST_CASE("settings service ignores invalid persisted values")
   SUCCEED("SQLite is not available in this build");
 #endif
 }
+
+TEST_CASE("settings service resolves repository settings from global settings")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory directory("uburu-settings-service-repository-inheritance-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  uburu::app::StorageSettingsService settingsService(storage);
+  auto globalSettings = uburu::app::defaultGlobalSettings();
+
+  globalSettings.maximumThreadCount = 8;
+  globalSettings.maximumFileSizeBytes = 4096U;
+  globalSettings.resultLimit = 500;
+  globalSettings.memoryBudgetBytes = 8192U;
+  globalSettings.diskBudgetBytes = 16384U;
+  globalSettings.telemetryEnabled = true;
+
+  settingsService.saveGlobalSettings(globalSettings);
+
+  const auto settings = settingsService.resolveRepositorySettings("repository-id");
+
+  CHECK(settings.repositoryId == "repository-id");
+  CHECK(settings.schemaVersion == 1);
+  CHECK(settings.friendlyName.empty());
+  CHECK(settings.maximumThreadCount == 8);
+  CHECK(settings.maximumFileSizeBytes == 4096U);
+  CHECK(settings.resultLimit == 500);
+  CHECK(settings.memoryBudgetBytes == 8192U);
+  CHECK(settings.diskBudgetBytes == 16384U);
+  CHECK(settings.respectGitignore);
+  CHECK_FALSE(settings.includeHiddenFiles);
+  CHECK(settings.relevantExtensions.empty());
+  CHECK(settings.telemetryEnabled);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("settings service applies repository overrides over global settings")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory directory("uburu-settings-service-repository-override-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  uburu::app::StorageSettingsService settingsService(storage);
+  auto globalSettings = uburu::app::defaultGlobalSettings();
+  auto repositorySettings = uburu::app::defaultRepositorySettings("repository-id");
+
+  globalSettings.maximumThreadCount = 8;
+  globalSettings.maximumFileSizeBytes = 4096U;
+  globalSettings.resultLimit = 500;
+  globalSettings.memoryBudgetBytes = 8192U;
+  globalSettings.diskBudgetBytes = 16384U;
+  globalSettings.telemetryEnabled = true;
+
+  repositorySettings.friendlyName = "Product repository";
+  repositorySettings.maximumThreadCount = 2;
+  repositorySettings.maximumFileSizeBytes = 1024U;
+  repositorySettings.resultLimit = 120;
+  repositorySettings.memoryBudgetBytes = 2048U;
+  repositorySettings.diskBudgetBytes = 3072U;
+  repositorySettings.respectGitignore = false;
+  repositorySettings.includeHiddenFiles = true;
+  repositorySettings.relevantExtensions = "cpp,hpp,qml";
+
+  settingsService.saveGlobalSettings(globalSettings);
+  settingsService.saveRepositorySettings(repositorySettings);
+
+  const auto loaded = settingsService.loadRepositorySettings("repository-id");
+  const auto effective = settingsService.resolveRepositorySettings("repository-id");
+
+  REQUIRE(loaded.friendlyName.has_value());
+  REQUIRE(loaded.maximumThreadCount.has_value());
+  REQUIRE(loaded.respectGitignore.has_value());
+  CHECK(*loaded.friendlyName == "Product repository");
+  CHECK(*loaded.maximumThreadCount == 2);
+  CHECK_FALSE(*loaded.respectGitignore);
+  CHECK(effective.friendlyName == "Product repository");
+  CHECK(effective.maximumThreadCount == 2);
+  CHECK(effective.maximumFileSizeBytes == 1024U);
+  CHECK(effective.resultLimit == 120);
+  CHECK(effective.memoryBudgetBytes == 2048U);
+  CHECK(effective.diskBudgetBytes == 3072U);
+  CHECK_FALSE(effective.respectGitignore);
+  CHECK(effective.includeHiddenFiles);
+  CHECK(effective.relevantExtensions == "cpp,hpp,qml");
+  CHECK(effective.telemetryEnabled);
+  CHECK(storage.preference("repository-id", "repository.maximumThreadCount") == "2");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("settings service ignores invalid repository overrides")
+{
+#if defined(UBURU_HAS_SQLITE)
+  uburu::tests::TemporaryDirectory directory("uburu-settings-service-repository-invalid-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+
+  storage.initialize();
+
+  uburu::app::StorageSettingsService settingsService(storage);
+  auto globalSettings = uburu::app::defaultGlobalSettings();
+
+  globalSettings.maximumThreadCount = 4;
+  globalSettings.resultLimit = 300;
+
+  settingsService.saveGlobalSettings(globalSettings);
+  storage.setPreference("repository-id", "repository.maximumThreadCount", "many");
+  storage.setPreference("repository-id", "repository.resultLimit", "0");
+  storage.setPreference("repository-id", "repository.respectGitignore", "sometimes");
+  storage.setPreference("repository-id", "repository.includeHiddenFiles", "unknown");
+
+  const auto loaded = settingsService.loadRepositorySettings("repository-id");
+  const auto effective = settingsService.resolveRepositorySettings("repository-id");
+
+  CHECK_FALSE(loaded.maximumThreadCount.has_value());
+  CHECK_FALSE(loaded.resultLimit.has_value());
+  CHECK_FALSE(loaded.respectGitignore.has_value());
+  CHECK_FALSE(loaded.includeHiddenFiles.has_value());
+  CHECK(effective.maximumThreadCount == 4);
+  CHECK(effective.resultLimit == 300);
+  CHECK(effective.respectGitignore);
+  CHECK_FALSE(effective.includeHiddenFiles);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}

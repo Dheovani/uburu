@@ -103,6 +103,8 @@ These tables are deliberately simple at this stage. Semantic validation of keys,
 
 Milestone 11 introduces `app::SettingsService` as the typed boundary above the textual preference table. Storage still persists scoped strings so migrations stay simple, but the application layer now loads and saves a versioned `GlobalSettings` object with normalized defaults for theme, language, thread count, file-size limit, result limit, memory budget, disk budget, and telemetry opt-in. Invalid or unknown persisted values fall back to safe defaults; telemetry remains disabled unless the typed settings explicitly enable it.
 
+Repository preferences use the same storage table with `RepositoryId` scope. `RepositorySettings` stores only explicit overrides, while `EffectiveRepositorySettings` resolves the predictable chain `internal defaults -> global settings -> repository overrides`. Repository overrides currently cover friendly name, thread count, file-size limit, result limit, memory budget, disk budget, `.gitignore` behavior, hidden-file behavior, and relevant extensions. Telemetry is intentionally inherited only from global settings so a repository cannot silently opt into it by itself.
+
 ## Initial FTS5 evaluation
 
 Milestone 5 introduced `uburu-storage-fts5-benchmark`, a developer benchmark disabled from the default build. It creates a deterministic SQLite dataset, compares a simple textual query through `LIKE` with an equivalent FTS5 query, and validates that both return the same count.

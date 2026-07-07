@@ -46,7 +46,7 @@ This document is the project's operational plan. Milestone order represents real
 ### Exit criteria
 
 - [x] A clean clone can be configured and tested through presets without manually editing paths.
-- [ ] CI green on at least Windows/MinGW and Linux.
+- [x] CI green on at least Windows/MinGW and Linux.
 
 ## Milestone 1 — Correct direct-search semantics (P0)
 
@@ -304,6 +304,8 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Add import/export for settings and saved searches.
 - [ ] Define telemetry policy: disabled by default and opt-in only, if it exists.
 - [ ] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.
+  - [x] Add a compact top-left application menu as the entry point for settings and common commands.
+  - [ ] Connect language and general-preferences actions to real settings screens.
 - [ ] Never send names, paths, or content without explicit consent.
 - [ ] Protect history and index according to user permissions.
 - [ ] Handle inaccessible paths, removable media, and unstable network locations.

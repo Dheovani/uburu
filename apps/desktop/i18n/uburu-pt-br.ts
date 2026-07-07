@@ -74,6 +74,49 @@
     <message><source>Informação</source><translation>Informação</translation></message>
   </context>
   <context>
+    <name>top-menu-bar</name>
+    <message><source>Selecionar pasta...</source><translation>Selecionar pasta...</translation></message>
+    <message><source>Ctrl+O</source><translation>Ctrl+O</translation></message>
+    <message><source>Reindexar escopo</source><translation>Reindexar escopo</translation></message>
+    <message><source>Ctrl+Alt+I</source><translation>Ctrl+Alt+I</translation></message>
+    <message><source>Cancelar indexação</source><translation>Cancelar indexação</translation></message>
+    <message><source>Ctrl+Alt+Esc</source><translation>Ctrl+Alt+Esc</translation></message>
+    <message><source>Sair</source><translation>Sair</translation></message>
+    <message><source>Alt+F4</source><translation>Alt+F4</translation></message>
+    <message><source>Focar busca</source><translation>Focar busca</translation></message>
+    <message><source>Ctrl+F</source><translation>Ctrl+F</translation></message>
+    <message><source>Salvar busca atual</source><translation>Salvar busca atual</translation></message>
+    <message><source>Ctrl+S</source><translation>Ctrl+S</translation></message>
+    <message><source>Favoritar pasta atual</source><translation>Favoritar pasta atual</translation></message>
+    <message><source>Ctrl+D</source><translation>Ctrl+D</translation></message>
+    <message><source>Copiar diagnóstico</source><translation>Copiar diagnóstico</translation></message>
+    <message><source>Iniciar busca</source><translation>Iniciar busca</translation></message>
+    <message><source>Enter</source><translation>Enter</translation></message>
+    <message><source>Cancelar busca</source><translation>Cancelar busca</translation></message>
+    <message><source>Esc</source><translation>Esc</translation></message>
+    <message><source>Abrir resultado selecionado</source><translation>Abrir resultado selecionado</translation></message>
+    <message><source>Próxima ocorrência</source><translation>Próxima ocorrência</translation></message>
+    <message><source>F4</source><translation>F4</translation></message>
+    <message><source>Ocorrência anterior</source><translation>Ocorrência anterior</translation></message>
+    <message><source>Shift+F4</source><translation>Shift+F4</translation></message>
+    <message><source>Paleta de comandos</source><translation>Paleta de comandos</translation></message>
+    <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
+    <message><source>Tema do sistema</source><translation>Tema do sistema</translation></message>
+    <message><source>Tema escuro</source><translation>Tema escuro</translation></message>
+    <message><source>Tema claro</source><translation>Tema claro</translation></message>
+    <message><source>Preferências gerais</source><translation>Preferências gerais</translation></message>
+    <message><source>Idioma</source><translation>Idioma</translation></message>
+    <message><source>Privacidade e histórico</source><translation>Privacidade e histórico</translation></message>
+    <message><source>Diagnóstico rápido</source><translation>Diagnóstico rápido</translation></message>
+    <message><source>Mostrar comandos</source><translation>Mostrar comandos</translation></message>
+    <message><source>Arquivo</source><translation>Arquivo</translation></message>
+    <message><source>Editar</source><translation>Editar</translation></message>
+    <message><source>Busca</source><translation>Busca</translation></message>
+    <message><source>Exibir</source><translation>Exibir</translation></message>
+    <message><source>Configurações</source><translation>Configurações</translation></message>
+    <message><source>Ajuda</source><translation>Ajuda</translation></message>
+  </context>
+  <context>
     <name>preview-pane</name>
     <message><source>PRÉ-VISUALIZAÇÃO</source><translation>PRÉ-VISUALIZAÇÃO</translation></message>
     <message><source>Pré-visualização</source><translation>Pré-visualização</translation></message>
@@ -143,11 +186,6 @@
   </context>
   <context>
     <name>search-header</name>
-    <message><source>Comandos</source><translation>Comandos</translation></message>
-    <message><source>Abrir paleta de comandos</source><translation>Abrir paleta de comandos</translation></message>
-    <message><source>Mostra os comandos disponíveis e seus atalhos.</source><translation>Mostra os comandos disponíveis e seus atalhos.</translation></message>
-    <message><source>Abrir paleta de comandos (%1)</source><translation>Abrir paleta de comandos (%1)</translation></message>
-    <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
     <message><source>BUSCA LOCAL</source><translation>BUSCA LOCAL</translation></message>
     <message><source>Uburu</source><translation>Uburu</translation></message>
     <message><source>Cancelando</source><translation>Cancelando</translation></message>

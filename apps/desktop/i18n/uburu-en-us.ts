@@ -74,6 +74,49 @@
     <message><source>Informação</source><translation>Information</translation></message>
   </context>
   <context>
+    <name>top-menu-bar</name>
+    <message><source>Selecionar pasta...</source><translation>Select folder...</translation></message>
+    <message><source>Ctrl+O</source><translation>Ctrl+O</translation></message>
+    <message><source>Reindexar escopo</source><translation>Reindex scope</translation></message>
+    <message><source>Ctrl+Alt+I</source><translation>Ctrl+Alt+I</translation></message>
+    <message><source>Cancelar indexação</source><translation>Cancel indexing</translation></message>
+    <message><source>Ctrl+Alt+Esc</source><translation>Ctrl+Alt+Esc</translation></message>
+    <message><source>Sair</source><translation>Exit</translation></message>
+    <message><source>Alt+F4</source><translation>Alt+F4</translation></message>
+    <message><source>Focar busca</source><translation>Focus search</translation></message>
+    <message><source>Ctrl+F</source><translation>Ctrl+F</translation></message>
+    <message><source>Salvar busca atual</source><translation>Save current search</translation></message>
+    <message><source>Ctrl+S</source><translation>Ctrl+S</translation></message>
+    <message><source>Favoritar pasta atual</source><translation>Favorite current folder</translation></message>
+    <message><source>Ctrl+D</source><translation>Ctrl+D</translation></message>
+    <message><source>Copiar diagnóstico</source><translation>Copy diagnostics</translation></message>
+    <message><source>Iniciar busca</source><translation>Start search</translation></message>
+    <message><source>Enter</source><translation>Enter</translation></message>
+    <message><source>Cancelar busca</source><translation>Cancel search</translation></message>
+    <message><source>Esc</source><translation>Esc</translation></message>
+    <message><source>Abrir resultado selecionado</source><translation>Open selected result</translation></message>
+    <message><source>Próxima ocorrência</source><translation>Next occurrence</translation></message>
+    <message><source>F4</source><translation>F4</translation></message>
+    <message><source>Ocorrência anterior</source><translation>Previous occurrence</translation></message>
+    <message><source>Shift+F4</source><translation>Shift+F4</translation></message>
+    <message><source>Paleta de comandos</source><translation>Command palette</translation></message>
+    <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
+    <message><source>Tema do sistema</source><translation>System theme</translation></message>
+    <message><source>Tema escuro</source><translation>Dark theme</translation></message>
+    <message><source>Tema claro</source><translation>Light theme</translation></message>
+    <message><source>Preferências gerais</source><translation>General preferences</translation></message>
+    <message><source>Idioma</source><translation>Language</translation></message>
+    <message><source>Privacidade e histórico</source><translation>Privacy and history</translation></message>
+    <message><source>Diagnóstico rápido</source><translation>Quick diagnostics</translation></message>
+    <message><source>Mostrar comandos</source><translation>Show commands</translation></message>
+    <message><source>Arquivo</source><translation>File</translation></message>
+    <message><source>Editar</source><translation>Edit</translation></message>
+    <message><source>Busca</source><translation>Search</translation></message>
+    <message><source>Exibir</source><translation>View</translation></message>
+    <message><source>Configurações</source><translation>Settings</translation></message>
+    <message><source>Ajuda</source><translation>Help</translation></message>
+  </context>
+  <context>
     <name>preview-pane</name>
     <message><source>PRÉ-VISUALIZAÇÃO</source><translation>PREVIEW</translation></message>
     <message><source>Pré-visualização</source><translation>Preview</translation></message>
@@ -143,11 +186,6 @@
   </context>
   <context>
     <name>search-header</name>
-    <message><source>Comandos</source><translation>Commands</translation></message>
-    <message><source>Abrir paleta de comandos</source><translation>Open command palette</translation></message>
-    <message><source>Mostra os comandos disponíveis e seus atalhos.</source><translation>Shows available commands and their shortcuts.</translation></message>
-    <message><source>Abrir paleta de comandos (%1)</source><translation>Open command palette (%1)</translation></message>
-    <message><source>Ctrl+K</source><translation>Ctrl+K</translation></message>
     <message><source>BUSCA LOCAL</source><translation>LOCAL SEARCH</translation></message>
     <message><source>Uburu</source><translation>Uburu</translation></message>
     <message><source>Cancelando</source><translation>Cancelling</translation></message>

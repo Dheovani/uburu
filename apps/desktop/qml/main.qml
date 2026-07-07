@@ -268,6 +268,70 @@ ApplicationWindow {
         searchHeader.runSearch()
     }
 
+    function runTopMenuAction(action) {
+        switch (action) {
+        case "selectFolder":
+            folderDialog.open()
+            return
+        case "reindexScope":
+            searchController.startIndexing(
+                searchHeader.respectGitignoreEnabled,
+                searchHeader.includeHiddenEnabled,
+                searchHeader.includeBinaryEnabled,
+                searchHeader.includeSubdirectoriesEnabled,
+                searchHeader.documentTypes
+            )
+            return
+        case "cancelIndexing":
+            searchController.cancelIndexing()
+            return
+        case "quit":
+            Qt.quit()
+            return
+        case "focusSearch":
+            searchHeader.focusSearch()
+            return
+        case "toggleSavedSearch":
+            root.toggleSavedSearch(searchHeader.queryText)
+            return
+        case "toggleFavoriteDirectory":
+            searchController.toggleCurrentDirectoryFavorite()
+            return
+        case "copyDiagnostics":
+            searchController.copyToClipboard(root.searchDiagnosticText())
+            return
+        case "startSearch":
+            searchHeader.runSearch()
+            return
+        case "cancelSearch":
+            searchController.cancel()
+            return
+        case "openCurrentResult":
+            resultsPane.openCurrentResult()
+            return
+        case "nextResult":
+            resultsPane.selectNextResult()
+            return
+        case "previousResult":
+            resultsPane.selectPreviousResult()
+            return
+        case "openCommandPalette":
+            commandPalette.openPalette()
+            return
+        case "themeSystem":
+            Theme.mode = "system"
+            return
+        case "themeDark":
+            Theme.mode = "dark"
+            return
+        case "themeLight":
+            Theme.mode = "light"
+            return
+        default:
+            return
+        }
+    }
+
     FolderDialog {
         id: folderDialog
 
@@ -362,8 +426,22 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 18
+        anchors.topMargin: 5
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
         spacing: 12
+
+        TopMenuBar {
+            canSearch: searchHeader.canSearch()
+            canCancelSearch: searchController.running && !searchController.cancelling
+            canIndex: searchController.selectedDirectories.length > 0 && !searchController.indexingRunning
+            canCancelIndexing: searchController.indexingRunning
+            hasDirectory: searchController.directory.length > 0
+            hasQuery: searchHeader.queryText.length > 0
+            hasCurrentResult: resultsPane.hasCurrentResult()
+            themeMode: Theme.mode
+            onActionTriggered: action => root.runTopMenuAction(action)
+        }
 
         SearchHeader {
             id: searchHeader
@@ -386,7 +464,6 @@ ApplicationWindow {
             favoriteDirectories: searchController.favoriteDirectories
             currentSearchSaved: root.isSearchSaved(queryText)
             currentDirectoryFavorite: searchController.currentDirectoryFavorite
-            onOpenCommandPalette: commandPalette.openPalette()
             onSelectDirectory: folderDialog.open()
             onAddIncludedDirectory: includedDirectoryDialog.open()
             onAddExcludedDirectory: excludedDirectoryDialog.open()

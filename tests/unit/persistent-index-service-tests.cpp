@@ -614,3 +614,80 @@ TEST_CASE("persistent index service reports unreadable files without aborting th
   SUCCEED("SQLite is not available in this build");
 #endif
 }
+
+TEST_CASE("persistent index service classifies unsupported document formats without reporting failures")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-unsupported-format-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "valid.txt", "valid");
+  writeFile(root / "src" / "document.docx", "packaged content placeholder");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "src/valid.txt"),
+    fileEntry(root, "src/document.docx"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+  const auto valid = storage.findDocument("worktree-id", "src/valid.txt");
+  const auto unsupported = storage.findDocument("worktree-id", "src/document.docx");
+
+  CHECK_FALSE(summary.cancelled);
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  CHECK(summary.skippedUnsupportedFormat == 1);
+  CHECK(summary.skippedBinary == 0);
+  CHECK(summary.skippedTemporaryLimitation == 0);
+  REQUIRE(valid.has_value());
+  CHECK_FALSE(unsupported.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service classifies binary files without reporting failures")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-binary-skip-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "valid.txt", "valid");
+  writeFile(root / "src" / "data.bin", "binary placeholder");
+
+  auto binary = fileEntry(root, "src/data.bin");
+  binary.binary = true;
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "src/valid.txt"),
+    binary,
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+  const auto valid = storage.findDocument("worktree-id", "src/valid.txt");
+  const auto skipped = storage.findDocument("worktree-id", "src/data.bin");
+
+  CHECK_FALSE(summary.cancelled);
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  CHECK(summary.skippedUnsupportedFormat == 0);
+  CHECK(summary.skippedBinary == 1);
+  CHECK(summary.skippedTemporaryLimitation == 0);
+  REQUIRE(valid.has_value());
+  CHECK_FALSE(skipped.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}

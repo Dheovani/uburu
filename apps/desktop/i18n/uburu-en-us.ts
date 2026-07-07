@@ -252,7 +252,7 @@
     <message><source>Selecione um escopo para indexar</source><translation>Select a scope to index</translation></message>
     <message><source>Preparando indexação...</source><translation>Preparing indexing...</translation></message>
     <message><source>Indexação cancelada</source><translation>Indexing cancelled</translation></message>
-    <message><source>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)</source><translation>Index updated: %1 indexed, %2 reused, %3 removed, %4 failed</translation></message>
+    <message><source>Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 ignorado(s), %5 falha(s)</source><translation>Index updated: %1 indexed, %2 reused, %3 removed, %4 skipped, %5 failed</translation></message>
     <message><source>Indexando diretório sem Git: %1</source><translation>Indexing non-Git directory: %1</translation></message>
     <message><source>Indexando %1</source><translation>Indexing %1</translation></message>
     <message><source>Cancelando indexação...</source><translation>Cancelling indexing...</translation></message>

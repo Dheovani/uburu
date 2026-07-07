@@ -22,6 +22,11 @@ namespace uburu::index
     std::size_t reusedByHash{0};
     std::size_t removed{0};
     std::size_t failed{0};
+    std::size_t skippedUnsupportedFormat{0};
+    std::size_t skippedBinary{0};
+    std::size_t skippedBySize{0};
+    std::size_t skippedByFilter{0};
+    std::size_t skippedTemporaryLimitation{0};
     std::filesystem::path currentPath;
   };
 
@@ -33,6 +38,11 @@ namespace uburu::index
     std::size_t reusedByHash{0};
     std::size_t removed{0};
     std::size_t failed{0};
+    std::size_t skippedUnsupportedFormat{0};
+    std::size_t skippedBinary{0};
+    std::size_t skippedBySize{0};
+    std::size_t skippedByFilter{0};
+    std::size_t skippedTemporaryLimitation{0};
     bool cancelled{false};
   };
 

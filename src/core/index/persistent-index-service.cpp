@@ -6,6 +6,7 @@
 #include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
 
+#include <array>
 #include <chrono>
 #include <deque>
 #include <exception>
@@ -29,6 +30,66 @@ namespace uburu::index
     [[nodiscard]] bool shouldIndexFile(const FileEntry& file)
     {
       return !file.binary;
+    }
+
+    enum class IndexSkipReason
+    {
+      none,
+      unsupportedFormat,
+      binary,
+      temporaryLimitation
+    };
+
+    struct IndexedTextReadResult
+    {
+      std::optional<std::string> text;
+      IndexSkipReason skipReason{IndexSkipReason::none};
+      bool cancelled{false};
+      bool failed{false};
+    };
+
+    [[nodiscard]] std::string lowerAscii(std::string value)
+    {
+      for (auto& character : value) {
+        if (character >= 'A' && character <= 'Z')
+          character = static_cast<char>(character - 'A' + 'a');
+      }
+
+      return value;
+    }
+
+    [[nodiscard]] bool hasUnsupportedDocumentExtension(const std::filesystem::path& path)
+    {
+      constexpr std::array unsupportedExtensions{
+        ".pdf", ".doc", ".docx", ".odt", ".rtf", ".epub", ".zip", ".xlsx", ".pptx"};
+      const auto extension = lowerAscii(path.extension().string());
+
+      for (const auto unsupportedExtension : unsupportedExtensions) {
+        if (extension == unsupportedExtension)
+          return true;
+      }
+
+      return false;
+    }
+
+    void recordSkip(IndexSkipReason reason, IndexUpdateSummary& summary, IndexUpdateProgress& progress)
+    {
+      switch (reason) {
+      case IndexSkipReason::unsupportedFormat:
+        ++summary.skippedUnsupportedFormat;
+        ++progress.skippedUnsupportedFormat;
+        return;
+      case IndexSkipReason::binary:
+        ++summary.skippedBinary;
+        ++progress.skippedBinary;
+        return;
+      case IndexSkipReason::temporaryLimitation:
+        ++summary.skippedTemporaryLimitation;
+        ++progress.skippedTemporaryLimitation;
+        return;
+      case IndexSkipReason::none:
+        return;
+      }
     }
 
     [[nodiscard]] bool isDeletedOverlay(const IndexFileMetadata& metadata)
@@ -169,7 +230,7 @@ namespace uburu::index
       return query.options.target == SearchTarget::content || query.options.target == SearchTarget::contentAndFileName;
     }
 
-    [[nodiscard]] std::optional<std::string>
+    [[nodiscard]] IndexedTextReadResult
     readIndexedText(const FileEntry& file, const SearchOptions& options, std::stop_token stopToken)
     {
       std::string indexedText;
@@ -189,10 +250,20 @@ namespace uburu::index
         },
         stopToken);
 
-      if (summary.status != text::TextReadStatus::completed)
-        return std::nullopt;
+      if (summary.status == text::TextReadStatus::completed)
+        return IndexedTextReadResult{.text = std::move(indexedText)};
 
-      return indexedText;
+      if (summary.status == text::TextReadStatus::cancelled)
+        return IndexedTextReadResult{.cancelled = true};
+
+      if (summary.status == text::TextReadStatus::binarySkipped)
+        return IndexedTextReadResult{.skipReason = IndexSkipReason::binary};
+
+      if (summary.status == text::TextReadStatus::invalidEncoding ||
+          summary.status == text::TextReadStatus::lineTooLong)
+        return IndexedTextReadResult{.skipReason = IndexSkipReason::temporaryLimitation};
+
+      return IndexedTextReadResult{.failed = true};
     }
 
     [[nodiscard]] std::vector<text::MatchPosition> indexedPathMatches(std::string_view pathText,
@@ -403,6 +474,14 @@ namespace uburu::index
       }
 
       if (!shouldIndexFile(file)) {
+        recordSkip(IndexSkipReason::binary, summary, progress);
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
+      if (hasUnsupportedDocumentExtension(file.relativePath)) {
+        recordSkip(IndexSkipReason::unsupportedFormat, summary, progress);
         publishProgress(onProgress, progress);
 
         continue;
@@ -452,15 +531,20 @@ namespace uburu::index
 
       const auto indexedText = readIndexedText(file, SearchOptions{}, stopToken);
 
-      if (!indexedText) {
-        if (stopToken.stop_requested()) {
+      if (!indexedText.text) {
+        if (stopToken.stop_requested() || indexedText.cancelled) {
           summary.cancelled = true;
 
           break;
         }
 
-        ++summary.failed;
-        ++progress.failed;
+        if (indexedText.skipReason != IndexSkipReason::none)
+          recordSkip(indexedText.skipReason, summary, progress);
+        else {
+          ++summary.failed;
+          ++progress.failed;
+        }
+
         publishProgress(onProgress, progress);
 
         continue;
@@ -480,7 +564,7 @@ namespace uburu::index
       }
 
       hashesSeenInUpdate.insert(hashKey);
-      documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, *indexedText));
+      documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, *indexedText.text));
       publishProgress(onProgress, progress);
     }
 

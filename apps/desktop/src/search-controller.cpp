@@ -338,7 +338,18 @@ namespace uburu::app
       target.reusedByHash += source.reusedByHash;
       target.removed += source.removed;
       target.failed += source.failed;
+      target.skippedUnsupportedFormat += source.skippedUnsupportedFormat;
+      target.skippedBinary += source.skippedBinary;
+      target.skippedBySize += source.skippedBySize;
+      target.skippedByFilter += source.skippedByFilter;
+      target.skippedTemporaryLimitation += source.skippedTemporaryLimitation;
       target.cancelled = target.cancelled || source.cancelled;
+    }
+
+    std::size_t skippedIndexingFiles(const index::IndexUpdateSummary& summary)
+    {
+      return summary.skippedUnsupportedFormat + summary.skippedBinary + summary.skippedBySize +
+             summary.skippedByFilter + summary.skippedTemporaryLimitation;
     }
 
     QString longestContainingRoot(const QStringList& roots, const QString& path)
@@ -1374,8 +1385,13 @@ namespace uburu::app
         setIndexingProgress(tr("Indexação cancelada"), indexingProgressValue);
       } else {
         const auto reusedDocuments = summary.reusedByCatalog + summary.reusedByBlob + summary.reusedByHash;
-        auto status = tr("Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 falha(s)");
-        status = status.arg(summary.indexed).arg(reusedDocuments).arg(summary.removed).arg(summary.failed);
+        auto status =
+          tr("Índice atualizado: %1 indexado(s), %2 reutilizado(s), %3 removido(s), %4 ignorado(s), %5 falha(s)");
+        status = status.arg(summary.indexed)
+          .arg(reusedDocuments)
+          .arg(summary.removed)
+          .arg(skippedIndexingFiles(summary))
+          .arg(summary.failed);
 
         setIndexingProgress(status, completeProgressPercentage);
       }

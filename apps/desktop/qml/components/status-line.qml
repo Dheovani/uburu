@@ -7,7 +7,10 @@ import "../theme"
 Rectangle {
     property string status: ""
     property string indexingStatus: ""
+    property int searchProgress: 0
+    property bool searchProgressIndeterminate: running
     property int indexingProgress: 0
+    property bool indexingProgressIndeterminate: indexingRunning && indexingProgress <= 0
     property bool indexingRunning: false
     property bool running: false
     property bool cancelling: false
@@ -48,28 +51,62 @@ Rectangle {
             Layout.maximumWidth: parent.width * 0.42
         }
 
-        ProgressBar {
+        ActivityProgress {
+            Layout.preferredWidth: 86
+            visible: running
+            value: searchProgress
+            indeterminate: searchProgressIndeterminate
+            accentColor: cancelling ? Theme.warning : Theme.primary
+            Accessible.name: qsTr("Progresso da busca")
+        }
+
+        ActivityProgress {
             Layout.preferredWidth: 96
-            Layout.preferredHeight: 6
-            from: 0
-            to: 100
-            value: indexingProgress
             visible: indexingRunning
+            value: indexingProgress
+            indeterminate: indexingProgressIndeterminate
+            accentColor: Theme.primary
             Accessible.name: qsTr("Progresso da indexação")
+        }
+    }
 
-            background: Rectangle {
-                radius: 3
-                color: Theme.surfaceRaised
-                border.color: Theme.border
-            }
+    component ActivityProgress: Item {
+        property int value: 0
+        property bool indeterminate: false
+        property color accentColor: Theme.primary
 
-            contentItem: Item {
-                Rectangle {
-                    width: parent.width * (indexingProgress / 100)
-                    height: parent.height
-                    radius: 3
-                    color: Theme.primary
-                }
+        Layout.preferredHeight: 6
+        implicitHeight: 6
+        clip: true
+
+        onIndeterminateChanged: {
+            if (!indeterminate)
+                progressFill.x = 0
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 3
+            color: Theme.surfaceRaised
+            border.color: Theme.border
+        }
+
+        Rectangle {
+            id: progressFill
+
+            width: parent.indeterminate ? parent.width * 0.34 : parent.width * Math.max(0, Math.min(1, parent.value / 100))
+            height: parent.height
+            radius: 3
+            color: parent.accentColor
+            opacity: parent.indeterminate ? 0.78 : 1
+            x: 0
+
+            NumberAnimation on x {
+                running: progressFill.parent.visible && progressFill.parent.indeterminate
+                loops: Animation.Infinite
+                from: -progressFill.width
+                to: progressFill.parent.width
+                duration: 900
             }
         }
     }

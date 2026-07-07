@@ -244,6 +244,7 @@
     <name>status-line</name>
     <message><source>Aguardando comando de busca</source><translation>Aguardando comando de busca</translation></message>
     <message><source>Indexação inativa</source><translation>Indexação inativa</translation></message>
+    <message><source>Progresso da busca</source><translation>Progresso da busca</translation></message>
     <message><source>Progresso da indexação</source><translation>Progresso da indexação</translation></message>
     <message><source>A pasta ignorada precisa estar dentro de um escopo selecionado</source><translation>A pasta ignorada precisa estar dentro de um escopo selecionado</translation></message>
     <message><source>Selecione uma subpasta para ignorar, não a raiz da busca</source><translation>Selecione uma subpasta para ignorar, não a raiz da busca</translation></message>

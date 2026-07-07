@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -223,6 +224,37 @@ TEST_CASE("diagnostic report can be exported to a file")
   std::getline(stream, content);
 
   CHECK(content.find("Uburu Test") != std::string::npos);
+}
+
+TEST_CASE("crash report exports a local sanitized artifact")
+{
+  uburu::tests::TemporaryFile file("uburu-crash-report-test.json");
+
+  auto report = uburu::diagnostics::makeCrashReport("Unhandled exception", "runtime");
+  report.generatedAt = std::chrono::system_clock::time_point{std::chrono::milliseconds{77}};
+  report.fields = {
+    uburu::diagnostics::LogField{.key = "activeFeature", .value = "indexing", .sensitive = false},
+    uburu::diagnostics::LogField{.key = "activePath", .value = "C:/private/repo", .sensitive = true},
+  };
+  report.recentErrors.push_back(uburu::diagnostics::LogEvent{
+    .level = uburu::diagnostics::LogLevel::error,
+    .category = uburu::diagnostics::LogCategory::storage,
+    .message = "database recovery scheduled",
+    .fields = {uburu::diagnostics::LogField{.key = "database", .value = "C:/private/uburu.db", .sensitive = true}},
+    .timestamp = std::chrono::system_clock::time_point{std::chrono::milliseconds{78}}});
+
+  uburu::diagnostics::exportCrashReport(report, file.path());
+
+  std::ifstream stream(file.path(), std::ios::binary);
+  const std::string content{std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
+
+  CHECK(content.find("\"reason\":\"Unhandled exception\"") != std::string::npos);
+  CHECK(content.find("\"error_category\":\"runtime\"") != std::string::npos);
+  CHECK(content.find("\"platform\"") != std::string::npos);
+  CHECK(content.find("\"build_configuration\"") != std::string::npos);
+  CHECK(content.find("indexing") != std::string::npos);
+  CHECK(content.find("C:/private") == std::string::npos);
+  CHECK(content.find("<redacted>") != std::string::npos);
 }
 
 TEST_CASE("structured metrics sink records search metrics as structured log fields")

@@ -169,6 +169,10 @@ Isolated read, permission, or file-removed failures during search must not inter
 
 Errors that prevent the whole search, such as query validation or unavailable backend, remain displayed as final errors. Explicit user cancellation has visual priority over partial warnings to avoid ambiguous feedback.
 
+## Bottom progress indicators
+
+The footer exposes activity without blocking the main panes. Search shows an indeterminate progress rail because direct traversal cannot always know the final file count while discovery is still running. Indexing shows a determinate rail whenever `IndexUpdateProgress::total` is known, and falls back to an indeterminate rail while preparing, scanning, or waiting for a total. Cancellation uses the warning color so the user can distinguish active work from shutdown.
+
 ## Formats pending content extraction
 
 Current direct search treats plain-text files as searchable content and can find binary or packaged files by name when the target combines content and file name. Formats such as PDF, DOCX, ODT, RTF, and EPUB must not be presented as searchable content until dedicated extractors exist.

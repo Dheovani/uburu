@@ -299,7 +299,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Implement typed and versioned global settings.
 - [x] Implement per-repository settings with predictable inheritance.
 - [x] Separate real indexing failures from files ignored by unsupported format, binary, size, filter, or temporary parser limitation in indexing status.
-- [ ] Add determinate or indeterminate bottom progress bars for active search and indexing, using exact progress when the total work is known and a clearly marked ongoing state when scanning still cannot estimate the remaining work.
+- [x] Add determinate or indeterminate bottom progress bars for active search and indexing, using exact progress when the total work is known and a clearly marked ongoing state when scanning still cannot estimate the remaining work.
 - [x] Validate limits for threads, files, results, memory, and disk.
 - [ ] Add import/export for settings and saved searches.
 - [x] Define telemetry policy: disabled by default and opt-in only, if it exists.
@@ -310,7 +310,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Protect history and index according to user permissions.
 - [x] Handle inaccessible paths, removable media, and unstable network locations.
 - [ ] Recover state after crash without corrupting index or preferences.
-- [ ] Implement local, exportable crash reports.
+- [x] Implement local, exportable crash reports.
 - [ ] Add limits against decompression bombs and special formats when supported.
 - [x] Create a threat model for regex, hostile files, symlinks, and local database.
 

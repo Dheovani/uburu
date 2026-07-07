@@ -8,6 +8,31 @@
 namespace
 {
 
+  constexpr std::size_t smallRenderBatchSize = 16;
+  constexpr std::size_t largeRenderBatchSize = 256;
+  constexpr std::size_t adaptiveMinimumBatchSize = 16;
+  constexpr std::size_t adaptiveMaximumBatchSize = 512;
+  constexpr std::uint32_t simulatedUiRenderPasses = 8;
+
+  [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions fixedBatchRunOptions(std::size_t batchSize)
+  {
+    return uburu::benchmarks::SearchBenchmarkRunOptions{
+      .executionOptions = uburu::app::SearchExecutionOptions{.resultBatchSize = batchSize, .adaptiveBatching = false},
+      .simulatedUiRenderPasses = simulatedUiRenderPasses,
+    };
+  }
+
+  [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions adaptiveBatchRunOptions()
+  {
+    return uburu::benchmarks::SearchBenchmarkRunOptions{
+      .executionOptions = uburu::app::SearchExecutionOptions{.resultBatchSize = smallRenderBatchSize,
+                                                             .adaptiveBatching = true,
+                                                             .minimumResultBatchSize = adaptiveMinimumBatchSize,
+                                                             .maximumResultBatchSize = adaptiveMaximumBatchSize},
+      .simulatedUiRenderPasses = simulatedUiRenderPasses,
+    };
+  }
+
   template <typename DatasetFactory> void runSearchServiceScenario(benchmark::State& state, DatasetFactory factory)
   {
     const auto dataset = factory();
@@ -19,6 +44,26 @@ namespace
 
       benchmark::DoNotOptimize(consumedResults);
       benchmark::DoNotOptimize(consumedBytes);
+      uburu::benchmarks::publishSearchCounters(state, dataset.get(), result);
+    }
+  }
+
+  template <typename DatasetFactory>
+  void runSearchServiceScenario(benchmark::State& state,
+                                DatasetFactory factory,
+                                uburu::benchmarks::SearchBenchmarkRunOptions options)
+  {
+    const auto dataset = factory();
+
+    for (auto _ : state) {
+      const auto result = uburu::benchmarks::runDefaultSearchServiceBenchmark(dataset.get(), options);
+      auto consumedResults = result.consumedResults;
+      auto consumedBytes = result.consumedBytes + result.simulatedUiRenderBytes;
+      auto renderChecksum = result.simulatedUiRenderChecksum;
+
+      benchmark::DoNotOptimize(consumedResults);
+      benchmark::DoNotOptimize(consumedBytes);
+      benchmark::DoNotOptimize(renderChecksum);
       uburu::benchmarks::publishSearchCounters(state, dataset.get(), result);
     }
   }
@@ -88,6 +133,27 @@ namespace
   void BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect(benchmark::State& state)
   {
     runRepeatedSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset);
+  }
+
+  void BM_SearchService_Batching_FixedSmallBatch_RenderCost(benchmark::State& state)
+  {
+    auto datasetFactory = uburu::benchmarks::makeFewLargeFilesDataset;
+
+    runSearchServiceScenario(state, datasetFactory, fixedBatchRunOptions(smallRenderBatchSize));
+  }
+
+  void BM_SearchService_Batching_FixedLargeBatch_RenderCost(benchmark::State& state)
+  {
+    auto datasetFactory = uburu::benchmarks::makeFewLargeFilesDataset;
+
+    runSearchServiceScenario(state, datasetFactory, fixedBatchRunOptions(largeRenderBatchSize));
+  }
+
+  void BM_SearchService_Batching_Adaptive_RenderCost(benchmark::State& state)
+  {
+    auto datasetFactory = uburu::benchmarks::makeFewLargeFilesDataset;
+
+    runSearchServiceScenario(state, datasetFactory, adaptiveBatchRunOptions());
   }
 
   void BM_IndexService_Initial_ManySmallFiles(benchmark::State& state)
@@ -170,6 +236,9 @@ BENCHMARK(BM_SearchService_Direct_UnicodeNormalization);
 BENCHMARK(BM_SearchService_Direct_GitignoreHeavy_Literal);
 BENCHMARK(BM_SearchService_Direct_BinaryAndHiddenFiltering);
 BENCHMARK(BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect);
+BENCHMARK(BM_SearchService_Batching_FixedSmallBatch_RenderCost);
+BENCHMARK(BM_SearchService_Batching_FixedLargeBatch_RenderCost);
+BENCHMARK(BM_SearchService_Batching_Adaptive_RenderCost);
 BENCHMARK(BM_IndexService_Initial_ManySmallFiles);
 BENCHMARK(BM_IndexService_Incremental_ManySmallFiles);
 BENCHMARK(BM_IndexService_BranchSwitch_ManySmallFiles);

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "target": "uburu-search-service-benchmark",
+  "hardwareClass": "developer-reference",
+  "toolchain": "platform-default-debug",
+  "buildType": "Debug",
+  "datasetProfiles": [
+    "many-small-files",
+    "few-large-files",
+    "regex-heavy-content",
+    "indexing-disposable-sqlite"
+  ],
+  "notes": "Conservative guardrails for development. Add machine-specific baselines after repeated stable runs.",
+  "checks": [
+    {
+      "benchmark": "BM_SearchService_Direct_ManySmallFiles_Literal",
+      "metric": "time_to_first_result_ns",
+      "maximum": 100000000
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_ManySmallFiles_Literal",
+      "metric": "total_time_ns",
+      "maximum": 500000000
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_FewLargeFiles_Literal",
+      "metric": "bytes_per_second",
+      "minimum": 1000000
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_ManySmallFiles_Regex",
+      "metric": "regex_jit_enabled",
+      "minimum": 1
+    },
+    {
+      "benchmark": "BM_SearchService_Batching_Adaptive_RenderCost",
+      "metric": "result_batches",
+      "maximum": 128
+    },
+    {
+      "benchmark": "BM_SearchService_Batching_Adaptive_RenderCost",
+      "metric": "simulated_ui_render_bytes",
+      "minimum": 1
+    },
+    {
+      "benchmark": "BM_IndexService_Initial_ManySmallFiles",
+      "metric": "indexed",
+      "minimum": 1
+    },
+    {
+      "benchmark": "BM_IndexService_Incremental_ManySmallFiles",
+      "metric": "reused_by_catalog",
+      "minimum": 1
+    },
+    {
+      "benchmark": "BM_IndexService_BranchSwitch_ManySmallFiles",
+      "metric": "head_changed",
+      "minimum": 1
+    },
+    {
+      "benchmark": "BM_IndexService_BlobHashReuse_RenamedFile",
+      "metric": "reused_by_blob",
+      "minimum": 1
+    }
+  ]
+}

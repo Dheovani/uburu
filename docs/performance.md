@@ -50,7 +50,27 @@ Export JSON results with:
   --benchmark_out=benchmark-results.json
 ```
 
-Initial scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, precomposed-versus-decomposed Unicode normalization cost, regex/JIT-heavy content, `.gitignore`-heavy trees, mixed text/binary filtering, repeated scans over the same dataset, initial persistent indexing, unchanged incremental indexing, branch-switch indexing, content-hash reuse, and Git blob-hash reuse. The repeated-scan scenario does not clear the operating-system cache; it publishes `first_pass_*`, `second_pass_*`, and `second_pass_speedup` counters as a practical signal of cache effects between an observed first pass and an immediate hot pass. The persistent-index scenarios use disposable SQLite databases; incremental and branch-switch scenarios pause benchmark timing while preparing the first generation, then measure the operation under study. Memory counters are approximate: search scenarios publish result memory and peak batch payload, while index scenarios publish the in-memory file-catalog estimate and resulting SQLite file bytes. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
+Check the exported output against the versioned developer baseline with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-benchmark-baseline.ps1 `
+  -Results benchmark-results.json `
+  -Baseline benchmarks\baselines\reference-developer.json
+```
+
+Initial scenarios cover many small files, few large files, case-insensitive literal search, case-sensitive literal search, whole-word literal search, precomposed-versus-decomposed Unicode normalization cost, regex/JIT-heavy content, `.gitignore`-heavy trees, mixed text/binary filtering, repeated scans over the same dataset, initial persistent indexing, unchanged incremental indexing, branch-switch indexing, content-hash reuse, Git blob-hash reuse, and result batching. The repeated-scan scenario does not clear the operating-system cache; it publishes `first_pass_*`, `second_pass_*`, and `second_pass_speedup` counters as a practical signal of cache effects between an observed first pass and an immediate hot pass. The persistent-index scenarios use disposable SQLite databases; incremental and branch-switch scenarios pause benchmark timing while preparing the first generation, then measure the operation under study. Memory counters are approximate: search scenarios publish result memory and peak batch payload, while index scenarios publish the in-memory file-catalog estimate and resulting SQLite file bytes. Batching scenarios use a deterministic event-sink workload as an application-layer proxy for UI delivery cost; future Qt/QML profiling should measure actual scene-graph rendering separately. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.
+
+## Performance targets
+
+Targets are product-level expectations, not hard promises for every machine. CI or scheduled benchmark checks should compare against versioned baselines for a specific hardware class, while these targets describe what the user experience should converge toward.
+
+| Repository class | Approximate size | Direct search target | Indexed search target | Indexing target |
+| --- | ---: | --- | --- | --- |
+| Small | up to 10k files or 250 MB | first result under 150 ms and complete literal search under 2 s | first indexed result under 75 ms | initial indexing under 15 s |
+| Medium | up to 100k files or 2 GB | first result under 300 ms and progressive updates every 100 ms to 250 ms | first indexed result under 100 ms and complete metadata query under 1 s | incremental update under 3 s when less than 1% changed |
+| Large | up to 1M files or 20 GB | first result under 750 ms for selective queries, with cancellation always immediate | first indexed result under 150 ms and stable memory growth | branch switch reconciliation under 10 s when content can be reused |
+
+Regression alerts should start conservative: fail on missing counters, missing scenarios, order-of-magnitude latency regressions, disabled PCRE2 JIT in regex scenarios that expect it, indexing reuse dropping to zero in reuse scenarios, and batching scenarios producing excessive batch counts or no simulated delivery work. As benchmark history grows, baselines should move from broad guardrails to per-hardware thresholds using repeated median values.
 
 ## Large file reading
 

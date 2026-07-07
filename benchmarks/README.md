@@ -14,6 +14,8 @@ The persistent-index scenarios use a disposable SQLite database and deterministi
 
 Memory counters are approximate and intended for regression comparison, not heap-forensics. Search scenarios publish `result_memory_bytes`, `result_queue_peak_items`, and `result_queue_peak_bytes`. Index scenarios publish `index_catalog_memory_bytes` for the in-memory file catalog and `index_database_bytes` for the disposable SQLite files produced by the run.
 
+Batching scenarios compare fixed small batches, fixed large batches, and adaptive batching while the event sink performs deterministic in-memory work over each result payload. This is a proxy for application-layer UI delivery cost, not a replacement for future Qt/QML scene-graph profiling.
+
 ```powershell
 cmake --preset core-windows-msvc-debug -DUBURU_BUILD_BENCHMARKS=ON
 cmake --build build/core-windows-msvc-debug --config Debug --target uburu-search-service-benchmark
@@ -28,6 +30,16 @@ For JSON output:
   --benchmark_format=json `
   --benchmark_out=benchmark-results.json
 ```
+
+Compare JSON output against the current reference guardrails with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-benchmark-baseline.ps1 `
+  -Results benchmark-results.json `
+  -Baseline benchmarks\baselines\reference-developer.json
+```
+
+Baseline files live in `benchmarks/baselines/`. A baseline is tied to a hardware class, toolchain, build type, and dataset profile. Do not update a baseline just because one local run is slower; first verify repeatability and either fix the regression or create a hardware-specific baseline.
 
 Benchmarks are developer tools, not correctness tests, and should not be registered as normal CTest cases.
 

@@ -289,10 +289,10 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Measure initial indexing, incremental indexing, and branch switch.
 - [x] Measure reuse by content hash and blob hash.
 - [x] Measure memory for queues, results, and index.
-- [ ] Measure batching and UI rendering cost.
-- [ ] Define baselines by hardware/dataset and store versioned results.
-- [ ] Create relevant regression alerts in CI or periodic execution.
-- [ ] Document quantitative targets per repository class.
+- [x] Measure batching and UI rendering cost.
+- [x] Define baselines by hardware/dataset and store versioned results.
+- [x] Create relevant regression alerts in CI or periodic execution.
+- [x] Document quantitative targets per repository class.
 
 ## Milestone 11 — Settings, privacy, and resilience (P2)
 

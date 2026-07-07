@@ -97,7 +97,8 @@ namespace uburu::text
       std::uintmax_t lineOffset{0};
       std::uintmax_t nextByteOffset{0};
 
-      [[nodiscard]] bool append(char scalar, std::uintmax_t byteWidth)
+      [[nodiscard]]
+      bool append(char scalar, std::uintmax_t byteWidth)
       {
         if (line.empty())
           lineOffset = nextByteOffset;
@@ -108,7 +109,8 @@ namespace uburu::text
         return line.size() <= options.maximumLineLength;
       }
 
-      [[nodiscard]] bool appendUtf8(std::string_view utf8, std::uintmax_t byteWidth)
+      [[nodiscard]]
+      bool appendUtf8(std::string_view utf8, std::uintmax_t byteWidth)
       {
         if (line.empty())
           lineOffset = nextByteOffset;
@@ -119,7 +121,8 @@ namespace uburu::text
         return line.size() <= options.maximumLineLength;
       }
 
-      [[nodiscard]] bool emit(LineEnding ending, std::uintmax_t endingByteWidth)
+      [[nodiscard]]
+      bool emit(LineEnding ending, std::uintmax_t endingByteWidth)
       {
         if (stopToken.stop_requested())
           return false;
@@ -141,7 +144,8 @@ namespace uburu::text
         return true;
       }
 
-      [[nodiscard]] bool finish()
+      [[nodiscard]]
+      bool finish()
       {
         if (line.empty())
           return true;

@@ -45,10 +45,11 @@ namespace uburu::text
     std::size_t nestingDepth{0};
   };
 
-  [[nodiscard]] RichFormatSafetyStatus validateArchiveEntrySafety(ArchiveEntrySafetyInput entry,
-                                                                  RichFormatSafetyLimits limits = {});
-  [[nodiscard]] RichFormatSafetyStatus validateArchiveSafety(ArchiveSafetyInput archive,
-                                                             RichFormatSafetyLimits limits = {});
-  [[nodiscard]] std::string_view richFormatSafetyStatusName(RichFormatSafetyStatus status);
+  [[nodiscard]]
+  RichFormatSafetyStatus validateArchiveEntrySafety(ArchiveEntrySafetyInput entry, RichFormatSafetyLimits limits = {});
+  [[nodiscard]]
+  RichFormatSafetyStatus validateArchiveSafety(ArchiveSafetyInput archive, RichFormatSafetyLimits limits = {});
+  [[nodiscard]]
+  std::string_view richFormatSafetyStatusName(RichFormatSafetyStatus status);
 
 } // namespace uburu::text

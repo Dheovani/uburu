@@ -15,12 +15,15 @@ namespace uburu::text
     std::size_t length{0};
   };
 
-  [[nodiscard]] std::optional<MatchPosition>
+  [[nodiscard]]
+  std::optional<MatchPosition>
   findLiteral(std::string_view text, std::string_view expression, const SearchOptions& options);
-  [[nodiscard]] std::vector<MatchPosition>
+  [[nodiscard]]
+  std::vector<MatchPosition>
   findAllLiterals(std::string_view text, std::string_view expression, const SearchOptions& options);
-  [[nodiscard]] bool
-  matchesRequestedBoundaries(std::string_view text, MatchPosition match, const SearchOptions& options);
-  [[nodiscard]] bool looksBinary(std::string_view sample);
+  [[nodiscard]]
+  bool matchesRequestedBoundaries(std::string_view text, MatchPosition match, const SearchOptions& options);
+  [[nodiscard]]
+  bool looksBinary(std::string_view sample);
 
 } // namespace uburu::text

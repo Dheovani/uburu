@@ -51,12 +51,15 @@ namespace uburu::text
 
   using TextLineSink = std::function<bool(const TextLine&)>;
 
-  [[nodiscard]] TextReadSummary readTextFileLines(const std::filesystem::path& path,
-                                                  const SearchOptions& options,
-                                                  const TextLineSink& sink,
-                                                  std::stop_token stop_token = {});
+  [[nodiscard]]
+  TextReadSummary readTextFileLines(const std::filesystem::path& path,
+                                    const SearchOptions& options,
+                                    const TextLineSink& sink,
+                                    std::stop_token stop_token = {});
 
-  [[nodiscard]] bool sampleLooksBinary(std::string_view sample, TextEncoding encoding);
-  [[nodiscard]] std::size_t visualColumnForByteOffset(std::string_view utf8Text, std::size_t byteOffset);
+  [[nodiscard]]
+  bool sampleLooksBinary(std::string_view sample, TextEncoding encoding);
+  [[nodiscard]]
+  std::size_t visualColumnForByteOffset(std::string_view utf8Text, std::size_t byteOffset);
 
 } // namespace uburu::text

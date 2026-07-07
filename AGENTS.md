@@ -541,6 +541,7 @@ For human readability, visually separate declarations and control blocks:
 - After a `return`, insert a blank line only when there is following code in the same scope. Do not add an artificial blank line between a final `return` and the block/function `}`.
 - Avoid multiline ternaries with compound conditions inside initializers or aggregate `return` values when alignment becomes confusing. Prefer extracting the condition to a semantic function/variable. When a multiline ternary is kept, do not align `?` and `:` with many spaces up to the condition; advance only one visual level relative to the main expression.
 - When repeatedly comparing the same variable, enum, status, pointer, or similar conceptual value, put each comparison on its own line to ease reading, review, and future diffs.
+- Put attributes such as `[[nodiscard]]`, `[[maybe_unused]]`, and similar declaration attributes on their own line immediately before the declaration they annotate. Do the same after template declarations: keep `template <...>` on its own line, then place attributes on the next line when present, then the declaration. This keeps attributes visually distinct from the return type while still respecting the 120-column limit.
 
 Example:
 

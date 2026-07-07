@@ -7,9 +7,10 @@ namespace uburu::text
   namespace
   {
 
-    [[nodiscard]] bool exceedsCompressionRatio(std::uint64_t compressedBytes,
-                                               std::uint64_t expandedBytes,
-                                               std::uint64_t maximumCompressionRatio)
+    [[nodiscard]]
+    bool exceedsCompressionRatio(std::uint64_t compressedBytes,
+                                 std::uint64_t expandedBytes,
+                                 std::uint64_t maximumCompressionRatio)
     {
       if (compressedBytes == 0)
         return true;

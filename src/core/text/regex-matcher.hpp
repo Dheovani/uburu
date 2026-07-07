@@ -34,7 +34,8 @@ namespace uburu::text
 
   struct RegexCompileResult;
 
-  [[nodiscard]] RegexCompileResult compileRegex(std::string_view expression, const SearchOptions& options);
+  [[nodiscard]]
+  RegexCompileResult compileRegex(std::string_view expression, const SearchOptions& options);
 
   class RegexMatcher final
   {
@@ -46,8 +47,10 @@ namespace uburu::text
     RegexMatcher& operator=(RegexMatcher&& other) noexcept;
     ~RegexMatcher();
 
-    [[nodiscard]] RegexMatchResult findAll(std::string_view text) const;
-    [[nodiscard]] bool jitEnabled() const noexcept;
+    [[nodiscard]]
+    RegexMatchResult findAll(std::string_view text) const;
+    [[nodiscard]]
+    bool jitEnabled() const noexcept;
 
   private:
     friend struct RegexCompileResult;

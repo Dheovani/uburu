@@ -314,7 +314,26 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Add limits against decompression bombs and special formats when supported.
 - [x] Create a threat model for regex, hostile files, symlinks, and local database.
 
-## Milestone 12 — CLI and extensibility (P2)
+## Milestone 12 — Document extractors and rich file formats (P1)
+
+- [ ] Define a document-extraction interface independent from `core/text`, so direct search, indexing, preview, and future CLI can consume extracted text without coupling the core to one parser library.
+- [ ] Preserve file-name search for every scanned file even when content extraction is unavailable, unsupported, skipped, or fails.
+- [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
+- [ ] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
+- [ ] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
+- [ ] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.
+- [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
+- [ ] Evaluate support for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model planned for OOXML.
+- [ ] Add support for RTF extraction, with explicit limits for nested groups, escaped text, embedded objects, and malformed documents.
+- [ ] Add support for HTML/XHTML extraction as structured text, excluding scripts/styles by default and preserving visible text semantics for search and preview.
+- [ ] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
+- [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
+- [ ] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".
+- [ ] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.
+- [ ] Add fuzzing and hostile-file tests for document extractors, especially archive containers, malformed PDFs, malformed RTF, oversized shared strings, and nested/recursive package structures.
+- [ ] Document supported formats, limitations, dependencies, and security boundaries in `docs/search-semantics.md`, `docs/indexing.md`, and `docs/privacy.md`.
+
+## Milestone 13 — CLI and extensibility (P2)
 
 - [ ] Create a thin CLI over the same `SearchService`, without duplicating the engine.
 - [ ] Support human output, JSON Lines, and stable exit codes.
@@ -326,7 +345,7 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Version public contracts before allowing external plugins.
 - [ ] Document ABI/API stability limits.
 
-## Milestone 13 — Packaging and releases (P2)
+## Milestone 14 — Packaging and releases (P2)
 
 - [ ] Automate Windows bundle with Qt, MinGW/MSVC runtime, and required vcpkg DLLs.
 - [ ] Produce Windows installer and evaluate MSIX versus traditional installer.
@@ -341,7 +360,7 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Add update policy and stable/pre-release channel.
 - [ ] Create release, rollback, and database compatibility checklist.
 
-## Milestone 14 — Professional documentation (P1/P2)
+## Milestone 15 — Professional documentation (P1/P2)
 
 - [ ] Create `docs/search-semantics.md`.
 - [ ] Expand `docs/architecture.md` with components and search sequence.

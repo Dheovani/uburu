@@ -302,11 +302,11 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Add determinate or indeterminate bottom progress bars for active search and indexing, using exact progress when the total work is known and a clearly marked ongoing state when scanning still cannot estimate the remaining work.
 - [x] Validate limits for threads, files, results, memory, and disk.
 - [ ] Add import/export for settings and saved searches.
-- [ ] Define telemetry policy: disabled by default and opt-in only, if it exists.
+- [x] Define telemetry policy: disabled by default and opt-in only, if it exists.
 - [ ] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.
   - [x] Add a compact top-left application menu as the entry point for settings and common commands.
   - [ ] Connect language and general-preferences actions to real settings screens.
-- [ ] Never send names, paths, or content without explicit consent.
+- [x] Never send names, paths, or content without explicit consent.
 - [ ] Protect history and index according to user permissions.
 - [ ] Handle inaccessible paths, removable media, and unstable network locations.
 - [ ] Recover state after crash without corrupting index or preferences.

@@ -35,6 +35,7 @@ qt_add_resources(uburu_desktop "uburu_qml"
     qml/components/scope-bar.qml
     qml/components/search-header.qml
     qml/components/secondary-button.qml
+    qml/components/settings-dialog.qml
     qml/components/status-line.qml
     qml/components/top-menu-bar.qml
     qml/theme/Theme.qml

@@ -303,9 +303,9 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Validate limits for threads, files, results, memory, and disk.
 - [x] Add import/export for settings and saved searches.
 - [x] Define telemetry policy: disabled by default and opt-in only, if it exists.
-- [ ] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.
+- [x] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.
   - [x] Add a compact top-left application menu as the entry point for settings and common commands.
-  - [ ] Connect language and general-preferences actions to real settings screens.
+  - [x] Connect language and general-preferences actions to real settings screens.
 - [x] Never send names, paths, or content without explicit consent.
 - [x] Protect history and index according to user permissions.
 - [x] Handle inaccessible paths, removable media, and unstable network locations.

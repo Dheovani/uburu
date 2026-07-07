@@ -81,9 +81,9 @@ Rectangle {
 
     function settingsItems() {
         return [
-            { text: qsTr("Preferências gerais"), shortcut: "", enabled: false, action: "generalPreferences" },
-            { text: qsTr("Idioma"), shortcut: "", enabled: false, action: "languagePreferences" },
-            { text: qsTr("Privacidade e histórico"), shortcut: "", enabled: false, action: "privacyPreferences" },
+            { text: qsTr("Preferências gerais"), shortcut: "", enabled: true, action: "generalPreferences" },
+            { text: qsTr("Idioma"), shortcut: "", enabled: true, action: "languagePreferences" },
+            { text: qsTr("Privacidade e histórico"), shortcut: "", enabled: true, action: "privacyPreferences" },
             { separator: true },
             { text: qsTr("Diagnóstico rápido"), shortcut: "", enabled: true, action: "copyDiagnostics" }
         ]

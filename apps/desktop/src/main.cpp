@@ -9,6 +9,7 @@
 #include <QQmlEngine>
 #include <QQmlError>
 #include <QQuickStyle>
+#include <QSettings>
 #include <QTextStream>
 #include <QTranslator>
 #include <QUrl>
@@ -33,6 +34,20 @@ namespace
       appendQmlLoadLog(warning.toString());
   }
 
+  QString configuredLocaleName()
+  {
+    QSettings settings;
+
+    settings.beginGroup(QStringLiteral("main-window"));
+    const auto languageMode = settings.value(QStringLiteral("languageMode"), QStringLiteral("system")).toString();
+    settings.endGroup();
+
+    if (languageMode == QStringLiteral("pt-BR") || languageMode == QStringLiteral("en-US"))
+      return languageMode.toLower();
+
+    return QLocale::system().name().replace('_', '-').toLower();
+  }
+
 } // namespace
 
 int main(int argc, char* argv[])
@@ -45,7 +60,7 @@ int main(int argc, char* argv[])
   application.setWindowIcon(QIcon(QStringLiteral(":/assets/logo-uburu.png")));
 
   QTranslator translator;
-  const auto locale = QLocale::system().name().replace('_', '-').toLower();
+  const auto locale = configuredLocaleName();
   if (translator.load(QStringLiteral(":/i18n/uburu-%1.qm").arg(locale))) {
     application.installTranslator(&translator);
   }

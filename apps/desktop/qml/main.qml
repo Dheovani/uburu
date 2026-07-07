@@ -191,6 +191,17 @@ ApplicationWindow {
         return mode === "system" || mode === "dark" || mode === "light" ? mode : "system"
     }
 
+    function normalizeLanguageMode(mode) {
+        return mode === "system" || mode === "pt-BR" || mode === "en-US" ? mode : "system"
+    }
+
+    function resetLayoutPreferences() {
+        root.resultsPanePreferredWidth = 430
+        root.resultsPanePreferredHeight = 260
+        root.width = Math.max(root.width, root.minimumWidth)
+        root.height = Math.max(root.height, root.minimumHeight)
+    }
+
     function searchDiagnosticText() {
         return [
             qsTr("Status: %1").arg(searchController.status),
@@ -351,6 +362,15 @@ ApplicationWindow {
         case "openCommandPalette":
             commandPalette.openPalette()
             return
+        case "generalPreferences":
+            settingsDialog.openGeneral()
+            return
+        case "languagePreferences":
+            settingsDialog.openLanguage()
+            return
+        case "privacyPreferences":
+            settingsDialog.openPrivacy()
+            return
         case "themeSystem":
             Theme.mode = "system"
             return
@@ -455,6 +475,17 @@ ApplicationWindow {
         parent: Overlay.overlay
         commands: root.commandPaletteItems
         onCommandTriggered: commandIndex => root.runPaletteCommand(commandIndex)
+    }
+
+    SettingsDialog {
+        id: settingsDialog
+
+        themeMode: Theme.mode
+        languageMode: mainWindowSettings.languageMode
+        onThemeModeSelected: mode => Theme.mode = root.normalizeThemeMode(mode)
+        onLanguageModeSelected: mode => mainWindowSettings.languageMode = root.normalizeLanguageMode(mode)
+        onCopyDiagnosticsRequested: searchController.copyToClipboard(root.searchDiagnosticText())
+        onResetLayoutRequested: root.resetLayoutPreferences()
     }
 
     ColumnLayout {
@@ -610,6 +641,7 @@ ApplicationWindow {
         property string recentSearches: "[]"
         property string recentDocumentTypes: "[]"
         property string savedSearches: "[]"
+        property string languageMode: "system"
         property alias windowX: root.x
         property alias windowY: root.y
         property alias windowWidth: root.width
@@ -628,6 +660,7 @@ ApplicationWindow {
 
     Component.onCompleted: {
         Theme.mode = root.normalizeThemeMode(mainWindowSettings.themeMode)
+        mainWindowSettings.languageMode = root.normalizeLanguageMode(mainWindowSettings.languageMode)
         root.recentSearches = root.parseStoredList(mainWindowSettings.recentSearches)
         root.recentDocumentTypes = root.parseStoredList(mainWindowSettings.recentDocumentTypes)
         root.savedSearches = root.parseStoredList(mainWindowSettings.savedSearches)

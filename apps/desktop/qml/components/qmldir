@@ -1,5 +1,6 @@
 PrimaryButton 1.0 primary-button.qml
 SecondaryButton 1.0 secondary-button.qml
+SettingsDialog 1.0 settings-dialog.qml
 ActionMenu 1.0 action-menu.qml
 ActionMenuItem 1.0 action-menu-item.qml
 ActionMenuSeparator 1.0 action-menu-separator.qml

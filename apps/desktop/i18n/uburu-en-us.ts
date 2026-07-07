@@ -250,6 +250,35 @@
     <message><source>Selecione uma subpasta para ignorar, não a raiz da busca</source><translation>Select a subfolder to ignore, not the search root</translation></message>
   </context>
   <context>
+    <name>settings-dialog</name>
+    <message><source>Configurações</source><translation>Settings</translation></message>
+    <message><source>Preferências locais do Uburu</source><translation>Local Uburu preferences</translation></message>
+    <message><source>Fechar configurações</source><translation>Close settings</translation></message>
+    <message><source>Geral</source><translation>General</translation></message>
+    <message><source>Idioma</source><translation>Language</translation></message>
+    <message><source>Privacidade</source><translation>Privacy</translation></message>
+    <message><source>Diagnóstico rápido</source><translation>Quick diagnostics</translation></message>
+    <message><source>Preferências gerais</source><translation>General preferences</translation></message>
+    <message><source>Ajustes globais aplicados à experiência local.</source><translation>Global settings applied to the local experience.</translation></message>
+    <message><source>Tema</source><translation>Theme</translation></message>
+    <message><source>Escolha a aparência do aplicativo.</source><translation>Choose the application appearance.</translation></message>
+    <message><source>Sistema</source><translation>System</translation></message>
+    <message><source>Escuro</source><translation>Dark</translation></message>
+    <message><source>Claro</source><translation>Light</translation></message>
+    <message><source>Layout</source><translation>Layout</translation></message>
+    <message><source>Restaura o tamanho padrão dos painéis de resultados e preview.</source><translation>Restores the default size of the results and preview panes.</translation></message>
+    <message><source>Restaurar layout</source><translation>Reset layout</translation></message>
+    <message><source>Escolha o idioma da interface. A alteração é aplicada ao reiniciar o Uburu.</source><translation>Choose the interface language. The change is applied after restarting Uburu.</translation></message>
+    <message><source>Idioma da interface</source><translation>Interface language</translation></message>
+    <message><source>Use o idioma do sistema ou selecione manualmente.</source><translation>Use the system language or select one manually.</translation></message>
+    <message><source>Português (Brasil)</source><translation>Portuguese (Brazil)</translation></message>
+    <message><source>English (US)</source><translation>English (US)</translation></message>
+    <message><source>Uburu mantém buscas, índice e diagnósticos localmente, salvo exportação explícita.</source><translation>Uburu keeps searches, the index, and diagnostics local unless explicitly exported.</translation></message>
+    <message><source>Diagnóstico</source><translation>Diagnostics</translation></message>
+    <message><source>Copia um resumo técnico da busca atual sem enviar dados pela rede.</source><translation>Copies a technical summary of the current search without sending data over the network.</translation></message>
+    <message><source>Copiar diagnóstico</source><translation>Copy diagnostics</translation></message>
+  </context>
+  <context>
     <name>SearchController</name>
     <message><source>Pronto</source><translation>Ready</translation></message>
     <message><source>Indexação inativa</source><translation>Indexing inactive</translation></message>

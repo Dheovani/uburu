@@ -460,6 +460,7 @@ ApplicationWindow {
     ColumnLayout {
         anchors.fill: parent
         anchors.topMargin: 5
+        anchors.bottomMargin: 18
         anchors.leftMargin: 18
         anchors.rightMargin: 18
         spacing: 12

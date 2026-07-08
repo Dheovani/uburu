@@ -35,13 +35,15 @@ namespace
       std::filesystem::remove_all(pathValue, error);
     }
 
-    [[nodiscard]] const std::filesystem::path& path() const
+    [[nodiscard]]
+    const std::filesystem::path& path() const
     {
       return pathValue;
     }
 
   private:
-    [[nodiscard]] static std::string uniqueName(std::string name)
+    [[nodiscard]]
+    static std::string uniqueName(std::string name)
     {
       const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
 
@@ -51,7 +53,8 @@ namespace
     std::filesystem::path pathValue;
   };
 
-  [[nodiscard]] uburu::RepositoryInfo repositoryInfo(const std::filesystem::path& root)
+  [[nodiscard]]
+  uburu::RepositoryInfo repositoryInfo(const std::filesystem::path& root)
   {
     return uburu::RepositoryInfo{.id = "repository-id",
                                  .commonGitDirectory = root / ".git",
@@ -61,7 +64,8 @@ namespace
                                  .detachedHead = false};
   }
 
-  [[nodiscard]] uburu::WorktreeInfo worktreeInfo(const std::filesystem::path& root)
+  [[nodiscard]]
+  uburu::WorktreeInfo worktreeInfo(const std::filesystem::path& root)
   {
     return uburu::WorktreeInfo{.id = "worktree-id",
                                .repositoryId = "repository-id",
@@ -82,7 +86,8 @@ namespace
     file << content;
   }
 
-  [[nodiscard]] uburu::FileEntry fileEntry(const std::filesystem::path& root, const std::filesystem::path& relativePath)
+  [[nodiscard]]
+  uburu::FileEntry fileEntry(const std::filesystem::path& root, const std::filesystem::path& relativePath)
   {
     const auto absolutePath = root / relativePath;
 
@@ -93,7 +98,8 @@ namespace
                             .searchRoot = root};
   }
 
-  [[nodiscard]] uburu::IndexDocument
+  [[nodiscard]]
+  uburu::IndexDocument
   indexedDocument(std::string contentHash, std::string gitBlobHash, std::filesystem::path relativePath)
   {
     uburu::IndexDocument document;
@@ -112,7 +118,8 @@ namespace
     return document;
   }
 
-  [[nodiscard]] uburu::IndexGeneration indexGeneration(std::vector<uburu::IndexDocument> documents)
+  [[nodiscard]]
+  uburu::IndexGeneration indexGeneration(std::vector<uburu::IndexDocument> documents)
   {
     return uburu::IndexGeneration{.repositoryId = "repository-id",
                                   .worktreeId = "worktree-id",
@@ -640,13 +647,58 @@ TEST_CASE("persistent index service classifies unsupported document formats with
   const auto unsupported = storage.findDocument("worktree-id", "src/document.docx");
 
   CHECK_FALSE(summary.cancelled);
-  CHECK(summary.indexed == 1);
+  CHECK(summary.indexed == 2);
   CHECK(summary.failed == 0);
   CHECK(summary.skippedUnsupportedFormat == 1);
   CHECK(summary.skippedBinary == 0);
   CHECK(summary.skippedTemporaryLimitation == 0);
   REQUIRE(valid.has_value());
-  CHECK_FALSE(unsupported.has_value());
+  REQUIRE(unsupported.has_value());
+  CHECK_FALSE(unsupported->indexedText.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service keeps unsupported formats searchable by file name")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-unsupported-name-only-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "document.docx", "packaged content placeholder");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "src/document.docx"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery fileNameQuery;
+  fileNameQuery.root = root;
+  fileNameQuery.expression = "document";
+  fileNameQuery.options.target = uburu::SearchTarget::fileName;
+
+  uburu::SearchQuery contentQuery;
+  contentQuery.root = root;
+  contentQuery.expression = "packaged";
+  contentQuery.options.target = uburu::SearchTarget::content;
+
+  const auto fileNameResults = indexService.search(fileNameQuery);
+  const auto contentResults = indexService.search(contentQuery);
+
+  CHECK_FALSE(summary.cancelled);
+  CHECK(summary.skippedUnsupportedFormat == 1);
+  REQUIRE(fileNameResults.size() == 1);
+  CHECK(fileNameResults.front().kind == uburu::SearchResultKind::fileName);
+  CHECK(fileNameResults.front().path == std::filesystem::path("src/document.docx"));
+  CHECK(contentResults.empty());
 #else
   SUCCEED("SQLite is not available in this build");
 #endif
@@ -680,13 +732,54 @@ TEST_CASE("persistent index service classifies binary files without reporting fa
   const auto skipped = storage.findDocument("worktree-id", "src/data.bin");
 
   CHECK_FALSE(summary.cancelled);
-  CHECK(summary.indexed == 1);
+  CHECK(summary.indexed == 2);
   CHECK(summary.failed == 0);
   CHECK(summary.skippedUnsupportedFormat == 0);
   CHECK(summary.skippedBinary == 1);
   CHECK(summary.skippedTemporaryLimitation == 0);
   REQUIRE(valid.has_value());
-  CHECK_FALSE(skipped.has_value());
+  REQUIRE(skipped.has_value());
+  CHECK_FALSE(skipped->indexedText.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service keeps binary files searchable by file name")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-binary-name-only-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "image.png", "binary placeholder");
+
+  auto binary = fileEntry(root, "src/image.png");
+  binary.binary = true;
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    binary,
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery query;
+  query.root = root;
+  query.expression = "image";
+  query.options.target = uburu::SearchTarget::fileName;
+
+  const auto results = indexService.search(query);
+
+  CHECK_FALSE(summary.cancelled);
+  CHECK(summary.skippedBinary == 1);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().kind == uburu::SearchResultKind::fileName);
+  CHECK(results.front().path == std::filesystem::path("src/image.png"));
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

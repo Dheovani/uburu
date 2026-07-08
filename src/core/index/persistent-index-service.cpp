@@ -22,12 +22,14 @@ namespace uburu::index
   namespace
   {
 
-    [[nodiscard]] std::string reusableDocumentKey(ContentHashAlgorithm algorithm, std::string_view hash)
+    [[nodiscard]]
+    std::string reusableDocumentKey(ContentHashAlgorithm algorithm, std::string_view hash)
     {
       return std::to_string(static_cast<int>(algorithm)) + ":" + std::string{hash};
     }
 
-    [[nodiscard]] bool shouldIndexFile(const FileEntry& file)
+    [[nodiscard]]
+    bool shouldIndexFile(const FileEntry& file)
     {
       return !file.binary;
     }
@@ -48,7 +50,8 @@ namespace uburu::index
       bool failed{false};
     };
 
-    [[nodiscard]] std::string lowerAscii(std::string value)
+    [[nodiscard]]
+    std::string lowerAscii(std::string value)
     {
       for (auto& character : value) {
         if (character >= 'A' && character <= 'Z')
@@ -58,7 +61,8 @@ namespace uburu::index
       return value;
     }
 
-    [[nodiscard]] bool hasUnsupportedDocumentExtension(const std::filesystem::path& path)
+    [[nodiscard]]
+    bool hasUnsupportedDocumentExtension(const std::filesystem::path& path)
     {
       constexpr std::array unsupportedExtensions{
         ".pdf", ".doc", ".docx", ".odt", ".rtf", ".epub", ".zip", ".xlsx", ".pptx"};
@@ -92,12 +96,14 @@ namespace uburu::index
       }
     }
 
-    [[nodiscard]] bool isDeletedOverlay(const IndexFileMetadata& metadata)
+    [[nodiscard]]
+    bool isDeletedOverlay(const IndexFileMetadata& metadata)
     {
       return metadata.status == GitFileStatus::deleted;
     }
 
-    [[nodiscard]] bool canReuseCatalogDocument(const IndexDocument& document, const IndexFileCandidate& candidate)
+    [[nodiscard]]
+    bool canReuseCatalogDocument(const IndexDocument& document, const IndexFileCandidate& candidate)
     {
       const auto& file = candidate.file;
 
@@ -106,13 +112,15 @@ namespace uburu::index
              document.status == GitFileStatus::clean && document.contentHashAlgorithm != ContentHashAlgorithm::unknown;
     }
 
-    [[nodiscard]] bool canReuseBlobDocument(const IndexFileMetadata& metadata)
+    [[nodiscard]]
+    bool canReuseBlobDocument(const IndexFileMetadata& metadata)
     {
       return metadata.status == GitFileStatus::clean && metadata.gitBlob.has_value() &&
              metadata.gitBlob->algorithm != GitObjectHashAlgorithm::unknown && !metadata.gitBlob->value.empty();
     }
 
-    [[nodiscard]] std::optional<std::string> gitBlobHash(const IndexFileMetadata& metadata)
+    [[nodiscard]]
+    std::optional<std::string> gitBlobHash(const IndexFileMetadata& metadata)
     {
       if (!metadata.gitBlob)
         return std::nullopt;
@@ -120,7 +128,8 @@ namespace uburu::index
       return metadata.gitBlob->value;
     }
 
-    [[nodiscard]] GitObjectHashAlgorithm gitBlobHashAlgorithm(const IndexFileMetadata& metadata)
+    [[nodiscard]]
+    GitObjectHashAlgorithm gitBlobHashAlgorithm(const IndexFileMetadata& metadata)
     {
       if (!metadata.gitBlob)
         return GitObjectHashAlgorithm::unknown;
@@ -128,11 +137,12 @@ namespace uburu::index
       return metadata.gitBlob->algorithm;
     }
 
-    [[nodiscard]] IndexDocument makeIndexDocument(const WorktreeInfo& worktree,
-                                                  const FileEntry& file,
-                                                  const IndexFileMetadata& metadata,
-                                                  const ContentHash& contentHash,
-                                                  std::string indexedText)
+    [[nodiscard]]
+    IndexDocument makeIndexDocument(const WorktreeInfo& worktree,
+                                    const FileEntry& file,
+                                    const IndexFileMetadata& metadata,
+                                    const ContentHash& contentHash,
+                                    std::optional<std::string> indexedText)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -150,10 +160,11 @@ namespace uburu::index
                            .indexedText = std::move(indexedText)};
     }
 
-    [[nodiscard]] IndexDocument makeDeletedIndexDocument(const WorktreeInfo& worktree,
-                                                         const FileEntry& file,
-                                                         const IndexFileMetadata& metadata,
-                                                         const IndexDocument& previousDocument)
+    [[nodiscard]]
+    IndexDocument makeDeletedIndexDocument(const WorktreeInfo& worktree,
+                                           const FileEntry& file,
+                                           const IndexFileMetadata& metadata,
+                                           const IndexDocument& previousDocument)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -173,10 +184,11 @@ namespace uburu::index
                            .indexedText = std::nullopt};
     }
 
-    [[nodiscard]] IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree,
-                                                        const FileEntry& file,
-                                                        const IndexFileMetadata& metadata,
-                                                        const IndexedDocumentIdentity& reusableDocument)
+    [[nodiscard]]
+    IndexDocument makeReusedIndexDocument(const WorktreeInfo& worktree,
+                                          const FileEntry& file,
+                                          const IndexFileMetadata& metadata,
+                                          const IndexedDocumentIdentity& reusableDocument)
     {
       return IndexDocument{.formatVersion = latestIndexDocumentFormatVersion,
                            .repositoryId = worktree.repositoryId,
@@ -196,7 +208,8 @@ namespace uburu::index
                            .indexedText = std::nullopt};
     }
 
-    [[nodiscard]] IndexedDocumentIdentity reusableIdentity(const IndexDocument& document)
+    [[nodiscard]]
+    IndexedDocumentIdentity reusableIdentity(const IndexDocument& document)
     {
       return IndexedDocumentIdentity{.formatVersion = document.formatVersion,
                                      .contentHash = document.contentHash,
@@ -207,7 +220,8 @@ namespace uburu::index
                                      .indexedAt = document.indexedAt};
     }
 
-    [[nodiscard]] IndexFileCandidate defaultCandidate(const FileEntry& file)
+    [[nodiscard]]
+    IndexFileCandidate defaultCandidate(const FileEntry& file)
     {
       return IndexFileCandidate{.file = file, .metadata = IndexFileMetadata{}};
     }
@@ -220,17 +234,20 @@ namespace uburu::index
       onProgress(progress);
     }
 
-    [[nodiscard]] bool searchesFileName(const SearchQuery& query)
+    [[nodiscard]]
+    bool searchesFileName(const SearchQuery& query)
     {
       return query.options.target == SearchTarget::fileName || query.options.target == SearchTarget::contentAndFileName;
     }
 
-    [[nodiscard]] bool searchesContent(const SearchQuery& query)
+    [[nodiscard]]
+    bool searchesContent(const SearchQuery& query)
     {
       return query.options.target == SearchTarget::content || query.options.target == SearchTarget::contentAndFileName;
     }
 
-    [[nodiscard]] IndexedTextReadResult
+    [[nodiscard]]
+    IndexedTextReadResult
     readIndexedText(const FileEntry& file, const SearchOptions& options, std::stop_token stopToken)
     {
       std::string indexedText;
@@ -290,9 +307,10 @@ namespace uburu::index
       return result;
     }
 
-    [[nodiscard]] std::vector<text::MatchPosition> indexedPathMatches(std::string_view pathText,
-                                                                      const SearchQuery& query,
-                                                                      const std::optional<text::RegexMatcher>& regex)
+    [[nodiscard]]
+    std::vector<text::MatchPosition> indexedPathMatches(std::string_view pathText,
+                                                        const SearchQuery& query,
+                                                        const std::optional<text::RegexMatcher>& regex)
     {
       if (regex)
         return regex->findAll(pathText).matches;
@@ -300,7 +318,8 @@ namespace uburu::index
       return text::findAllLiterals(pathText, query.expression, query.options);
     }
 
-    [[nodiscard]] std::optional<std::vector<text::MatchPosition>>
+    [[nodiscard]]
+    std::optional<std::vector<text::MatchPosition>>
     indexedTextMatches(std::string_view text, const SearchQuery& query, const std::optional<text::RegexMatcher>& regex)
     {
       if (regex) {
@@ -315,8 +334,8 @@ namespace uburu::index
       return text::findAllLiterals(text, query.expression, query.options);
     }
 
-    [[nodiscard]] std::vector<MatchSpan> makeHighlights(std::string_view lineText,
-                                                        const std::vector<text::MatchPosition>& matches)
+    [[nodiscard]]
+    std::vector<MatchSpan> makeHighlights(std::string_view lineText, const std::vector<text::MatchPosition>& matches)
     {
       std::vector<MatchSpan> highlights;
       highlights.reserve(matches.size());
@@ -330,14 +349,15 @@ namespace uburu::index
       return highlights;
     }
 
-    [[nodiscard]] SearchResult makeIndexedResult(const IndexDocument& document,
-                                                 SearchResultKind kind,
-                                                 std::size_t line,
-                                                 std::string_view lineText,
-                                                 const text::MatchPosition& match,
-                                                 const std::vector<text::MatchPosition>& matches,
-                                                 const SearchQuery& query,
-                                                 const std::deque<std::string>& contextBefore)
+    [[nodiscard]]
+    SearchResult makeIndexedResult(const IndexDocument& document,
+                                   SearchResultKind kind,
+                                   std::size_t line,
+                                   std::string_view lineText,
+                                   const text::MatchPosition& match,
+                                   const std::vector<text::MatchPosition>& matches,
+                                   const SearchQuery& query,
+                                   const std::deque<std::string>& contextBefore)
     {
       return SearchResult{.kind = kind,
                           .path = document.relativePath,
@@ -351,15 +371,16 @@ namespace uburu::index
                           .searchRoot = query.root};
     }
 
-    [[nodiscard]] bool appendIndexedResults(const IndexDocument& document,
-                                            SearchResultKind kind,
-                                            std::size_t line,
-                                            std::string_view lineText,
-                                            const std::vector<text::MatchPosition>& matches,
-                                            const SearchQuery& query,
-                                            std::size_t& fileMatches,
-                                            const std::deque<std::string>& contextBefore,
-                                            std::vector<SearchResult>& results)
+    [[nodiscard]]
+    bool appendIndexedResults(const IndexDocument& document,
+                              SearchResultKind kind,
+                              std::size_t line,
+                              std::string_view lineText,
+                              const std::vector<text::MatchPosition>& matches,
+                              const SearchQuery& query,
+                              std::size_t& fileMatches,
+                              const std::deque<std::string>& contextBefore,
+                              std::vector<SearchResult>& results)
     {
       for (const auto& match : matches) {
         if (results.size() >= query.options.resultLimit)
@@ -428,7 +449,8 @@ namespace uburu::index
       return true;
     }
 
-    [[nodiscard]] std::optional<text::RegexMatcher> compileIndexedRegex(const SearchQuery& query)
+    [[nodiscard]]
+    std::optional<text::RegexMatcher> compileIndexedRegex(const SearchQuery& query)
     {
       if (query.options.mode != SearchMode::regex)
         return std::nullopt;
@@ -497,20 +519,6 @@ namespace uburu::index
         continue;
       }
 
-      if (!shouldIndexFile(file)) {
-        recordSkip(IndexSkipReason::binary, summary, progress);
-        publishProgress(onProgress, progress);
-
-        continue;
-      }
-
-      if (hasUnsupportedDocumentExtension(file.relativePath)) {
-        recordSkip(IndexSkipReason::unsupportedFormat, summary, progress);
-        publishProgress(onProgress, progress);
-
-        continue;
-      }
-
       if (reusableCatalogDocument && canReuseCatalogDocument(*reusableCatalogDocument, candidate)) {
         ++summary.reusedByCatalog;
         ++progress.reusedByCatalog;
@@ -553,7 +561,27 @@ namespace uburu::index
         break;
       }
 
-      const auto indexedText = readIndexedText(file, SearchOptions{}, stopToken);
+      if (!shouldIndexFile(file)) {
+        recordSkip(IndexSkipReason::binary, summary, progress);
+        ++summary.indexed;
+        ++progress.indexed;
+        documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
+      if (hasUnsupportedDocumentExtension(file.relativePath)) {
+        recordSkip(IndexSkipReason::unsupportedFormat, summary, progress);
+        ++summary.indexed;
+        ++progress.indexed;
+        documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
+        publishProgress(onProgress, progress);
+
+        continue;
+      }
+
+      auto indexedText = readIndexedText(file, SearchOptions{}, stopToken);
 
       if (!indexedText.text) {
         if (stopToken.stop_requested() || indexedText.cancelled) {
@@ -562,11 +590,15 @@ namespace uburu::index
           break;
         }
 
-        if (indexedText.skipReason != IndexSkipReason::none)
+        if (indexedText.skipReason != IndexSkipReason::none) {
           recordSkip(indexedText.skipReason, summary, progress);
-        else {
+          ++summary.indexed;
+          ++progress.indexed;
+          documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
+        } else {
           ++summary.failed;
           ++progress.failed;
+          documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
         }
 
         publishProgress(onProgress, progress);
@@ -588,7 +620,8 @@ namespace uburu::index
       }
 
       hashesSeenInUpdate.insert(hashKey);
-      documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, *indexedText.text));
+      documents.push_back(
+        makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::move(indexedText.text)));
       publishProgress(onProgress, progress);
     }
 

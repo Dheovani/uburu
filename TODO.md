@@ -316,7 +316,7 @@ This document is the project's operational plan. Milestone order represents real
 
 ## Milestone 12 — Document extractors and rich file formats (P1)
 
-- [ ] Define a document-extraction interface independent from `core/text`, so direct search, indexing, preview, and future CLI can consume extracted text without coupling the core to one parser library.
+- [x] Define a document-extraction interface independent from `core/text`, so direct search, indexing, preview, and future CLI can consume extracted text without coupling the core to one parser library.
 - [ ] Preserve file-name search for every scanned file even when content extraction is unavailable, unsupported, skipped, or fails.
 - [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
 - [ ] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.

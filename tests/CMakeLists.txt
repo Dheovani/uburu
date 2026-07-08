@@ -7,6 +7,7 @@ add_executable(uburu_core_tests
   unit/bounded-queue-tests.cpp
   unit/content-hash-tests.cpp
   unit/diagnostics-tests.cpp
+  unit/document-extractor-tests.cpp
   unit/direct-search-engine-tests.cpp
   unit/git-reconciliation-tests.cpp
   unit/git-ignore-rules-tests.cpp

@@ -203,6 +203,14 @@ Binary files are detected by configurable sample before line-by-line reading. De
 
 Line-by-line reading supports `LF`, `CRLF`, standalone `CR`, empty lines, and files without a final newline. Line-ending markers are not part of `SearchResult::lineText`, and the reader records the line ending type in `TextLine` for future preview, offsets, and diagnostics.
 
+## Document extraction
+
+Milestone 12 introduces `core/document` as the stable boundary for text extracted from files. Search, indexing, preview, and future CLI code should consume `DocumentExtractor` contracts instead of calling format-specific parser libraries directly. The first implementation is `PlainTextExtractor`, which adapts the existing UTF-aware text reader into extracted line segments with document locations.
+
+The extraction API distinguishes completed extraction, cancellation, unsupported formats, binary skips, open/read failures, invalid encoding, safety-limit skips, parser failures, and encrypted/protected documents. Rich formats such as PDF, OOXML, OpenDocument, RTF, HTML, subtitles, and email containers must plug into this boundary with explicit limits and status mapping rather than pretending to be plain text files.
+
+File-name search remains a separate search target. Extractor failures must not prevent the product from representing that a file exists; future indexing work should store a name-only searchable entry when content extraction is unsupported, skipped, or failed.
+
 ## Cancellation and partial failures
 
 Cancellation is cooperative. Search must stop as soon as possible after the cancellation token is signaled.

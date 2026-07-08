@@ -296,6 +296,25 @@ TEST_CASE("desktop result action opens a selected file URL")
   CHECK(capture.openedUrl == QUrl::fromLocalFile(qtPath(file.path())));
 }
 
+TEST_CASE("desktop preview uses visible text for html files")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-html-preview-settings-test");
+  uburu::tests::TemporaryDirectory previewDirectory("uburu-controller-html-preview-test");
+  const auto filePath = previewDirectory.path() / "preview.html";
+
+  isolateSettings(settingsDirectory.path(), QStringLiteral("html-preview-test"));
+  uburu::tests::writeFile(filePath, "<body><h1>Visible needle</h1><script>hiddenNeedle()</script></body>");
+
+  uburu::app::SearchController controller;
+  controller.loadPreview(qtPath(filePath), QStringLiteral("1:9"), {}, {});
+
+  REQUIRE(waitUntil([&] { return !controller.previewLoading(); }));
+
+  CHECK(controller.previewText().contains(QStringLiteral("Visible needle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("hiddenNeedle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("<script>")));
+}
+
 TEST_CASE("search result model exposes result roles")
 {
   auto& application = testApplication();

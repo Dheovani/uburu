@@ -538,6 +538,38 @@ TEST_CASE("direct search decodes UTF-16 content before matching")
   CHECK(summary.matches == 1);
 }
 
+TEST_CASE("direct search uses visible text for html content")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-html-content-test");
+  const auto path = directory.path() / "page.html";
+  uburu::tests::writeFile(path, "<body><h1>Visible needle</h1><script>hiddenNeedle()</script></body>");
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "page.html");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery visibleQuery = makeQuery(directory.path(), "needle");
+  uburu::SearchQuery hiddenQuery = makeQuery(directory.path(), "hiddenNeedle");
+  std::vector<uburu::SearchResult> visibleResults;
+  std::vector<uburu::SearchResult> hiddenResults;
+
+  const auto visibleSummary = engine.search(visibleQuery, [&](uburu::SearchResult result) {
+    visibleResults.push_back(std::move(result));
+
+    return true;
+  });
+  const auto hiddenSummary = engine.search(hiddenQuery, [&](uburu::SearchResult result) {
+    hiddenResults.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(visibleResults.size() == 1);
+  CHECK(visibleResults.front().lineText == "Visible needle");
+  CHECK(visibleResults.front().line == 1);
+  CHECK(visibleSummary.matches == 1);
+  CHECK(hiddenResults.empty());
+  CHECK(hiddenSummary.matches == 0);
+}
+
 TEST_CASE("direct search skips sampled binary files without reporting read errors")
 {
   const uburu::tests::TemporaryFile file("uburu-search-binary-content.bin");

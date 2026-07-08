@@ -325,7 +325,7 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate support for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model planned for OOXML.
 - [ ] Add support for RTF extraction, with explicit limits for nested groups, escaped text, embedded objects, and malformed documents.
-- [ ] Add support for HTML/XHTML extraction as structured text, excluding scripts/styles by default and preserving visible text semantics for search and preview.
+- [x] Add support for HTML/XHTML extraction as structured text, excluding scripts/styles by default and preserving visible text semantics for search and preview.
 - [ ] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
 - [ ] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".

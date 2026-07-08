@@ -455,6 +455,47 @@ TEST_CASE("persistent index search returns indexed content matches")
 #endif
 }
 
+TEST_CASE("persistent index service stores extracted html visible text")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-html-extraction-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "docs" / "index.html",
+            "<html><body><h1>Visible needle</h1><script>hiddenNeedle()</script></body></html>");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "docs/index.html"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery visibleQuery{.root = root, .scope = {}, .expression = "needle", .options = {}};
+  visibleQuery.options.target = uburu::SearchTarget::content;
+
+  uburu::SearchQuery hiddenQuery{.root = root, .scope = {}, .expression = "hiddenNeedle", .options = {}};
+  hiddenQuery.options.target = uburu::SearchTarget::content;
+
+  const auto visibleResults = indexService.search(visibleQuery);
+  const auto hiddenResults = indexService.search(hiddenQuery);
+
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(visibleResults.size() == 1);
+  CHECK(visibleResults.front().path == std::filesystem::path("docs/index.html"));
+  CHECK(visibleResults.front().lineText == "Visible needle");
+  CHECK(hiddenResults.empty());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reports missing fresh and stale generations")
 {
 #if defined(UBURU_HAS_SQLITE)

@@ -1,6 +1,7 @@
 #include "search-controller.hpp"
 
 #include "app/services/indexing-service.hpp"
+#include "core/document/html-document-extractor.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/index/persistent-index-service.hpp"
@@ -625,12 +626,171 @@ namespace uburu::app
       return PreviewLoadStatus::readFailed;
     }
 
+    PreviewLoadStatus previewStatusFromDocumentStatus(document::DocumentExtractionStatus status)
+    {
+      switch (status) {
+      case document::DocumentExtractionStatus::completed:
+        return PreviewLoadStatus::completed;
+      case document::DocumentExtractionStatus::cancelled:
+        return PreviewLoadStatus::cancelled;
+      case document::DocumentExtractionStatus::openFailed:
+        return PreviewLoadStatus::openFailed;
+      case document::DocumentExtractionStatus::readFailed:
+      case document::DocumentExtractionStatus::unsupportedFormat:
+      case document::DocumentExtractionStatus::parserFailed:
+      case document::DocumentExtractionStatus::encryptedOrProtected:
+        return PreviewLoadStatus::readFailed;
+      case document::DocumentExtractionStatus::binarySkipped:
+        return PreviewLoadStatus::binarySkipped;
+      case document::DocumentExtractionStatus::invalidEncoding:
+        return PreviewLoadStatus::invalidEncoding;
+      case document::DocumentExtractionStatus::safetyLimitExceeded:
+        return PreviewLoadStatus::lineTooLong;
+      }
+
+      return PreviewLoadStatus::readFailed;
+    }
+
+    bool appendPreviewLine(const text::TextLine& line,
+                           const std::optional<std::size_t>& targetLine,
+                           const std::vector<MatchSpan>& highlights,
+                           const std::vector<MatchSpan>& emptyHighlights,
+                           PreviewLoadResult& result,
+                           QStringList& lines,
+                           QStringList& htmlLines,
+                           std::size_t& previewBytes)
+    {
+      const auto selectedLine = targetLine.has_value() && *targetLine == line.lineNumber;
+      const auto& lineHighlights = selectedLine ? highlights : emptyHighlights;
+      lines.push_back(formattedPreviewLine(line, selectedLine));
+      htmlLines.push_back(formattedPreviewHtmlLine(line, selectedLine, lineHighlights));
+      previewBytes += line.text.size();
+
+      if (previewBytes >= maximumPreviewBytes) {
+        result.truncated = true;
+
+        return false;
+      }
+
+      return true;
+    }
+
+    bool appendExtractedPreviewSegment(const document::ExtractedTextSegment& segment,
+                                       const std::optional<std::size_t>& targetLine,
+                                       std::size_t firstLine,
+                                       std::size_t lastLine,
+                                       const std::vector<MatchSpan>& highlights,
+                                       const std::vector<MatchSpan>& emptyHighlights,
+                                       PreviewLoadResult& result,
+                                       QStringList& lines,
+                                       QStringList& htmlLines,
+                                       std::size_t& previewBytes)
+    {
+      std::size_t lineNumber = 1;
+      std::size_t lineStart = 0;
+
+      while (lineStart <= segment.text.size()) {
+        const auto lineEnd = segment.text.find('\n', lineStart);
+        const auto lineSize = lineEnd == std::string::npos ? segment.text.size() - lineStart : lineEnd - lineStart;
+        text::TextLine line;
+
+        line.text = segment.text.substr(lineStart, lineSize);
+        line.lineNumber = lineNumber;
+
+        if (lineNumber >= firstLine) {
+          if (lineNumber > lastLine)
+            return false;
+
+          if (!appendPreviewLine(line, targetLine, highlights, emptyHighlights, result, lines, htmlLines, previewBytes))
+            return false;
+        }
+
+        if (lineEnd == std::string::npos)
+          break;
+
+        lineStart = lineEnd + 1;
+        ++lineNumber;
+      }
+
+      return true;
+    }
+
+    std::optional<PreviewLoadResult> loadHtmlPreviewText(const QString& path,
+                                                         const QString& location,
+                                                         const QString& fallbackPreview,
+                                                         const std::vector<MatchSpan>& highlights,
+                                                         std::stop_token stopToken)
+    {
+      document::HtmlDocumentExtractor extractor;
+
+      if (!extractor.supports(nativePath(path)))
+        return std::nullopt;
+
+      PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
+      const auto targetLine = lineNumberFromLocation(location);
+      const auto firstLine = targetLine.has_value() && *targetLine > previewContextBeforeLines
+                               ? *targetLine - previewContextBeforeLines
+                               : std::size_t{1};
+      const auto lastLine =
+        targetLine.has_value() ? *targetLine + previewContextAfterLines : maximumPreviewLinesWithoutLocation;
+      document::DocumentExtractionOptions options;
+      QStringList lines;
+      QStringList htmlLines;
+      std::size_t previewBytes = 0;
+      const std::vector<MatchSpan> emptyHighlights;
+
+      options.textOptions.includeBinary = false;
+      options.textOptions.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
+
+      const auto summary = extractor.extract(
+        nativePath(path),
+        options,
+        [&](const document::ExtractedTextSegment& segment) {
+          if (stopToken.stop_requested())
+            return false;
+
+          return appendExtractedPreviewSegment(segment,
+                                               targetLine,
+                                               firstLine,
+                                               lastLine,
+                                               highlights,
+                                               emptyHighlights,
+                                               result,
+                                               lines,
+                                               htmlLines,
+                                               previewBytes);
+        },
+        stopToken);
+
+      result.status = previewStatusFromDocumentStatus(summary.status);
+
+      if (result.status == PreviewLoadStatus::cancelled)
+        return result;
+
+      result.text = lines.join(QStringLiteral("\n"));
+
+      if (!htmlLines.empty()) {
+        result.html =
+          QStringLiteral(
+            "<html><body style=\"white-space:pre;font-family:Consolas,monospace;color:%1;\">%2</body></html>")
+            .arg(QString::fromLatin1(previewHtmlTextColor), htmlLines.join(QString{}));
+      }
+
+      if (result.text.isEmpty() && !fallbackPreview.isEmpty())
+        result.text = fallbackPreview;
+
+      return result;
+    }
+
     PreviewLoadResult loadPreviewText(const QString& path,
                                       const QString& location,
                                       const QString& fallbackPreview,
                                       std::vector<MatchSpan> highlights,
                                       std::stop_token stopToken)
     {
+      if (auto htmlPreview = loadHtmlPreviewText(path, location, fallbackPreview, highlights, stopToken))
+        return *htmlPreview;
+
       PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
       const auto targetLine = lineNumberFromLocation(location);
       const auto firstLine = targetLine.has_value() && *targetLine > previewContextBeforeLines
@@ -660,18 +820,8 @@ namespace uburu::app
           if (line.lineNumber > lastLine)
             return false;
 
-          const auto selectedLine = targetLine.has_value() && *targetLine == line.lineNumber;
-          const auto& lineHighlights = selectedLine ? highlights : emptyHighlights;
-          lines.push_back(formattedPreviewLine(line, selectedLine));
-          htmlLines.push_back(formattedPreviewHtmlLine(line, selectedLine, lineHighlights));
-          previewBytes += line.text.size();
-
-          if (previewBytes >= maximumPreviewBytes) {
-            result.truncated = true;
-            return false;
-          }
-
-          return true;
+          return appendPreviewLine(
+            line, targetLine, highlights, emptyHighlights, result, lines, htmlLines, previewBytes);
         },
         stopToken);
 

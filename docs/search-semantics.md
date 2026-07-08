@@ -139,6 +139,12 @@ File-name results use `SearchResultKind::fileName`, line `0`, and a 1-based colu
 
 File-name search does not open the file, allowing paths to be found even when content is not accessible at that moment. Regex, case sensitivity, and whole-word rules also apply to the relative path.
 
+## Document extraction
+
+Indexed content search uses the `core/document` extraction boundary before storing searchable text. Plain text files are indexed line by line through the text reader. HTML, HTM, and XHTML files are indexed as visible text: tags are stripped, common entities are decoded, block-level tags create text boundaries, and script, style, and comment contents are excluded by default. This keeps searches from matching implementation details that are not visible document content.
+
+When content extraction is unavailable, unsupported, unsafe, or temporarily limited, the file remains searchable by name if it was scanned. In that case the indexed document has no stored content text, so `content` search does not return matches from raw container bytes, compressed XML packages, scripts, binary payloads, or parser artifacts.
+
 ## File filters
 
 The scanner applies filters before delivering `FileEntry` to the search engine:

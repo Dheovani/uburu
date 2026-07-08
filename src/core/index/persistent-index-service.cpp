@@ -1,5 +1,8 @@
 #include "core/index/persistent-index-service.hpp"
 
+#include "core/document/document-extractor.hpp"
+#include "core/document/html-document-extractor.hpp"
+#include "core/document/plain-text-extractor.hpp"
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
 #include "core/text/regex-matcher.hpp"
@@ -10,6 +13,7 @@
 #include <chrono>
 #include <deque>
 #include <exception>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -49,6 +53,21 @@ namespace uburu::index
       bool cancelled{false};
       bool failed{false};
     };
+
+    [[nodiscard]]
+    const document::DocumentExtractorRegistry& defaultDocumentExtractorRegistry()
+    {
+      static const auto registry = [] {
+        document::DocumentExtractorRegistry configuredRegistry;
+
+        configuredRegistry.add(std::make_shared<document::HtmlDocumentExtractor>());
+        configuredRegistry.add(std::make_shared<document::PlainTextExtractor>());
+
+        return configuredRegistry;
+      }();
+
+      return registry;
+    }
 
     [[nodiscard]]
     std::string lowerAscii(std::string value)
@@ -251,23 +270,27 @@ namespace uburu::index
     readIndexedText(const FileEntry& file, const SearchOptions& options, std::stop_token stopToken)
     {
       std::string indexedText;
-      bool firstLine = true;
+      bool firstSegment = true;
 
-      const auto summary = text::readTextFileLines(
+      document::DocumentExtractionOptions extractionOptions;
+
+      extractionOptions.textOptions = options;
+
+      const auto summary = defaultDocumentExtractorRegistry().extract(
         file.absolutePath,
-        options,
-        [&](const text::TextLine& line) {
-          if (!firstLine)
+        extractionOptions,
+        [&](const document::ExtractedTextSegment& segment) {
+          if (!firstSegment)
             indexedText.push_back('\n');
 
-          indexedText += line.text;
-          firstLine = false;
+          indexedText += segment.text;
+          firstSegment = false;
 
           return true;
         },
         stopToken);
 
-      if (summary.status == text::TextReadStatus::completed) {
+      if (summary.status == document::DocumentExtractionStatus::completed) {
         IndexedTextReadResult result;
 
         result.text = std::move(indexedText);
@@ -275,7 +298,7 @@ namespace uburu::index
         return result;
       }
 
-      if (summary.status == text::TextReadStatus::cancelled) {
+      if (summary.status == document::DocumentExtractionStatus::cancelled) {
         IndexedTextReadResult result;
 
         result.cancelled = true;
@@ -283,7 +306,7 @@ namespace uburu::index
         return result;
       }
 
-      if (summary.status == text::TextReadStatus::binarySkipped) {
+      if (summary.status == document::DocumentExtractionStatus::binarySkipped) {
         IndexedTextReadResult result;
 
         result.skipReason = IndexSkipReason::binary;
@@ -291,8 +314,9 @@ namespace uburu::index
         return result;
       }
 
-      if (summary.status == text::TextReadStatus::invalidEncoding ||
-          summary.status == text::TextReadStatus::lineTooLong) {
+      if (summary.status == document::DocumentExtractionStatus::invalidEncoding ||
+          summary.status == document::DocumentExtractionStatus::safetyLimitExceeded ||
+          summary.status == document::DocumentExtractionStatus::unsupportedFormat) {
         IndexedTextReadResult result;
 
         result.skipReason = IndexSkipReason::temporaryLimitation;

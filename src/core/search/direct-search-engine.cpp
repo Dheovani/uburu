@@ -1,5 +1,6 @@
 #include "core/search/direct-search-engine.hpp"
 
+#include "core/document/html-document-extractor.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
 #include "core/search/search-scope.hpp"
@@ -253,6 +254,31 @@ namespace uburu::search
       return true;
     }
 
+    bool reportDocumentExtractionSummary(SearchSummary& summary,
+                                         const FileEntry& entry,
+                                         document::DocumentExtractionSummary extractionSummary)
+    {
+      if (extractionSummary.status == document::DocumentExtractionStatus::completed)
+        return true;
+
+      if (extractionSummary.status == document::DocumentExtractionStatus::binarySkipped) {
+        ++summary.metrics.binaryFiles;
+        ++summary.metrics.binaryFilesSkipped;
+
+        return true;
+      }
+
+      if (extractionSummary.status == document::DocumentExtractionStatus::cancelled)
+        return false;
+
+      const auto code = extractionSummary.status == document::DocumentExtractionStatus::openFailed
+        ? SearchErrorCode::fileOpenFailed
+        : SearchErrorCode::fileReadFailed;
+      reportPartialFailure(summary, code, entry);
+
+      return true;
+    }
+
     std::vector<MatchSpan> makeHighlights(std::string_view lineText, const std::vector<text::MatchPosition>& matches)
     {
       std::vector<MatchSpan> highlights;
@@ -465,57 +491,120 @@ namespace uburu::search
 
           bool stopCurrentFile = false;
           bool stopSearch = false;
+          auto processLine = [&](std::string_view lineText, std::size_t lineNumber) {
+            if (!addContextAfter(pendingResults, lineText, sink)) {
+              stopSearch = true;
+
+              return false;
+            }
+
+            const auto matches = findMatches(lineText, query, regexMatcher, summary);
+
+            if (!matches)
+              return false;
+
+            if (matches->empty()) {
+              previousContext.push_back(std::string{lineText});
+              while (previousContext.size() > query.options.contextBeforeLines)
+                previousContext.pop_front();
+
+              return true;
+            }
+
+            appendSearchDebugLog("engine",
+                                 "content-match path=" + pathToUtf8(entry.relativePath) + " line=" +
+                                   std::to_string(lineNumber) + " matches=" + std::to_string(matches->size()));
+
+            const auto decision = publishMatches(entry,
+                                                 SearchResultKind::content,
+                                                 lineNumber,
+                                                 lineText,
+                                                 *matches,
+                                                 query,
+                                                 summary,
+                                                 fileMatches,
+                                                 previousContext,
+                                                 pendingResults,
+                                                 sink);
+
+            previousContext.push_back(std::string{lineText});
+            while (previousContext.size() > query.options.contextBeforeLines)
+              previousContext.pop_front();
+
+            if (decision == PublishDecision::stopSearch) {
+              stopSearch = true;
+
+              return false;
+            }
+
+            if (decision == PublishDecision::stopCurrentFile) {
+              stopCurrentFile = true;
+
+              return false;
+            }
+
+            return true;
+          };
+
+          document::HtmlDocumentExtractor htmlExtractor;
+
+          if (htmlExtractor.supports(entry.absolutePath)) {
+            document::DocumentExtractionOptions extractionOptions;
+
+            extractionOptions.textOptions = query.options;
+
+            const auto extractionSummary = htmlExtractor.extract(
+              entry.absolutePath,
+              extractionOptions,
+              [&](const document::ExtractedTextSegment& segment) {
+                std::size_t lineNumber = 1;
+                std::size_t lineStart = 0;
+
+                while (lineStart <= segment.text.size()) {
+                  const auto lineEnd = segment.text.find('\n', lineStart);
+                  const auto lineSize =
+                    lineEnd == std::string::npos ? segment.text.size() - lineStart : lineEnd - lineStart;
+                  const auto lineText = std::string_view{segment.text}.substr(lineStart, lineSize);
+
+                  if (!processLine(lineText, lineNumber)) {
+                    if (!stopSearch && !stopCurrentFile)
+                      stopSearch = true;
+
+                    return false;
+                  }
+
+                  if (lineEnd == std::string::npos)
+                    break;
+
+                  lineStart = lineEnd + 1;
+                  ++lineNumber;
+                }
+
+                return true;
+              },
+              stop_token);
+
+            if (!flushPending(pendingResults, sink))
+              return false;
+
+            if (stopSearch)
+              return false;
+
+            if (stopCurrentFile)
+              return true;
+
+            return reportDocumentExtractionSummary(summary, entry, extractionSummary);
+          }
+
           const auto readSummary = text::readTextFileLines(
             entry.absolutePath,
             query.options,
             [&](const text::TextLine& line) {
-              if (!addContextAfter(pendingResults, line.text, sink)) {
+              if (!processLine(line.text, line.lineNumber)) {
+                if (stopSearch || stopCurrentFile)
+                  return false;
+
                 stopSearch = true;
-
-                return false;
-              }
-
-              const auto matches = findMatches(line.text, query, regexMatcher, summary);
-
-              if (!matches)
-                return false;
-
-              if (matches->empty()) {
-                previousContext.push_back(line.text);
-                while (previousContext.size() > query.options.contextBeforeLines)
-                  previousContext.pop_front();
-
-                return true;
-              }
-
-              appendSearchDebugLog("engine",
-                                   "content-match path=" + pathToUtf8(entry.relativePath) + " line=" +
-                                     std::to_string(line.lineNumber) + " matches=" + std::to_string(matches->size()));
-
-              const auto decision = publishMatches(entry,
-                                                   SearchResultKind::content,
-                                                   line.lineNumber,
-                                                   line.text,
-                                                   *matches,
-                                                   query,
-                                                   summary,
-                                                   fileMatches,
-                                                   previousContext,
-                                                   pendingResults,
-                                                   sink);
-
-              previousContext.push_back(line.text);
-              while (previousContext.size() > query.options.contextBeforeLines)
-                previousContext.pop_front();
-
-              if (decision == PublishDecision::stopSearch) {
-                stopSearch = true;
-
-                return false;
-              }
-
-              if (decision == PublishDecision::stopCurrentFile) {
-                stopCurrentFile = true;
 
                 return false;
               }

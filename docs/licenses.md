@@ -4,7 +4,9 @@ This document records Uburu's initial licensing policy. It does not replace lega
 
 ## Project license
 
-Uburu's own code is distributed under the MIT license, as stated in the root `LICENSE` file.
+Uburu's own code is distributed under the custom Uburu Personal Use License, as stated in the root `LICENSE` file. The project is not MIT-licensed. Personal, non-commercial use is permitted, but commercial use, organizational use, paid redistribution, hosted services, sublicensing, and resale require prior written authorization or a separate commercial license.
+
+This licensing model intentionally reserves commercial rights for Dheovani Xavier da Cruz, the current sole copyright holder, while keeping the application usable by individuals for personal purposes. Before publishing public builds, installers, app-store packages, paid editions, or accepting external contributions at scale, the license text should receive formal legal review.
 
 ## Main dependencies
 
@@ -46,7 +48,9 @@ Before publishing a release:
 
 - generate a list of packaged DLLs/libraries;
 - record dependency versions and licenses;
+- include the Uburu Personal Use License with the application;
 - include license texts required by Qt and other dependencies;
+- confirm whether the release is personal-use, commercial, enterprise, or otherwise covered by a separate written license;
 - review whether any used Qt module is GPL-only;
 - generate an SBOM when the release pipeline is available;
 - validate whether the distribution mode can comply with LGPLv3 or requires a commercial license.

@@ -1,21 +1,64 @@
-MIT License
+Uburu Personal Use License
+Version 1.0
 
-Copyright (c) 2026 Uburu contributors
+Copyright (c) 2026 Dheovani Xavier da Cruz.
+All rights reserved except as expressly granted below.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Definitions
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+"Software" means the Uburu application, source code, documentation, assets, build scripts, binaries, and any other files distributed in this repository or as part of an Uburu release.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+"Personal Use" means use by an individual for private, non-commercial purposes, including learning, evaluation, personal productivity, and searching files on devices or accounts personally controlled by that individual.
+
+"Commercial Use" means any use primarily intended for commercial advantage, business operations, revenue generation, professional services, paid consulting, resale, distribution for profit, hosted services, or use by or on behalf of a company, organization, government, institution, or other legal entity.
+
+2. Personal use grant
+
+You may download, install, run, and use the Software for Personal Use.
+
+You may copy the Software to your own personal devices and make reasonable backup copies for Personal Use.
+
+You may inspect and modify the source code for Personal Use, provided that you do not distribute modified or unmodified copies except as expressly permitted by this license.
+
+3. Reserved commercial rights
+
+Commercial Use is not permitted without prior written authorization from the copyright holder or a separate commercial license.
+
+Without such authorization, you may not:
+
+- sell, rent, lease, sublicense, or otherwise commercially exploit the Software;
+- distribute the Software, modified or unmodified, as part of a paid product, paid service, commercial bundle, or commercial workflow;
+- offer the Software or any modified version as a hosted, managed, SaaS, internal enterprise, or professional service;
+- use the Software on behalf of a company, organization, government, institution, or other legal entity;
+- remove, obscure, or alter copyright, license, trademark, or attribution notices;
+- use Uburu names, logos, icons, or branding to imply endorsement or affiliation without written permission.
+
+4. Redistribution
+
+Redistribution of the Software, whether modified or unmodified, is not permitted without prior written authorization, except for reasonable backup copies or copies between your own personal devices for Personal Use.
+
+5. Contributions
+
+Unless a separate written agreement says otherwise, any contribution submitted to the project is provided under this same license and may be used by the project maintainers to develop, distribute, and commercially license Uburu.
+
+As of this license version, the original and sole copyright holder is Dheovani Xavier da Cruz.
+
+6. Third-party components
+
+Third-party dependencies, libraries, tools, and assets included with or used by the Software may be governed by their own licenses. This license applies only to Uburu-owned materials and does not override third-party license terms.
+
+7. No warranty
+
+The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, non-infringement, availability, security, or correctness.
+
+8. Limitation of liability
+
+To the maximum extent permitted by applicable law, the copyright holder and any future contributors shall not be liable for any claim, damages, data loss, business interruption, lost profits, or other liability arising from or related to the Software or its use.
+
+9. Termination
+
+Your rights under this license terminate automatically if you violate its terms. Upon termination, you must stop using the Software and delete any copies that are not otherwise authorized.
+
+10. Separate licenses
+
+Commercial, organizational, redistribution, OEM, marketplace, and enterprise licenses may be granted separately in writing. Any separate written license controls only for the rights and parties expressly covered by that agreement.

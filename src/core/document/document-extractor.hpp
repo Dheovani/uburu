@@ -38,6 +38,17 @@ namespace uburu::document
     timestamp
   };
 
+  enum class DocumentContentAvailability
+  {
+    contentAvailable,
+    nameOnlyUnsupported,
+    nameOnlyBinary,
+    nameOnlySafetyLimited,
+    nameOnlyProtected,
+    extractionFailed,
+    cancelled
+  };
+
   struct DocumentLocation
   {
     DocumentLocationKind kind{DocumentLocationKind::none};
@@ -72,6 +83,18 @@ namespace uburu::document
   };
 
   using ExtractedTextSink = std::function<bool(const ExtractedTextSegment&)>;
+
+  [[nodiscard]]
+  std::string_view documentExtractionStatusName(DocumentExtractionStatus status);
+
+  [[nodiscard]]
+  DocumentContentAvailability documentContentAvailability(DocumentExtractionStatus status);
+
+  [[nodiscard]]
+  std::string_view documentContentAvailabilityName(DocumentContentAvailability availability);
+
+  [[nodiscard]]
+  bool isNameOnlySearchable(DocumentContentAvailability availability);
 
   class DocumentExtractor
   {

@@ -111,6 +111,40 @@ TEST_CASE("document extractor registry delegates to the first supporting extract
   CHECK(lines.front() == "content");
 }
 
+TEST_CASE("document extraction policy exposes stable status and availability names")
+{
+  CHECK(uburu::document::documentExtractionStatusName(uburu::document::DocumentExtractionStatus::unsupportedFormat) ==
+        "unsupportedFormat");
+  CHECK(uburu::document::documentExtractionStatusName(uburu::document::DocumentExtractionStatus::parserFailed) ==
+        "parserFailed");
+  CHECK(uburu::document::documentContentAvailabilityName(
+          uburu::document::DocumentContentAvailability::nameOnlyUnsupported) == "nameOnlyUnsupported");
+  CHECK(uburu::document::documentContentAvailabilityName(
+          uburu::document::DocumentContentAvailability::extractionFailed) == "extractionFailed");
+}
+
+TEST_CASE("document extraction policy separates name-only and failed content states")
+{
+  const auto unsupported =
+    uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::unsupportedFormat);
+  const auto binary =
+    uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::binarySkipped);
+  const auto unsafe =
+    uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  const auto protectedDocument =
+    uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::encryptedOrProtected);
+  const auto failed =
+    uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::parserFailed);
+
+  CHECK(unsupported == uburu::document::DocumentContentAvailability::nameOnlyUnsupported);
+  CHECK(binary == uburu::document::DocumentContentAvailability::nameOnlyBinary);
+  CHECK(unsafe == uburu::document::DocumentContentAvailability::nameOnlySafetyLimited);
+  CHECK(protectedDocument == uburu::document::DocumentContentAvailability::nameOnlyProtected);
+  CHECK(failed == uburu::document::DocumentContentAvailability::extractionFailed);
+  CHECK(uburu::document::isNameOnlySearchable(unsupported));
+  CHECK_FALSE(uburu::document::isNameOnlySearchable(failed));
+}
+
 TEST_CASE("html document extractor supports common html extensions")
 {
   uburu::document::HtmlDocumentExtractor extractor;

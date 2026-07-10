@@ -293,7 +293,9 @@ namespace uburu::index
         },
         stopToken);
 
-      if (summary.status == document::DocumentExtractionStatus::completed) {
+      const auto availability = document::documentContentAvailability(summary.status);
+
+      if (availability == document::DocumentContentAvailability::contentAvailable) {
         IndexedTextReadResult result;
 
         result.text = std::move(indexedText);
@@ -301,7 +303,7 @@ namespace uburu::index
         return result;
       }
 
-      if (summary.status == document::DocumentExtractionStatus::cancelled) {
+      if (availability == document::DocumentContentAvailability::cancelled) {
         IndexedTextReadResult result;
 
         result.cancelled = true;
@@ -309,7 +311,7 @@ namespace uburu::index
         return result;
       }
 
-      if (summary.status == document::DocumentExtractionStatus::binarySkipped) {
+      if (availability == document::DocumentContentAvailability::nameOnlyBinary) {
         IndexedTextReadResult result;
 
         result.skipReason = IndexSkipReason::binary;
@@ -317,9 +319,15 @@ namespace uburu::index
         return result;
       }
 
-      if (summary.status == document::DocumentExtractionStatus::invalidEncoding ||
-          summary.status == document::DocumentExtractionStatus::safetyLimitExceeded ||
-          summary.status == document::DocumentExtractionStatus::unsupportedFormat) {
+      if (availability == document::DocumentContentAvailability::nameOnlyUnsupported) {
+        IndexedTextReadResult result;
+
+        result.skipReason = IndexSkipReason::unsupportedFormat;
+
+        return result;
+      }
+
+      if (document::isNameOnlySearchable(availability)) {
         IndexedTextReadResult result;
 
         result.skipReason = IndexSkipReason::temporaryLimitation;

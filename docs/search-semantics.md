@@ -217,6 +217,8 @@ Milestone 12 introduces `core/document` as the stable boundary for text extracte
 
 The extraction API distinguishes completed extraction, cancellation, unsupported formats, binary skips, open/read failures, invalid encoding, safety-limit skips, parser failures, and encrypted/protected documents. Rich formats such as PDF, OOXML, OpenDocument, HTML, RTF, subtitles, and email containers must plug into this boundary with explicit limits and status mapping rather than pretending to be plain text files.
 
+The content-availability policy intentionally separates content extraction from file-name search. `contentAvailable` means extracted text can participate in content search. `nameOnlyUnsupported`, `nameOnlyBinary`, `nameOnlySafetyLimited`, and `nameOnlyProtected` mean the file remains searchable by path/name but its content is not exposed to matching or indexing. `extractionFailed` means the extractor attempted to process the file and hit a real parser/open/read failure that should be reported as a failure instead of silently downgrading to a name-only result. `cancelled` means the run ended cooperatively and must not be reported as a document failure.
+
 File-name search remains a separate search target. Extractor failures must not prevent the product from representing that a file exists. Indexed search stores name-only entries when content extraction is unsupported, skipped, or failed after the file identity can be established. Those entries have no indexed text and therefore do not satisfy content-only queries, but they do satisfy file-name queries.
 
 ## Cancellation and partial failures

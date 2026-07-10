@@ -31,6 +31,7 @@ add_executable(uburu_core_tests
   unit/text-file-reader-tests.cpp
   unit/text-matcher-tests.cpp
   unit/worker-pool-tests.cpp
+  unit/zip-archive-reader-tests.cpp
 )
 
 target_link_libraries(uburu_core_tests PRIVATE Uburu::App Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)

@@ -12,11 +12,11 @@ namespace uburu::text
                                  std::uint64_t expandedBytes,
                                  std::uint64_t maximumCompressionRatio)
     {
-      if (compressedBytes == 0)
-        return true;
-
       if (expandedBytes == 0)
         return false;
+
+      if (compressedBytes == 0)
+        return true;
 
       if (maximumCompressionRatio == 0)
         return true;

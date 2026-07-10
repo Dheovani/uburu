@@ -319,6 +319,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Define a document-extraction interface independent from `core/text`, so direct search, indexing, preview, and future CLI can consume extracted text without coupling the core to one parser library.
 - [x] Preserve file-name search for every scanned file even when content extraction is unavailable, unsupported, skipped, or fails.
 - [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
+- [x] Add a safe archive catalog reader for ZIP-backed formats, validating entry names, entry counts, expanded sizes, compression ratios, and unsupported ZIP64 packages before any OOXML/OpenDocument extractor reads payload bytes.
 - [ ] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
 - [ ] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
 - [ ] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.

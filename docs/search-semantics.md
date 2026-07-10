@@ -245,7 +245,7 @@ If the file is removed, becomes inaccessible, or fails during reading, search re
 
 ## Rich document safety
 
-The direct text reader does not extract packaged or binary document formats yet. Formats such as DOCX, XLSX, PPTX, ODT, EPUB, and similar archive-backed documents must pass `RichFormatSafetyLimits` and the `core/archive` ZIP catalog reader before any future extractor exposes their content to search or indexing. The initial safety contract caps total expanded bytes, single expanded entry size, entry count, nesting depth, and compression ratio; the ZIP catalog layer also rejects unsafe entry names and unsupported ZIP64 metadata. Until an extractor exists and passes those limits, such files remain searchable by name only.
+The direct text reader does not extract packaged or binary document formats yet. Formats such as DOCX, XLSX, PPTX, ODT, EPUB, and similar archive-backed documents must pass `RichFormatSafetyLimits` and the `core/archive` ZIP catalog reader before any future extractor exposes their content to search or indexing. The initial safety contract caps total expanded bytes, single expanded entry size, entry count, nesting depth, and compression ratio; the ZIP layer also rejects unsafe entry names and unsupported ZIP64 metadata, and payload access is explicit per entry rather than whole-archive extraction. Until an extractor exists and passes those limits, such files remain searchable by name only.
 
 ## Ownership and copies
 

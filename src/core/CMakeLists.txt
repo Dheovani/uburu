@@ -48,6 +48,9 @@ add_library(Uburu::Core ALIAS uburu_core)
 target_include_directories(uburu_core PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(uburu_core PUBLIC Uburu::ProjectOptions)
 
+find_package(ZLIB REQUIRED)
+target_link_libraries(uburu_core PRIVATE ZLIB::ZLIB)
+
 find_package(SQLite3 QUIET)
 if(SQLite3_FOUND)
   if(TARGET SQLite3::SQLite3)

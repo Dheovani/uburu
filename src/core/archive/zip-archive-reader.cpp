@@ -6,12 +6,16 @@
 #include <optional>
 #include <span>
 #include <string_view>
+#include <utility>
+
+#include <zlib.h>
 
 namespace uburu::archive
 {
   namespace
   {
 
+    constexpr std::uint32_t localFileHeaderSignature = 0x0403'4B50U;
     constexpr std::uint32_t centralDirectoryFileHeaderSignature = 0x0201'4B50U;
     constexpr std::uint32_t endOfCentralDirectorySignature = 0x0605'4B50U;
     constexpr std::uint16_t zip64Marker16 = 0xFFFFU;
@@ -26,6 +30,9 @@ namespace uburu::archive
     constexpr std::size_t centralDirectoryExpandedSizeOffset = 24;
     constexpr std::size_t centralDirectoryCompressionMethodOffset = 10;
     constexpr std::size_t centralDirectoryLocalHeaderOffset = 42;
+    constexpr std::size_t localFileHeaderFixedBytes = 30;
+    constexpr std::size_t localFileHeaderNameLengthOffset = 26;
+    constexpr std::size_t localFileHeaderExtraLengthOffset = 28;
     constexpr std::size_t eocdEntryCountOffset = 10;
     constexpr std::size_t eocdCentralDirectorySizeOffset = 12;
     constexpr std::size_t eocdCentralDirectoryOffsetOffset = 16;
@@ -35,12 +42,49 @@ namespace uburu::archive
     constexpr char nulCharacter = '\0';
     constexpr std::uint16_t storeCompressionMethod = 0;
     constexpr std::uint16_t deflateCompressionMethod = 8;
+    constexpr int zlibRawDeflateWindowBits = -MAX_WBITS;
 
     struct CentralDirectoryLocation
     {
       std::uint64_t offset{0};
       std::uint64_t size{0};
       std::size_t entryCount{0};
+    };
+
+    class InflateStream
+    {
+    public:
+      InflateStream()
+      {
+        initialized = inflateInit2(&stream, zlibRawDeflateWindowBits) == Z_OK;
+      }
+
+      ~InflateStream()
+      {
+        if (initialized)
+          inflateEnd(&stream);
+      }
+
+      InflateStream(const InflateStream&) = delete;
+      InflateStream& operator=(const InflateStream&) = delete;
+      InflateStream(InflateStream&&) noexcept = delete;
+      InflateStream& operator=(InflateStream&&) noexcept = delete;
+
+      [[nodiscard]]
+      bool isInitialized() const
+      {
+        return initialized;
+      }
+
+      [[nodiscard]]
+      z_stream& value()
+      {
+        return stream;
+      }
+
+    private:
+      z_stream stream{};
+      bool initialized{false};
     };
 
     [[nodiscard]]
@@ -161,6 +205,15 @@ namespace uburu::archive
     }
 
     [[nodiscard]]
+    ZipEntryReadResult failedEntryRead(
+      ZipArchiveReadStatus status,
+      std::error_code error = {},
+      text::RichFormatSafetyStatus safetyStatus = text::RichFormatSafetyStatus::accepted)
+    {
+      return ZipEntryReadResult{.status = status, .safetyStatus = safetyStatus, .error = error, .bytes = {}};
+    }
+
+    [[nodiscard]]
     std::vector<unsigned char> readTail(std::ifstream& stream, std::uint64_t fileSize, std::error_code& error)
     {
       const auto tailBytes =
@@ -262,6 +315,113 @@ namespace uburu::archive
     }
 
     [[nodiscard]]
+    std::vector<unsigned char> readBytes(
+      std::ifstream& stream,
+      std::uint64_t offset,
+      std::uint64_t size,
+      std::error_code& error)
+    {
+      if (size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+        error = std::make_error_code(std::errc::file_too_large);
+
+        return {};
+      }
+
+      std::vector<unsigned char> bytes(static_cast<std::size_t>(size));
+
+      stream.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+
+      if (!stream) {
+        error = std::make_error_code(std::errc::io_error);
+
+        return {};
+      }
+
+      stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+
+      if (!stream) {
+        error = std::make_error_code(std::errc::io_error);
+
+        return {};
+      }
+
+      return bytes;
+    }
+
+    [[nodiscard]]
+    std::optional<std::uint64_t> readEntryPayloadOffset(
+      std::ifstream& stream,
+      const ZipArchiveEntry& entry,
+      std::error_code& error)
+    {
+      const auto localHeader = readBytes(stream, entry.localHeaderOffset, localFileHeaderFixedBytes, error);
+
+      if (error)
+        return std::nullopt;
+
+      if (littleEndian32(localHeader, 0) != localFileHeaderSignature) {
+        error = std::make_error_code(std::errc::invalid_argument);
+
+        return std::nullopt;
+      }
+
+      const auto nameLength = littleEndian16(localHeader, localFileHeaderNameLengthOffset);
+      const auto extraLength = littleEndian16(localHeader, localFileHeaderExtraLengthOffset);
+      const auto payloadOffset = entry.localHeaderOffset + localFileHeaderFixedBytes + nameLength + extraLength;
+      const auto localName = readBytes(stream, entry.localHeaderOffset + localFileHeaderFixedBytes, nameLength, error);
+
+      if (error)
+        return std::nullopt;
+
+      const std::string rawLocalName(
+        reinterpret_cast<const char*>(localName.data()),
+        localName.size());
+
+      if (rawLocalName != entry.rawName) {
+        error = std::make_error_code(std::errc::invalid_argument);
+
+        return std::nullopt;
+      }
+
+      return payloadOffset;
+    }
+
+    [[nodiscard]]
+    ZipEntryReadResult inflateRawDeflatePayload(std::span<const unsigned char> compressed, std::uint64_t expandedBytes)
+    {
+      if (expandedBytes == 0)
+        return ZipEntryReadResult{.bytes = {}};
+
+      if (expandedBytes > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
+        return failedEntryRead(ZipArchiveReadStatus::safetyLimitExceeded);
+
+      if (expandedBytes > static_cast<std::uint64_t>(std::numeric_limits<uInt>::max()))
+        return failedEntryRead(ZipArchiveReadStatus::safetyLimitExceeded);
+
+      if (compressed.size() > static_cast<std::size_t>(std::numeric_limits<uInt>::max()))
+        return failedEntryRead(ZipArchiveReadStatus::safetyLimitExceeded);
+
+      std::vector<unsigned char> output(static_cast<std::size_t>(expandedBytes));
+      InflateStream inflateStream;
+
+      if (!inflateStream.isInitialized())
+        return failedEntryRead(ZipArchiveReadStatus::decompressionFailed);
+
+      auto& stream = inflateStream.value();
+      stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(compressed.data()));
+      stream.avail_in = static_cast<uInt>(compressed.size());
+      stream.next_out = reinterpret_cast<Bytef*>(output.data());
+      stream.avail_out = static_cast<uInt>(output.size());
+
+      const auto result = inflate(&stream, Z_FINISH);
+
+      if (result != Z_STREAM_END || stream.total_out != output.size())
+        return failedEntryRead(ZipArchiveReadStatus::decompressionFailed);
+
+      return ZipEntryReadResult{.bytes = std::move(output)};
+    }
+
+    [[nodiscard]]
     ZipArchiveCatalog parseCentralDirectory(
       std::span<const unsigned char> centralDirectory,
       CentralDirectoryLocation location,
@@ -313,7 +473,7 @@ namespace uburu::archive
         const auto directory = rawName.back() == zipDirectorySeparator;
 
         if (!directory && !isSupportedCompressionMethod(compressionMethod))
-          return failedCatalog(ZipArchiveReadStatus::invalidArchive);
+          return failedCatalog(ZipArchiveReadStatus::unsupportedCompressionMethod);
 
         const auto entrySafety = text::validateArchiveEntrySafety(
           {.compressedBytes = compressedBytes, .expandedBytes = expandedBytes},
@@ -331,6 +491,7 @@ namespace uburu::archive
         catalog.entries.push_back(ZipArchiveEntry{.rawName = rawName,
                                                   .normalizedPath = normalizeZipEntryPath(rawName),
                                                   .compressionMethod = compressionMethod,
+                                                  .localHeaderOffset = localHeaderOffset,
                                                   .compressedBytes = compressedBytes,
                                                   .expandedBytes = expandedBytes,
                                                   .directory = directory});
@@ -404,6 +565,66 @@ namespace uburu::archive
     return parseCentralDirectory(centralDirectory, *location, limits, stopToken);
   }
 
+  ZipEntryReadResult ZipArchiveReader::readEntry(
+    const std::filesystem::path& path,
+    const ZipArchiveEntry& entry,
+    text::RichFormatSafetyLimits limits,
+    std::stop_token stopToken) const
+  {
+    if (stopToken.stop_requested())
+      return failedEntryRead(ZipArchiveReadStatus::cancelled);
+
+    if (entry.directory)
+      return failedEntryRead(ZipArchiveReadStatus::entryNotFound);
+
+    if (!isSupportedCompressionMethod(entry.compressionMethod))
+      return failedEntryRead(ZipArchiveReadStatus::unsupportedCompressionMethod);
+
+    const auto entrySafety = text::validateArchiveEntrySafety(
+      {.compressedBytes = entry.compressedBytes, .expandedBytes = entry.expandedBytes},
+      limits);
+
+    if (entrySafety != text::RichFormatSafetyStatus::accepted)
+      return failedEntryRead(ZipArchiveReadStatus::safetyLimitExceeded, {}, entrySafety);
+
+    std::ifstream stream(path, std::ios::binary);
+
+    if (!stream)
+      return failedEntryRead(
+        ZipArchiveReadStatus::openFailed,
+        std::make_error_code(std::errc::no_such_file_or_directory));
+
+    std::error_code readError;
+    const auto payloadOffset = readEntryPayloadOffset(stream, entry, readError);
+
+    if (readError) {
+      if (readError == std::make_error_code(std::errc::invalid_argument))
+        return failedEntryRead(ZipArchiveReadStatus::invalidArchive, readError);
+
+      return failedEntryRead(ZipArchiveReadStatus::readFailed, readError);
+    }
+
+    if (!payloadOffset)
+      return failedEntryRead(ZipArchiveReadStatus::invalidArchive);
+
+    if (stopToken.stop_requested())
+      return failedEntryRead(ZipArchiveReadStatus::cancelled);
+
+    auto payload = readBytes(stream, *payloadOffset, entry.compressedBytes, readError);
+
+    if (readError)
+      return failedEntryRead(ZipArchiveReadStatus::readFailed, readError);
+
+    if (entry.compressionMethod == storeCompressionMethod) {
+      if (entry.compressedBytes != entry.expandedBytes)
+        return failedEntryRead(ZipArchiveReadStatus::invalidArchive);
+
+      return ZipEntryReadResult{.bytes = std::move(payload)};
+    }
+
+    return inflateRawDeflatePayload(payload, entry.expandedBytes);
+  }
+
   std::string_view zipArchiveReadStatusName(ZipArchiveReadStatus status)
   {
     switch (status) {
@@ -419,10 +640,16 @@ namespace uburu::archive
       return "invalidArchive";
     case ZipArchiveReadStatus::unsupportedZip64:
       return "unsupportedZip64";
+    case ZipArchiveReadStatus::unsupportedCompressionMethod:
+      return "unsupportedCompressionMethod";
+    case ZipArchiveReadStatus::entryNotFound:
+      return "entryNotFound";
     case ZipArchiveReadStatus::unsafeEntryName:
       return "unsafeEntryName";
     case ZipArchiveReadStatus::safetyLimitExceeded:
       return "safetyLimitExceeded";
+    case ZipArchiveReadStatus::decompressionFailed:
+      return "decompressionFailed";
     }
 
     return "unknown";

@@ -20,8 +20,11 @@ namespace uburu::archive
     readFailed,
     invalidArchive,
     unsupportedZip64,
+    unsupportedCompressionMethod,
+    entryNotFound,
     unsafeEntryName,
-    safetyLimitExceeded
+    safetyLimitExceeded,
+    decompressionFailed
   };
 
   struct ZipArchiveEntry
@@ -29,6 +32,7 @@ namespace uburu::archive
     std::string rawName;
     std::filesystem::path normalizedPath;
     std::uint16_t compressionMethod{0};
+    std::uint64_t localHeaderOffset{0};
     std::uint64_t compressedBytes{0};
     std::uint64_t expandedBytes{0};
     bool directory{false};
@@ -42,13 +46,29 @@ namespace uburu::archive
     std::vector<ZipArchiveEntry> entries;
   };
 
+  struct ZipEntryReadResult
+  {
+    ZipArchiveReadStatus status{ZipArchiveReadStatus::completed};
+    text::RichFormatSafetyStatus safetyStatus{text::RichFormatSafetyStatus::accepted};
+    std::error_code error;
+    std::vector<unsigned char> bytes;
+  };
+
   class ZipArchiveReader
   {
   public:
     [[nodiscard]]
-    ZipArchiveCatalog readCatalog(const std::filesystem::path& path,
-                                  text::RichFormatSafetyLimits limits = {},
-                                  std::stop_token stopToken = {}) const;
+    ZipArchiveCatalog readCatalog(
+      const std::filesystem::path& path,
+      text::RichFormatSafetyLimits limits = {},
+      std::stop_token stopToken = {}) const;
+
+    [[nodiscard]]
+    ZipEntryReadResult readEntry(
+      const std::filesystem::path& path,
+      const ZipArchiveEntry& entry,
+      text::RichFormatSafetyLimits limits = {},
+      std::stop_token stopToken = {}) const;
   };
 
   [[nodiscard]]

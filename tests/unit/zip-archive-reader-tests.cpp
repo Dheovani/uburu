@@ -17,6 +17,7 @@ namespace
   constexpr std::uint16_t zipVersionNeeded = 20;
   constexpr std::uint16_t storeCompressionMethod = 0;
   constexpr std::uint16_t deflateCompressionMethod = 8;
+  constexpr std::uint16_t unsupportedCompressionMethod = 99;
   constexpr std::uint16_t noFlags = 0;
   constexpr std::uint16_t noTimestamp = 0;
   constexpr std::uint32_t noCrc = 0;
@@ -33,6 +34,7 @@ namespace
     std::uint32_t compressedBytes{0};
     std::uint32_t expandedBytes{0};
     std::uint16_t compressionMethod{deflateCompressionMethod};
+    std::vector<unsigned char> payload;
   };
 
   void appendLittleEndian16(std::vector<unsigned char>& bytes, std::uint16_t value)
@@ -62,6 +64,26 @@ namespace
   }
 
   [[nodiscard]]
+  std::uint32_t effectiveCompressedBytes(const TestZipEntry& entry)
+  {
+    if (!entry.payload.empty())
+      return static_cast<std::uint32_t>(entry.payload.size());
+
+    return entry.compressedBytes;
+  }
+
+  void appendPayload(std::vector<unsigned char>& bytes, const TestZipEntry& entry)
+  {
+    if (!entry.payload.empty()) {
+      bytes.insert(bytes.end(), entry.payload.begin(), entry.payload.end());
+
+      return;
+    }
+
+    bytes.insert(bytes.end(), static_cast<std::size_t>(entry.compressedBytes), 0);
+  }
+
+  [[nodiscard]]
   std::vector<unsigned char> makeZip(std::vector<TestZipEntry> entries)
   {
     std::vector<unsigned char> bytes;
@@ -76,12 +98,12 @@ namespace
       appendLittleEndian16(bytes, noTimestamp);
       appendLittleEndian16(bytes, noTimestamp);
       appendLittleEndian32(bytes, noCrc);
-      appendLittleEndian32(bytes, entry.compressedBytes);
+      appendLittleEndian32(bytes, effectiveCompressedBytes(entry));
       appendLittleEndian32(bytes, entry.expandedBytes);
       appendLittleEndian16(bytes, static_cast<std::uint16_t>(entry.name.size()));
       appendLittleEndian16(bytes, 0);
       appendText(bytes, entry.name);
-      bytes.insert(bytes.end(), static_cast<std::size_t>(entry.compressedBytes), 0);
+      appendPayload(bytes, entry);
     }
 
     const auto centralDirectoryOffset = static_cast<std::uint32_t>(bytes.size());
@@ -96,7 +118,7 @@ namespace
       appendLittleEndian16(bytes, noTimestamp);
       appendLittleEndian16(bytes, noTimestamp);
       appendLittleEndian32(bytes, noCrc);
-      appendLittleEndian32(bytes, entry.compressedBytes);
+      appendLittleEndian32(bytes, effectiveCompressedBytes(entry));
       appendLittleEndian32(bytes, entry.expandedBytes);
       appendLittleEndian16(bytes, static_cast<std::uint16_t>(entry.name.size()));
       appendLittleEndian16(bytes, 0);
@@ -146,6 +168,50 @@ TEST_CASE("zip archive reader lists safe entries without extracting payloads")
   CHECK(catalog.entries[2].directory);
 }
 
+TEST_CASE("zip archive reader reads stored entry payloads")
+{
+  uburu::tests::TemporaryFile file("uburu-zip-stored-entry.zip");
+  uburu::tests::writeBytes(
+    file.path(),
+    makeZip({{.name = "word/document.xml",
+              .compressedBytes = 5,
+              .expandedBytes = 5,
+              .compressionMethod = storeCompressionMethod,
+              .payload = {'h', 'e', 'l', 'l', 'o'}}}));
+
+  const uburu::archive::ZipArchiveReader reader;
+  const auto catalog = reader.readCatalog(file.path());
+
+  REQUIRE(catalog.status == uburu::archive::ZipArchiveReadStatus::completed);
+  REQUIRE(catalog.entries.size() == 1);
+
+  const auto result = reader.readEntry(file.path(), catalog.entries.front());
+
+  REQUIRE(result.status == uburu::archive::ZipArchiveReadStatus::completed);
+  CHECK(result.bytes == std::vector<unsigned char>{'h', 'e', 'l', 'l', 'o'});
+}
+
+TEST_CASE("zip archive reader inflates raw deflate entry payloads")
+{
+  uburu::tests::TemporaryFile file("uburu-zip-deflate-entry.zip");
+  uburu::tests::writeBytes(
+    file.path(),
+    makeZip({{.name = "word/document.xml",
+              .expandedBytes = 5,
+              .payload = {0xCBU, 0x48U, 0xCDU, 0xC9U, 0xC9U, 0x07U, 0x00U}}}));
+
+  const uburu::archive::ZipArchiveReader reader;
+  const auto catalog = reader.readCatalog(file.path());
+
+  REQUIRE(catalog.status == uburu::archive::ZipArchiveReadStatus::completed);
+  REQUIRE(catalog.entries.size() == 1);
+
+  const auto result = reader.readEntry(file.path(), catalog.entries.front());
+
+  REQUIRE(result.status == uburu::archive::ZipArchiveReadStatus::completed);
+  CHECK(result.bytes == std::vector<unsigned char>{'h', 'e', 'l', 'l', 'o'});
+}
+
 TEST_CASE("zip archive reader rejects unsafe entry names")
 {
   uburu::tests::TemporaryFile file("uburu-zip-unsafe-name.zip");
@@ -169,6 +235,22 @@ TEST_CASE("zip archive reader rejects zip64 metadata until it is explicitly supp
   const auto catalog = reader.readCatalog(file.path());
 
   CHECK(catalog.status == uburu::archive::ZipArchiveReadStatus::unsupportedZip64);
+}
+
+TEST_CASE("zip archive reader rejects unsupported compression methods")
+{
+  uburu::tests::TemporaryFile file("uburu-zip-unsupported-compression.zip");
+  uburu::tests::writeBytes(
+    file.path(),
+    makeZip({{.name = "word/document.xml",
+              .compressedBytes = 1,
+              .expandedBytes = 1,
+              .compressionMethod = unsupportedCompressionMethod}}));
+
+  const uburu::archive::ZipArchiveReader reader;
+  const auto catalog = reader.readCatalog(file.path());
+
+  CHECK(catalog.status == uburu::archive::ZipArchiveReadStatus::unsupportedCompressionMethod);
 }
 
 TEST_CASE("zip archive reader rejects archive safety limit violations")
@@ -203,6 +285,10 @@ TEST_CASE("zip archive reader reports invalid archives")
 TEST_CASE("zip archive reader exposes stable status names")
 {
   CHECK(uburu::archive::zipArchiveReadStatusName(uburu::archive::ZipArchiveReadStatus::completed) == "completed");
+  CHECK(uburu::archive::zipArchiveReadStatusName(uburu::archive::ZipArchiveReadStatus::decompressionFailed) ==
+        "decompressionFailed");
+  CHECK(uburu::archive::zipArchiveReadStatusName(uburu::archive::ZipArchiveReadStatus::unsupportedCompressionMethod) ==
+        "unsupportedCompressionMethod");
   CHECK(uburu::archive::zipArchiveReadStatusName(uburu::archive::ZipArchiveReadStatus::unsafeEntryName) ==
         "unsafeEntryName");
 }

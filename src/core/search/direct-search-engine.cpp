@@ -1,6 +1,7 @@
 #include "core/search/direct-search-engine.hpp"
 
 #include "core/document/html-document-extractor.hpp"
+#include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
@@ -193,6 +194,25 @@ namespace uburu::search
     bool searchesFileName(SearchTarget target)
     {
       return target == SearchTarget::fileName || target == SearchTarget::contentAndFileName;
+    }
+
+    [[nodiscard]]
+    const document::DocumentExtractor* structuredDocumentExtractor(const std::filesystem::path& path)
+    {
+      static const document::HtmlDocumentExtractor htmlExtractor;
+      static const document::RtfDocumentExtractor rtfExtractor;
+      static const document::SubtitleDocumentExtractor subtitleExtractor;
+
+      if (htmlExtractor.supports(path))
+        return &htmlExtractor;
+
+      if (rtfExtractor.supports(path))
+        return &rtfExtractor;
+
+      if (subtitleExtractor.supports(path))
+        return &subtitleExtractor;
+
+      return nullptr;
     }
 
     std::vector<text::MatchPosition> findLiteralMatches(std::string_view text, const SearchQuery& query)
@@ -547,15 +567,7 @@ namespace uburu::search
             return true;
           };
 
-          document::HtmlDocumentExtractor htmlExtractor;
-          document::SubtitleDocumentExtractor subtitleExtractor;
-          const document::DocumentExtractor* structuredExtractor = nullptr;
-
-          if (htmlExtractor.supports(entry.absolutePath))
-            structuredExtractor = &htmlExtractor;
-          else if (subtitleExtractor.supports(entry.absolutePath))
-            structuredExtractor = &subtitleExtractor;
-
+          const auto* structuredExtractor = structuredDocumentExtractor(entry.absolutePath);
           if (structuredExtractor != nullptr) {
             document::DocumentExtractionOptions extractionOptions;
 

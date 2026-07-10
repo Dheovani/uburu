@@ -334,6 +334,25 @@ TEST_CASE("desktop preview uses cue text for subtitle files")
   CHECK_FALSE(controller.previewText().contains(QStringLiteral("-->")));
 }
 
+TEST_CASE("desktop preview uses visible text for rtf files")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-rtf-preview-settings-test");
+  uburu::tests::TemporaryDirectory previewDirectory("uburu-controller-rtf-preview-test");
+  const auto filePath = previewDirectory.path() / "preview.rtf";
+
+  isolateSettings(settingsDirectory.path(), QStringLiteral("rtf-preview-test"));
+  uburu::tests::writeFile(filePath, "{\\rtf1 Visible rtf needle {\\pict hiddenNeedle}}");
+
+  uburu::app::SearchController controller;
+  controller.loadPreview(qtPath(filePath), QStringLiteral("1:13"), {}, {});
+
+  REQUIRE(waitUntil([&] { return !controller.previewLoading(); }));
+
+  CHECK(controller.previewText().contains(QStringLiteral("Visible rtf needle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("hiddenNeedle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("\\rtf1")));
+}
+
 TEST_CASE("search result model exposes result roles")
 {
   auto& application = testApplication();

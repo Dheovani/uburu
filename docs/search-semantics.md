@@ -141,7 +141,7 @@ File-name search does not open the file, allowing paths to be found even when co
 
 ## Document extraction
 
-Indexed content search uses the `core/document` extraction boundary before storing searchable text. Plain text files are indexed line by line through the text reader. HTML, HTM, and XHTML files are indexed as visible text: tags are stripped, common entities are decoded, block-level tags create text boundaries, and script, style, and comment contents are excluded by default. This keeps searches from matching implementation details that are not visible document content.
+Indexed content search uses the `core/document` extraction boundary before storing searchable text. Plain text files are indexed line by line through the text reader. HTML, HTM, and XHTML files are indexed as visible text: tags are stripped, common entities are decoded, block-level tags create text boundaries, and script, style, and comment contents are excluded by default. RTF files are indexed as extracted visible text with common escapes decoded, embedded image/object destinations skipped, and explicit safety limits for group nesting, control words, and binary payloads. This keeps searches from matching implementation details that are not visible document content.
 
 Subtitle files are treated as structured text documents. SRT and WebVTT cue text is indexed without sequence numbers, timing arrows, WebVTT headers, or note blocks. Cue locations use `DocumentLocationKind::timestamp` with the start time in milliseconds, preparing search results and preview for future time-aware navigation.
 
@@ -215,7 +215,7 @@ Line-by-line reading supports `LF`, `CRLF`, standalone `CR`, empty lines, and fi
 
 Milestone 12 introduces `core/document` as the stable boundary for text extracted from files. Search, indexing, preview, and future CLI code should consume `DocumentExtractor` contracts instead of calling format-specific parser libraries directly. The first implementation is `PlainTextExtractor`, which adapts the existing UTF-aware text reader into extracted line segments with document locations.
 
-The extraction API distinguishes completed extraction, cancellation, unsupported formats, binary skips, open/read failures, invalid encoding, safety-limit skips, parser failures, and encrypted/protected documents. Rich formats such as PDF, OOXML, OpenDocument, RTF, HTML, subtitles, and email containers must plug into this boundary with explicit limits and status mapping rather than pretending to be plain text files.
+The extraction API distinguishes completed extraction, cancellation, unsupported formats, binary skips, open/read failures, invalid encoding, safety-limit skips, parser failures, and encrypted/protected documents. Rich formats such as PDF, OOXML, OpenDocument, HTML, RTF, subtitles, and email containers must plug into this boundary with explicit limits and status mapping rather than pretending to be plain text files.
 
 File-name search remains a separate search target. Extractor failures must not prevent the product from representing that a file exists. Indexed search stores name-only entries when content extraction is unsupported, skipped, or failed after the file identity can be established. Those entries have no indexed text and therefore do not satisfy content-only queries, but they do satisfy file-name queries.
 

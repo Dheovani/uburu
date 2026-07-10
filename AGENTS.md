@@ -638,6 +638,8 @@ For function signatures, calls, and declarations with parameters:
 
 - Do not break lines if all parameters still fit comfortably within the 120-column limit.
 - When a break is necessary because the line exceeds 120 columns, put each parameter on its own line, aligned as a block. Do not keep the first parameter on the function line merely to use more horizontal space.
+- For function signatures that exceed 120 characters, put the opening parenthesis at the end of the function name line and place every parameter on its own following line with one 2-space continuation indent. This is the preferred style for declarations and definitions.
+- Apply the same rule to constructors or aggregate-style initializers when the member-initializer list exceeds the limit: keep the declaration readable and break one initialized member per line instead of packing as much as possible into the first line.
 - Avoid breaks caused only by excessive automatic alignment when the line is still readable.
 
 The `format` target is auxiliary and must never be required to build the project.

@@ -1,6 +1,7 @@
 #include "core/document/document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
+#include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
 #include "helpers/temporary-paths.hpp"
 
@@ -233,4 +234,66 @@ TEST_CASE("subtitle document extractor ignores webvtt headers notes and cue mark
   REQUIRE(segments.size() == 1);
   CHECK(segments.front().text == "Hello visible");
   CHECK(segments.front().location.primary == 1000);
+}
+
+TEST_CASE("rtf document extractor emits visible text and decodes common escapes")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-rtf-visible-test");
+  const auto path = directory.path() / "sample.rtf";
+  uburu::document::RtfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(
+    path,
+    "{\\rtf1\\ansi Visible \\b bold\\b0\\par Unicode \\u233\\'e9 caf\\'e9 {\\fonttbl hiddenNeedle}}");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  std::string expectedText = "Visible bold\nUnicode ";
+
+  expectedText.push_back(static_cast<char>(0xC3));
+  expectedText.push_back(static_cast<char>(0xA9));
+  expectedText += " caf";
+  expectedText.push_back(static_cast<char>(0xC3));
+  expectedText.push_back(static_cast<char>(0xA9));
+
+  CHECK(segments.front().text == expectedText);
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::none);
+}
+
+TEST_CASE("rtf document extractor skips images objects and oversized binary payloads")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-rtf-safety-test");
+  const auto safePath = directory.path() / "safe.rtf";
+  const auto unsafePath = directory.path() / "unsafe.rtf";
+  uburu::document::RtfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(safePath, "{\\rtf1 Visible {\\pict hiddenNeedle} text}");
+
+  const auto safeSummary =
+    extractor.extract(safePath, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+      segments.push_back(segment);
+
+      return true;
+    });
+
+  REQUIRE(safeSummary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Visible  text");
+
+  uburu::tests::writeFile(unsafePath, "{\\rtf1 Visible \\bin999999999 hidden}");
+
+  const auto unsafeSummary =
+    extractor.extract(unsafePath, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(unsafeSummary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
 }

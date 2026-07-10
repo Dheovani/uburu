@@ -2,6 +2,7 @@
 
 #include "app/services/indexing-service.hpp"
 #include "core/document/html-document-extractor.hpp"
+#include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/git/git-cli-git-service.hpp"
@@ -217,6 +218,25 @@ namespace uburu::app
       const auto firstPart = *relativePath.begin();
 
       return firstPart != "..";
+    }
+
+    [[nodiscard]]
+    const document::DocumentExtractor* structuredPreviewExtractor(const std::filesystem::path& path)
+    {
+      static const document::HtmlDocumentExtractor htmlExtractor;
+      static const document::RtfDocumentExtractor rtfExtractor;
+      static const document::SubtitleDocumentExtractor subtitleExtractor;
+
+      if (htmlExtractor.supports(path))
+        return &htmlExtractor;
+
+      if (rtfExtractor.supports(path))
+        return &rtfExtractor;
+
+      if (subtitleExtractor.supports(path))
+        return &subtitleExtractor;
+
+      return nullptr;
     }
 
     QStringList withoutDirectory(QStringList directories, const QString& directory)
@@ -716,21 +736,15 @@ namespace uburu::app
       return true;
     }
 
-    std::optional<PreviewLoadResult> loadStructuredPreviewText(const QString& path,
-                                                               const QString& location,
-                                                               const QString& fallbackPreview,
-                                                               const std::vector<MatchSpan>& highlights,
-                                                               std::stop_token stopToken)
+    std::optional<PreviewLoadResult> loadStructuredPreviewText(
+      const QString& path,
+      const QString& location,
+      const QString& fallbackPreview,
+      const std::vector<MatchSpan>& highlights,
+      std::stop_token stopToken)
     {
-      document::HtmlDocumentExtractor htmlExtractor;
-      document::SubtitleDocumentExtractor subtitleExtractor;
       const auto nativePreviewPath = nativePath(path);
-      const document::DocumentExtractor* extractor = nullptr;
-
-      if (htmlExtractor.supports(nativePreviewPath))
-        extractor = &htmlExtractor;
-      else if (subtitleExtractor.supports(nativePreviewPath))
-        extractor = &subtitleExtractor;
+      const auto* extractor = structuredPreviewExtractor(nativePreviewPath);
 
       if (extractor == nullptr)
         return std::nullopt;

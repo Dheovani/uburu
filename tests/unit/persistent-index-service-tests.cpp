@@ -531,6 +531,46 @@ TEST_CASE("persistent index service stores extracted subtitle cue text")
 #endif
 }
 
+TEST_CASE("persistent index service stores extracted rtf visible text")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-rtf-extraction-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "docs" / "sample.rtf", "{\\rtf1 Visible rtf needle {\\pict hiddenNeedle}}");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "docs/sample.rtf"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery visibleQuery{.root = root, .scope = {}, .expression = "needle", .options = {}};
+  visibleQuery.options.target = uburu::SearchTarget::content;
+
+  uburu::SearchQuery hiddenQuery{.root = root, .scope = {}, .expression = "hiddenNeedle", .options = {}};
+  hiddenQuery.options.target = uburu::SearchTarget::content;
+
+  const auto visibleResults = indexService.search(visibleQuery);
+  const auto hiddenResults = indexService.search(hiddenQuery);
+
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(visibleResults.size() == 1);
+  CHECK(visibleResults.front().path == std::filesystem::path("docs/sample.rtf"));
+  CHECK(visibleResults.front().lineText == "Visible rtf needle");
+  CHECK(hiddenResults.empty());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reports missing fresh and stale generations")
 {
 #if defined(UBURU_HAS_SQLITE)

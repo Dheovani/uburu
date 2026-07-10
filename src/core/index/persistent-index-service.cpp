@@ -51,6 +51,10 @@ namespace uburu::index
     struct IndexedTextReadResult
     {
       std::optional<std::string> text;
+      std::string extractorName;
+      document::DocumentExtractionSummary extractionSummary;
+      std::chrono::nanoseconds extractionTime{};
+      std::uintmax_t indexedTextBytes{0};
       IndexSkipReason skipReason{IndexSkipReason::none};
       bool cancelled{false};
       bool failed{false};
@@ -116,6 +120,58 @@ namespace uburu::index
       case IndexSkipReason::none:
         return;
       }
+    }
+
+    [[nodiscard]]
+    IndexExtractorMetrics& extractorMetrics(std::vector<IndexExtractorMetrics>& metrics, std::string_view extractorName)
+    {
+      for (auto& item : metrics) {
+        if (item.extractorName == extractorName)
+          return item;
+      }
+
+      auto& item = metrics.emplace_back();
+
+      item.extractorName = std::string{extractorName};
+
+      return item;
+    }
+
+    void recordExtractorMetrics(IndexUpdateSummary& summary,
+                                IndexUpdateProgress& progress,
+                                std::string_view extractorName,
+                                std::uintmax_t fileBytes,
+                                const document::DocumentExtractionSummary& extractionSummary,
+                                std::chrono::nanoseconds extractionTime,
+                                std::uintmax_t indexedTextBytes)
+    {
+      auto record = [&](std::vector<IndexExtractorMetrics>& metrics) {
+        auto& item = extractorMetrics(metrics, extractorName);
+        const auto availability = document::documentContentAvailability(extractionSummary.status);
+
+        ++item.filesProcessed;
+        item.bytesProcessed += fileBytes;
+        item.extractionTime += extractionTime;
+        item.indexedTextBytes += indexedTextBytes;
+
+        if (availability == document::DocumentContentAvailability::nameOnlyUnsupported)
+          ++item.skippedUnsupportedFormat;
+
+        if (availability == document::DocumentContentAvailability::nameOnlyBinary)
+          ++item.skippedBinary;
+
+        if (availability == document::DocumentContentAvailability::nameOnlySafetyLimited)
+          ++item.skippedSafetyLimited;
+
+        if (availability == document::DocumentContentAvailability::nameOnlyProtected)
+          ++item.skippedProtected;
+
+        if (availability == document::DocumentContentAvailability::extractionFailed)
+          ++item.parserFailures;
+      };
+
+      record(summary.extractorMetrics);
+      record(progress.extractorMetrics);
     }
 
     [[nodiscard]]
@@ -274,68 +330,71 @@ namespace uburu::index
     {
       std::string indexedText;
       bool firstSegment = true;
+      const auto* extractor = defaultDocumentExtractorRegistry().findExtractor(file.absolutePath);
+      const auto extractorName =
+        extractor == nullptr ? std::string{"unsupported-format"} : std::string{extractor->name()};
+      const auto extractionStart = std::chrono::steady_clock::now();
 
       document::DocumentExtractionOptions extractionOptions;
 
       extractionOptions.textOptions = options;
 
-      const auto summary = defaultDocumentExtractorRegistry().extract(
-        file.absolutePath,
-        extractionOptions,
-        [&](const document::ExtractedTextSegment& segment) {
-          if (!firstSegment)
-            indexedText.push_back('\n');
+      auto extractionSummary = document::DocumentExtractionSummary{};
 
-          indexedText += segment.text;
-          firstSegment = false;
+      if (extractor == nullptr) {
+        extractionSummary.status = document::DocumentExtractionStatus::unsupportedFormat;
+      } else {
+        extractionSummary = extractor->extract(
+          file.absolutePath,
+          extractionOptions,
+          [&](const document::ExtractedTextSegment& segment) {
+            if (!firstSegment)
+              indexedText.push_back('\n');
 
-          return true;
-        },
-        stopToken);
+            indexedText += segment.text;
+            firstSegment = false;
 
-      const auto availability = document::documentContentAvailability(summary.status);
+            return true;
+          },
+          stopToken);
+      }
+
+      auto result = IndexedTextReadResult{.extractorName = extractorName,
+                                          .extractionSummary = extractionSummary,
+                                          .extractionTime = std::chrono::steady_clock::now() - extractionStart,
+                                          .indexedTextBytes = static_cast<std::uintmax_t>(indexedText.size())};
+
+      const auto availability = document::documentContentAvailability(extractionSummary.status);
 
       if (availability == document::DocumentContentAvailability::contentAvailable) {
-        IndexedTextReadResult result;
-
         result.text = std::move(indexedText);
 
         return result;
       }
 
       if (availability == document::DocumentContentAvailability::cancelled) {
-        IndexedTextReadResult result;
-
         result.cancelled = true;
 
         return result;
       }
 
       if (availability == document::DocumentContentAvailability::nameOnlyBinary) {
-        IndexedTextReadResult result;
-
         result.skipReason = IndexSkipReason::binary;
 
         return result;
       }
 
       if (availability == document::DocumentContentAvailability::nameOnlyUnsupported) {
-        IndexedTextReadResult result;
-
         result.skipReason = IndexSkipReason::unsupportedFormat;
 
         return result;
       }
 
       if (document::isNameOnlySearchable(availability)) {
-        IndexedTextReadResult result;
-
         result.skipReason = IndexSkipReason::temporaryLimitation;
 
         return result;
       }
-
-      IndexedTextReadResult result;
 
       result.failed = true;
 
@@ -597,6 +656,11 @@ namespace uburu::index
       }
 
       if (!shouldIndexFile(file)) {
+        document::DocumentExtractionSummary extractionSummary;
+
+        extractionSummary.status = document::DocumentExtractionStatus::binarySkipped;
+        recordExtractorMetrics(
+          summary, progress, "binary-sample", file.size, extractionSummary, std::chrono::nanoseconds{}, 0);
         recordSkip(IndexSkipReason::binary, summary, progress);
         ++summary.indexed;
         ++progress.indexed;
@@ -607,6 +671,11 @@ namespace uburu::index
       }
 
       if (hasUnsupportedDocumentExtension(file.relativePath)) {
+        document::DocumentExtractionSummary extractionSummary;
+
+        extractionSummary.status = document::DocumentExtractionStatus::unsupportedFormat;
+        recordExtractorMetrics(
+          summary, progress, "unsupported-format", file.size, extractionSummary, std::chrono::nanoseconds{}, 0);
         recordSkip(IndexSkipReason::unsupportedFormat, summary, progress);
         ++summary.indexed;
         ++progress.indexed;
@@ -617,6 +686,15 @@ namespace uburu::index
       }
 
       auto indexedText = readIndexedText(file, SearchOptions{}, stopToken);
+
+      recordExtractorMetrics(
+        summary,
+        progress,
+        indexedText.extractorName,
+        file.size,
+        indexedText.extractionSummary,
+        indexedText.extractionTime,
+        indexedText.indexedTextBytes);
 
       if (!indexedText.text) {
         if (stopToken.stop_requested() || indexedText.cancelled) {

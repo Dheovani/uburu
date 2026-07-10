@@ -2,15 +2,32 @@
 
 #include "shared/types/domain-types.hpp"
 
+#include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <optional>
 #include <span>
 #include <stop_token>
+#include <string>
 #include <vector>
 
 namespace uburu::index
 {
+
+  struct IndexExtractorMetrics
+  {
+    std::string extractorName;
+    std::size_t filesProcessed{0};
+    std::uintmax_t bytesProcessed{0};
+    std::chrono::nanoseconds extractionTime{};
+    std::size_t skippedUnsupportedFormat{0};
+    std::size_t skippedBinary{0};
+    std::size_t skippedSafetyLimited{0};
+    std::size_t skippedProtected{0};
+    std::size_t parserFailures{0};
+    std::uintmax_t indexedTextBytes{0};
+  };
 
   struct IndexUpdateProgress
   {
@@ -27,6 +44,7 @@ namespace uburu::index
     std::size_t skippedBySize{0};
     std::size_t skippedByFilter{0};
     std::size_t skippedTemporaryLimitation{0};
+    std::vector<IndexExtractorMetrics> extractorMetrics;
     std::filesystem::path currentPath;
   };
 
@@ -43,6 +61,7 @@ namespace uburu::index
     std::size_t skippedBySize{0};
     std::size_t skippedByFilter{0};
     std::size_t skippedTemporaryLimitation{0};
+    std::vector<IndexExtractorMetrics> extractorMetrics;
     bool cancelled{false};
   };
 

@@ -329,7 +329,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
 - [x] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".
-- [ ] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.
+- [x] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.
 - [ ] Add fuzzing and hostile-file tests for document extractors, especially archive containers, malformed PDFs, malformed RTF, oversized shared strings, and nested/recursive package structures.
 - [ ] Document supported formats, limitations, dependencies, and security boundaries in `docs/search-semantics.md`, `docs/indexing.md`, and `docs/privacy.md`.
 

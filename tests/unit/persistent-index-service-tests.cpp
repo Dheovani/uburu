@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -571,6 +572,40 @@ TEST_CASE("persistent index service stores extracted rtf visible text")
 #endif
 }
 
+TEST_CASE("persistent index service records metrics for document extractors")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-extractor-metrics-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "docs" / "sample.rtf", "{\\rtf1 Visible rtf needle}");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "docs/sample.rtf"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+  const auto rtfMetrics =
+    std::ranges::find(summary.extractorMetrics, "rtf", &uburu::index::IndexExtractorMetrics::extractorName);
+
+  REQUIRE(rtfMetrics != summary.extractorMetrics.end());
+  CHECK(summary.failed == 0);
+  CHECK(rtfMetrics->filesProcessed == 1);
+  CHECK(rtfMetrics->bytesProcessed > 0);
+  CHECK(rtfMetrics->indexedTextBytes == std::string_view{"Visible rtf needle"}.size());
+  CHECK(rtfMetrics->skippedUnsupportedFormat == 0);
+  CHECK(rtfMetrics->parserFailures == 0);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reports missing fresh and stale generations")
 {
 #if defined(UBURU_HAS_SQLITE)
@@ -771,6 +806,48 @@ TEST_CASE("persistent index service classifies unsupported document formats with
   REQUIRE(valid.has_value());
   REQUIRE(unsupported.has_value());
   CHECK_FALSE(unsupported->indexedText.has_value());
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service records name-only extractor metrics")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-name-only-metrics-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "src" / "document.docx", "packaged content placeholder");
+  writeFile(root / "src" / "image.bin", "binary placeholder");
+
+  auto binary = fileEntry(root, "src/image.bin");
+  binary.binary = true;
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "src/document.docx"),
+    binary,
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+  const auto unsupportedMetrics = std::ranges::find(
+    summary.extractorMetrics, "unsupported-format", &uburu::index::IndexExtractorMetrics::extractorName);
+  const auto binaryMetrics =
+    std::ranges::find(summary.extractorMetrics, "binary-sample", &uburu::index::IndexExtractorMetrics::extractorName);
+
+  REQUIRE(unsupportedMetrics != summary.extractorMetrics.end());
+  REQUIRE(binaryMetrics != summary.extractorMetrics.end());
+  CHECK(summary.skippedUnsupportedFormat == 1);
+  CHECK(summary.skippedBinary == 1);
+  CHECK(unsupportedMetrics->filesProcessed == 1);
+  CHECK(unsupportedMetrics->skippedUnsupportedFormat == 1);
+  CHECK(binaryMetrics->filesProcessed == 1);
+  CHECK(binaryMetrics->skippedBinary == 1);
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

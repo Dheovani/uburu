@@ -2,6 +2,7 @@ add_library(uburu_core STATIC
   document/document-extractor.cpp
   document/html-document-extractor.cpp
   document/plain-text-extractor.cpp
+  document/subtitle-document-extractor.cpp
   diagnostics/diagnostic-report.cpp
   diagnostics/file-structured-logger.cpp
   diagnostics/search-tracing.cpp

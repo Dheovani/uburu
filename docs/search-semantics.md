@@ -143,6 +143,8 @@ File-name search does not open the file, allowing paths to be found even when co
 
 Indexed content search uses the `core/document` extraction boundary before storing searchable text. Plain text files are indexed line by line through the text reader. HTML, HTM, and XHTML files are indexed as visible text: tags are stripped, common entities are decoded, block-level tags create text boundaries, and script, style, and comment contents are excluded by default. This keeps searches from matching implementation details that are not visible document content.
 
+Subtitle files are treated as structured text documents. SRT and WebVTT cue text is indexed without sequence numbers, timing arrows, WebVTT headers, or note blocks. Cue locations use `DocumentLocationKind::timestamp` with the start time in milliseconds, preparing search results and preview for future time-aware navigation.
+
 When content extraction is unavailable, unsupported, unsafe, or temporarily limited, the file remains searchable by name if it was scanned. In that case the indexed document has no stored content text, so `content` search does not return matches from raw container bytes, compressed XML packages, scripts, binary payloads, or parser artifacts.
 
 ## File filters

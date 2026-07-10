@@ -1,6 +1,7 @@
 #include "core/search/direct-search-engine.hpp"
 
 #include "core/document/html-document-extractor.hpp"
+#include "core/document/subtitle-document-extractor.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
 #include "core/search/search-scope.hpp"
@@ -272,8 +273,8 @@ namespace uburu::search
         return false;
 
       const auto code = extractionSummary.status == document::DocumentExtractionStatus::openFailed
-        ? SearchErrorCode::fileOpenFailed
-        : SearchErrorCode::fileReadFailed;
+                          ? SearchErrorCode::fileOpenFailed
+                          : SearchErrorCode::fileReadFailed;
       reportPartialFailure(summary, code, entry);
 
       return true;
@@ -547,13 +548,20 @@ namespace uburu::search
           };
 
           document::HtmlDocumentExtractor htmlExtractor;
+          document::SubtitleDocumentExtractor subtitleExtractor;
+          const document::DocumentExtractor* structuredExtractor = nullptr;
 
-          if (htmlExtractor.supports(entry.absolutePath)) {
+          if (htmlExtractor.supports(entry.absolutePath))
+            structuredExtractor = &htmlExtractor;
+          else if (subtitleExtractor.supports(entry.absolutePath))
+            structuredExtractor = &subtitleExtractor;
+
+          if (structuredExtractor != nullptr) {
             document::DocumentExtractionOptions extractionOptions;
 
             extractionOptions.textOptions = query.options;
 
-            const auto extractionSummary = htmlExtractor.extract(
+            const auto extractionSummary = structuredExtractor->extract(
               entry.absolutePath,
               extractionOptions,
               [&](const document::ExtractedTextSegment& segment) {

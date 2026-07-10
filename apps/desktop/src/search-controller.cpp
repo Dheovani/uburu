@@ -2,6 +2,7 @@
 
 #include "app/services/indexing-service.hpp"
 #include "core/document/html-document-extractor.hpp"
+#include "core/document/subtitle-document-extractor.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/index/persistent-index-service.hpp"
@@ -715,15 +716,23 @@ namespace uburu::app
       return true;
     }
 
-    std::optional<PreviewLoadResult> loadHtmlPreviewText(const QString& path,
-                                                         const QString& location,
-                                                         const QString& fallbackPreview,
-                                                         const std::vector<MatchSpan>& highlights,
-                                                         std::stop_token stopToken)
+    std::optional<PreviewLoadResult> loadStructuredPreviewText(const QString& path,
+                                                               const QString& location,
+                                                               const QString& fallbackPreview,
+                                                               const std::vector<MatchSpan>& highlights,
+                                                               std::stop_token stopToken)
     {
-      document::HtmlDocumentExtractor extractor;
+      document::HtmlDocumentExtractor htmlExtractor;
+      document::SubtitleDocumentExtractor subtitleExtractor;
+      const auto nativePreviewPath = nativePath(path);
+      const document::DocumentExtractor* extractor = nullptr;
 
-      if (!extractor.supports(nativePath(path)))
+      if (htmlExtractor.supports(nativePreviewPath))
+        extractor = &htmlExtractor;
+      else if (subtitleExtractor.supports(nativePreviewPath))
+        extractor = &subtitleExtractor;
+
+      if (extractor == nullptr)
         return std::nullopt;
 
       PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
@@ -742,8 +751,8 @@ namespace uburu::app
       options.textOptions.includeBinary = false;
       options.textOptions.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
 
-      const auto summary = extractor.extract(
-        nativePath(path),
+      const auto summary = extractor->extract(
+        nativePreviewPath,
         options,
         [&](const document::ExtractedTextSegment& segment) {
           if (stopToken.stop_requested())
@@ -788,8 +797,8 @@ namespace uburu::app
                                       std::vector<MatchSpan> highlights,
                                       std::stop_token stopToken)
     {
-      if (auto htmlPreview = loadHtmlPreviewText(path, location, fallbackPreview, highlights, stopToken))
-        return *htmlPreview;
+      if (auto structuredPreview = loadStructuredPreviewText(path, location, fallbackPreview, highlights, stopToken))
+        return *structuredPreview;
 
       PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
       const auto targetLine = lineNumberFromLocation(location);

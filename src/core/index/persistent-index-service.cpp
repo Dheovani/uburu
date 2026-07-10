@@ -3,6 +3,7 @@
 #include "core/document/document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
+#include "core/document/subtitle-document-extractor.hpp"
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
 #include "core/text/regex-matcher.hpp"
@@ -61,6 +62,7 @@ namespace uburu::index
         document::DocumentExtractorRegistry configuredRegistry;
 
         configuredRegistry.add(std::make_shared<document::HtmlDocumentExtractor>());
+        configuredRegistry.add(std::make_shared<document::SubtitleDocumentExtractor>());
         configuredRegistry.add(std::make_shared<document::PlainTextExtractor>());
 
         return configuredRegistry;

@@ -326,7 +326,7 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Evaluate support for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model planned for OOXML.
 - [ ] Add support for RTF extraction, with explicit limits for nested groups, escaped text, embedded objects, and malformed documents.
 - [x] Add support for HTML/XHTML extraction as structured text, excluding scripts/styles by default and preserving visible text semantics for search and preview.
-- [ ] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
+- [x] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
 - [ ] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".
 - [ ] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.

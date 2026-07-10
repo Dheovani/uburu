@@ -496,6 +496,41 @@ TEST_CASE("persistent index service stores extracted html visible text")
 #endif
 }
 
+TEST_CASE("persistent index service stores extracted subtitle cue text")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-subtitle-extraction-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "media" / "sample.vtt", "WEBVTT\n\n00:01.000 --> 00:02.000\nVisible subtitle needle\n\n");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "media/sample.vtt"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
+  query.options.target = uburu::SearchTarget::content;
+
+  const auto results = indexService.search(query);
+
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == std::filesystem::path("media/sample.vtt"));
+  CHECK(results.front().lineText == "Visible subtitle needle");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reports missing fresh and stale generations")
 {
 #if defined(UBURU_HAS_SQLITE)

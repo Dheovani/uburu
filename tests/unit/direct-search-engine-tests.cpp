@@ -570,6 +570,29 @@ TEST_CASE("direct search uses visible text for html content")
   CHECK(hiddenSummary.matches == 0);
 }
 
+TEST_CASE("direct search uses cue text for subtitle content")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-subtitle-content-test");
+  const auto path = directory.path() / "sample.srt";
+  uburu::tests::writeFile(path, "1\n00:00:01,500 --> 00:00:03,000\nVisible subtitle needle\n\n");
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "sample.srt");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().lineText == "Visible subtitle needle");
+  CHECK(results.front().line == 1);
+  CHECK(summary.matches == 1);
+}
+
 TEST_CASE("direct search skips sampled binary files without reporting read errors")
 {
   const uburu::tests::TemporaryFile file("uburu-search-binary-content.bin");

@@ -1,6 +1,7 @@
 #include "core/document/document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
+#include "core/document/subtitle-document-extractor.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -184,4 +185,52 @@ TEST_CASE("html document extractor enforces extracted byte limits before publish
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
   CHECK(summary.segmentsExtracted == 0);
   CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("subtitle document extractor streams cue text with timestamp locations")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-subtitle-test");
+  const auto path = directory.path() / "sample.srt";
+  uburu::document::SubtitleDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path, "1\n00:00:01,500 --> 00:00:03,000\nHello\nworld\n\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Hello world");
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::timestamp);
+  CHECK(segments.front().location.primary == 1500);
+  CHECK(segments.front().location.label == "00:00:01,500");
+}
+
+TEST_CASE("subtitle document extractor ignores webvtt headers notes and cue markup")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-webvtt-test");
+  const auto path = directory.path() / "sample.vtt";
+  uburu::document::SubtitleDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path,
+                          "WEBVTT\n\nNOTE hidden text\nstill hidden\n\n00:01.000 --> 00:02.000\n<v Bob>Hello "
+                          "<i>visible</i></v>\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Hello visible");
+  CHECK(segments.front().location.primary == 1000);
 }

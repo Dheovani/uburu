@@ -315,6 +315,25 @@ TEST_CASE("desktop preview uses visible text for html files")
   CHECK_FALSE(controller.previewText().contains(QStringLiteral("<script>")));
 }
 
+TEST_CASE("desktop preview uses cue text for subtitle files")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-subtitle-preview-settings-test");
+  uburu::tests::TemporaryDirectory previewDirectory("uburu-controller-subtitle-preview-test");
+  const auto filePath = previewDirectory.path() / "preview.vtt";
+
+  isolateSettings(settingsDirectory.path(), QStringLiteral("subtitle-preview-test"));
+  uburu::tests::writeFile(filePath, "WEBVTT\n\n00:01.000 --> 00:02.000\nVisible subtitle needle\n");
+
+  uburu::app::SearchController controller;
+  controller.loadPreview(qtPath(filePath), QStringLiteral("1:18"), {}, {});
+
+  REQUIRE(waitUntil([&] { return !controller.previewLoading(); }));
+
+  CHECK(controller.previewText().contains(QStringLiteral("Visible subtitle needle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("WEBVTT")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("-->")));
+}
+
 TEST_CASE("search result model exposes result roles")
 {
   auto& application = testApplication();

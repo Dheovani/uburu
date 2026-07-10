@@ -1,6 +1,7 @@
 #include "core/filesystem/file-scanner.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/search/direct-search-engine.hpp"
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -623,6 +624,33 @@ TEST_CASE("direct search uses visible text for rtf content")
   CHECK(visibleSummary.matches == 1);
   CHECK(hiddenResults.empty());
   CHECK(hiddenSummary.matches == 0);
+}
+
+TEST_CASE("direct search uses visible text for docx content")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-docx-content-test");
+  const auto path = directory.path() / "sample.docx";
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalDocxBytes(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+      "<w:body><w:p><w:r><w:t>Visible docx needle</w:t></w:r></w:p></w:body></w:document>"));
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "sample.docx");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().lineText == "Visible docx needle");
+  CHECK(results.front().line == 1);
+  CHECK(summary.matches == 1);
 }
 
 TEST_CASE("direct search skips sampled binary files without reporting read errors")

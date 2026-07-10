@@ -1,5 +1,6 @@
 add_library(uburu_core STATIC
   archive/zip-archive-reader.cpp
+  document/docx-document-extractor.cpp
   document/document-extractor.cpp
   document/html-document-extractor.cpp
   document/plain-text-extractor.cpp

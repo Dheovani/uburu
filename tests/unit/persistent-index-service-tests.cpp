@@ -1,5 +1,6 @@
 #include "core/index/persistent-index-service.hpp"
 #include "core/storage/sqlite-storage-service.hpp"
+#include "fixtures/test-fixtures.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -572,6 +573,49 @@ TEST_CASE("persistent index service stores extracted rtf visible text")
 #endif
 }
 
+TEST_CASE("persistent index service stores extracted docx visible text")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-docx-extraction-test");
+  const auto root = directory.path() / "repo";
+
+  uburu::tests::writeBytes(
+    root / "docs" / "sample.docx",
+    uburu::tests::fixtures::minimalDocxBytes(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+      "<w:body><w:p><w:r><w:t>Visible docx needle</w:t></w:r></w:p></w:body></w:document>"));
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "docs/sample.docx"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
+  query.options.target = uburu::SearchTarget::content;
+
+  const auto results = indexService.search(query);
+  const auto stored = storage.findDocument("worktree-id", "docs/sample.docx");
+
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == std::filesystem::path("docs/sample.docx"));
+  CHECK(results.front().lineText == "Visible docx needle");
+  REQUIRE(stored.has_value());
+  REQUIRE(stored->indexedText.has_value());
+  CHECK(*stored->indexedText == "Visible docx needle");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service records metrics for document extractors")
 {
 #if defined(UBURU_HAS_SQLITE)
@@ -780,7 +824,7 @@ TEST_CASE("persistent index service classifies unsupported document formats with
   const auto root = directory.path() / "repo";
 
   writeFile(root / "src" / "valid.txt", "valid");
-  writeFile(root / "src" / "document.docx", "packaged content placeholder");
+  writeFile(root / "src" / "document.xlsx", "packaged content placeholder");
 
   uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
   storage.initialize();
@@ -790,12 +834,12 @@ TEST_CASE("persistent index service classifies unsupported document formats with
   uburu::index::PersistentIndexService indexService(storage);
   const std::vector files{
     fileEntry(root, "src/valid.txt"),
-    fileEntry(root, "src/document.docx"),
+    fileEntry(root, "src/document.xlsx"),
   };
 
   const auto summary = indexService.update(worktreeInfo(root), files);
   const auto valid = storage.findDocument("worktree-id", "src/valid.txt");
-  const auto unsupported = storage.findDocument("worktree-id", "src/document.docx");
+  const auto unsupported = storage.findDocument("worktree-id", "src/document.xlsx");
 
   CHECK_FALSE(summary.cancelled);
   CHECK(summary.indexed == 2);
@@ -817,7 +861,7 @@ TEST_CASE("persistent index service records name-only extractor metrics")
   TemporaryDirectory directory("uburu-persistent-index-name-only-metrics-test");
   const auto root = directory.path() / "repo";
 
-  writeFile(root / "src" / "document.docx", "packaged content placeholder");
+  writeFile(root / "src" / "document.xlsx", "packaged content placeholder");
   writeFile(root / "src" / "image.bin", "binary placeholder");
 
   auto binary = fileEntry(root, "src/image.bin");
@@ -830,7 +874,7 @@ TEST_CASE("persistent index service records name-only extractor metrics")
 
   uburu::index::PersistentIndexService indexService(storage);
   const std::vector files{
-    fileEntry(root, "src/document.docx"),
+    fileEntry(root, "src/document.xlsx"),
     binary,
   };
 
@@ -859,7 +903,7 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
   TemporaryDirectory directory("uburu-persistent-index-unsupported-name-only-test");
   const auto root = directory.path() / "repo";
 
-  writeFile(root / "src" / "document.docx", "packaged content placeholder");
+  writeFile(root / "src" / "document.xlsx", "packaged content placeholder");
 
   uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
   storage.initialize();
@@ -868,7 +912,7 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
 
   uburu::index::PersistentIndexService indexService(storage);
   const std::vector files{
-    fileEntry(root, "src/document.docx"),
+    fileEntry(root, "src/document.xlsx"),
   };
 
   const auto summary = indexService.update(worktreeInfo(root), files);
@@ -890,7 +934,7 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
   CHECK(summary.skippedUnsupportedFormat == 1);
   REQUIRE(fileNameResults.size() == 1);
   CHECK(fileNameResults.front().kind == uburu::SearchResultKind::fileName);
-  CHECK(fileNameResults.front().path == std::filesystem::path("src/document.docx"));
+  CHECK(fileNameResults.front().path == std::filesystem::path("src/document.xlsx"));
   CHECK(contentResults.empty());
 #else
   SUCCEED("SQLite is not available in this build");

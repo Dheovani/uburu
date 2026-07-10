@@ -1,8 +1,10 @@
 #include "core/document/document-extractor.hpp"
+#include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -143,6 +145,64 @@ TEST_CASE("document extraction policy separates name-only and failed content sta
   CHECK(failed == uburu::document::DocumentContentAvailability::extractionFailed);
   CHECK(uburu::document::isNameOnlySearchable(unsupported));
   CHECK_FALSE(uburu::document::isNameOnlySearchable(failed));
+}
+
+TEST_CASE("docx document extractor supports docx extension")
+{
+  uburu::document::DocxDocumentExtractor extractor;
+
+  CHECK(extractor.supports("document.docx"));
+  CHECK(extractor.supports("DOCUMENT.DOCX"));
+  CHECK_FALSE(extractor.supports("document.doc"));
+}
+
+TEST_CASE("docx document extractor emits visible wordprocessing text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-visible-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalDocxBytes(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+      "<w:body>"
+      "<w:p><w:r><w:t>Hello &amp; needle</w:t></w:r></w:p>"
+      "<w:p><w:r><w:t>Second</w:t><w:tab/><w:t>line</w:t></w:r></w:p>"
+      "</w:body>"
+      "</w:document>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Hello & needle\nSecond line");
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::none);
+}
+
+TEST_CASE("docx document extractor reports malformed packages as parser failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-malformed-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes(
+      {uburu::tests::fixtures::StoredZipEntryFixture{.name = "word/missing.xml", .content = "<xml/>"}}));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
 }
 
 TEST_CASE("html document extractor supports common html extensions")

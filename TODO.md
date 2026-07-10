@@ -322,6 +322,9 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Add bounded ZIP entry payload reading for stored and deflated entries, so OOXML/OpenDocument extractors can request specific internal files without extracting whole packages.
 - [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
 - [ ] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
+  - [x] Implement initial bounded DOCX body extraction from `word/document.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
+  - [ ] Extract basic DOCX metadata and improve table/location reporting.
+  - [ ] Add hostile DOCX regression fixtures for oversized XML, malformed packages, unsupported ZIP features, and cancellation paths.
 - [ ] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
 - [ ] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
@@ -333,7 +336,7 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".
 - [x] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.
 - [ ] Add fuzzing and hostile-file tests for document extractors, especially archive containers, malformed PDFs, malformed RTF, oversized shared strings, and nested/recursive package structures.
-- [ ] Document supported formats, limitations, dependencies, and security boundaries in `docs/search-semantics.md`, `docs/indexing.md`, and `docs/privacy.md`.
+- [x] Document supported formats, limitations, dependencies, and security boundaries in `docs/search-semantics.md`, `docs/indexing.md`, and `docs/privacy.md`.
 
 ## Milestone 13 — CLI and extensibility (P2)
 

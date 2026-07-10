@@ -14,6 +14,23 @@ namespace uburu::tests::fixtures
   inline constexpr std::string_view literalNeedle = "needle";
   inline constexpr std::string_view rootGitIgnoreContent = "*.log\n!important.log\nbuild/\n";
   inline constexpr std::string_view nestedGitIgnoreContent = "*.generated.cpp\n";
+  inline constexpr std::uint32_t testZipLocalFileHeaderSignature = 0x0403'4B50U;
+  inline constexpr std::uint32_t testZipCentralDirectoryFileHeaderSignature = 0x0201'4B50U;
+  inline constexpr std::uint32_t testZipEndOfCentralDirectorySignature = 0x0605'4B50U;
+  inline constexpr std::uint16_t testZipVersionNeeded = 20;
+  inline constexpr std::uint16_t testZipStoreCompressionMethod = 0;
+  inline constexpr std::uint16_t testZipNoFlags = 0;
+  inline constexpr std::uint16_t testZipNoTimestamp = 0;
+  inline constexpr std::uint32_t testZipNoCrc = 0;
+  inline constexpr std::uint16_t testZipNoDisk = 0;
+  inline constexpr std::uint16_t testZipNoAttributes = 0;
+  inline constexpr std::uint32_t testZipNoExternalAttributes = 0;
+
+  struct StoredZipEntryFixture
+  {
+    std::string name;
+    std::string content;
+  };
 
   inline std::string portuguesePrecomposedText()
   {
@@ -30,28 +47,123 @@ namespace uburu::tests::fixtures
            "ria";
   }
 
-  [[nodiscard]] inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
+  inline void appendLittleEndian16(std::vector<unsigned char>& bytes, std::uint16_t value)
+  {
+    bytes.push_back(static_cast<unsigned char>(value & 0xFFU));
+    bytes.push_back(static_cast<unsigned char>((value >> 8U) & 0xFFU));
+  }
+
+  inline void appendLittleEndian32(std::vector<unsigned char>& bytes, std::uint32_t value)
+  {
+    bytes.push_back(static_cast<unsigned char>(value & 0xFFU));
+    bytes.push_back(static_cast<unsigned char>((value >> 8U) & 0xFFU));
+    bytes.push_back(static_cast<unsigned char>((value >> 16U) & 0xFFU));
+    bytes.push_back(static_cast<unsigned char>((value >> 24U) & 0xFFU));
+  }
+
+  inline void appendZipText(std::vector<unsigned char>& bytes, std::string_view text)
+  {
+    for (const auto character : text)
+      bytes.push_back(static_cast<unsigned char>(character));
+  }
+
+  [[nodiscard]]
+  inline std::vector<unsigned char> storedZipBytes(std::vector<StoredZipEntryFixture> entries)
+  {
+    std::vector<unsigned char> bytes;
+    std::vector<std::uint32_t> localOffsets;
+
+    for (const auto& entry : entries) {
+      localOffsets.push_back(static_cast<std::uint32_t>(bytes.size()));
+      appendLittleEndian32(bytes, testZipLocalFileHeaderSignature);
+      appendLittleEndian16(bytes, testZipVersionNeeded);
+      appendLittleEndian16(bytes, testZipNoFlags);
+      appendLittleEndian16(bytes, testZipStoreCompressionMethod);
+      appendLittleEndian16(bytes, testZipNoTimestamp);
+      appendLittleEndian16(bytes, testZipNoTimestamp);
+      appendLittleEndian32(bytes, testZipNoCrc);
+      appendLittleEndian32(bytes, static_cast<std::uint32_t>(entry.content.size()));
+      appendLittleEndian32(bytes, static_cast<std::uint32_t>(entry.content.size()));
+      appendLittleEndian16(bytes, static_cast<std::uint16_t>(entry.name.size()));
+      appendLittleEndian16(bytes, 0);
+      appendZipText(bytes, entry.name);
+      appendZipText(bytes, entry.content);
+    }
+
+    const auto centralDirectoryOffset = static_cast<std::uint32_t>(bytes.size());
+
+    for (std::size_t index = 0; index < entries.size(); ++index) {
+      const auto& entry = entries[index];
+      appendLittleEndian32(bytes, testZipCentralDirectoryFileHeaderSignature);
+      appendLittleEndian16(bytes, testZipVersionNeeded);
+      appendLittleEndian16(bytes, testZipVersionNeeded);
+      appendLittleEndian16(bytes, testZipNoFlags);
+      appendLittleEndian16(bytes, testZipStoreCompressionMethod);
+      appendLittleEndian16(bytes, testZipNoTimestamp);
+      appendLittleEndian16(bytes, testZipNoTimestamp);
+      appendLittleEndian32(bytes, testZipNoCrc);
+      appendLittleEndian32(bytes, static_cast<std::uint32_t>(entry.content.size()));
+      appendLittleEndian32(bytes, static_cast<std::uint32_t>(entry.content.size()));
+      appendLittleEndian16(bytes, static_cast<std::uint16_t>(entry.name.size()));
+      appendLittleEndian16(bytes, 0);
+      appendLittleEndian16(bytes, 0);
+      appendLittleEndian16(bytes, testZipNoDisk);
+      appendLittleEndian16(bytes, testZipNoAttributes);
+      appendLittleEndian32(bytes, testZipNoExternalAttributes);
+      appendLittleEndian32(bytes, localOffsets[index]);
+      appendZipText(bytes, entry.name);
+    }
+
+    const auto centralDirectorySize = static_cast<std::uint32_t>(bytes.size() - centralDirectoryOffset);
+    appendLittleEndian32(bytes, testZipEndOfCentralDirectorySignature);
+    appendLittleEndian16(bytes, testZipNoDisk);
+    appendLittleEndian16(bytes, testZipNoDisk);
+    appendLittleEndian16(bytes, static_cast<std::uint16_t>(entries.size()));
+    appendLittleEndian16(bytes, static_cast<std::uint16_t>(entries.size()));
+    appendLittleEndian32(bytes, centralDirectorySize);
+    appendLittleEndian32(bytes, centralDirectoryOffset);
+    appendLittleEndian16(bytes, 0);
+
+    return bytes;
+  }
+
+  [[nodiscard]]
+  inline std::vector<unsigned char> minimalDocxBytes(std::string_view documentXml)
+  {
+    return storedZipBytes({StoredZipEntryFixture{.name = "[Content_Types].xml",
+                                                 .content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                                                            "<Types xmlns=\"http://schemas.openxmlformats.org/"
+                                                            "package/2006/content-types\"/>"},
+                           StoredZipEntryFixture{.name = "word/document.xml", .content = std::string{documentXml}}});
+  }
+
+  [[nodiscard]]
+  inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
   {
     return {0xEFU, 0xBBU, 0xBFU, 'o', 'n', 'e', '\n', 't', 'w', 'o', '\r',
             '\n',  't',   'h',   'r', 'e', 'e', '\r', 'f', 'o', 'u', 'r'};
   }
 
-  [[nodiscard]] inline std::vector<unsigned char> utf16LittleEndianPortugueseBytes()
+  [[nodiscard]]
+  inline std::vector<unsigned char> utf16LittleEndianPortugueseBytes()
   {
     return {0xFFU, 0xFEU, 'a', 0x00U, 0xE7U, 0x00U, 0xE3U, 0x00U, 'o', 0x00U};
   }
 
-  [[nodiscard]] inline std::vector<unsigned char> utf16BigEndianPortugueseBytes()
+  [[nodiscard]]
+  inline std::vector<unsigned char> utf16BigEndianPortugueseBytes()
   {
     return {0xFEU, 0xFFU, 0x00U, 'a', 0x00U, 0xE7U, 0x00U, 0xE3U, 0x00U, 'o'};
   }
 
-  [[nodiscard]] inline std::vector<unsigned char> latin1PortugueseBytes()
+  [[nodiscard]]
+  inline std::vector<unsigned char> latin1PortugueseBytes()
   {
     return {'a', 0xE7U, 0xE3U, 'o'};
   }
 
-  [[nodiscard]] inline std::vector<unsigned char> binaryTextLikeBytes()
+  [[nodiscard]]
+  inline std::vector<unsigned char> binaryTextLikeBytes()
   {
     return {'t', 'e', 'x', 't', 0x00U, 'm', 'o', 'r', 'e'};
   }

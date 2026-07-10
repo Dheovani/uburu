@@ -1,6 +1,7 @@
 #include "search-controller.hpp"
 
 #include "app/services/indexing-service.hpp"
+#include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
@@ -223,9 +224,13 @@ namespace uburu::app
     [[nodiscard]]
     const document::DocumentExtractor* structuredPreviewExtractor(const std::filesystem::path& path)
     {
+      static const document::DocxDocumentExtractor docxExtractor;
       static const document::HtmlDocumentExtractor htmlExtractor;
       static const document::RtfDocumentExtractor rtfExtractor;
       static const document::SubtitleDocumentExtractor subtitleExtractor;
+
+      if (docxExtractor.supports(path))
+        return &docxExtractor;
 
       if (htmlExtractor.supports(path))
         return &htmlExtractor;

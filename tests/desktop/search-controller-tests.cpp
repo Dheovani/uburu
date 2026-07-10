@@ -1,5 +1,6 @@
 #include "search-controller.hpp"
 
+#include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
 #include <QCoreApplication>
@@ -79,7 +80,8 @@ namespace
   class BlockingSearchService final : public uburu::app::SearchService
   {
   public:
-    [[nodiscard]] uburu::search::SearchSummary
+    [[nodiscard]]
+    uburu::search::SearchSummary
     search(const uburu::SearchQuery&, uburu::search::ResultSink, std::stop_token stopToken = {}) const override
     {
       started = true;
@@ -92,10 +94,12 @@ namespace
       return uburu::search::SearchSummary{.cancelled = true};
     }
 
-    [[nodiscard]] uburu::search::SearchSummary searchWithEvents(const uburu::SearchQuery&,
-                                                                const uburu::app::SearchEventSink&,
-                                                                uburu::app::SearchExecutionOptions = {},
-                                                                std::stop_token = {}) const override
+    [[nodiscard]]
+    uburu::search::SearchSummary searchWithEvents(
+      const uburu::SearchQuery&,
+      const uburu::app::SearchEventSink&,
+      uburu::app::SearchExecutionOptions = {},
+      std::stop_token = {}) const override
     {
       return {};
     }
@@ -351,6 +355,29 @@ TEST_CASE("desktop preview uses visible text for rtf files")
   CHECK(controller.previewText().contains(QStringLiteral("Visible rtf needle")));
   CHECK_FALSE(controller.previewText().contains(QStringLiteral("hiddenNeedle")));
   CHECK_FALSE(controller.previewText().contains(QStringLiteral("\\rtf1")));
+}
+
+TEST_CASE("desktop preview uses visible text for docx files")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-docx-preview-settings-test");
+  uburu::tests::TemporaryDirectory previewDirectory("uburu-controller-docx-preview-test");
+  const auto filePath = previewDirectory.path() / "preview.docx";
+
+  isolateSettings(settingsDirectory.path(), QStringLiteral("docx-preview-test"));
+  uburu::tests::writeBytes(
+    filePath,
+    uburu::tests::fixtures::minimalDocxBytes(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+      "<w:body><w:p><w:r><w:t>Visible docx needle</w:t></w:r></w:p></w:body></w:document>"));
+
+  uburu::app::SearchController controller;
+  controller.loadPreview(qtPath(filePath), QStringLiteral("1:14"), {}, {});
+
+  REQUIRE(waitUntil([&] { return !controller.previewLoading(); }));
+
+  CHECK(controller.previewText().contains(QStringLiteral("Visible docx needle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("document.xml")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("<w:t>")));
 }
 
 TEST_CASE("search result model exposes result roles")

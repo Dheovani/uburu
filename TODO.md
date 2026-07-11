@@ -346,6 +346,8 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".
 - [x] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.
 - [ ] Add fuzzing and hostile-file tests for document extractors, especially archive containers, malformed PDFs, malformed RTF, oversized shared strings, and nested/recursive package structures.
+  - [x] Add PDF hostile-file regression tests for FlateDecode streams, including valid compressed page text and invalid compressed payloads.
+  - [x] Add a PDF extractor fuzz-smoke target with bounded input, extracted byte, segment byte, and segment-count limits.
 - [x] Document supported formats, limitations, dependencies, and security boundaries in `docs/search-semantics.md`, `docs/indexing.md`, and `docs/privacy.md`.
 
 ## Milestone 13 — CLI and extensibility (P2)

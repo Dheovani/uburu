@@ -11,8 +11,11 @@
 #include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
+#include <zlib.h>
+
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <memory>
 #include <stop_token>
 #include <string>
@@ -26,6 +29,7 @@ namespace
   constexpr std::size_t zipCentralCompressionMethodOffset = 10;
   constexpr std::size_t zipLocalFixedHeaderBytes = 30;
   constexpr std::size_t zipCentralFixedHeaderBytes = 46;
+  constexpr int zlibCompressionLevel = Z_BEST_SPEED;
 
   void writeLittleEndian16At(std::vector<unsigned char>& bytes, std::size_t offset, std::uint16_t value)
   {
@@ -53,6 +57,50 @@ namespace
     }
 
     return bytes;
+  }
+
+  [[nodiscard]]
+  std::string zlibCompressedText(std::string_view text)
+  {
+    auto destinationBytes = compressBound(static_cast<uLong>(text.size()));
+    std::string compressed(destinationBytes, '\0');
+
+    const auto status = compress2(
+      reinterpret_cast<Bytef*>(compressed.data()),
+      &destinationBytes,
+      reinterpret_cast<const Bytef*>(text.data()),
+      static_cast<uLong>(text.size()),
+      zlibCompressionLevel);
+
+    REQUIRE(status == Z_OK);
+
+    compressed.resize(static_cast<std::size_t>(destinationBytes));
+
+    return compressed;
+  }
+
+  [[nodiscard]]
+  std::string minimalPdfWithStream(std::string_view dictionary, std::string_view contentStream)
+  {
+    return "%PDF-1.4\n"
+           "1 0 obj\n"
+           "<< /Type /Catalog /Pages 2 0 R >>\n"
+           "endobj\n"
+           "2 0 obj\n"
+           "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+           "endobj\n"
+           "3 0 obj\n"
+           "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+           "endobj\n"
+           "4 0 obj\n" +
+           std::string{dictionary} +
+           "\nstream\n" +
+           std::string{contentStream} +
+           "\nendstream\n"
+           "endobj\n"
+           "trailer\n"
+           "<< /Root 1 0 R >>\n"
+           "%%EOF\n";
   }
 
 } // namespace
@@ -1035,6 +1083,49 @@ TEST_CASE("pdf document extractor decodes hex strings in page streams")
   REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
   REQUIRE(segments.size() == 1);
   CHECK(segments.front().text == "Hex PDF");
+}
+
+TEST_CASE("pdf document extractor inflates FlateDecode page streams")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-flate-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+  const auto compressed = zlibCompressedText("BT (Compressed PDF text) Tj ET");
+
+  uburu::tests::writeFile(
+    path,
+    minimalPdfWithStream(
+      "<< /Length " + std::to_string(compressed.size()) + " /Filter /FlateDecode >>",
+      compressed));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Compressed PDF text");
+}
+
+TEST_CASE("pdf document extractor reports invalid FlateDecode streams as parser failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-invalid-flate-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeFile(
+    path,
+    minimalPdfWithStream("<< /Length 12 /Filter /FlateDecode >>", "not deflated"));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
 }
 
 TEST_CASE("pdf document extractor applies extracted byte limits before publishing")

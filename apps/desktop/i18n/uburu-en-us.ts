@@ -200,12 +200,12 @@
     <message><source>Tipos</source><translation>Types</translation></message>
     <message><source>Tipos de documento</source><translation>Document types</translation></message>
     <message><source>Filtre por extensões separadas por vírgula ou espaço.</source><translation>Filter by extensions separated by comma or space.</translation></message>
-    <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.</source><translation>Filter by extensions separated by comma or space, such as txt, cpp, or md. Formats like PDF and DOCX still depend on future extractors for content search.</translation></message>
+    <message><source>Filtre por extensões separadas por vírgula ou espaço, como txt, docx, odt ou pdf. Formatos sem extrator atual ainda são pesquisados apenas pelo nome.</source><translation>Filter by extensions separated by comma or space, such as txt, docx, odt, or pdf. Formats without a current extractor are still searched by file name only.</translation></message>
     <message><source>Ex.: pdf, docx, txt</source><translation>Ex.: pdf, docx, txt</translation></message>
     <message><source>Tipos recentes</source><translation>Recent types</translation></message>
     <message><source>Filtro de tipos</source><translation>Type filter</translation></message>
     <message><source>Filtro de tipos recente: %1</source><translation>Recent type filter: %1</translation></message>
-    <message><source>PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.</source><translation>PDF, DOCX, and similar formats are still filtered by name; content search depends on future extractors.</translation></message>
+    <message><source>Alguns tipos filtrados não têm extrator de conteúdo; nesses casos, a busca ainda usa apenas o nome do arquivo.</source><translation>Some filtered types do not have a content extractor; in those cases, search still uses only the file name.</translation></message>
     <message><source>Remover busca salva</source><translation>Remove saved search</translation></message>
     <message><source>Salvar busca atual</source><translation>Save current search</translation></message>
     <message><source>Buscas salvas</source><translation>Saved searches</translation></message>

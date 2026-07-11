@@ -177,8 +177,8 @@ Errors that prevent the whole search, such as query validation or unavailable ba
 
 The footer exposes activity without blocking the main panes. Search shows an indeterminate progress rail because direct traversal cannot always know the final file count while discovery is still running. Indexing shows a determinate rail whenever `IndexUpdateProgress::total` is known, and falls back to an indeterminate rail while preparing, scanning, or waiting for a total. Cancellation uses the warning color so the user can distinguish active work from shutdown.
 
-## Formats pending content extraction
+## Document format content extraction
 
-Current direct search treats plain-text files as searchable content and can find binary or packaged files by name when the target combines content and file name. Formats such as PDF, DOCX, ODT, RTF, and EPUB must not be presented as searchable content until dedicated extractors exist.
+Current direct search treats plain-text files and supported document formats as searchable content. The current extractor layer covers DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, HTML, subtitles, and initial bounded PDF text extraction. Binary, legacy, encrypted, malformed, or unsupported packaged formats can still be found by file name when the target combines content and file name.
 
-The UI should make this limitation clear when the user filters by those types: the filter selects files by name/extension, but searching inside content depends on a future extraction layer. That layer should live below the UI, in `core/text` or dedicated adapters, with memory limits, cooperative cancellation, and hostile-file handling.
+The UI should make remaining limitations clear only when the user filters by types without a current extractor, such as legacy Office, EPUB, or email containers. The filter selects files by extension, but searching inside unsupported content depends on future extractors below the UI, with memory limits, cooperative cancellation, and hostile-file handling.

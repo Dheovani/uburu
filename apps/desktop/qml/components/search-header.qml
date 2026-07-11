@@ -68,7 +68,7 @@ Panel {
     color: Theme.surface
 
     function hasUnsupportedDocumentContentTypes(text) {
-        const unsupportedDocumentTypes = ["pdf", "doc", "docx", "odt", "rtf", "epub"]
+        const unsupportedDocumentTypes = ["doc", "xls", "ppt", "epub", "eml", "msg"]
         const documentTypes = text.toLowerCase().split(/[,;\s]+/)
 
         for (const documentType of documentTypes) {
@@ -382,7 +382,7 @@ Panel {
                 }
 
                 InfoIcon {
-                    text: qsTr("Filtre por extensões separadas por vírgula ou espaço, como txt, cpp ou md. Formatos como PDF e DOCX ainda dependem de extratores futuros para busca no conteúdo.")
+                    text: qsTr("Filtre por extensões separadas por vírgula ou espaço, como txt, docx, odt ou pdf. Formatos sem extrator atual ainda são pesquisados apenas pelo nome.")
                 }
 
                 TextField {
@@ -493,7 +493,7 @@ Panel {
 
                 MutedLabel {
                     Layout.fillWidth: true
-                    text: qsTr("PDF, DOCX e formatos semelhantes ainda são filtrados pelo nome; busca no conteúdo depende de extratores futuros.")
+                    text: qsTr("Alguns tipos filtrados não têm extrator de conteúdo; nesses casos, a busca ainda usa apenas o nome do arquivo.")
                     color: Theme.warning
                     wrapMode: Text.WordWrap
                 }

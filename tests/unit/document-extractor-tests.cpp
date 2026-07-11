@@ -1128,6 +1128,101 @@ TEST_CASE("pdf document extractor reports invalid FlateDecode streams as parser 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
 }
 
+TEST_CASE("pdf document extractor decodes UTF-16BE literal strings")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-utf16-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT <FEFF005000440046> Tj ET"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "PDF");
+}
+
+TEST_CASE("pdf document extractor decodes single byte accented text as UTF-8")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-single-byte-accent-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT <434F4D554E494341C7C34F> Tj ET"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "COMUNICAÇÃO");
+}
+
+TEST_CASE("pdf document extractor applies simple ToUnicode font maps")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-tounicode-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(
+    path,
+    "%PDF-1.4\n"
+    "1 0 obj\n"
+    "<< /Type /Catalog /Pages 2 0 R >>\n"
+    "endobj\n"
+    "2 0 obj\n"
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+    "endobj\n"
+    "3 0 obj\n"
+    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+    "endobj\n"
+    "4 0 obj\n"
+    "<< /Length 23 >>\n"
+    "stream\n"
+    "BT /F1 12 Tf <0102> Tj ET\n"
+    "endstream\n"
+    "endobj\n"
+    "5 0 obj\n"
+    "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\n"
+    "endobj\n"
+    "6 0 obj\n"
+    "<< /Length 101 >>\n"
+    "stream\n"
+    "beginbfchar\n"
+    "<01> <0055>\n"
+    "<02> <0062>\n"
+    "endbfchar\n"
+    "endstream\n"
+    "endobj\n"
+    "trailer\n"
+    "<< /Root 1 0 R >>\n"
+    "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Ub");
+}
+
 TEST_CASE("pdf document extractor applies extracted byte limits before publishing")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-pdf-limit-test");

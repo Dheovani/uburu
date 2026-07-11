@@ -30,17 +30,71 @@ namespace uburu::document
     constexpr std::string_view pageMarker = "/Page";
     constexpr std::string_view pagesMarker = "/Pages";
     constexpr std::string_view contentsMarker = "/Contents";
+    constexpr std::string_view fontMarker = "/Font";
+    constexpr std::string_view toUnicodeMarker = "/ToUnicode";
     constexpr std::string_view streamMarker = "stream";
     constexpr std::string_view endStreamMarker = "endstream";
     constexpr std::string_view flateDecodeMarker = "/FlateDecode";
+    constexpr std::string_view beginBfCharMarker = "beginbfchar";
+    constexpr std::string_view endBfCharMarker = "endbfchar";
+    constexpr std::string_view beginBfRangeMarker = "beginbfrange";
+    constexpr std::string_view endBfRangeMarker = "endbfrange";
     constexpr std::uintmax_t defaultMaximumPdfBytes = 128ULL * 1024ULL * 1024ULL;
     constexpr std::uintmax_t pdfSafetyMultiplier = 16;
     constexpr std::size_t maximumReferenceScanBytes = 2048;
+    constexpr std::size_t maximumFontResourceScanBytes = 4096;
     constexpr std::size_t maximumPdfHeaderProbeBytes = 1024;
     constexpr std::size_t maximumOctalDigits = 3;
+    constexpr std::size_t utf16CodeUnitBytes = 2;
     constexpr std::size_t pdfReadBufferBytes = 8192;
     constexpr std::size_t zlibOutputBufferBytes = 8192;
+    constexpr unsigned char utf16BigEndianBomFirst = 0xFEU;
+    constexpr unsigned char utf16BigEndianBomSecond = 0xFFU;
+    constexpr char32_t replacementScalar = 0xFFFDU;
+    constexpr char32_t highSurrogateFirst = 0xD800U;
+    constexpr char32_t highSurrogateLast = 0xDBFFU;
+    constexpr char32_t lowSurrogateFirst = 0xDC00U;
+    constexpr char32_t lowSurrogateLast = 0xDFFFU;
+    constexpr char32_t surrogateBase = 0x10000U;
+    constexpr char32_t surrogatePayloadBits = 10U;
+    constexpr char32_t surrogatePayloadMask = 0x3FFU;
+    constexpr char32_t undefinedSingleByteScalar = replacementScalar;
     constexpr int zlibWindowBits = 15;
+
+    constexpr std::array<char32_t, 32> windows1252ControlScalars{
+      0x20ACU,                    // 0x80
+      undefinedSingleByteScalar,  // 0x81
+      0x201AU,                    // 0x82
+      0x0192U,                    // 0x83
+      0x201EU,                    // 0x84
+      0x2026U,                    // 0x85
+      0x2020U,                    // 0x86
+      0x2021U,                    // 0x87
+      0x02C6U,                    // 0x88
+      0x2030U,                    // 0x89
+      0x0160U,                    // 0x8A
+      0x2039U,                    // 0x8B
+      0x0152U,                    // 0x8C
+      undefinedSingleByteScalar,  // 0x8D
+      0x017DU,                    // 0x8E
+      undefinedSingleByteScalar,  // 0x8F
+      undefinedSingleByteScalar,  // 0x90
+      0x2018U,                    // 0x91
+      0x2019U,                    // 0x92
+      0x201CU,                    // 0x93
+      0x201DU,                    // 0x94
+      0x2022U,                    // 0x95
+      0x2013U,                    // 0x96
+      0x2014U,                    // 0x97
+      0x02DCU,                    // 0x98
+      0x2122U,                    // 0x99
+      0x0161U,                    // 0x9A
+      0x203AU,                    // 0x9B
+      0x0153U,                    // 0x9C
+      undefinedSingleByteScalar,  // 0x9D
+      0x017EU,                    // 0x9E
+      0x0178U,                    // 0x9F
+    };
 
     struct PdfObject
     {
@@ -53,6 +107,14 @@ namespace uburu::document
       std::string_view dictionary;
       std::string_view bytes;
     };
+
+    struct ToUnicodeMap
+    {
+      std::map<std::string, std::string> entries;
+      std::size_t maximumCodeBytes{0};
+    };
+
+    using FontUnicodeMaps = std::map<std::string, ToUnicodeMap>;
 
     [[nodiscard]]
     bool wouldExceedByteLimit(const DocumentExtractionOptions& options, std::uintmax_t bytes)
@@ -104,10 +166,125 @@ namespace uburu::document
              character == '%';
     }
 
+    [[nodiscard]]
+    bool hasUtf16BigEndianBom(std::string_view bytes)
+    {
+      return bytes.size() >= utf16CodeUnitBytes &&
+             static_cast<unsigned char>(bytes[0]) == utf16BigEndianBomFirst &&
+             static_cast<unsigned char>(bytes[1]) == utf16BigEndianBomSecond;
+    }
+
+    void appendUtf8(std::string& output, char32_t scalar)
+    {
+      if (scalar <= 0x7FU) {
+        output.push_back(static_cast<char>(scalar));
+
+        return;
+      }
+
+      if (scalar <= 0x7FFU) {
+        output.push_back(static_cast<char>(0xC0U | (scalar >> 6U)));
+        output.push_back(static_cast<char>(0x80U | (scalar & 0x3FU)));
+
+        return;
+      }
+
+      if (scalar <= 0xFFFFU) {
+        output.push_back(static_cast<char>(0xE0U | (scalar >> 12U)));
+        output.push_back(static_cast<char>(0x80U | ((scalar >> 6U) & 0x3FU)));
+        output.push_back(static_cast<char>(0x80U | (scalar & 0x3FU)));
+
+        return;
+      }
+
+      output.push_back(static_cast<char>(0xF0U | (scalar >> 18U)));
+      output.push_back(static_cast<char>(0x80U | ((scalar >> 12U) & 0x3FU)));
+      output.push_back(static_cast<char>(0x80U | ((scalar >> 6U) & 0x3FU)));
+      output.push_back(static_cast<char>(0x80U | (scalar & 0x3FU)));
+    }
+
+    [[nodiscard]]
+    char32_t utf16Scalar(std::string_view bytes, std::size_t& offset)
+    {
+      if (offset + 1 >= bytes.size()) {
+        offset = bytes.size();
+
+        return replacementScalar;
+      }
+
+      auto scalar = (static_cast<char32_t>(static_cast<unsigned char>(bytes[offset])) << 8U) |
+                    static_cast<unsigned char>(bytes[offset + 1]);
+      offset += utf16CodeUnitBytes;
+
+      if (scalar < highSurrogateFirst || scalar > highSurrogateLast)
+        return scalar;
+
+      if (offset + 1 >= bytes.size()) {
+        offset = bytes.size();
+
+        return replacementScalar;
+      }
+
+      const auto low = (static_cast<char32_t>(static_cast<unsigned char>(bytes[offset])) << 8U) |
+                       static_cast<unsigned char>(bytes[offset + 1]);
+      offset += utf16CodeUnitBytes;
+
+      if (low < lowSurrogateFirst || low > lowSurrogateLast)
+        return replacementScalar;
+
+      return surrogateBase + (((scalar - highSurrogateFirst) & surrogatePayloadMask) << surrogatePayloadBits) +
+             ((low - lowSurrogateFirst) & surrogatePayloadMask);
+    }
+
+    [[nodiscard]]
+    std::string utf16BigEndianToUtf8(std::string_view bytes)
+    {
+      std::string output;
+      std::size_t offset = hasUtf16BigEndianBom(bytes) ? utf16CodeUnitBytes : 0;
+
+      while (offset < bytes.size()) {
+        appendUtf8(output, utf16Scalar(bytes, offset));
+      }
+
+      return output;
+    }
+
+    [[nodiscard]]
+    char32_t windows1252Scalar(unsigned char byte)
+    {
+      if (byte < 0x80U || byte >= 0xA0U)
+        return byte;
+
+      return windows1252ControlScalars[byte - 0x80U];
+    }
+
+    [[nodiscard]]
+    std::string singleBytePdfTextToUtf8(std::string_view bytes)
+    {
+      std::string output;
+
+      for (const auto byte : bytes) {
+        appendUtf8(output, windows1252Scalar(static_cast<unsigned char>(byte)));
+      }
+
+      return output;
+    }
+
     void skipWhitespace(std::string_view text, std::size_t& offset)
     {
       while (offset < text.size() && isAsciiWhitespace(text[offset])) {
         ++offset;
+      }
+    }
+
+    void trimAsciiWhitespace(std::string_view& text)
+    {
+      while (!text.empty() && isAsciiWhitespace(text.front())) {
+        text.remove_prefix(1);
+      }
+
+      while (!text.empty() && isAsciiWhitespace(text.back())) {
+        text.remove_suffix(1);
       }
     }
 
@@ -151,6 +328,27 @@ namespace uburu::document
       offset = static_cast<std::size_t>(result.ptr - text.data());
 
       return value;
+    }
+
+    [[nodiscard]]
+    std::optional<std::string> parseName(std::string_view text, std::size_t& offset)
+    {
+      skipWhitespace(text, offset);
+
+      if (offset >= text.size() || text[offset] != '/')
+        return std::nullopt;
+
+      ++offset;
+      const auto begin = offset;
+
+      while (offset < text.size() && !isAsciiWhitespace(text[offset]) && !isPdfDelimiter(text[offset])) {
+        ++offset;
+      }
+
+      if (offset == begin)
+        return std::nullopt;
+
+      return std::string{text.substr(begin, offset - begin)};
     }
 
     [[nodiscard]]
@@ -335,6 +533,86 @@ namespace uburu::document
 
         if (scan < pageBody.size() && pageBody[scan] == 'R') {
           references.push_back(*number);
+          ++scan;
+
+          continue;
+        }
+
+        scan = numberOffset + 1;
+      }
+
+      return references;
+    }
+
+    [[nodiscard]]
+    std::optional<int> objectReferenceAfter(std::string_view body, std::string_view marker)
+    {
+      const auto markerOffset = body.find(marker);
+
+      if (markerOffset == std::string_view::npos)
+        return std::nullopt;
+
+      auto scan = markerOffset + marker.size();
+      const auto number = parseInteger(body, scan);
+
+      if (!number)
+        return std::nullopt;
+
+      const auto generation = parseInteger(body, scan);
+
+      if (!generation)
+        return std::nullopt;
+
+      skipWhitespace(body, scan);
+
+      if (scan >= body.size() || body[scan] != 'R')
+        return std::nullopt;
+
+      return *number;
+    }
+
+    [[nodiscard]]
+    std::map<std::string, int> fontReferences(std::string_view pageBody)
+    {
+      std::map<std::string, int> references;
+      const auto fontOffset = pageBody.find(fontMarker);
+
+      if (fontOffset == std::string_view::npos)
+        return references;
+
+      auto scan = fontOffset + fontMarker.size();
+      const auto scanEnd = std::min(pageBody.size(), scan + maximumFontResourceScanBytes);
+
+      while (scan < scanEnd) {
+        const auto name = parseName(pageBody, scan);
+
+        if (!name) {
+          ++scan;
+
+          continue;
+        }
+
+        const auto numberOffset = scan;
+        const auto number = parseInteger(pageBody, scan);
+
+        if (!number) {
+          scan = numberOffset + 1;
+
+          continue;
+        }
+
+        const auto generation = parseInteger(pageBody, scan);
+
+        if (!generation) {
+          scan = numberOffset + 1;
+
+          continue;
+        }
+
+        skipWhitespace(pageBody, scan);
+
+        if (scan < pageBody.size() && pageBody[scan] == 'R') {
+          references.emplace(*name, *number);
           ++scan;
 
           continue;
@@ -576,6 +854,246 @@ namespace uburu::document
       return value;
     }
 
+    [[nodiscard]]
+    std::vector<std::string> hexStringsFromLine(std::string_view line)
+    {
+      std::vector<std::string> values;
+      std::size_t offset = 0;
+
+      while (offset < line.size()) {
+        if (line[offset] == '<' && offset + 1 < line.size() && line[offset + 1] != '<') {
+          if (auto value = hexString(line, offset)) {
+            values.push_back(std::move(*value));
+
+            continue;
+          }
+        }
+
+        ++offset;
+      }
+
+      return values;
+    }
+
+    [[nodiscard]]
+    std::uint32_t bigEndianInteger(std::string_view bytes)
+    {
+      std::uint32_t value = 0;
+
+      for (const auto byte : bytes) {
+        value = (value << 8U) | static_cast<unsigned char>(byte);
+      }
+
+      return value;
+    }
+
+    [[nodiscard]]
+    std::string bigEndianBytes(std::uint32_t value, std::size_t bytes)
+    {
+      std::string output(bytes, '\0');
+
+      for (std::size_t index = 0; index < bytes; ++index) {
+        const auto shift = (bytes - index - 1U) * 8U;
+        output[index] = static_cast<char>((value >> shift) & 0xFFU);
+      }
+
+      return output;
+    }
+
+    [[nodiscard]]
+    std::optional<char32_t> firstUtf16Scalar(std::string_view bytes)
+    {
+      if (bytes.empty() || bytes.size() % utf16CodeUnitBytes != 0)
+        return std::nullopt;
+
+      std::size_t offset = hasUtf16BigEndianBom(bytes) ? utf16CodeUnitBytes : 0;
+
+      if (offset >= bytes.size())
+        return std::nullopt;
+
+      return utf16Scalar(bytes, offset);
+    }
+
+    void addToUnicodeEntry(ToUnicodeMap& map, std::string code, std::string_view utf16Text)
+    {
+      if (code.empty())
+        return;
+
+      map.maximumCodeBytes = std::max(map.maximumCodeBytes, code.size());
+      map.entries[std::move(code)] = utf16BigEndianToUtf8(utf16Text);
+    }
+
+    void parseBfCharLine(ToUnicodeMap& map, std::string_view line)
+    {
+      auto values = hexStringsFromLine(line);
+
+      if (values.size() < 2)
+        return;
+
+      addToUnicodeEntry(map, std::move(values[0]), values[1]);
+    }
+
+    void parseBfRangeLine(ToUnicodeMap& map, std::string_view line)
+    {
+      auto values = hexStringsFromLine(line);
+
+      if (values.size() < 3)
+        return;
+
+      const auto sourceStart = bigEndianInteger(values[0]);
+      const auto sourceEnd = bigEndianInteger(values[1]);
+
+      if (sourceEnd < sourceStart)
+        return;
+
+      if (line.find('[') != std::string_view::npos) {
+        for (std::uint32_t source = sourceStart; source <= sourceEnd && source - sourceStart + 2U < values.size();
+             ++source) {
+          addToUnicodeEntry(
+            map,
+            bigEndianBytes(source, values[0].size()),
+            values[static_cast<std::size_t>(source - sourceStart + 2U)]);
+        }
+
+        return;
+      }
+
+      const auto destinationStart = firstUtf16Scalar(values[2]);
+
+      if (!destinationStart)
+        return;
+
+      for (std::uint32_t source = sourceStart; source <= sourceEnd; ++source) {
+        std::string destination;
+        appendUtf8(destination, *destinationStart + (source - sourceStart));
+        auto code = bigEndianBytes(source, values[0].size());
+        map.maximumCodeBytes = std::max(map.maximumCodeBytes, code.size());
+        map.entries[std::move(code)] = std::move(destination);
+      }
+    }
+
+    [[nodiscard]]
+    ToUnicodeMap parseToUnicodeMap(std::string_view cmapText)
+    {
+      ToUnicodeMap map;
+      bool insideBfChar = false;
+      bool insideBfRange = false;
+      std::size_t offset = 0;
+
+      while (offset < cmapText.size()) {
+        const auto lineEnd = cmapText.find_first_of("\r\n", offset);
+        auto line = lineEnd == std::string_view::npos
+          ? cmapText.substr(offset)
+          : cmapText.substr(offset, lineEnd - offset);
+        trimAsciiWhitespace(line);
+
+        if (line.find(beginBfCharMarker) != std::string_view::npos) {
+          insideBfChar = true;
+          insideBfRange = false;
+        } else if (line.find(endBfCharMarker) != std::string_view::npos) {
+          insideBfChar = false;
+        } else if (line.find(beginBfRangeMarker) != std::string_view::npos) {
+          insideBfRange = true;
+          insideBfChar = false;
+        } else if (line.find(endBfRangeMarker) != std::string_view::npos) {
+          insideBfRange = false;
+        } else if (insideBfChar) {
+          parseBfCharLine(map, line);
+        } else if (insideBfRange) {
+          parseBfRangeLine(map, line);
+        }
+
+        if (lineEnd == std::string_view::npos)
+          break;
+
+        offset = lineEnd + 1;
+
+        if (offset < cmapText.size() && cmapText[lineEnd] == '\r' && cmapText[offset] == '\n')
+          ++offset;
+      }
+
+      return map;
+    }
+
+    [[nodiscard]]
+    FontUnicodeMaps fontUnicodeMapsForPage(const PdfObject& page, const std::map<int, PdfObject>& objects)
+    {
+      FontUnicodeMaps maps;
+
+      for (const auto& [fontName, fontObjectNumber] : fontReferences(page.body)) {
+        const auto fontObject = objects.find(fontObjectNumber);
+
+        if (fontObject == objects.end())
+          continue;
+
+        const auto toUnicodeObjectNumber = objectReferenceAfter(fontObject->second.body, toUnicodeMarker);
+
+        if (!toUnicodeObjectNumber)
+          continue;
+
+        const auto toUnicodeObject = objects.find(*toUnicodeObjectNumber);
+
+        if (toUnicodeObject == objects.end())
+          continue;
+
+        const auto streams = streamsFromObject(toUnicodeObject->second.body);
+
+        if (streams.empty())
+          continue;
+
+        const auto decoded = decodedStream(streams.front());
+
+        if (!decoded)
+          continue;
+
+        auto map = parseToUnicodeMap(*decoded);
+
+        if (!map.entries.empty())
+          maps.emplace(fontName, std::move(map));
+      }
+
+      return maps;
+    }
+
+    [[nodiscard]]
+    std::string decodePdfTextBytes(std::string bytes, const ToUnicodeMap* map)
+    {
+      if (map != nullptr && !map->entries.empty()) {
+        std::string output;
+        std::size_t offset = 0;
+
+        while (offset < bytes.size()) {
+          bool matched = false;
+          const auto maximumCodeBytes = std::min(map->maximumCodeBytes, bytes.size() - offset);
+
+          for (std::size_t size = maximumCodeBytes; size > 0; --size) {
+            const auto mapped = map->entries.find(bytes.substr(offset, size));
+
+            if (mapped == map->entries.end())
+              continue;
+
+            output += mapped->second;
+            offset += size;
+            matched = true;
+
+            break;
+          }
+
+          if (!matched) {
+            output += singleBytePdfTextToUtf8(std::string_view{bytes.data() + offset, 1});
+            ++offset;
+          }
+        }
+
+        return output;
+      }
+
+      if (hasUtf16BigEndianBom(bytes))
+        return utf16BigEndianToUtf8(bytes);
+
+      return singleBytePdfTextToUtf8(bytes);
+    }
+
     void appendTextToken(std::string& pageText, std::string text)
     {
       xml::trimTrailingAsciiWhitespace(text);
@@ -590,9 +1108,11 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::string textFromContentStream(std::string_view streamText)
+    std::string textFromContentStream(std::string_view streamText, const FontUnicodeMaps& fontMaps)
     {
       std::string pageText;
+      std::string lastName;
+      const ToUnicodeMap* activeToUnicodeMap = nullptr;
       bool insideTextObject = false;
       std::size_t offset = 0;
 
@@ -620,9 +1140,25 @@ namespace uburu::document
           continue;
         }
 
+        if (streamText[offset] == '/') {
+          if (auto name = parseName(streamText, offset)) {
+            lastName = std::move(*name);
+
+            continue;
+          }
+        }
+
+        if (hasTokenAt(streamText, offset, "Tf")) {
+          const auto font = fontMaps.find(lastName);
+          activeToUnicodeMap = font == fontMaps.end() ? nullptr : &font->second;
+          offset += 2;
+
+          continue;
+        }
+
         if (streamText[offset] == '(') {
           if (auto value = literalString(streamText, offset)) {
-            appendTextToken(pageText, std::move(*value));
+            appendTextToken(pageText, decodePdfTextBytes(std::move(*value), activeToUnicodeMap));
 
             continue;
           }
@@ -630,7 +1166,7 @@ namespace uburu::document
 
         if (streamText[offset] == '<') {
           if (auto value = hexString(streamText, offset)) {
-            appendTextToken(pageText, std::move(*value));
+            appendTextToken(pageText, decodePdfTextBytes(std::move(*value), activeToUnicodeMap));
 
             continue;
           }
@@ -651,6 +1187,7 @@ namespace uburu::document
       DocumentExtractionSummary& summary)
     {
       std::string pageText;
+      const auto fontMaps = fontUnicodeMapsForPage(page, objects);
       auto streams = streamsFromObject(page.body);
 
       for (const auto reference : contentReferences(page.body)) {
@@ -672,7 +1209,7 @@ namespace uburu::document
           return {};
         }
 
-        appendTextToken(pageText, textFromContentStream(*decoded));
+        appendTextToken(pageText, textFromContentStream(*decoded, fontMaps));
       }
 
       xml::trimTrailingAsciiWhitespace(pageText);

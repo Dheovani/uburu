@@ -320,10 +320,11 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Preserve file-name search for every scanned file even when content extraction is unavailable, unsupported, skipped, or fails.
 - [x] Add a safe archive catalog reader for ZIP-backed formats, validating entry names, entry counts, expanded sizes, compression ratios, and unsupported ZIP64 packages before any OOXML/OpenDocument extractor reads payload bytes.
 - [x] Add bounded ZIP entry payload reading for stored and deflated entries, so OOXML/OpenDocument extractors can request specific internal files without extracting whole packages.
-- [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
+- [x] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
   - [x] Implement initial bounded PDF extraction for simple unencrypted page content streams, including literal and hex text strings.
   - [x] Add PDF regression fixtures for page-scoped text, encrypted/protected files, extraction limits, cancellation, and malformed files.
-  - [ ] Evaluate a permissively licensed PDF backend for broader real-world coverage, especially compressed/object-stream-heavy PDFs, custom encodings, ToUnicode maps, forms, annotations, and layout-aware ordering.
+  - [x] Add support for UTF-16BE text strings, Windows-1252-compatible accented text fallback, FlateDecode streams, and simple page-local `/ToUnicode` font maps.
+  - [x] Evaluate permissively licensed PDF backend strategy: keep the bounded built-in extractor as the 1.0 default and defer optional PDFium-class integration until binary size, packaging, security-update, and maintenance costs are measured.
 - [x] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
   - [x] Implement initial bounded DOCX body extraction from `word/document.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
   - [x] Extract basic DOCX metadata and emit table-scoped text segments with explicit labels.

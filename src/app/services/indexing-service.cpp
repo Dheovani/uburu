@@ -7,6 +7,28 @@
 
 namespace uburu::app
 {
+  namespace
+  {
+
+    [[nodiscard]]
+    index::IndexUpdateSummary cancelledSummary()
+    {
+      index::IndexUpdateSummary summary;
+      summary.cancelled = true;
+
+      return summary;
+    }
+
+    [[nodiscard]]
+    index::IndexUpdateSummary failedSummary()
+    {
+      index::IndexUpdateSummary summary;
+      summary.failed = 1;
+
+      return summary;
+    }
+
+  } // namespace
 
   DefaultIndexingService::DefaultIndexingService(std::shared_ptr<const filesystem::FileScanner> scanner,
                                                  std::shared_ptr<const git::GitService> gitService,
@@ -52,7 +74,7 @@ namespace uburu::app
                                                            std::stop_token stopToken)
   {
     if (currentState == IndexingServiceState::paused)
-      return index::IndexUpdateSummary{.cancelled = true};
+      return cancelledSummary();
 
     std::vector<FileEntry> files;
 
@@ -70,13 +92,13 @@ namespace uburu::app
       stopToken);
 
     if (stopToken.stop_requested())
-      return index::IndexUpdateSummary{.cancelled = true};
+      return cancelledSummary();
 
     const auto overlayResult = gitService->workingTreeOverlay(worktree);
     const auto* overlay = std::get_if<std::vector<GitOverlayEntry>>(&overlayResult);
 
     if (overlay == nullptr)
-      return index::IndexUpdateSummary{.failed = 1};
+      return failedSummary();
 
     return indexService->update(worktree, files, *overlay, onProgress, stopToken);
   }
@@ -88,7 +110,7 @@ namespace uburu::app
                                                               std::stop_token stopToken)
   {
     if (currentState == IndexingServiceState::paused)
-      return index::IndexUpdateSummary{.cancelled = true};
+      return cancelledSummary();
 
     if (batch.events.empty() && !batch.eventsMayBeIncomplete && !batch.requiresRescan)
       return {};

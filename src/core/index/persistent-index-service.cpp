@@ -369,10 +369,11 @@ namespace uburu::index
           stopToken);
       }
 
-      auto result = IndexedTextReadResult{.extractorName = extractorName,
-                                          .extractionSummary = extractionSummary,
-                                          .extractionTime = std::chrono::steady_clock::now() - extractionStart,
-                                          .indexedTextBytes = static_cast<std::uintmax_t>(indexedText.size())};
+      IndexedTextReadResult result;
+      result.extractorName = extractorName;
+      result.extractionSummary = extractionSummary;
+      result.extractionTime = std::chrono::steady_clock::now() - extractionStart;
+      result.indexedTextBytes = static_cast<std::uintmax_t>(indexedText.size());
 
       const auto availability = document::documentContentAvailability(extractionSummary.status);
 

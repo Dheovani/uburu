@@ -4,9 +4,13 @@
 #include "core/document/xml-document-utils.hpp"
 
 #include <algorithm>
+#include <array>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace uburu::document
 {
@@ -14,8 +18,25 @@ namespace uburu::document
   {
 
     constexpr std::string_view wordDocumentXmlPath = "word/document.xml";
+    constexpr std::string_view corePropertiesXmlPath = "docProps/core.xml";
+    constexpr std::string_view appPropertiesXmlPath = "docProps/app.xml";
     constexpr std::string_view extractorName = "docx";
     constexpr std::string_view documentLocationLabel = "document";
+    constexpr std::string_view metadataLocationLabel = "metadata";
+    constexpr std::string_view tableLocationPrefix = "table ";
+    constexpr char tableCellSeparator = '\t';
+
+    struct WordDocumentText
+    {
+      std::string documentText;
+      std::vector<std::string> tableTexts;
+    };
+
+    struct MetadataField
+    {
+      std::string_view tagName;
+      std::string_view label;
+    };
 
     void appendSpace(std::string& output)
     {
@@ -37,6 +58,25 @@ namespace uburu::document
       output.push_back('\n');
     }
 
+    void appendCellBreak(std::string& output)
+    {
+      while (!output.empty() && output.back() == ' ') {
+        output.pop_back();
+      }
+
+      if (!output.empty() && output.back() != '\n' && output.back() != tableCellSeparator)
+        output.push_back(tableCellSeparator);
+    }
+
+    [[nodiscard]]
+    std::string& activeTextTarget(WordDocumentText& text, std::size_t tableDepth)
+    {
+      if (tableDepth == 0)
+        return text.documentText;
+
+      return text.tableTexts.back();
+    }
+
     [[nodiscard]]
     bool wouldExceedByteLimit(const DocumentExtractionOptions& options, std::size_t bytes)
     {
@@ -44,29 +84,30 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::string visibleTextFromWordDocumentXml(std::string_view xml, std::stop_token stopToken)
+    bool wouldExceedSegmentLimit(const DocumentExtractionOptions& options, std::size_t segments)
     {
-      std::string visibleText;
-      bool insideTextNode = false;
+      return options.maximumSegments > 0 && segments > options.maximumSegments;
+    }
+
+    [[nodiscard]]
+    std::optional<std::string> firstElementText(std::string_view xml, std::string_view wantedTagName)
+    {
+      std::string value;
+      bool insideWantedTag = false;
       std::size_t offset = 0;
 
-      visibleText.reserve(xml.size() / 2);
-
       while (offset < xml.size()) {
-        if (stopToken.stop_requested())
-          break;
-
         const auto tagStart = xml.find('<', offset);
 
         if (tagStart == std::string_view::npos) {
-          if (insideTextNode)
-            xml::appendDecodedText(xml.substr(offset), visibleText);
+          if (insideWantedTag)
+            xml::appendDecodedText(xml.substr(offset), value);
 
           break;
         }
 
-        if (insideTextNode)
-          xml::appendDecodedText(xml.substr(offset, tagStart - offset), visibleText);
+        if (insideWantedTag)
+          xml::appendDecodedText(xml.substr(offset, tagStart - offset), value);
 
         const auto tagEnd = xml.find('>', tagStart + 1);
 
@@ -77,22 +118,111 @@ namespace uburu::document
         const auto tagName = xml::localNameFromTag(tagContent);
         const auto closingTag = xml::isClosingTag(tagContent);
 
-        if (tagName == "t") {
-          insideTextNode = !closingTag && !xml::isSelfClosingTag(tagContent);
-        } else if (!insideTextNode && tagName == "tab") {
-          appendSpace(visibleText);
-        } else if (!insideTextNode && (tagName == "br" || tagName == "cr")) {
-          appendLineBreak(visibleText);
-        } else if (closingTag && tagName == "p") {
-          appendLineBreak(visibleText);
+        if (tagName == wantedTagName) {
+          if (closingTag)
+            break;
+
+          insideWantedTag = !xml::isSelfClosingTag(tagContent);
         }
 
         offset = tagEnd + 1;
       }
 
-      xml::trimTrailingAsciiWhitespace(visibleText);
+      xml::trimTrailingAsciiWhitespace(value);
 
-      return visibleText;
+      if (value.empty())
+        return std::nullopt;
+
+      return value;
+    }
+
+    void appendMetadataFields(std::string& metadataText, std::string_view xml, std::span<const MetadataField> fields)
+    {
+      for (const auto& field : fields) {
+        const auto value = firstElementText(xml, field.tagName);
+
+        if (!value)
+          continue;
+
+        if (!metadataText.empty())
+          metadataText.push_back('\n');
+
+        metadataText += field.label;
+        metadataText += ": ";
+        metadataText += *value;
+      }
+    }
+
+    [[nodiscard]]
+    WordDocumentText visibleTextFromWordDocumentXml(std::string_view xml, std::stop_token stopToken)
+    {
+      WordDocumentText text;
+      bool insideTextNode = false;
+      std::size_t tableDepth = 0;
+      std::size_t offset = 0;
+
+      text.documentText.reserve(xml.size() / 2);
+
+      while (offset < xml.size()) {
+        if (stopToken.stop_requested())
+          break;
+
+        const auto tagStart = xml.find('<', offset);
+
+        if (tagStart == std::string_view::npos) {
+          if (insideTextNode)
+            xml::appendDecodedText(xml.substr(offset), activeTextTarget(text, tableDepth));
+
+          break;
+        }
+
+        if (insideTextNode)
+          xml::appendDecodedText(xml.substr(offset, tagStart - offset), activeTextTarget(text, tableDepth));
+
+        const auto tagEnd = xml.find('>', tagStart + 1);
+
+        if (tagEnd == std::string_view::npos)
+          break;
+
+        const auto tagContent = xml.substr(tagStart + 1, tagEnd - tagStart - 1);
+        const auto tagName = xml::localNameFromTag(tagContent);
+        const auto closingTag = xml::isClosingTag(tagContent);
+        const auto selfClosingTag = xml::isSelfClosingTag(tagContent);
+
+        if (!insideTextNode && tagName == "tbl") {
+          if (closingTag) {
+            if (tableDepth > 0)
+              --tableDepth;
+          } else if (!selfClosingTag) {
+            if (tableDepth == 0)
+              text.tableTexts.emplace_back();
+
+            ++tableDepth;
+          }
+        } else if (tagName == "t") {
+          insideTextNode = !closingTag && !selfClosingTag;
+        } else if (!insideTextNode && tagName == "tab") {
+          appendSpace(activeTextTarget(text, tableDepth));
+        } else if (!insideTextNode && (tagName == "br" || tagName == "cr")) {
+          appendLineBreak(activeTextTarget(text, tableDepth));
+        } else if (!insideTextNode && closingTag && tagName == "tc") {
+          appendCellBreak(activeTextTarget(text, tableDepth));
+        } else if (!insideTextNode && closingTag && tagName == "p" && tableDepth == 0) {
+          appendLineBreak(activeTextTarget(text, tableDepth));
+        } else if (!insideTextNode && closingTag && tagName == "tr") {
+          appendLineBreak(activeTextTarget(text, tableDepth));
+        }
+
+        offset = tagEnd + 1;
+      }
+
+      xml::trimTrailingAsciiWhitespace(text.documentText);
+
+      for (auto& tableText : text.tableTexts) {
+        xml::trimTrailingAsciiWhitespace(tableText);
+      }
+
+      return text;
     }
 
     [[nodiscard]]
@@ -121,6 +251,102 @@ namespace uburu::document
       return DocumentExtractionStatus::parserFailed;
     }
 
+    [[nodiscard]]
+    std::optional<std::string> readZipTextEntry(
+      const archive::ZipArchiveReader& reader,
+      const std::filesystem::path& path,
+      const archive::ZipArchiveCatalog& catalog,
+      std::string_view rawName,
+      DocumentExtractionSummary& summary,
+      std::stop_token stopToken)
+    {
+      const auto entry = std::ranges::find(catalog.entries, rawName, &archive::ZipArchiveEntry::rawName);
+
+      if (entry == catalog.entries.end())
+        return std::nullopt;
+
+      const auto entryRead = reader.readEntry(path, *entry, {}, stopToken);
+
+      if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
+        summary.status = statusFromZipStatus(entryRead.status);
+        summary.error = entryRead.error;
+
+        return std::nullopt;
+      }
+
+      return std::string(reinterpret_cast<const char*>(entryRead.bytes.data()), entryRead.bytes.size());
+    }
+
+    [[nodiscard]]
+    std::string metadataTextFromPackage(
+      const archive::ZipArchiveReader& reader,
+      const std::filesystem::path& path,
+      const archive::ZipArchiveCatalog& catalog,
+      DocumentExtractionSummary& summary,
+      std::stop_token stopToken)
+    {
+      constexpr std::array coreFields{
+        MetadataField{"title", "Title"},
+        MetadataField{"subject", "Subject"},
+        MetadataField{"creator", "Creator"},
+        MetadataField{"keywords", "Keywords"},
+        MetadataField{"description", "Description"},
+        MetadataField{"lastmodifiedby", "Last modified by"},
+      };
+      
+      constexpr std::array appFields{
+        MetadataField{"company", "Company"},
+        MetadataField{"manager", "Manager"},
+      };
+
+      std::string metadataText;
+
+      if (const auto coreProperties =
+            readZipTextEntry(reader, path, catalog, corePropertiesXmlPath, summary, stopToken)) {
+        appendMetadataFields(metadataText, *coreProperties, coreFields);
+      }
+
+      if (summary.status != DocumentExtractionStatus::completed || stopToken.stop_requested())
+        return metadataText;
+
+      if (const auto appProperties =
+            readZipTextEntry(reader, path, catalog, appPropertiesXmlPath, summary, stopToken)) {
+        appendMetadataFields(metadataText, *appProperties, appFields);
+      }
+
+      return metadataText;
+    }
+
+    [[nodiscard]]
+    bool publishSegment(
+      const ExtractedTextSink& sink,
+      DocumentExtractionSummary& summary,
+      std::string text,
+      std::string label,
+      std::size_t primary = 0)
+    {
+      if (text.empty())
+        return true;
+
+      ExtractedTextSegment segment;
+
+      segment.text = std::move(text);
+      segment.location.kind = DocumentLocationKind::none;
+      segment.location.primary = primary;
+      segment.location.label = std::move(label);
+
+      if (!sink(segment)) {
+        summary.status = DocumentExtractionStatus::cancelled;
+
+        return false;
+      }
+
+      ++summary.segmentsExtracted;
+      summary.bytesExtracted += segment.text.size();
+
+      return true;
+    }
+
   } // namespace
 
   std::string_view DocxDocumentExtractor::name() const
@@ -146,6 +372,17 @@ namespace uburu::document
     if (catalog.status != archive::ZipArchiveReadStatus::completed) {
       summary.status = statusFromZipStatus(catalog.status);
       summary.error = catalog.error;
+
+      return summary;
+    }
+
+    auto metadataText = metadataTextFromPackage(reader, path, catalog, summary, stopToken);
+
+    if (summary.status != DocumentExtractionStatus::completed)
+      return summary;
+
+    if (stopToken.stop_requested()) {
+      summary.status = DocumentExtractionStatus::cancelled;
 
       return summary;
     }
@@ -183,26 +420,41 @@ namespace uburu::document
       return summary;
     }
 
-    if (wouldExceedByteLimit(options, visibleText.size())) {
+    std::size_t totalBytes = metadataText.size() + visibleText.documentText.size();
+    std::size_t segmentCount = 0;
+
+    if (!metadataText.empty())
+      ++segmentCount;
+
+    if (!visibleText.documentText.empty())
+      ++segmentCount;
+
+    for (const auto& tableText : visibleText.tableTexts) {
+      if (!tableText.empty()) {
+        totalBytes += tableText.size();
+        ++segmentCount;
+      }
+    }
+
+    if (wouldExceedByteLimit(options, totalBytes) || wouldExceedSegmentLimit(options, segmentCount)) {
       summary.status = DocumentExtractionStatus::safetyLimitExceeded;
 
       return summary;
     }
 
-    ExtractedTextSegment segment;
-
-    segment.text = std::move(visibleText);
-    segment.location.kind = DocumentLocationKind::none;
-    segment.location.label = documentLocationLabel;
-
-    if (!sink(segment)) {
-      summary.status = DocumentExtractionStatus::cancelled;
-
+    if (!publishSegment(sink, summary, std::move(metadataText), std::string{metadataLocationLabel}))
       return summary;
-    }
 
-    summary.segmentsExtracted = 1;
-    summary.bytesExtracted = segment.text.size();
+    if (!publishSegment(sink, summary, std::move(visibleText.documentText), std::string{documentLocationLabel}))
+      return summary;
+
+    for (std::size_t index = 0; index < visibleText.tableTexts.size(); ++index) {
+      auto label = std::string{tableLocationPrefix};
+      label += std::to_string(index + 1);
+
+      if (!publishSegment(sink, summary, std::move(visibleText.tableTexts[index]), std::move(label), index + 1))
+        return summary;
+    }
 
     return summary;
   }

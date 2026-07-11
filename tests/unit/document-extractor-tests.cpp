@@ -188,6 +188,88 @@ TEST_CASE("docx document extractor emits visible wordprocessing text")
   CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::none);
 }
 
+TEST_CASE("docx document extractor emits metadata and table segments")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-metadata-table-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes({
+      uburu::tests::fixtures::StoredZipEntryFixture{.name = "[Content_Types].xml", .content = "<Types/>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "docProps/core.xml",
+        .content = "<cp:coreProperties xmlns:dc=\"http://purl.org/dc/elements/1.1/\">"
+                   "<dc:title>Important title</dc:title>"
+                   "<dc:creator>Dheovani</dc:creator>"
+                   "<dc:description>Metadata needle</dc:description>"
+                   "</cp:coreProperties>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "word/document.xml",
+        .content = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                   "<w:body>"
+                   "<w:p><w:r><w:t>Outside paragraph</w:t></w:r></w:p>"
+                   "<w:tbl>"
+                   "<w:tr>"
+                   "<w:tc><w:p><w:r><w:t>A1</w:t></w:r></w:p></w:tc>"
+                   "<w:tc><w:p><w:r><w:t>B1 needle</w:t></w:r></w:p></w:tc>"
+                   "</w:tr>"
+                   "</w:tbl>"
+                   "</w:body>"
+                   "</w:document>"},
+    }));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 3);
+  CHECK(segments[0].location.label == "metadata");
+  CHECK(segments[0].text == "Title: Important title\nCreator: Dheovani\nDescription: Metadata needle");
+  CHECK(segments[1].location.label == "document");
+  CHECK(segments[1].text == "Outside paragraph");
+  CHECK(segments[2].location.label == "table 1");
+  CHECK(segments[2].location.primary == 1);
+  CHECK(segments[2].text == "A1\tB1 needle");
+}
+
+TEST_CASE("docx document extractor applies extracted byte and segment limits before publishing")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-limit-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumSegments = 1;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes({
+      uburu::tests::fixtures::StoredZipEntryFixture{.name = "docProps/core.xml",
+                                                    .content = "<dc:title>Metadata</dc:title>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "word/document.xml",
+        .content = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                   "<w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:body></w:document>"},
+    }));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(deliveredSegments == 0);
+}
+
 TEST_CASE("docx document extractor reports malformed packages as parser failures")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-docx-malformed-test");
@@ -248,6 +330,90 @@ TEST_CASE("xlsx document extractor emits shared and inline worksheet text")
   CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::sheet);
   CHECK(segments.front().location.primary == 1);
   CHECK(segments.front().location.label == "Sheet One");
+}
+
+TEST_CASE("xlsx document extractor follows workbook relationships and rich cell values")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-relationships-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes({
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/workbook.xml",
+        .content = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
+                   "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+                   "<sheets>"
+                   "<sheet name=\"Formula Sheet\" sheetId=\"1\" r:id=\"rIdFormula\"/>"
+                   "<sheet name=\"Boolean Sheet\" sheetId=\"2\" r:id=\"rIdBoolean\"/>"
+                   "</sheets>"
+                   "</workbook>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/_rels/workbook.xml.rels",
+        .content = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                   "<Relationship Id=\"rIdBoolean\" "
+                   "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" "
+                   "Target=\"worksheets/sheet1.xml\"/>"
+                   "<Relationship Id=\"rIdFormula\" "
+                   "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" "
+                   "Target=\"worksheets/sheet2.xml\"/>"
+                   "</Relationships>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/worksheets/sheet1.xml",
+        .content = "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                   "<sheetData><row><c t=\"b\"><v>1</v></c><c t=\"e\"><v>#N/A</v></c></row></sheetData>"
+                   "</worksheet>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/worksheets/sheet2.xml",
+        .content = "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                   "<sheetData><row><c><f>SUM(A1:A2)</f><v>3</v></c><c t=\"str\"><v>cached text</v></c></row>"
+                   "</sheetData></worksheet>"},
+    }));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 2);
+  CHECK(segments[0].location.label == "Formula Sheet");
+  CHECK(segments[0].text == "SUM(A1:A2) = 3\tcached text");
+  CHECK(segments[1].location.label == "Boolean Sheet");
+  CHECK(segments[1].text == "TRUE\t#N/A");
+}
+
+TEST_CASE("xlsx document extractor applies extracted byte limits before publishing")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-limit-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumExtractedBytes = 3;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalXlsxBytes(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheetData><row><c t=\"inlineStr\"><is><t>too large</t></is></c></row></sheetData>"
+      "</worksheet>",
+      "<sst/>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(deliveredSegments == 0);
 }
 
 TEST_CASE("xlsx document extractor reports malformed packages as parser failures")

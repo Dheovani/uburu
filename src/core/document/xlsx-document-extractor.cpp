@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -20,6 +21,9 @@ namespace uburu::document
     constexpr std::string_view extractorName = "xlsx";
     constexpr std::string_view sharedStringsPath = "xl/sharedStrings.xml";
     constexpr std::string_view workbookPath = "xl/workbook.xml";
+    constexpr std::string_view workbookRelationshipsPath = "xl/_rels/workbook.xml.rels";
+    constexpr std::string_view officeDocumentRelationshipPrefix =
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
     constexpr std::string_view worksheetDirectory = "xl/worksheets/";
     constexpr std::string_view worksheetExtension = ".xml";
     constexpr char cellSeparator = '\t';
@@ -30,10 +34,28 @@ namespace uburu::document
       std::string text;
     };
 
+    struct WorkbookSheet
+    {
+      std::string name;
+      std::string relationshipId;
+    };
+
+    struct WorkbookRelationship
+    {
+      std::string id;
+      std::string target;
+    };
+
     [[nodiscard]]
     bool wouldExceedByteLimit(const DocumentExtractionOptions& options, std::uintmax_t bytes)
     {
       return options.maximumExtractedBytes > 0 && bytes > options.maximumExtractedBytes;
+    }
+
+    [[nodiscard]]
+    bool wouldExceedSegmentLimit(const DocumentExtractionOptions& options, std::size_t segments)
+    {
+      return options.maximumSegments > 0 && segments > options.maximumSegments;
     }
 
     [[nodiscard]]
@@ -103,6 +125,22 @@ namespace uburu::document
       return value;
     }
 
+    [[nodiscard]]
+    std::string normalizedRelationshipTarget(std::string target)
+    {
+      constexpr std::string_view workbookBaseDirectory = "xl/";
+
+      if (target.empty())
+        return {};
+
+      if (target.starts_with('/'))
+        target.erase(0, 1);
+      else if (!target.starts_with(workbookBaseDirectory))
+        target = std::string{workbookBaseDirectory} + target;
+
+      return target;
+    }
+
     void appendCellValue(std::vector<std::string>& rowValues, std::string value)
     {
       xml::trimTrailingAsciiWhitespace(value);
@@ -132,9 +170,9 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::vector<std::string> workbookSheetNames(std::string_view xmlText)
+    std::vector<WorkbookSheet> workbookSheets(std::string_view xmlText)
     {
-      std::vector<std::string> sheetNames;
+      std::vector<WorkbookSheet> sheets;
       std::size_t offset = 0;
 
       while (offset < xmlText.size()) {
@@ -151,14 +189,56 @@ namespace uburu::document
         const auto tagContent = xmlText.substr(tagStart + 1, tagEnd - tagStart - 1);
 
         if (!xml::isClosingTag(tagContent) && xml::localNameFromTag(tagContent) == "sheet") {
-          if (auto name = xml::attributeValue(tagContent, "name"); name && !name->empty())
-            sheetNames.push_back(std::move(*name));
+          auto name = xml::attributeValue(tagContent, "name").value_or("");
+          auto relationshipId = xml::attributeValue(tagContent, "id").value_or("");
+
+          if (!name.empty())
+            sheets.push_back({.name = std::move(name), .relationshipId = std::move(relationshipId)});
         }
 
         offset = tagEnd + 1;
       }
 
-      return sheetNames;
+      return sheets;
+    }
+
+    [[nodiscard]]
+    std::vector<WorkbookRelationship> workbookRelationships(std::string_view xmlText)
+    {
+      std::vector<WorkbookRelationship> relationships;
+      std::size_t offset = 0;
+
+      while (offset < xmlText.size()) {
+        const auto tagStart = xmlText.find('<', offset);
+
+        if (tagStart == std::string_view::npos)
+          break;
+
+        const auto tagEnd = xmlText.find('>', tagStart + 1);
+
+        if (tagEnd == std::string_view::npos)
+          break;
+
+        const auto tagContent = xmlText.substr(tagStart + 1, tagEnd - tagStart - 1);
+
+        if (!xml::isClosingTag(tagContent) && xml::localNameFromTag(tagContent) == "relationship") {
+          auto id = xml::attributeValue(tagContent, "id").value_or("");
+          auto type = xml::attributeValue(tagContent, "type").value_or("");
+          auto target = xml::attributeValue(tagContent, "target").value_or("");
+          const auto worksheetRelationshipType = std::string{officeDocumentRelationshipPrefix} + "worksheet";
+
+          if (!id.empty() && type == worksheetRelationshipType && !target.empty()) {
+            relationships.push_back({
+              .id = std::move(id),
+              .target = normalizedRelationshipTarget(std::move(target)),
+            });
+          }
+        }
+
+        offset = tagEnd + 1;
+      }
+
+      return relationships;
     }
 
     [[nodiscard]]
@@ -215,12 +295,19 @@ namespace uburu::document
     std::string resolveCellValue(
       std::string cellType,
       std::string rawValue,
+      std::string formulaValue,
       const std::vector<std::string>& sharedStringValues)
     {
       xml::trimTrailingAsciiWhitespace(rawValue);
+      xml::trimTrailingAsciiWhitespace(formulaValue);
 
-      if (rawValue.empty())
-        return {};
+      if (cellType == "b") {
+        if (rawValue == "1")
+          return "TRUE";
+
+        if (rawValue == "0")
+          return "FALSE";
+      }
 
       if (cellType == "s") {
         const auto sharedStringIndex = parseSize(rawValue);
@@ -230,6 +317,15 @@ namespace uburu::document
 
         return sharedStringValues[*sharedStringIndex];
       }
+
+      if (cellType == "str" || cellType == "inlineStr" || cellType == "d" || cellType == "e")
+        return rawValue;
+
+      if (!formulaValue.empty() && !rawValue.empty())
+        return formulaValue + " = " + rawValue;
+
+      if (!formulaValue.empty())
+        return formulaValue;
 
       return rawValue;
     }
@@ -244,8 +340,10 @@ namespace uburu::document
       std::vector<std::string> rowValues;
       std::string currentCellType;
       std::string currentCellValue;
+      std::string currentFormulaValue;
       bool insideRow = false;
       bool insideValue = false;
+      bool insideFormula = false;
       bool insideInlineText = false;
       std::size_t offset = 0;
 
@@ -256,13 +354,17 @@ namespace uburu::document
         const auto tagStart = xmlText.find('<', offset);
 
         if (tagStart == std::string_view::npos) {
-          if (insideValue || insideInlineText)
+          if (insideFormula)
+            xml::appendDecodedText(xmlText.substr(offset), currentFormulaValue);
+          else if (insideValue || insideInlineText)
             xml::appendDecodedText(xmlText.substr(offset), currentCellValue);
 
           break;
         }
 
-        if (insideValue || insideInlineText)
+        if (insideFormula)
+          xml::appendDecodedText(xmlText.substr(offset, tagStart - offset), currentFormulaValue);
+        else if (insideValue || insideInlineText)
           xml::appendDecodedText(xmlText.substr(offset, tagStart - offset), currentCellValue);
 
         const auto tagEnd = xmlText.find('>', tagStart + 1);
@@ -283,15 +385,21 @@ namespace uburu::document
           }
         } else if (insideRow && tagName == "c") {
           if (closingTag) {
-            appendCellValue(rowValues, resolveCellValue(currentCellType, currentCellValue, sharedStringValues));
+            appendCellValue(
+              rowValues,
+              resolveCellValue(currentCellType, currentCellValue, currentFormulaValue, sharedStringValues));
             currentCellType = {};
             currentCellValue = {};
+            currentFormulaValue = {};
           } else {
             currentCellType = xml::attributeValue(tagContent, "t").value_or("");
             currentCellValue = {};
+            currentFormulaValue = {};
           }
         } else if (insideRow && tagName == "v") {
           insideValue = !closingTag && !xml::isSelfClosingTag(tagContent);
+        } else if (insideRow && tagName == "f") {
+          insideFormula = !closingTag && !xml::isSelfClosingTag(tagContent);
         } else if (insideRow && tagName == "t") {
           insideInlineText = !closingTag && !xml::isSelfClosingTag(tagContent);
         }
@@ -308,6 +416,59 @@ namespace uburu::document
     std::string defaultSheetLabel(std::size_t index)
     {
       return "sheet" + std::to_string(index + 1);
+    }
+
+    [[nodiscard]]
+    std::map<std::string, const archive::ZipArchiveEntry*> worksheetEntryMap(
+      const std::vector<const archive::ZipArchiveEntry*>& entries)
+    {
+      std::map<std::string, const archive::ZipArchiveEntry*> mappedEntries;
+
+      for (const auto* entry : entries) {
+        mappedEntries.emplace(entry->rawName, entry);
+      }
+
+      return mappedEntries;
+    }
+
+    void appendWorkbookOrderedWorksheets(
+      std::vector<WorksheetText>& worksheets,
+      const std::vector<WorkbookSheet>& sheets,
+      const std::vector<WorkbookRelationship>& relationships,
+      const std::map<std::string, const archive::ZipArchiveEntry*>& availableEntries,
+      const std::vector<std::string>& sharedStringValues,
+      const archive::ZipArchiveReader& reader,
+      const std::filesystem::path& path,
+      std::stop_token stopToken,
+      DocumentExtractionSummary& summary)
+    {
+      for (std::size_t index = 0; index < sheets.size(); ++index) {
+        const auto& sheet = sheets[index];
+        const auto relationship =
+          std::ranges::find(relationships, sheet.relationshipId, &WorkbookRelationship::id);
+
+        if (relationship == relationships.end())
+          continue;
+
+        const auto entry = availableEntries.find(relationship->target);
+
+        if (entry == availableEntries.end())
+          continue;
+
+        const auto entryRead = reader.readEntry(path, *entry->second, {}, stopToken);
+
+        if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
+          summary.status = statusFromZipStatus(entryRead.status);
+          summary.error = entryRead.error;
+
+          return;
+        }
+
+        worksheets.push_back({
+          .label = sheet.name.empty() ? defaultSheetLabel(index) : sheet.name,
+          .text = worksheetText(bytesToString(entryRead.bytes), sharedStringValues, stopToken),
+        });
+      }
     }
 
   } // namespace
@@ -355,7 +516,7 @@ namespace uburu::document
       sharedStringValues = sharedStrings(bytesToString(entryRead.bytes));
     }
 
-    std::vector<std::string> sheetNames;
+    std::vector<WorkbookSheet> sheets;
 
     // Workbook metadata gives user-facing sheet names; worksheet files remain the source of cell text.
     if (const auto* workbookEntry = findEntry(catalog, workbookPath)) {
@@ -368,7 +529,22 @@ namespace uburu::document
         return summary;
       }
 
-      sheetNames = workbookSheetNames(bytesToString(entryRead.bytes));
+      sheets = workbookSheets(bytesToString(entryRead.bytes));
+    }
+
+    std::vector<WorkbookRelationship> relationships;
+
+    if (const auto* relationshipsEntry = findEntry(catalog, workbookRelationshipsPath)) {
+      const auto entryRead = reader.readEntry(path, *relationshipsEntry, {}, stopToken);
+
+      if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
+        summary.status = statusFromZipStatus(entryRead.status);
+        summary.error = entryRead.error;
+
+        return summary;
+      }
+
+      relationships = workbookRelationships(bytesToString(entryRead.bytes));
     }
 
     std::vector<const archive::ZipArchiveEntry*> worksheetEntries;
@@ -388,35 +564,67 @@ namespace uburu::document
     }
 
     std::uintmax_t totalBytes = 0;
+    std::vector<WorksheetText> worksheets;
 
-    for (std::size_t index = 0; index < worksheetEntries.size(); ++index) {
+    if (!sheets.empty() && !relationships.empty()) {
+      appendWorkbookOrderedWorksheets(
+        worksheets,
+        sheets,
+        relationships,
+        worksheetEntryMap(worksheetEntries),
+        sharedStringValues,
+        reader,
+        path,
+        stopToken,
+        summary);
+
+      if (summary.status != DocumentExtractionStatus::completed)
+        return summary;
+    }
+
+    if (worksheets.empty()) {
+      for (std::size_t index = 0; index < worksheetEntries.size(); ++index) {
+        if (stopToken.stop_requested()) {
+          summary.status = DocumentExtractionStatus::cancelled;
+
+          return summary;
+        }
+
+        const auto entryRead = reader.readEntry(path, *worksheetEntries[index], {}, stopToken);
+
+        if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
+          summary.status = statusFromZipStatus(entryRead.status);
+          summary.error = entryRead.error;
+
+          return summary;
+        }
+
+        const auto hasWorkbookSheetName = index < sheets.size() && !sheets[index].name.empty();
+
+        worksheets.push_back({
+          .label = hasWorkbookSheetName ? sheets[index].name : defaultSheetLabel(index),
+          .text = worksheetText(bytesToString(entryRead.bytes), sharedStringValues, stopToken),
+        });
+      }
+    }
+
+    for (std::size_t index = 0; index < worksheets.size(); ++index) {
       if (stopToken.stop_requested()) {
         summary.status = DocumentExtractionStatus::cancelled;
 
         return summary;
       }
 
-      const auto entryRead = reader.readEntry(path, *worksheetEntries[index], {}, stopToken);
-
-      if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
-        summary.status = statusFromZipStatus(entryRead.status);
-        summary.error = entryRead.error;
-
-        return summary;
-      }
-
-      WorksheetText worksheet;
-      const auto hasWorkbookSheetName = index < sheetNames.size() && !sheetNames[index].empty();
-
-      worksheet.label = hasWorkbookSheetName ? sheetNames[index] : defaultSheetLabel(index);
-      worksheet.text = worksheetText(bytesToString(entryRead.bytes), sharedStringValues, stopToken);
+      auto& worksheet = worksheets[index];
 
       if (worksheet.text.empty())
         continue;
 
       totalBytes += worksheet.text.size();
 
-      if (wouldExceedByteLimit(options, totalBytes)) {
+      const auto nextSegmentCount = summary.segmentsExtracted + 1;
+
+      if (wouldExceedByteLimit(options, totalBytes) || wouldExceedSegmentLimit(options, nextSegmentCount)) {
         summary.status = DocumentExtractionStatus::safetyLimitExceeded;
 
         return summary;

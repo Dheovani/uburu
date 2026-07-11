@@ -185,6 +185,29 @@ namespace uburu::archive
     }
 
     [[nodiscard]]
+    std::size_t zipEntryNestingDepth(std::string_view name)
+    {
+      std::size_t depth = 0;
+      std::size_t segmentStart = 0;
+
+      while (segmentStart < name.size()) {
+        const auto segmentEnd = name.find(zipDirectorySeparator, segmentStart);
+        const auto segment =
+          name.substr(segmentStart, segmentEnd == std::string_view::npos ? name.size() : segmentEnd);
+
+        if (!segment.empty())
+          ++depth;
+
+        if (segmentEnd == std::string_view::npos)
+          break;
+
+        segmentStart = segmentEnd + 1;
+      }
+
+      return depth;
+    }
+
+    [[nodiscard]]
     bool checkedAdd(std::uint64_t left, std::uint64_t right, std::uint64_t& result)
     {
       if (left > std::numeric_limits<std::uint64_t>::max() - right)
@@ -431,6 +454,7 @@ namespace uburu::archive
       ZipArchiveCatalog catalog;
       catalog.entries.reserve(location.entryCount);
       std::uint64_t totalExpandedBytes = 0;
+      std::size_t maximumNestingDepth = 0;
       std::size_t offset = 0;
 
       for (std::size_t entryIndex = 0; entryIndex < location.entryCount; ++entryIndex) {
@@ -488,6 +512,8 @@ namespace uburu::archive
             {},
             text::RichFormatSafetyStatus::totalExpandedBytesExceeded);
 
+        maximumNestingDepth = std::max(maximumNestingDepth, zipEntryNestingDepth(rawName));
+
         catalog.entries.push_back(ZipArchiveEntry{.rawName = rawName,
                                                   .normalizedPath = normalizeZipEntryPath(rawName),
                                                   .compressionMethod = compressionMethod,
@@ -502,9 +528,13 @@ namespace uburu::archive
       if (offset != centralDirectory.size())
         return failedCatalog(ZipArchiveReadStatus::invalidArchive);
 
-      const auto archiveSafety = text::validateArchiveSafety(
-        {.totalExpandedBytes = totalExpandedBytes, .entryCount = location.entryCount, .nestingDepth = 1},
-        limits);
+      const text::ArchiveSafetyInput archiveSafetyInput{
+        .totalExpandedBytes = totalExpandedBytes,
+        .entryCount = location.entryCount,
+        .nestingDepth = maximumNestingDepth,
+      };
+      
+      const auto archiveSafety = text::validateArchiveSafety(archiveSafetyInput, limits);
 
       if (archiveSafety != text::RichFormatSafetyStatus::accepted)
         return failedCatalog(ZipArchiveReadStatus::safetyLimitExceeded, {}, archiveSafety);

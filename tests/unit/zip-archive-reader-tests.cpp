@@ -271,6 +271,27 @@ TEST_CASE("zip archive reader rejects archive safety limit violations")
   CHECK(catalog.safetyStatus == uburu::text::RichFormatSafetyStatus::compressionRatioExceeded);
 }
 
+TEST_CASE("zip archive reader rejects excessive nested package paths")
+{
+  uburu::tests::TemporaryFile file("uburu-zip-nested-paths.zip");
+  uburu::tests::writeBytes(
+    file.path(),
+    makeZip({{.name = "a/b/c/d/document.xml", .compressedBytes = 1, .expandedBytes = 1}}));
+
+  const uburu::archive::ZipArchiveReader reader;
+  const uburu::text::RichFormatSafetyLimits limits{
+    .maximumExpandedArchiveBytes = 1'000,
+    .maximumSingleExpandedEntryBytes = 500,
+    .maximumArchiveEntries = 10,
+    .maximumArchiveNestingDepth = 3,
+    .maximumCompressionRatio = 100,
+  };
+  const auto catalog = reader.readCatalog(file.path(), limits);
+
+  CHECK(catalog.status == uburu::archive::ZipArchiveReadStatus::safetyLimitExceeded);
+  CHECK(catalog.safetyStatus == uburu::text::RichFormatSafetyStatus::nestingDepthExceeded);
+}
+
 TEST_CASE("zip archive reader reports invalid archives")
 {
   uburu::tests::TemporaryFile file("uburu-invalid-zip.zip");

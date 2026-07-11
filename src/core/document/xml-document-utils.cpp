@@ -136,6 +136,46 @@ namespace uburu::document::xml
       }
     }
 
+    [[nodiscard]]
+    std::string_view consumeXmlName(std::string_view& text)
+    {
+      std::size_t size = 0;
+
+      while (size < text.size()) {
+        const auto character = text[size];
+
+        if (isAsciiWhitespace(character) || character == '=' || character == '/' || character == '>')
+          break;
+
+        ++size;
+      }
+
+      const auto name = text.substr(0, size);
+      text.remove_prefix(size);
+
+      return name;
+    }
+
+    void trimLeadingAsciiWhitespace(std::string_view& text)
+    {
+      while (!text.empty() && isAsciiWhitespace(text.front())) {
+        text.remove_prefix(1);
+      }
+    }
+
+    void trimTrailingAsciiWhitespace(std::string_view& text)
+    {
+      while (!text.empty() && isAsciiWhitespace(text.back())) {
+        text.remove_suffix(1);
+      }
+    }
+
+    [[nodiscard]]
+    bool xmlNamesMatch(std::string_view left, std::string_view right)
+    {
+      return localNameFromTag(left) == lowerAscii(right);
+    }
+
   } // namespace
 
   std::string lowerAscii(std::string_view text)
@@ -186,19 +226,7 @@ namespace uburu::document::xml
   std::string localNameFromTag(std::string_view tagContent)
   {
     trimLeadingTagSyntax(tagContent);
-
-    std::size_t size = 0;
-
-    while (size < tagContent.size()) {
-      const auto character = tagContent[size];
-
-      if (isAsciiWhitespace(character) || character == '/' || character == '>')
-        break;
-
-      ++size;
-    }
-
-    auto name = lowerAscii(tagContent.substr(0, size));
+    auto name = lowerAscii(consumeXmlName(tagContent));
     const auto namespaceSeparator = name.find(':');
 
     if (namespaceSeparator != std::string::npos)
@@ -211,37 +239,28 @@ namespace uburu::document::xml
   {
     trimLeadingTagSyntax(tagContent);
 
-    const auto firstWhitespace = tagContent.find_first_of(" \t\r\n\f");
+    // The input is the whole tag body, such as `c r="A1" t="s"`. Consume the element name first so the loop below
+    // works only on attributes.
+    const auto elementName = consumeXmlName(tagContent);
 
-    if (firstWhitespace == std::string_view::npos)
+    if (elementName.empty())
       return std::nullopt;
 
-    tagContent.remove_prefix(firstWhitespace + 1);
-
     while (!tagContent.empty()) {
-      while (!tagContent.empty() && isAsciiWhitespace(tagContent.front())) {
-        tagContent.remove_prefix(1);
-      }
+      trimLeadingAsciiWhitespace(tagContent);
 
       if (tagContent.empty() || tagContent.front() == '/' || tagContent.front() == '>')
         return std::nullopt;
 
-      const auto equals = tagContent.find('=');
+      auto name = consumeXmlName(tagContent);
+      trimTrailingAsciiWhitespace(name);
+      trimLeadingAsciiWhitespace(tagContent);
 
-      if (equals == std::string_view::npos)
+      if (name.empty() || tagContent.empty() || tagContent.front() != '=')
         return std::nullopt;
 
-      auto name = tagContent.substr(0, equals);
-
-      while (!name.empty() && isAsciiWhitespace(name.back())) {
-        name.remove_suffix(1);
-      }
-
-      tagContent.remove_prefix(equals + 1);
-
-      while (!tagContent.empty() && isAsciiWhitespace(tagContent.front())) {
-        tagContent.remove_prefix(1);
-      }
+      tagContent.remove_prefix(1);
+      trimLeadingAsciiWhitespace(tagContent);
 
       if (tagContent.empty())
         return std::nullopt;
@@ -258,7 +277,7 @@ namespace uburu::document::xml
       if (endQuote == std::string_view::npos)
         return std::nullopt;
 
-      if (localNameFromTag(name) == lowerAscii(attributeName)) {
+      if (xmlNamesMatch(name, attributeName)) {
         std::string decoded;
         appendDecodedText(tagContent.substr(0, endQuote), decoded);
 

@@ -341,6 +341,7 @@ namespace uburu::document
 
     std::vector<std::string> sharedStringValues;
 
+    // Shared strings are the common storage for repeated textual cell values in XLSX packages.
     if (const auto* sharedStringsEntry = findEntry(catalog, sharedStringsPath)) {
       const auto entryRead = reader.readEntry(path, *sharedStringsEntry, {}, stopToken);
 
@@ -356,6 +357,7 @@ namespace uburu::document
 
     std::vector<std::string> sheetNames;
 
+    // Workbook metadata gives user-facing sheet names; worksheet files remain the source of cell text.
     if (const auto* workbookEntry = findEntry(catalog, workbookPath)) {
       const auto entryRead = reader.readEntry(path, *workbookEntry, {}, stopToken);
 
@@ -371,6 +373,7 @@ namespace uburu::document
 
     std::vector<const archive::ZipArchiveEntry*> worksheetEntries;
 
+    // Worksheet entries are processed deterministically so repeated indexes produce stable segment ordering.
     for (const auto& entry : catalog.entries) {
       if (isWorksheetEntry(entry))
         worksheetEntries.push_back(&entry);

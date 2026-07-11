@@ -23,6 +23,9 @@ namespace uburu::text
     compressionRatioExceeded
   };
 
+  /**
+   * Defines archive expansion limits used before rich document parsing.
+   */
   struct RichFormatSafetyLimits
   {
     std::uint64_t maximumExpandedArchiveBytes{defaultMaximumExpandedArchiveBytes};
@@ -32,12 +35,18 @@ namespace uburu::text
     std::uint64_t maximumCompressionRatio{defaultMaximumCompressionRatio};
   };
 
+  /**
+   * Provides compressed and expanded sizes for a single archive entry.
+   */
   struct ArchiveEntrySafetyInput
   {
     std::uint64_t compressedBytes{0};
     std::uint64_t expandedBytes{0};
   };
 
+  /**
+   * Provides aggregate archive metadata for whole-archive validation.
+   */
   struct ArchiveSafetyInput
   {
     std::uint64_t totalExpandedBytes{0};
@@ -45,10 +54,21 @@ namespace uburu::text
     std::size_t nestingDepth{0};
   };
 
+  /**
+   * Validates one archive entry before its payload can be inflated.
+   */
   [[nodiscard]]
   RichFormatSafetyStatus validateArchiveEntrySafety(ArchiveEntrySafetyInput entry, RichFormatSafetyLimits limits = {});
+
+  /**
+   * Validates aggregate archive metadata before any format-specific parsing.
+   */
   [[nodiscard]]
   RichFormatSafetyStatus validateArchiveSafety(ArchiveSafetyInput archive, RichFormatSafetyLimits limits = {});
+
+  /**
+   * Returns a stable diagnostic name for a rich-format safety status.
+   */
   [[nodiscard]]
   std::string_view richFormatSafetyStatusName(RichFormatSafetyStatus status);
 

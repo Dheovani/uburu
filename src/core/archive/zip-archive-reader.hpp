@@ -27,6 +27,9 @@ namespace uburu::archive
     decompressionFailed
   };
 
+  /**
+   * Describes one safe central-directory entry without owning its payload.
+   */
   struct ZipArchiveEntry
   {
     std::string rawName;
@@ -38,6 +41,9 @@ namespace uburu::archive
     bool directory{false};
   };
 
+  /**
+   * Contains the validated central-directory catalog for a ZIP archive.
+   */
   struct ZipArchiveCatalog
   {
     ZipArchiveReadStatus status{ZipArchiveReadStatus::completed};
@@ -46,6 +52,9 @@ namespace uburu::archive
     std::vector<ZipArchiveEntry> entries;
   };
 
+  /**
+   * Contains the bounded payload bytes read for one ZIP entry.
+   */
   struct ZipEntryReadResult
   {
     ZipArchiveReadStatus status{ZipArchiveReadStatus::completed};
@@ -57,12 +66,18 @@ namespace uburu::archive
   class ZipArchiveReader
   {
   public:
+    /**
+     * Reads and validates the archive catalog without extracting entry payloads.
+     */
     [[nodiscard]]
     ZipArchiveCatalog readCatalog(
       const std::filesystem::path& path,
       text::RichFormatSafetyLimits limits = {},
       std::stop_token stopToken = {}) const;
 
+    /**
+     * Reads one previously cataloged entry using the same safety boundaries.
+     */
     [[nodiscard]]
     ZipEntryReadResult readEntry(
       const std::filesystem::path& path,
@@ -71,6 +86,9 @@ namespace uburu::archive
       std::stop_token stopToken = {}) const;
   };
 
+  /**
+   * Returns a stable diagnostic name for a ZIP archive read status.
+   */
   [[nodiscard]]
   std::string_view zipArchiveReadStatusName(ZipArchiveReadStatus status);
 

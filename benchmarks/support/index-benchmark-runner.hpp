@@ -13,6 +13,9 @@
 namespace uburu::benchmarks
 {
 
+  /**
+   * Captures index update counters and storage size for benchmark reporting.
+   */
   struct IndexBenchmarkResult
   {
     index::IndexUpdateSummary summary;
@@ -26,6 +29,9 @@ namespace uburu::benchmarks
     std::uint64_t databaseBytes{0};
   };
 
+  /**
+   * Owns benchmark storage and index services for repeatable indexing scenarios.
+   */
   class IndexBenchmarkContext
   {
   public:
@@ -37,13 +43,23 @@ namespace uburu::benchmarks
     IndexBenchmarkContext(IndexBenchmarkContext&&) noexcept = delete;
     IndexBenchmarkContext& operator=(IndexBenchmarkContext&&) noexcept = delete;
 
-    [[nodiscard]] const BenchmarkDataset& dataset() const;
-    [[nodiscard]] const WorktreeInfo& worktree() const;
-    [[nodiscard]] WorktreeInfo branchSwitchWorktree() const;
+    [[nodiscard]]
+    const BenchmarkDataset& dataset() const;
 
-    [[nodiscard]] IndexBenchmarkResult update(const WorktreeInfo& targetWorktree);
-    [[nodiscard]] IndexBenchmarkResult updateAfterBranchSwitch();
-    [[nodiscard]] IndexBenchmarkResult updateWithBlobReuseCandidate();
+    [[nodiscard]]
+    const WorktreeInfo& worktree() const;
+
+    [[nodiscard]]
+    WorktreeInfo branchSwitchWorktree() const;
+
+    [[nodiscard]]
+    IndexBenchmarkResult update(const WorktreeInfo& targetWorktree);
+
+    [[nodiscard]]
+    IndexBenchmarkResult updateAfterBranchSwitch();
+
+    [[nodiscard]]
+    IndexBenchmarkResult updateWithBlobReuseCandidate();
 
   private:
     const BenchmarkDataset* benchmarkDataset{nullptr};
@@ -56,6 +72,7 @@ namespace uburu::benchmarks
     std::uint64_t approximateCatalogMemoryBytes{0};
   };
 
-  [[nodiscard]] std::unique_ptr<IndexBenchmarkContext> makeIndexBenchmarkContext(const BenchmarkDataset& dataset);
+  [[nodiscard]]
+  std::unique_ptr<IndexBenchmarkContext> makeIndexBenchmarkContext(const BenchmarkDataset& dataset);
 
 } // namespace uburu::benchmarks

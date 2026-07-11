@@ -6,6 +6,9 @@
 namespace uburu::diagnostics
 {
 
+  /**
+   * Runtime counters for search, indexing reuse, queues, and memory growth.
+   */
   struct SearchMetrics
   {
     std::chrono::nanoseconds timeToFirstResult{};
@@ -31,6 +34,9 @@ namespace uburu::diagnostics
     bool memoryIncreased{false};
   };
 
+  /**
+   * Receives metric snapshots without binding producers to a concrete logging backend.
+   */
   class MetricsSink
   {
   public:

@@ -10,12 +10,18 @@
 namespace uburu::benchmarks
 {
 
+  /**
+   * Controls benchmark-side batching and optional simulated UI rendering work.
+   */
   struct SearchBenchmarkRunOptions
   {
     app::SearchExecutionOptions executionOptions{.adaptiveBatching = false};
     std::uint32_t simulatedUiRenderPasses{0};
   };
 
+  /**
+   * Captures service-level search counters relevant to perceived UI throughput.
+   */
   struct SearchBenchmarkResult
   {
     app::SearchSummaryDto summary;
@@ -28,8 +34,12 @@ namespace uburu::benchmarks
     std::uint64_t simulatedUiRenderChecksum{0};
   };
 
-  [[nodiscard]] SearchBenchmarkResult runDefaultSearchServiceBenchmark(const BenchmarkDataset& dataset);
-  [[nodiscard]] SearchBenchmarkResult runDefaultSearchServiceBenchmark(const BenchmarkDataset& dataset,
-                                                                       SearchBenchmarkRunOptions options);
+  [[nodiscard]]
+  SearchBenchmarkResult runDefaultSearchServiceBenchmark(const BenchmarkDataset& dataset);
+
+  [[nodiscard]]
+  SearchBenchmarkResult runDefaultSearchServiceBenchmark(
+    const BenchmarkDataset& dataset,
+    SearchBenchmarkRunOptions options);
 
 } // namespace uburu::benchmarks

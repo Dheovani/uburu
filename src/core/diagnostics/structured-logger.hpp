@@ -35,6 +35,9 @@ namespace uburu::diagnostics
     bool sensitive{false};
   };
 
+  /**
+   * Structured log record with optional sensitive fields that can be redacted at export time.
+   */
   struct LogEvent
   {
     LogLevel level{LogLevel::info};
@@ -44,6 +47,9 @@ namespace uburu::diagnostics
     std::chrono::system_clock::time_point timestamp{};
   };
 
+  /**
+   * Controls redaction and filtering for structured logs.
+   */
   struct StructuredLogOptions
   {
     bool includeSensitiveFields{false};
@@ -51,6 +57,9 @@ namespace uburu::diagnostics
     std::vector<LogCategory> enabledCategories;
   };
 
+  /**
+   * Sink abstraction for structured diagnostic events.
+   */
   class StructuredLogger
   {
   public:
@@ -58,13 +67,19 @@ namespace uburu::diagnostics
     virtual void write(LogEvent event) = 0;
   };
 
+  /**
+   * Test-friendly logger that keeps events in memory.
+   */
   class InMemoryStructuredLogger final : public StructuredLogger
   {
   public:
     explicit InMemoryStructuredLogger(StructuredLogOptions options = {});
 
     void write(LogEvent event) override;
-    [[nodiscard]] const std::vector<LogEvent>& entries() const noexcept;
+
+    [[nodiscard]]
+    const std::vector<LogEvent>& entries() const noexcept;
+
     void clear();
 
   private:
@@ -72,9 +87,15 @@ namespace uburu::diagnostics
     std::vector<LogEvent> recordedEntries;
   };
 
-  [[nodiscard]] std::string_view logLevelName(LogLevel level);
-  [[nodiscard]] std::string_view logCategoryName(LogCategory category);
-  [[nodiscard]] bool shouldRecordLogEvent(const LogEvent& event, const StructuredLogOptions& options);
+  [[nodiscard]]
+  std::string_view logLevelName(LogLevel level);
+
+  [[nodiscard]]
+  std::string_view logCategoryName(LogCategory category);
+
+  [[nodiscard]]
+  bool shouldRecordLogEvent(const LogEvent& event, const StructuredLogOptions& options);
+
   void sanitizeLogEvent(LogEvent& event, const StructuredLogOptions& options);
 
 } // namespace uburu::diagnostics

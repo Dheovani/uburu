@@ -10,6 +10,9 @@
 namespace uburu::text
 {
 
+  /**
+   * Captures regex compilation errors without exposing PCRE2 types to callers.
+   */
   struct RegexCompileError
   {
     int code{0};
@@ -25,6 +28,9 @@ namespace uburu::text
     internalError
   };
 
+  /**
+   * Holds regex matches plus backend execution status.
+   */
   struct RegexMatchResult
   {
     std::vector<MatchPosition> matches;
@@ -34,9 +40,15 @@ namespace uburu::text
 
   struct RegexCompileResult;
 
+  /**
+   * Compiles a regex according to search options and configured backend limits.
+   */
   [[nodiscard]]
   RegexCompileResult compileRegex(std::string_view expression, const SearchOptions& options);
 
+  /**
+   * Owns a compiled regex program and hides the backend allocation details.
+   */
   class RegexMatcher final
   {
   public:

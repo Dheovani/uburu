@@ -10,6 +10,9 @@
 namespace uburu::filesystem
 {
 
+  /**
+   * Linux watcher backed by inotify when the platform API is available.
+   */
   class LinuxFileWatcher final : public FileWatcher
   {
   public:
@@ -19,12 +22,18 @@ namespace uburu::filesystem
     LinuxFileWatcher(const LinuxFileWatcher&) = delete;
     LinuxFileWatcher& operator=(const LinuxFileWatcher&) = delete;
 
-    [[nodiscard]] FileChangeBatch poll(std::stop_token stop_token = {}) override;
+    [[nodiscard]]
+    FileChangeBatch poll(std::stop_token stopToken = {}) override;
 
   private:
-    [[nodiscard]] bool available() const;
-    [[nodiscard]] FileChangeBatch unavailableBatch() const;
-    [[nodiscard]] std::filesystem::path relativeFromRoot(const std::filesystem::path& path) const;
+    [[nodiscard]]
+    bool available() const;
+
+    [[nodiscard]]
+    FileChangeBatch unavailableBatch() const;
+
+    [[nodiscard]]
+    std::filesystem::path relativeFromRoot(const std::filesystem::path& path) const;
 
     void addDirectoryWatch(const std::filesystem::path& directory);
     void addRecursiveWatches();

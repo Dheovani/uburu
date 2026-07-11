@@ -9,12 +9,16 @@
 namespace uburu::filesystem
 {
 
+  /**
+   * Portable fallback watcher that detects changes by comparing filesystem snapshots.
+   */
   class PollingFileWatcher final : public FileWatcher
   {
   public:
     explicit PollingFileWatcher(std::filesystem::path root);
 
-    [[nodiscard]] FileChangeBatch poll(std::stop_token stop_token = {}) override;
+    [[nodiscard]]
+    FileChangeBatch poll(std::stop_token stopToken = {}) override;
 
   private:
     struct WatchedEntry
@@ -31,9 +35,11 @@ namespace uburu::filesystem
       bool incomplete{false};
     };
 
-    [[nodiscard]] Snapshot snapshot(std::stop_token stop_token) const;
+    [[nodiscard]]
+    Snapshot snapshot(std::stop_token stopToken) const;
 
-    [[nodiscard]] static bool changed(const WatchedEntry& previous, const WatchedEntry& current);
+    [[nodiscard]]
+    static bool changed(const WatchedEntry& previous, const WatchedEntry& current);
 
     std::filesystem::path root;
     std::unordered_map<std::string, WatchedEntry> entries;

@@ -11,6 +11,9 @@
 namespace uburu::concurrency
 {
 
+  /**
+   * Runs submitted tasks on a fixed set of cooperative-cancellation worker threads.
+   */
   class WorkerPool
   {
   public:
@@ -36,17 +39,28 @@ namespace uburu::concurrency
       requestStop();
     }
 
-    [[nodiscard]] bool submit(Task task, std::stop_token stop_token = {})
+    /**
+     * Enqueues work.
+     * @returns false when the pool cannot accept new tasks.
+     */
+    [[nodiscard]]
+    bool submit(Task task, std::stop_token stopToken = {})
     {
-      return queue.push(std::move(task), stop_token);
+      return queue.push(std::move(task), stopToken);
     }
 
+    /**
+     * Drains accepted work and joins all workers.
+     */
     void close()
     {
       queue.close();
       joinWorkers();
     }
 
+    /**
+     * Requests cancellation, closes the queue and joins all workers.
+     */
     void requestStop()
     {
       for (auto& worker : workers) {
@@ -57,7 +71,8 @@ namespace uburu::concurrency
       joinWorkers();
     }
 
-    [[nodiscard]] std::size_t workerCount() const
+    [[nodiscard]]
+    std::size_t workerCount() const
     {
       return workers.size();
     }
@@ -65,7 +80,8 @@ namespace uburu::concurrency
   private:
     static constexpr std::size_t defaultQueueCapacityMultiplier = 2;
 
-    [[nodiscard]] static std::size_t normalizedWorkerCount(std::size_t workerCount)
+    [[nodiscard]]
+    static std::size_t normalizedWorkerCount(std::size_t workerCount)
     {
       if (workerCount == 0)
         return 1;
@@ -82,15 +98,15 @@ namespace uburu::concurrency
       return normalizedWorkerCount(workerCount) * defaultQueueCapacityMultiplier;
     }
 
-    void run(std::stop_token stop_token)
+    void run(std::stop_token stopToken)
     {
-      while (!stop_token.stop_requested()) {
-        auto task = queue.pop(stop_token);
+      while (!stopToken.stop_requested()) {
+        auto task = queue.pop(stopToken);
 
         if (!task)
           return;
 
-        (*task)(stop_token);
+        (*task)(stopToken);
       }
     }
 

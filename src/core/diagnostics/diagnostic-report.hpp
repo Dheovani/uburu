@@ -12,6 +12,9 @@
 namespace uburu::diagnostics
 {
 
+  /**
+   * Portable diagnostic bundle intended for support and local troubleshooting.
+   */
   struct DiagnosticReport
   {
     std::string productName{"Uburu"};
@@ -26,6 +29,9 @@ namespace uburu::diagnostics
     bool includeSensitiveFields{false};
   };
 
+  /**
+   * Crash-focused diagnostic bundle safe to write after a controlled failure path.
+   */
   struct CrashReport
   {
     std::string productName{"Uburu"};
@@ -44,14 +50,23 @@ namespace uburu::diagnostics
     bool includeSensitiveFields{false};
   };
 
-  [[nodiscard]] std::string diagnosticReportJson(DiagnosticReport report, DiagnosticReportExportOptions options = {});
-  void exportDiagnosticReport(const DiagnosticReport& report,
-                              const std::filesystem::path& path,
-                              DiagnosticReportExportOptions options = {});
-  [[nodiscard]] CrashReport makeCrashReport(std::string reason, std::string errorCategory = {});
-  [[nodiscard]] std::string crashReportJson(CrashReport report, CrashReportExportOptions options = {});
-  void exportCrashReport(const CrashReport& report,
-                         const std::filesystem::path& path,
-                         CrashReportExportOptions options = {});
+  [[nodiscard]]
+  std::string diagnosticReportJson(DiagnosticReport report, DiagnosticReportExportOptions options = {});
+
+  void exportDiagnosticReport(
+    const DiagnosticReport& report,
+    const std::filesystem::path& path,
+    DiagnosticReportExportOptions options = {});
+
+  [[nodiscard]]
+  CrashReport makeCrashReport(std::string reason, std::string errorCategory = {});
+
+  [[nodiscard]]
+  std::string crashReportJson(CrashReport report, CrashReportExportOptions options = {});
+
+  void exportCrashReport(
+    const CrashReport& report,
+    const std::filesystem::path& path,
+    CrashReportExportOptions options = {});
 
 } // namespace uburu::diagnostics

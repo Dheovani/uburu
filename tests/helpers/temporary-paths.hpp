@@ -15,7 +15,11 @@
 namespace uburu::tests
 {
 
-  [[nodiscard]] inline std::filesystem::path uniqueTemporaryPath(std::string name)
+  /**
+   * Builds a process-local unique path under the system temporary directory.
+   */
+  [[nodiscard]]
+  inline std::filesystem::path uniqueTemporaryPath(std::string name)
   {
     static std::atomic_size_t counter{0};
 
@@ -33,6 +37,9 @@ namespace uburu::tests
     return std::filesystem::temp_directory_path() / uniqueName;
   }
 
+  /**
+   * RAII temporary directory for isolated tests.
+   */
   class TemporaryDirectory
   {
   public:
@@ -56,7 +63,8 @@ namespace uburu::tests
     TemporaryDirectory(TemporaryDirectory&&) noexcept = delete;
     TemporaryDirectory& operator=(TemporaryDirectory&&) noexcept = delete;
 
-    [[nodiscard]] const std::filesystem::path& path() const
+    [[nodiscard]]
+    const std::filesystem::path& path() const
     {
       return pathValue;
     }
@@ -65,6 +73,9 @@ namespace uburu::tests
     std::filesystem::path pathValue;
   };
 
+  /**
+   * RAII temporary file path that cleans up the file on destruction.
+   */
   class TemporaryFile
   {
   public:
@@ -85,7 +96,8 @@ namespace uburu::tests
     TemporaryFile(TemporaryFile&&) noexcept = delete;
     TemporaryFile& operator=(TemporaryFile&&) noexcept = delete;
 
-    [[nodiscard]] const std::filesystem::path& path() const
+    [[nodiscard]]
+    const std::filesystem::path& path() const
     {
       return pathValue;
     }

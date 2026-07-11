@@ -18,6 +18,9 @@ namespace uburu::concurrency
     std::uint64_t consumerWaits{0};
   };
 
+  /**
+   * Provides a cancellation-aware queue with fixed capacity and explicit close semantics.
+   */
   template <typename T> class BoundedQueue
   {
   public:
@@ -26,16 +29,20 @@ namespace uburu::concurrency
     BoundedQueue(const BoundedQueue&) = delete;
     BoundedQueue& operator=(const BoundedQueue&) = delete;
 
-    [[nodiscard]] bool push(T value, std::stop_token stop_token = {})
+    /**
+     * Pushes one item, waiting for capacity unless the queue is closed or cancellation is requested.
+     */
+    [[nodiscard]]
+    bool push(T value, std::stop_token stopToken = {})
     {
       std::unique_lock lock(mutex);
 
       if (!closedValue && queue.size() >= capacityValue)
         ++metricsValue.producerWaits;
 
-      notFull.wait(lock, stop_token, [&] { return closedValue || queue.size() < capacityValue; });
+      notFull.wait(lock, stopToken, [&] { return closedValue || queue.size() < capacityValue; });
 
-      if (closedValue || stop_token.stop_requested())
+      if (closedValue || stopToken.stop_requested())
         return false;
 
       queue.push_back(std::move(value));
@@ -44,14 +51,18 @@ namespace uburu::concurrency
       return true;
     }
 
-    [[nodiscard]] std::optional<T> pop(std::stop_token stop_token = {})
+    /**
+     * Pops one item or returns empty when the queue is closed, empty, or cancellation is requested.
+     */
+    [[nodiscard]]
+    std::optional<T> pop(std::stop_token stopToken = {})
     {
       std::unique_lock lock(mutex);
 
       if (!closedValue && queue.empty())
         ++metricsValue.consumerWaits;
 
-      notEmpty.wait(lock, stop_token, [&] { return closedValue || !queue.empty(); });
+      notEmpty.wait(lock, stopToken, [&] { return closedValue || !queue.empty(); });
 
       if (queue.empty())
         return std::nullopt;
@@ -63,6 +74,9 @@ namespace uburu::concurrency
       return value;
     }
 
+    /**
+     * Closes the queue and wakes all waiting producers and consumers.
+     */
     void close()
     {
       {
@@ -74,21 +88,24 @@ namespace uburu::concurrency
       notFull.notify_all();
     }
 
-    [[nodiscard]] std::size_t size() const
+    [[nodiscard]]
+    std::size_t size() const
     {
       std::lock_guard lock(mutex);
 
       return queue.size();
     }
 
-    [[nodiscard]] bool closed() const
+    [[nodiscard]]
+    bool closed() const
     {
       std::lock_guard lock(mutex);
 
       return closedValue;
     }
 
-    [[nodiscard]] BoundedQueueMetrics metrics() const
+    [[nodiscard]]
+    BoundedQueueMetrics metrics() const
     {
       std::lock_guard lock(mutex);
 

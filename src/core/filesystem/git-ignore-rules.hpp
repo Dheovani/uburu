@@ -8,6 +8,9 @@
 namespace uburu::filesystem
 {
 
+  /**
+   * Represents one parsed .gitignore rule with enough metadata for ordered matching.
+   */
   struct GitIgnoreRule
   {
     std::filesystem::path baseDirectory;
@@ -18,20 +21,30 @@ namespace uburu::filesystem
     bool basenameOnly{false};
   };
 
+  /**
+   * Maintains ordered .gitignore rules and evaluates the last matching rule.
+   */
   class GitIgnoreRules
   {
   public:
     void appendFile(const std::filesystem::path& ignoreFile, const std::filesystem::path& baseDirectory);
 
-    [[nodiscard]] bool ignores(const std::filesystem::path& relativePath, bool is_directory) const;
+    [[nodiscard]]
+    bool ignores(const std::filesystem::path& relativePath, bool isDirectory) const;
 
-    [[nodiscard]] bool empty() const;
+    [[nodiscard]]
+    bool empty() const;
 
   private:
     std::vector<GitIgnoreRule> rules;
   };
 
-  [[nodiscard]] std::vector<GitIgnoreRule> parseGitIgnore(std::string_view content,
-                                                          const std::filesystem::path& baseDirectory);
+  /**
+   * Parses .gitignore content relative to the directory that owns that ignore file.
+   */
+  [[nodiscard]]
+  std::vector<GitIgnoreRule> parseGitIgnore(
+    std::string_view content,
+    const std::filesystem::path& baseDirectory);
 
 } // namespace uburu::filesystem

@@ -33,6 +33,9 @@ namespace uburu::search
     fileReadFailed
   };
 
+  /**
+   * Describes one typed search error with optional backend-specific context.
+   */
   struct SearchError
   {
     SearchErrorCode code{SearchErrorCode::emptyExpression};
@@ -48,6 +51,9 @@ namespace uburu::search
     interpretedFallback
   };
 
+  /**
+   * Summarizes a search run for UI status, diagnostics, and tests.
+   */
   struct SearchSummary
   {
     std::size_t filesScanned{0};
@@ -62,12 +68,19 @@ namespace uburu::search
     diagnostics::SearchMetrics metrics;
   };
 
+  /**
+   * Streams search results without coupling callers to a concrete search backend.
+   */
   class SearchEngine
   {
   public:
     virtual ~SearchEngine() = default;
-    [[nodiscard]] virtual SearchSummary
-    search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token = {}) const = 0;
+
+    [[nodiscard]]
+    virtual SearchSummary search(
+      const SearchQuery& query,
+      ResultSink sink,
+      std::stop_token stopToken = {}) const = 0;
   };
 
 } // namespace uburu::search

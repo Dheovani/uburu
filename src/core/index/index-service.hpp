@@ -15,6 +15,9 @@
 namespace uburu::index
 {
 
+  /**
+   * Aggregates extractor-level work during an index update.
+   */
   struct IndexExtractorMetrics
   {
     std::string extractorName;
@@ -29,6 +32,9 @@ namespace uburu::index
     std::uintmax_t indexedTextBytes{0};
   };
 
+  /**
+   * Reports incremental indexing progress to the UI or diagnostics layer.
+   */
   struct IndexUpdateProgress
   {
     std::size_t processed{0};
@@ -48,6 +54,9 @@ namespace uburu::index
     std::filesystem::path currentPath;
   };
 
+  /**
+   * Summarizes the final result of an index update.
+   */
   struct IndexUpdateSummary
   {
     std::size_t indexed{0};
@@ -65,6 +74,9 @@ namespace uburu::index
     bool cancelled{false};
   };
 
+  /**
+   * Adds Git-derived metadata to a scanned file before indexing.
+   */
   struct IndexFileMetadata
   {
     GitFileStatus status{GitFileStatus::clean};
@@ -94,26 +106,43 @@ namespace uburu::index
 
   using IndexProgressCallback = std::function<void(const IndexUpdateProgress&)>;
 
+  /**
+   * Defines the persistent index boundary used by application services and search.
+   */
   class IndexService
   {
   public:
     virtual ~IndexService() = default;
-    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,
-                                                    std::span<const FileEntry> files,
-                                                    const IndexProgressCallback& onProgress = {},
-                                                    std::stop_token stopToken = {}) = 0;
-    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,
-                                                    std::span<const IndexFileCandidate> files,
-                                                    const IndexProgressCallback& onProgress = {},
-                                                    std::stop_token stopToken = {}) = 0;
-    [[nodiscard]] virtual IndexUpdateSummary update(const WorktreeInfo& worktree,
-                                                    std::span<const FileEntry> files,
-                                                    std::span<const GitOverlayEntry> overlay,
-                                                    const IndexProgressCallback& onProgress = {},
-                                                    std::stop_token stopToken = {}) = 0;
-    [[nodiscard]] virtual IndexStalenessReport staleness(const WorktreeInfo& worktree) const = 0;
-    [[nodiscard]] virtual std::vector<SearchResult> search(const SearchQuery& query,
-                                                           std::stop_token stopToken = {}) const = 0;
+
+    [[nodiscard]]
+    virtual IndexUpdateSummary update(
+      const WorktreeInfo& worktree,
+      std::span<const FileEntry> files,
+      const IndexProgressCallback& onProgress = {},
+      std::stop_token stopToken = {}) = 0;
+
+    [[nodiscard]]
+    virtual IndexUpdateSummary update(
+      const WorktreeInfo& worktree,
+      std::span<const IndexFileCandidate> files,
+      const IndexProgressCallback& onProgress = {},
+      std::stop_token stopToken = {}) = 0;
+
+    [[nodiscard]]
+    virtual IndexUpdateSummary update(
+      const WorktreeInfo& worktree,
+      std::span<const FileEntry> files,
+      std::span<const GitOverlayEntry> overlay,
+      const IndexProgressCallback& onProgress = {},
+      std::stop_token stopToken = {}) = 0;
+
+    [[nodiscard]]
+    virtual IndexStalenessReport staleness(const WorktreeInfo& worktree) const = 0;
+
+    [[nodiscard]]
+    virtual std::vector<SearchResult> search(
+      const SearchQuery& query,
+      std::stop_token stopToken = {}) const = 0;
   };
 
 } // namespace uburu::index

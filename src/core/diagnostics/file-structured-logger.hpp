@@ -8,6 +8,9 @@
 namespace uburu::diagnostics
 {
 
+  /**
+   * File logger configuration, including simple size-based rotation.
+   */
   struct FileStructuredLogOptions
   {
     StructuredLogOptions structuredOptions;
@@ -16,6 +19,9 @@ namespace uburu::diagnostics
     std::size_t maximumRotatedFiles{3};
   };
 
+  /**
+   * Writes structured logs as JSON lines to disk.
+   */
   class FileStructuredLogger final : public StructuredLogger
   {
   public:

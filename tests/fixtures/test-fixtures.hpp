@@ -32,11 +32,17 @@ namespace uburu::tests::fixtures
     std::string content;
   };
 
+  /**
+   * Returns Portuguese text encoded with precomposed Unicode scalars.
+   */
   inline std::string portuguesePrecomposedText()
   {
     return "a gera\xC3\xA7\xC3\xA3o e a corrup\xC3\xA7\xC3\xA3o da mat\xC3\xA9ria";
   }
 
+  /**
+   * Returns the same Portuguese text using decomposed combining marks.
+   */
   inline std::string portugueseDecomposedText()
   {
     return "a gerac\xCC\xA7"
@@ -47,12 +53,18 @@ namespace uburu::tests::fixtures
            "ria";
   }
 
+  /**
+   * Appends one little-endian 16-bit value to a byte buffer.
+   */
   inline void appendLittleEndian16(std::vector<unsigned char>& bytes, std::uint16_t value)
   {
     bytes.push_back(static_cast<unsigned char>(value & 0xFFU));
     bytes.push_back(static_cast<unsigned char>((value >> 8U) & 0xFFU));
   }
 
+  /**
+   * Appends one little-endian 32-bit value to a byte buffer.
+   */
   inline void appendLittleEndian32(std::vector<unsigned char>& bytes, std::uint32_t value)
   {
     bytes.push_back(static_cast<unsigned char>(value & 0xFFU));
@@ -67,6 +79,9 @@ namespace uburu::tests::fixtures
       bytes.push_back(static_cast<unsigned char>(character));
   }
 
+  /**
+   * Builds a minimal stored-only ZIP archive for document extractor tests.
+   */
   [[nodiscard]]
   inline std::vector<unsigned char> storedZipBytes(std::vector<StoredZipEntryFixture> entries)
   {
@@ -127,6 +142,9 @@ namespace uburu::tests::fixtures
     return bytes;
   }
 
+  /**
+   * Builds a minimal DOCX-like archive containing only the main document XML.
+   */
   [[nodiscard]]
   inline std::vector<unsigned char> minimalDocxBytes(std::string_view documentXml)
   {
@@ -137,6 +155,9 @@ namespace uburu::tests::fixtures
                            StoredZipEntryFixture{.name = "word/document.xml", .content = std::string{documentXml}}});
   }
 
+  /**
+   * Builds a minimal XLSX-like archive with workbook, shared strings, and one worksheet.
+   */
   [[nodiscard]]
   inline std::vector<unsigned char> minimalXlsxBytes(
     std::string_view worksheetXml,

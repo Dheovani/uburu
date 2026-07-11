@@ -8,6 +8,9 @@
 namespace uburu::diagnostics
 {
 
+  /**
+   * Converts metric snapshots into structured log events.
+   */
   class StructuredMetricsSink final : public MetricsSink
   {
   public:

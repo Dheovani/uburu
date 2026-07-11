@@ -17,6 +17,9 @@
 namespace uburu::tests
 {
 
+  /**
+   * Creates repository fixtures inside the working tree to keep libgit2 worktree tests stable on Windows.
+   */
   class Libgit2RepositoryDirectory
   {
   public:
@@ -41,7 +44,8 @@ namespace uburu::tests
     Libgit2RepositoryDirectory(Libgit2RepositoryDirectory&&) noexcept = delete;
     Libgit2RepositoryDirectory& operator=(Libgit2RepositoryDirectory&&) noexcept = delete;
 
-    [[nodiscard]] const std::filesystem::path& path() const
+    [[nodiscard]]
+    const std::filesystem::path& path() const
     {
       return pathValue;
     }
@@ -52,6 +56,9 @@ namespace uburu::tests
 
 #if defined(UBURU_HAS_LIBGIT2)
 
+  /**
+   * Fails a test with libgit2 context attached to Catch2 output.
+   */
   inline void requireGitSuccess(int status, std::string_view operation, const std::filesystem::path& path)
   {
     if (status != 0) {
@@ -66,6 +73,9 @@ namespace uburu::tests
     REQUIRE(status == 0);
   }
 
+  /**
+   * Creates a commit containing all current indexable files in the repository.
+   */
   inline void createCommit(git_repository* repository, std::string_view message)
   {
     git_index* index = nullptr;

@@ -13,6 +13,8 @@ namespace uburu
   using RepositoryId = std::string;
   using WorktreeId = std::string;
 
+  /** Version constants for persisted index documents. */
+
   inline constexpr std::uint32_t initialIndexDocumentFormatVersion = 1;
   inline constexpr std::uint32_t latestIndexDocumentFormatVersion = initialIndexDocumentFormatVersion;
 
@@ -90,6 +92,9 @@ namespace uburu
     conflict
   };
 
+  /**
+   * Search behavior and safety limits shared by direct and indexed search paths.
+   */
   struct SearchOptions
   {
     SearchMode mode{SearchMode::literal};
@@ -123,6 +128,9 @@ namespace uburu
     std::vector<std::filesystem::path> globalGitIgnoreFiles;
   };
 
+  /**
+   * One root selected by the user plus optional relative include/exclude folders.
+   */
   struct SearchRoot
   {
     std::filesystem::path path;
@@ -130,11 +138,17 @@ namespace uburu
     std::vector<std::filesystem::path> excludedDirectories;
   };
 
+  /**
+   * Multi-root search scope used by the core independently from UI widgets.
+   */
   struct SearchScope
   {
     std::vector<SearchRoot> roots;
   };
 
+  /**
+   * Complete search request consumed by search engines.
+   */
   struct SearchQuery
   {
     std::filesystem::path root;
@@ -143,6 +157,9 @@ namespace uburu
     SearchOptions options;
   };
 
+  /**
+   * Byte-precise highlight span with a display column for UI rendering.
+   */
   struct MatchSpan
   {
     std::size_t column{0};
@@ -150,6 +167,9 @@ namespace uburu
     std::size_t byteLength{0};
   };
 
+  /**
+   * One search hit, including preview context and the root that produced it.
+   */
   struct SearchResult
   {
     SearchResultKind kind{SearchResultKind::content};
@@ -164,6 +184,9 @@ namespace uburu
     std::filesystem::path searchRoot;
   };
 
+  /**
+   * Filesystem metadata collected before a file is read or indexed.
+   */
   struct FileEntry
   {
     std::filesystem::path absolutePath;
@@ -177,6 +200,9 @@ namespace uburu
     std::filesystem::path searchRoot;
   };
 
+  /**
+   * Logical Git repository metadata shared by all worktrees.
+   */
   struct RepositoryInfo
   {
     RepositoryId id;
@@ -187,6 +213,9 @@ namespace uburu
     bool detachedHead{false};
   };
 
+  /**
+   * Physical worktree state currently visible to the user.
+   */
   struct WorktreeInfo
   {
     WorktreeId id;
@@ -200,12 +229,18 @@ namespace uburu
     std::string lockReason;
   };
 
+  /**
+   * Hash of a Git object with its repository hash algorithm.
+   */
   struct GitObjectId
   {
     GitObjectHashAlgorithm algorithm{GitObjectHashAlgorithm::unknown};
     std::string value;
   };
 
+  /**
+   * Git working-tree overlay entry used to reconcile indexed state with local changes.
+   */
   struct GitOverlayEntry
   {
     std::filesystem::path relativePath;
@@ -215,12 +250,18 @@ namespace uburu
     std::optional<GitObjectId> reusableBlob;
   };
 
+  /**
+   * Nested Git boundary discovered during scanning.
+   */
   struct GitRepositoryBoundary
   {
     std::filesystem::path relativePath;
     GitRepositoryBoundaryKind kind{GitRepositoryBoundaryKind::none};
   };
 
+  /**
+   * Persisted representation of one indexable document version.
+   */
   struct IndexDocument
   {
     std::uint32_t formatVersion{latestIndexDocumentFormatVersion};
@@ -239,6 +280,9 @@ namespace uburu
     std::optional<std::string> indexedText;
   };
 
+  /**
+   * Reusable document identity used to avoid reindexing unchanged content.
+   */
   struct IndexedDocumentIdentity
   {
     std::uint32_t formatVersion{latestIndexDocumentFormatVersion};
@@ -250,6 +294,9 @@ namespace uburu
     std::chrono::system_clock::time_point indexedAt{};
   };
 
+  /**
+   * Full index generation for a worktree and HEAD snapshot.
+   */
   struct IndexGeneration
   {
     RepositoryId repositoryId;
@@ -260,6 +307,9 @@ namespace uburu
     std::vector<IndexDocument> documents;
   };
 
+  /**
+   * Lightweight generation metadata without document payloads.
+   */
   struct IndexGenerationMetadata
   {
     RepositoryId repositoryId;
@@ -269,6 +319,9 @@ namespace uburu
     std::chrono::system_clock::time_point createdAt{};
   };
 
+  /**
+   * SQLite PRAGMA state captured for storage diagnostics.
+   */
   struct StoragePragmaSnapshot
   {
     bool foreignKeysEnabled{false};
@@ -277,12 +330,18 @@ namespace uburu
     std::chrono::milliseconds busyTimeout{0};
   };
 
+  /**
+   * Result of a storage integrity check.
+   */
   struct StorageIntegrityReport
   {
     bool ok{false};
     std::string message;
   };
 
+  /**
+   * User search history entry persisted by storage.
+   */
   struct SearchHistoryEntry
   {
     std::filesystem::path root;
@@ -290,6 +349,9 @@ namespace uburu
     std::chrono::system_clock::time_point searchedAt{};
   };
 
+  /**
+   * Named search saved by the user.
+   */
   struct SavedSearch
   {
     std::string name;
@@ -298,6 +360,9 @@ namespace uburu
     std::chrono::system_clock::time_point savedAt{};
   };
 
+  /**
+   * Numeric indexing metric persisted for diagnostics and trend analysis.
+   */
   struct IndexingMetric
   {
     std::string name;
@@ -305,6 +370,9 @@ namespace uburu
     std::chrono::system_clock::time_point recordedAt{};
   };
 
+  /**
+   * Result of moving or copying database files to the current application data location.
+   */
   struct StorageMigrationResult
   {
     bool copiedDatabase{false};

@@ -40,6 +40,9 @@ namespace uburu::app
     bool truncated{false};
   };
 
+  /**
+   * Qt model that exposes progressive search results to QML.
+   */
   class SearchResultModel final : public QAbstractListModel
   {
     Q_OBJECT
@@ -55,10 +58,18 @@ namespace uburu::app
       FileGroupHeaderRole,
       FileGroupLabelRole
     };
+
     explicit SearchResultModel(QObject* parent = nullptr);
-    [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
-    [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
-    [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
+
+    [[nodiscard]]
+    int rowCount(const QModelIndex& parent = {}) const override;
+
+    [[nodiscard]]
+    QVariant data(const QModelIndex& index, int role) const override;
+
+    [[nodiscard]]
+    QHash<int, QByteArray> roleNames() const override;
+
     void clear();
     void append(SearchResult result);
 
@@ -66,6 +77,9 @@ namespace uburu::app
     std::vector<SearchResult> results;
   };
 
+  /**
+   * QML-facing controller that bridges user actions to search, indexing, preview, and file operations.
+   */
   class SearchController final : public QObject
   {
     Q_OBJECT
@@ -98,30 +112,78 @@ namespace uburu::app
     explicit SearchController(QObject* parent = nullptr);
     explicit SearchController(std::shared_ptr<const SearchService> searchService, QObject* parent = nullptr);
     ~SearchController() override;
-    [[nodiscard]] QString directory() const;
-    [[nodiscard]] QString status() const;
-    [[nodiscard]] bool running() const;
-    [[nodiscard]] bool cancelling() const;
-    [[nodiscard]] QAbstractItemModel* results();
-    [[nodiscard]] QStringList selectedDirectories() const;
-    [[nodiscard]] QVariantList includedDirectories() const;
-    [[nodiscard]] QVariantList excludedDirectories() const;
-    [[nodiscard]] QStringList recentDirectories() const;
-    [[nodiscard]] QStringList favoriteDirectories() const;
-    [[nodiscard]] bool currentDirectoryFavorite() const;
-    [[nodiscard]] qulonglong filesScanned() const;
-    [[nodiscard]] qulonglong matchesFound() const;
-    [[nodiscard]] QString timeToFirstResult() const;
-    [[nodiscard]] QString searchDuration() const;
-    [[nodiscard]] QString indexingStatus() const;
-    [[nodiscard]] bool indexingRunning() const;
-    [[nodiscard]] int indexingProgress() const;
-    [[nodiscard]] QString previewFilePath() const;
-    [[nodiscard]] QString previewLocation() const;
-    [[nodiscard]] QString previewText() const;
-    [[nodiscard]] QString previewHtml() const;
-    [[nodiscard]] bool previewLoading() const;
-    [[nodiscard]] bool regexAvailable() const;
+
+    [[nodiscard]]
+    QString directory() const;
+
+    [[nodiscard]]
+    QString status() const;
+
+    [[nodiscard]]
+    bool running() const;
+
+    [[nodiscard]]
+    bool cancelling() const;
+
+    [[nodiscard]]
+    QAbstractItemModel* results();
+
+    [[nodiscard]]
+    QStringList selectedDirectories() const;
+
+    [[nodiscard]]
+    QVariantList includedDirectories() const;
+
+    [[nodiscard]]
+    QVariantList excludedDirectories() const;
+
+    [[nodiscard]]
+    QStringList recentDirectories() const;
+
+    [[nodiscard]]
+    QStringList favoriteDirectories() const;
+
+    [[nodiscard]]
+    bool currentDirectoryFavorite() const;
+
+    [[nodiscard]]
+    qulonglong filesScanned() const;
+
+    [[nodiscard]]
+    qulonglong matchesFound() const;
+
+    [[nodiscard]]
+    QString timeToFirstResult() const;
+
+    [[nodiscard]]
+    QString searchDuration() const;
+
+    [[nodiscard]]
+    QString indexingStatus() const;
+
+    [[nodiscard]]
+    bool indexingRunning() const;
+
+    [[nodiscard]]
+    int indexingProgress() const;
+
+    [[nodiscard]]
+    QString previewFilePath() const;
+
+    [[nodiscard]]
+    QString previewLocation() const;
+
+    [[nodiscard]]
+    QString previewText() const;
+
+    [[nodiscard]]
+    QString previewHtml() const;
+
+    [[nodiscard]]
+    bool previewLoading() const;
+
+    [[nodiscard]]
+    bool regexAvailable() const;
 
     Q_INVOKABLE void selectDirectory(const QString& url);
     Q_INVOKABLE void selectSavedDirectory(const QString& path);
@@ -136,26 +198,31 @@ namespace uburu::app
     Q_INVOKABLE void openWith(const QString& path);
     Q_INVOKABLE void openContainingFolder(const QString& path);
     Q_INVOKABLE void copyToClipboard(const QString& text);
-    Q_INVOKABLE void loadPreview(const QString& path,
-                                 const QString& location,
-                                 const QString& fallbackPreview,
-                                 const QVariantList& highlights);
+    Q_INVOKABLE void loadPreview(
+      const QString& path,
+      const QString& location,
+      const QString& fallbackPreview,
+      const QVariantList& highlights);
     Q_INVOKABLE void clearPreview();
-    Q_INVOKABLE void startSearch(const QString& expression,
-                                 bool regex,
-                                 bool caseSensitive,
-                                 bool wholeWord,
-                                 bool respectGitignore,
-                                 bool includeHidden,
-                                 bool includeBinary,
-                                 bool includeSubdirectories,
-                                 const QString& documentTypes);
+
+    Q_INVOKABLE void startSearch(
+      const QString& expression,
+      bool regex,
+      bool caseSensitive,
+      bool wholeWord,
+      bool respectGitignore,
+      bool includeHidden,
+      bool includeBinary,
+      bool includeSubdirectories,
+      const QString& documentTypes);
     Q_INVOKABLE void cancel();
-    Q_INVOKABLE void startIndexing(bool respectGitignore,
-                                   bool includeHidden,
-                                   bool includeBinary,
-                                   bool includeSubdirectories,
-                                   const QString& documentTypes);
+
+    Q_INVOKABLE void startIndexing(
+      bool respectGitignore,
+      bool includeHidden,
+      bool includeBinary,
+      bool includeSubdirectories,
+      const QString& documentTypes);
     Q_INVOKABLE void cancelIndexing();
 
   signals:

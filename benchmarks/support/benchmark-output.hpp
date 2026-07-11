@@ -9,15 +9,20 @@
 namespace uburu::benchmarks
 {
 
-  void
-  publishSearchCounters(benchmark::State& state, const BenchmarkDataset& dataset, const SearchBenchmarkResult& result);
+  void publishSearchCounters(
+    benchmark::State& state,
+    const BenchmarkDataset& dataset,
+    const SearchBenchmarkResult& result);
 
-  void publishRepeatedSearchCounters(benchmark::State& state,
-                                     const BenchmarkDataset& dataset,
-                                     const SearchBenchmarkResult& firstPass,
-                                     const SearchBenchmarkResult& secondPass);
+  void publishRepeatedSearchCounters(
+    benchmark::State& state,
+    const BenchmarkDataset& dataset,
+    const SearchBenchmarkResult& firstPass,
+    const SearchBenchmarkResult& secondPass);
 
-  void
-  publishIndexCounters(benchmark::State& state, const BenchmarkDataset& dataset, const IndexBenchmarkResult& result);
+  void publishIndexCounters(
+    benchmark::State& state,
+    const BenchmarkDataset& dataset,
+    const IndexBenchmarkResult& result);
 
 } // namespace uburu::benchmarks

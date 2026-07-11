@@ -7,6 +7,10 @@
 namespace uburu::search
 {
 
-  [[nodiscard]] std::vector<SearchError> validateSearchQuery(const SearchQuery& query);
+  /**
+   * Validates a query before any scanner, index, or regex backend is invoked.
+   */
+  [[nodiscard]]
+  std::vector<SearchError> validateSearchQuery(const SearchQuery& query);
 
 } // namespace uburu::search

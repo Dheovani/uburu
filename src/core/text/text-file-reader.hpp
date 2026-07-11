@@ -31,6 +31,9 @@ namespace uburu::text
     cr
   };
 
+  /**
+   * Carries one decoded line with source position metadata.
+   */
   struct TextLine
   {
     std::string text;
@@ -39,6 +42,9 @@ namespace uburu::text
     LineEnding ending{LineEnding::none};
   };
 
+  /**
+   * Summarizes text decoding and line streaming.
+   */
   struct TextReadSummary
   {
     TextReadStatus status{TextReadStatus::completed};
@@ -51,14 +57,25 @@ namespace uburu::text
 
   using TextLineSink = std::function<bool(const TextLine&)>;
 
+  /**
+   * Streams decoded text lines without requiring callers to load the whole file.
+   */
   [[nodiscard]]
-  TextReadSummary readTextFileLines(const std::filesystem::path& path,
-                                    const SearchOptions& options,
-                                    const TextLineSink& sink,
-                                    std::stop_token stop_token = {});
+  TextReadSummary readTextFileLines(
+    const std::filesystem::path& path,
+    const SearchOptions& options,
+    const TextLineSink& sink,
+    std::stop_token stopToken = {});
 
+  /**
+   * Detects binary-looking samples after encoding detection has already run.
+   */
   [[nodiscard]]
   bool sampleLooksBinary(std::string_view sample, TextEncoding encoding);
+
+  /**
+   * Converts a UTF-8 byte offset into a user-facing one-based visual column.
+   */
   [[nodiscard]]
   std::size_t visualColumnForByteOffset(std::string_view utf8Text, std::size_t byteOffset);
 

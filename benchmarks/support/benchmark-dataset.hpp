@@ -9,6 +9,9 @@
 namespace uburu::benchmarks
 {
 
+  /**
+   * Describes a deterministic dataset and the expected search/indexing counters for benchmarks.
+   */
   struct BenchmarkDataset
   {
     std::filesystem::path root;
@@ -24,6 +27,9 @@ namespace uburu::benchmarks
     std::uint64_t expectedBinaryFiles{0};
   };
 
+  /**
+   * Owns a generated benchmark dataset and removes its files on destruction.
+   */
   class TemporaryBenchmarkDataset
   {
   public:
@@ -35,23 +41,44 @@ namespace uburu::benchmarks
     TemporaryBenchmarkDataset(TemporaryBenchmarkDataset&&) noexcept = delete;
     TemporaryBenchmarkDataset& operator=(TemporaryBenchmarkDataset&&) noexcept = delete;
 
-    [[nodiscard]] const BenchmarkDataset& get() const;
+    [[nodiscard]]
+    const BenchmarkDataset& get() const;
 
   private:
     BenchmarkDataset dataset;
   };
 
-  [[nodiscard]] TemporaryBenchmarkDataset makeManySmallFilesDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeFewLargeFilesDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeMixedTextAndBinaryDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeGitignoreHeavyDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeCaseInsensitiveLiteralDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeCaseSensitiveLiteralDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeWholeWordLiteralDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeUnicodeNormalizationDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeUnicodeContentDataset();
-  [[nodiscard]] TemporaryBenchmarkDataset makeRegexHeavyContentDataset();
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeManySmallFilesDataset();
 
-  [[nodiscard]] SearchQuery makeSearchQuery(const BenchmarkDataset& dataset);
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeFewLargeFilesDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeMixedTextAndBinaryDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeGitignoreHeavyDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeCaseInsensitiveLiteralDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeCaseSensitiveLiteralDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeWholeWordLiteralDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeUnicodeNormalizationDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeUnicodeContentDataset();
+
+  [[nodiscard]]
+  TemporaryBenchmarkDataset makeRegexHeavyContentDataset();
+
+  [[nodiscard]]
+  SearchQuery makeSearchQuery(const BenchmarkDataset& dataset);
 
 } // namespace uburu::benchmarks

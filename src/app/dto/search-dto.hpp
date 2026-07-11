@@ -35,6 +35,9 @@ namespace uburu::app
     failed
   };
 
+  /**
+   * Controls how service-level search events are batched before they reach the UI.
+   */
   struct SearchExecutionOptions
   {
     SearchRunId runId{0};
@@ -45,6 +48,9 @@ namespace uburu::app
     std::chrono::milliseconds targetBatchDeliveryLatency{defaultTargetBatchDeliveryLatency};
   };
 
+  /**
+   * UI-facing match span using byte offsets from the core and one-based display columns.
+   */
   struct SearchMatchDto
   {
     std::size_t column{0};
@@ -52,6 +58,9 @@ namespace uburu::app
     std::size_t byteLength{0};
   };
 
+  /**
+   * UI-safe projection of SearchResult that keeps the originating search root for scope validation.
+   */
   struct SearchResultDto
   {
     SearchResultKindDto kind{SearchResultKindDto::content};
@@ -66,6 +75,9 @@ namespace uburu::app
     std::filesystem::path searchRoot;
   };
 
+  /**
+   * Translatable error payload for the application layer.
+   */
   struct SearchErrorDto
   {
     std::string code;
@@ -75,6 +87,9 @@ namespace uburu::app
     std::size_t offset{0};
   };
 
+  /**
+   * Stable metrics snapshot exposed to controllers and QML.
+   */
   struct SearchMetricsDto
   {
     std::chrono::nanoseconds timeToFirstResult{};
@@ -100,6 +115,9 @@ namespace uburu::app
     bool memoryIncreased{false};
   };
 
+  /**
+   * Search completion summary converted to DTO fields that do not expose core implementation details.
+   */
   struct SearchSummaryDto
   {
     std::size_t filesScanned{0};
@@ -114,6 +132,9 @@ namespace uburu::app
     SearchMetricsDto metrics;
   };
 
+  /**
+   * Progressive event emitted while a search is running.
+   */
   struct SearchEventDto
   {
     SearchRunId runId{0};
@@ -125,12 +146,25 @@ namespace uburu::app
 
   using SearchEventSink = std::function<bool(const SearchEventDto&)>;
 
-  [[nodiscard]] SearchResultKindDto toSearchResultKindDto(SearchResultKind kind);
-  [[nodiscard]] SearchResultKind toCoreSearchResultKind(SearchResultKindDto kind);
-  [[nodiscard]] SearchMatchDto toSearchMatchDto(const MatchSpan& match);
-  [[nodiscard]] SearchResultDto toSearchResultDto(const SearchResult& result);
-  [[nodiscard]] SearchMetricsDto toSearchMetricsDto(const diagnostics::SearchMetrics& metrics);
-  [[nodiscard]] SearchErrorDto toSearchErrorDto(const search::SearchError& error);
-  [[nodiscard]] SearchSummaryDto toSearchSummaryDto(const search::SearchSummary& summary);
+  [[nodiscard]]
+  SearchResultKindDto toSearchResultKindDto(SearchResultKind kind);
+
+  [[nodiscard]]
+  SearchResultKind toCoreSearchResultKind(SearchResultKindDto kind);
+
+  [[nodiscard]]
+  SearchMatchDto toSearchMatchDto(const MatchSpan& match);
+
+  [[nodiscard]]
+  SearchResultDto toSearchResultDto(const SearchResult& result);
+
+  [[nodiscard]]
+  SearchMetricsDto toSearchMetricsDto(const diagnostics::SearchMetrics& metrics);
+
+  [[nodiscard]]
+  SearchErrorDto toSearchErrorDto(const search::SearchError& error);
+
+  [[nodiscard]]
+  SearchSummaryDto toSearchSummaryDto(const search::SearchSummary& summary);
 
 } // namespace uburu::app

@@ -9,6 +9,9 @@
 namespace uburu::index
 {
 
+  /**
+   * Converts Git overlay state into indexing candidates and hidden indexed paths.
+   */
   struct OverlayCandidatePlan
   {
     std::vector<IndexFileCandidate> candidates;
@@ -16,8 +19,10 @@ namespace uburu::index
     std::size_t missingWorkingTreeFiles{0};
   };
 
-  [[nodiscard]] OverlayCandidatePlan buildOverlayIndexCandidates(const WorktreeInfo& worktree,
-                                                                 std::span<const FileEntry> scannedFiles,
-                                                                 std::span<const GitOverlayEntry> overlay);
+  [[nodiscard]]
+  OverlayCandidatePlan buildOverlayIndexCandidates(
+    const WorktreeInfo& worktree,
+    std::span<const FileEntry> scannedFiles,
+    std::span<const GitOverlayEntry> overlay);
 
 } // namespace uburu::index

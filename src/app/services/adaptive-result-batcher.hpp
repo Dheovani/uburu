@@ -8,12 +8,17 @@
 namespace uburu::app
 {
 
+  /**
+   * Adapts result batch size to keep UI delivery latency close to the configured target.
+   */
   class AdaptiveResultBatcher final
   {
   public:
     explicit AdaptiveResultBatcher(const SearchExecutionOptions& options);
 
-    [[nodiscard]] std::size_t currentBatchSize() const;
+    [[nodiscard]]
+    std::size_t currentBatchSize() const;
+
     void recordDeliveryLatency(std::chrono::nanoseconds elapsed);
 
   private:

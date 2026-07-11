@@ -7,8 +7,16 @@
 namespace uburu::search
 {
 
-  [[nodiscard]] std::vector<SearchRoot> effectiveSearchRoots(const SearchQuery& query);
+  /**
+   * Resolves the active roots for a query, preferring explicit scoped roots over legacy root.
+   */
+  [[nodiscard]]
+  std::vector<SearchRoot> effectiveSearchRoots(const SearchQuery& query);
 
-  [[nodiscard]] SearchOptions optionsForRoot(const SearchOptions& options, const SearchRoot& root);
+  /**
+   * Applies per-root filters over the base query options.
+   */
+  [[nodiscard]]
+  SearchOptions optionsForRoot(const SearchOptions& options, const SearchRoot& root);
 
 } // namespace uburu::search

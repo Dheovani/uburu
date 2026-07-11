@@ -14,6 +14,9 @@ namespace uburu::filesystem
     deleted
   };
 
+  /**
+   * Carries one normalized change event relative to the watched root.
+   */
   struct FileChangeEvent
   {
     std::filesystem::path relativePath;
@@ -21,6 +24,9 @@ namespace uburu::filesystem
     bool directory{false};
   };
 
+  /**
+   * Groups watcher events and records whether the batch is complete enough to trust.
+   */
   struct FileChangeBatch
   {
     std::vector<FileChangeEvent> events;
@@ -28,12 +34,16 @@ namespace uburu::filesystem
     bool requiresRescan{false};
   };
 
+  /**
+   * Polls filesystem changes behind platform-specific watcher implementations.
+   */
   class FileWatcher
   {
   public:
     virtual ~FileWatcher() = default;
 
-    [[nodiscard]] virtual FileChangeBatch poll(std::stop_token stop_token = {}) = 0;
+    [[nodiscard]]
+    virtual FileChangeBatch poll(std::stop_token stopToken = {}) = 0;
   };
 
 } // namespace uburu::filesystem

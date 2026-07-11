@@ -24,18 +24,31 @@ namespace uburu::app
     SearchStrategy strategy{SearchStrategy::direct};
   };
 
+  /**
+   * Application-level facade that coordinates direct, indexed, or hybrid search execution.
+   */
   class SearchService
   {
   public:
     virtual ~SearchService() = default;
-    [[nodiscard]] virtual search::SearchSummary
-    search(const SearchQuery& query, search::ResultSink sink, std::stop_token stopToken = {}) const = 0;
-    [[nodiscard]] virtual search::SearchSummary searchWithEvents(const SearchQuery& query,
-                                                                 const SearchEventSink& sink,
-                                                                 SearchExecutionOptions executionOptions = {},
-                                                                 std::stop_token stopToken = {}) const = 0;
+
+    [[nodiscard]]
+    virtual search::SearchSummary search(
+      const SearchQuery& query,
+      search::ResultSink sink,
+      std::stop_token stopToken = {}) const = 0;
+
+    [[nodiscard]]
+    virtual search::SearchSummary searchWithEvents(
+      const SearchQuery& query,
+      const SearchEventSink& sink,
+      SearchExecutionOptions executionOptions = {},
+      std::stop_token stopToken = {}) const = 0;
   };
 
+  /**
+   * Default search orchestration with runtime metrics and optional indexed-search participation.
+   */
   class DefaultSearchService final : public SearchService
   {
   public:
@@ -45,17 +58,25 @@ namespace uburu::app
     DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine,
                          std::shared_ptr<const index::IndexService> indexService,
                          SearchServiceOptions options);
-    [[nodiscard]] search::SearchSummary
-    search(const SearchQuery& query, search::ResultSink sink, std::stop_token stopToken = {}) const override;
-    [[nodiscard]] search::SearchSummary searchWithEvents(const SearchQuery& query,
-                                                         const SearchEventSink& sink,
-                                                         SearchExecutionOptions executionOptions = {},
-                                                         std::stop_token stopToken = {}) const override;
+
+    [[nodiscard]]
+    search::SearchSummary search(
+      const SearchQuery& query,
+      search::ResultSink sink,
+      std::stop_token stopToken = {}) const override;
+
+    [[nodiscard]]
+    search::SearchSummary searchWithEvents(
+      const SearchQuery& query,
+      const SearchEventSink& sink,
+      SearchExecutionOptions executionOptions = {},
+      std::stop_token stopToken = {}) const override;
 
   private:
-    void finalizeRuntimeMetrics(search::SearchSummary& summary,
-                                std::chrono::steady_clock::time_point startedAt,
-                                std::uint64_t approximateMemoryBytes) const;
+    void finalizeRuntimeMetrics(
+      search::SearchSummary& summary,
+      std::chrono::steady_clock::time_point startedAt,
+      std::uint64_t approximateMemoryBytes) const;
 
     std::shared_ptr<const search::SearchEngine> directEngine;
     std::shared_ptr<const index::IndexService> indexService;

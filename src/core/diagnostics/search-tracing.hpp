@@ -11,6 +11,9 @@
 namespace uburu::diagnostics
 {
 
+  /**
+   * Controls whether short-lived search trace events are recorded.
+   */
   struct SearchTracingOptions
   {
     bool enabled{false};
@@ -18,6 +21,9 @@ namespace uburu::diagnostics
     std::size_t maximumEvents{1024};
   };
 
+  /**
+   * One measured search operation with optional structured fields.
+   */
   struct SearchTraceEvent
   {
     std::string name;
@@ -27,15 +33,26 @@ namespace uburu::diagnostics
     std::vector<LogField> fields;
   };
 
+  /**
+   * Collects bounded trace events for diagnostics and tests.
+   */
   class SearchTraceRecorder final
   {
   public:
     explicit SearchTraceRecorder(SearchTracingOptions options = {});
 
-    [[nodiscard]] bool enabled() const noexcept;
-    void
-    record(std::string name, LogCategory category, std::chrono::nanoseconds elapsed, std::vector<LogField> fields = {});
-    [[nodiscard]] const std::vector<SearchTraceEvent>& events() const noexcept;
+    [[nodiscard]]
+    bool enabled() const noexcept;
+
+    void record(
+      std::string name,
+      LogCategory category,
+      std::chrono::nanoseconds elapsed,
+      std::vector<LogField> fields = {});
+
+    [[nodiscard]]
+    const std::vector<SearchTraceEvent>& events() const noexcept;
+
     void clear();
 
   private:
@@ -43,13 +60,17 @@ namespace uburu::diagnostics
     std::vector<SearchTraceEvent> recordedEvents;
   };
 
+  /**
+   * RAII helper that records elapsed time when leaving scope.
+   */
   class SearchTraceScope final
   {
   public:
-    SearchTraceScope(SearchTraceRecorder& recorder,
-                     std::string name,
-                     LogCategory category,
-                     std::vector<LogField> fields = {});
+    SearchTraceScope(
+      SearchTraceRecorder& recorder,
+      std::string name,
+      LogCategory category,
+      std::vector<LogField> fields = {});
     SearchTraceScope(const SearchTraceScope&) = delete;
     SearchTraceScope& operator=(const SearchTraceScope&) = delete;
     SearchTraceScope(SearchTraceScope&& other) noexcept;
@@ -64,9 +85,11 @@ namespace uburu::diagnostics
     std::chrono::steady_clock::time_point startedAt{};
   };
 
-  [[nodiscard]] SearchTraceScope traceSearchScope(SearchTraceRecorder& recorder,
-                                                  std::string name,
-                                                  LogCategory category = LogCategory::search,
-                                                  std::vector<LogField> fields = {});
+  [[nodiscard]]
+  SearchTraceScope traceSearchScope(
+    SearchTraceRecorder& recorder,
+    std::string name,
+    LogCategory category = LogCategory::search,
+    std::vector<LogField> fields = {});
 
 } // namespace uburu::diagnostics

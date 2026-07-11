@@ -37,6 +37,9 @@ namespace uburu::app
     bool telemetryEnabled{false};
   };
 
+  /**
+   * Optional repository overrides that inherit any unset value from the global settings.
+   */
   struct RepositorySettings
   {
     RepositoryId repositoryId;
@@ -52,6 +55,9 @@ namespace uburu::app
     std::optional<std::string> relevantExtensions;
   };
 
+  /**
+   * Fully resolved settings snapshot used by repository-scoped services.
+   */
   struct EffectiveRepositorySettings
   {
     RepositoryId repositoryId;
@@ -81,8 +87,9 @@ namespace uburu::app
   RepositorySettings normalizedRepositorySettings(const RepositorySettings& settings);
 
   [[nodiscard]]
-  EffectiveRepositorySettings effectiveRepositorySettings(const GlobalSettings& globalSettings,
-                                                          const RepositorySettings& repositorySettings);
+  EffectiveRepositorySettings effectiveRepositorySettings(
+    const GlobalSettings& globalSettings,
+    const RepositorySettings& repositorySettings);
 
   [[nodiscard]]
   std::string toPreferenceValue(ThemeMode mode);
@@ -96,6 +103,9 @@ namespace uburu::app
   [[nodiscard]]
   UiLanguage uiLanguageFromPreferenceValue(const std::string& value);
 
+  /**
+   * Loads, saves, exports, and imports versioned settings independently from the UI.
+   */
   class SettingsService
   {
   public:
@@ -120,6 +130,9 @@ namespace uburu::app
     virtual void importSettingsAndSavedSearches(std::string_view text) = 0;
   };
 
+  /**
+   * SQLite-backed settings service implementation.
+   */
   class StorageSettingsService final : public SettingsService
   {
   public:

@@ -3,6 +3,7 @@ add_library(uburu_core STATIC
   document/docx-document-extractor.cpp
   document/document-extractor.cpp
   document/html-document-extractor.cpp
+  document/open-document-extractor.cpp
   document/plain-text-extractor.cpp
   document/pptx-document-extractor.cpp
   document/rtf-document-extractor.cpp

@@ -870,7 +870,7 @@ TEST_CASE("persistent index service classifies unsupported document formats with
   const auto root = directory.path() / "repo";
 
   writeFile(root / "src" / "valid.txt", "valid");
-  writeFile(root / "src" / "document.odt", "packaged content placeholder");
+  writeFile(root / "src" / "document.epub", "packaged content placeholder");
 
   uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
   storage.initialize();
@@ -880,12 +880,12 @@ TEST_CASE("persistent index service classifies unsupported document formats with
   uburu::index::PersistentIndexService indexService(storage);
   const std::vector files{
     fileEntry(root, "src/valid.txt"),
-    fileEntry(root, "src/document.odt"),
+    fileEntry(root, "src/document.epub"),
   };
 
   const auto summary = indexService.update(worktreeInfo(root), files);
   const auto valid = storage.findDocument("worktree-id", "src/valid.txt");
-  const auto unsupported = storage.findDocument("worktree-id", "src/document.odt");
+  const auto unsupported = storage.findDocument("worktree-id", "src/document.epub");
 
   CHECK_FALSE(summary.cancelled);
   CHECK(summary.indexed == 2);
@@ -907,7 +907,7 @@ TEST_CASE("persistent index service records name-only extractor metrics")
   TemporaryDirectory directory("uburu-persistent-index-name-only-metrics-test");
   const auto root = directory.path() / "repo";
 
-  writeFile(root / "src" / "document.odt", "packaged content placeholder");
+  writeFile(root / "src" / "document.epub", "packaged content placeholder");
   writeFile(root / "src" / "image.bin", "binary placeholder");
 
   auto binary = fileEntry(root, "src/image.bin");
@@ -920,7 +920,7 @@ TEST_CASE("persistent index service records name-only extractor metrics")
 
   uburu::index::PersistentIndexService indexService(storage);
   const std::vector files{
-    fileEntry(root, "src/document.odt"),
+    fileEntry(root, "src/document.epub"),
     binary,
   };
 
@@ -949,7 +949,7 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
   TemporaryDirectory directory("uburu-persistent-index-unsupported-name-only-test");
   const auto root = directory.path() / "repo";
 
-  writeFile(root / "src" / "document.odt", "packaged content placeholder");
+  writeFile(root / "src" / "document.epub", "packaged content placeholder");
 
   uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
   storage.initialize();
@@ -958,7 +958,7 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
 
   uburu::index::PersistentIndexService indexService(storage);
   const std::vector files{
-    fileEntry(root, "src/document.odt"),
+    fileEntry(root, "src/document.epub"),
   };
 
   const auto summary = indexService.update(worktreeInfo(root), files);
@@ -980,7 +980,7 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
   CHECK(summary.skippedUnsupportedFormat == 1);
   REQUIRE(fileNameResults.size() == 1);
   CHECK(fileNameResults.front().kind == uburu::SearchResultKind::fileName);
-  CHECK(fileNameResults.front().path == std::filesystem::path("src/document.odt"));
+  CHECK(fileNameResults.front().path == std::filesystem::path("src/document.epub"));
   CHECK(contentResults.empty());
 #else
   SUCCEED("SQLite is not available in this build");

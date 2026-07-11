@@ -1,6 +1,7 @@
 #include "core/document/document-extractor.hpp"
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
+#include "core/document/open-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
 #include "core/document/pptx-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
@@ -785,6 +786,195 @@ TEST_CASE("pptx document extractor reports malformed presentation relationship g
         .name = "ppt/slides/slide1.xml",
         .content = "<p:sld><p:cSld><p:spTree><a:t>orphan</a:t></p:spTree></p:cSld></p:sld>"},
     }));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
+}
+
+TEST_CASE("open document extractor supports odt ods and odp extensions")
+{
+  uburu::document::OpenDocumentExtractor extractor;
+
+  CHECK(extractor.supports("document.odt"));
+  CHECK(extractor.supports("spreadsheet.ods"));
+  CHECK(extractor.supports("presentation.odp"));
+  CHECK(extractor.supports("DOCUMENT.ODT"));
+  CHECK_FALSE(extractor.supports("document.docx"));
+}
+
+TEST_CASE("open document extractor emits text document content and metadata")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-odt-visible-test");
+  const auto path = directory.path() / "document.odt";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalOpenDocumentBytes(
+      "<office:document-content><office:body><office:text><text:h>Title</text:h><text:p>Hello "
+      "<text:s text:c=\"2\"/>world</text:p></office:text></office:body></office:document-content>",
+      "<office:document-meta><office:meta><dc:title>ODT title</dc:title><dc:creator>Writer</dc:creator>"
+      "</office:meta></office:document-meta>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 2);
+  CHECK(segments[0].text == "Title: ODT title\nCreator: Writer");
+  CHECK(segments[0].location.label == "metadata");
+  CHECK(segments[1].text == "Title\nHello world");
+  CHECK(segments[1].location.label == "document");
+}
+
+TEST_CASE("open document extractor emits spreadsheet sheet segments")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-ods-visible-test");
+  const auto path = directory.path() / "spreadsheet.ods";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalOpenDocumentBytes(
+      "<office:document-content><office:body><office:spreadsheet>"
+      "<table:table table:name=\"Data\"><table:table-row><table:table-cell><text:p>Alpha</text:p>"
+      "</table:table-cell><table:table-cell><text:p>Beta</text:p></table:table-cell></table:table-row></table:table>"
+      "</office:spreadsheet></office:body></office:document-content>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Alpha\nBeta");
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::sheet);
+  CHECK(segments.front().location.primary == 1);
+  CHECK(segments.front().location.label == "Data");
+}
+
+TEST_CASE("open document extractor emits presentation slide segments")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-odp-visible-test");
+  const auto path = directory.path() / "presentation.odp";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalOpenDocumentBytes(
+      "<office:document-content><office:body><office:presentation>"
+      "<draw:page draw:name=\"Intro\"><draw:frame><text:p>Slide title</text:p><text:p>Slide body</text:p>"
+      "</draw:frame></draw:page></office:presentation></office:body></office:document-content>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Slide title\nSlide body");
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::slide);
+  CHECK(segments.front().location.primary == 1);
+  CHECK(segments.front().location.label == "Intro");
+}
+
+TEST_CASE("open document extractor applies extracted byte limits before publishing")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-open-document-limit-test");
+  const auto path = directory.path() / "document.odt";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumExtractedBytes = 3;
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalOpenDocumentBytes(
+      "<office:document-content><office:body><office:text><text:p>too large</text:p></office:text></office:body>"
+      "</office:document-content>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(summary.segmentsExtracted == 0);
+  CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("open document extractor reports cancellation before reading package content")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-open-document-cancel-test");
+  const auto path = directory.path() / "document.odt";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::stop_source stopSource;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalOpenDocumentBytes(
+      "<office:document-content><office:body><office:text><text:p>cancel me</text:p></office:text></office:body>"
+      "</office:document-content>"));
+  stopSource.request_stop();
+
+  const auto summary = extractor.extract(
+    path,
+    options,
+    [](const uburu::document::ExtractedTextSegment&) { return true; },
+    stopSource.get_token());
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
+}
+
+TEST_CASE("open document extractor treats unsupported zip features as safety failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-open-document-unsupported-zip-test");
+  const auto path = directory.path() / "document.odt";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    storedZipBytesWithUnsupportedCompression({
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "content.xml",
+        .content = "<office:document-content><text:p>hidden</text:p></office:document-content>"},
+    }));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+}
+
+TEST_CASE("open document extractor reports packages without content xml as parser failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-open-document-malformed-test");
+  const auto path = directory.path() / "document.odt";
+  uburu::document::OpenDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes(
+      {uburu::tests::fixtures::StoredZipEntryFixture{.name = "meta.xml", .content = "<office:meta/>"}}));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });

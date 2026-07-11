@@ -218,6 +218,25 @@ namespace uburu::tests::fixtures
     return storedZipBytes(std::move(entries));
   }
 
+  /**
+   * Builds a minimal OpenDocument-like archive with content and optional metadata XML.
+   */
+  [[nodiscard]]
+  inline std::vector<unsigned char> minimalOpenDocumentBytes(
+    std::string_view contentXml,
+    std::string_view metaXml = {})
+  {
+    std::vector<StoredZipEntryFixture> entries{
+      StoredZipEntryFixture{.name = "content.xml", .content = std::string{contentXml}},
+    };
+
+    if (!metaXml.empty()) {
+      entries.push_back(StoredZipEntryFixture{.name = "meta.xml", .content = std::string{metaXml}});
+    }
+
+    return storedZipBytes(std::move(entries));
+  }
+
   [[nodiscard]]
   inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
   {

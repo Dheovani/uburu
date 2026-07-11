@@ -334,7 +334,9 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.
   - [x] Implement initial bounded PPTX extraction from presentation, relationship, slide, and speaker-note XML through the shared ZIP archive layer for direct search, indexing, and preview.
   - [x] Add PPTX regression fixtures for visible slide text, speaker notes, extraction limits, unsupported ZIP features, cancellation, and malformed relationship graphs.
-- [ ] Evaluate support for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model planned for OOXML.
+- [x] Add safe text extraction for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model used for OOXML.
+  - [x] Implement initial bounded OpenDocument extraction from `content.xml` and `meta.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
+  - [x] Add OpenDocument regression fixtures for text documents, spreadsheets, presentations, extraction limits, unsupported ZIP features, cancellation, and malformed packages.
 - [x] Add support for RTF extraction, with explicit limits for nested groups, escaped text, embedded objects, and malformed documents.
 - [x] Add support for HTML/XHTML extraction as structured text, excluding scripts/styles by default and preserving visible text semantics for search and preview.
 - [x] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
@@ -397,8 +399,10 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Specialized preview for relevant formats without compromising security.
 - [ ] Stable local automation API.
 - [ ] Evaluate SIMD acceleration and memory mapping only with benchmarks and portable fallback.
+- [ ] Revisit end-to-end search and indexing performance with real user datasets after Milestone 12, including startup latency, direct search latency, indexing throughput, preview latency, and UI responsiveness before choosing optimization strategies.
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
+- [ ] Evaluate future image-content search with OCR or metadata extraction for formats such as PNG, JPEG, TIFF, and screenshots, keeping it opt-in and benchmarked because it may add heavy dependencies and CPU cost.
 
 ## Gates for considering version 1.0 professional
 

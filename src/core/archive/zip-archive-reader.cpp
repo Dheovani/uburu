@@ -413,7 +413,12 @@ namespace uburu::archive
     ZipEntryReadResult inflateRawDeflatePayload(std::span<const unsigned char> compressed, std::uint64_t expandedBytes)
     {
       if (expandedBytes == 0)
-        return ZipEntryReadResult{.bytes = {}};
+        return ZipEntryReadResult{
+          .status = ZipArchiveReadStatus::completed,
+          .safetyStatus = text::RichFormatSafetyStatus::accepted,
+          .error = {},
+          .bytes = {},
+        };
 
       if (expandedBytes > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         return failedEntryRead(ZipArchiveReadStatus::safetyLimitExceeded);
@@ -441,7 +446,12 @@ namespace uburu::archive
       if (result != Z_STREAM_END || stream.total_out != output.size())
         return failedEntryRead(ZipArchiveReadStatus::decompressionFailed);
 
-      return ZipEntryReadResult{.bytes = std::move(output)};
+      return ZipEntryReadResult{
+        .status = ZipArchiveReadStatus::completed,
+        .safetyStatus = text::RichFormatSafetyStatus::accepted,
+        .error = {},
+        .bytes = std::move(output),
+      };
     }
 
     [[nodiscard]]
@@ -533,7 +543,7 @@ namespace uburu::archive
         .entryCount = location.entryCount,
         .nestingDepth = maximumNestingDepth,
       };
-      
+
       const auto archiveSafety = text::validateArchiveSafety(archiveSafetyInput, limits);
 
       if (archiveSafety != text::RichFormatSafetyStatus::accepted)
@@ -649,7 +659,12 @@ namespace uburu::archive
       if (entry.compressedBytes != entry.expandedBytes)
         return failedEntryRead(ZipArchiveReadStatus::invalidArchive);
 
-      return ZipEntryReadResult{.bytes = std::move(payload)};
+      return ZipEntryReadResult{
+        .status = ZipArchiveReadStatus::completed,
+        .safetyStatus = text::RichFormatSafetyStatus::accepted,
+        .error = {},
+        .bytes = std::move(payload),
+      };
     }
 
     return inflateRawDeflatePayload(payload, entry.expandedBytes);

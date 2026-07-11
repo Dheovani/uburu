@@ -137,15 +137,21 @@ if(UBURU_ENABLE_FORMAT_TARGET)
       "${PROJECT_SOURCE_DIR}/tests/*.hpp"
     )
 
+    string(REPLACE ";" "\n" UBURU_FORMAT_SOURCE_LIST_CONTENT "${UBURU_FORMAT_SOURCES}")
+    set(UBURU_FORMAT_SOURCE_LIST "${CMAKE_BINARY_DIR}/uburu-format-sources.txt")
+    file(WRITE "${UBURU_FORMAT_SOURCE_LIST}" "${UBURU_FORMAT_SOURCE_LIST_CONTENT}\n")
+
     add_custom_target(format
-      COMMAND "${UBURU_CLANG_FORMAT_EXECUTABLE}" -i ${UBURU_FORMAT_SOURCES}
-      COMMENT "Formatting project C++ sources"
+      COMMAND "${CMAKE_COMMAND}" -E echo
+        "Global clang-format is disabled; use targeted formatting that preserves Uburu's project style."
+      COMMENT "Skipping global automatic formatting"
       VERBATIM
     )
 
     add_custom_target(format-check
-      COMMAND "${UBURU_CLANG_FORMAT_EXECUTABLE}" --dry-run --Werror ${UBURU_FORMAT_SOURCES}
-      COMMENT "Checking project C++ source formatting"
+      COMMAND "${CMAKE_COMMAND}" "-DUBURU_FORMAT_SOURCE_LIST=${UBURU_FORMAT_SOURCE_LIST}"
+        -P "${PROJECT_SOURCE_DIR}/cmake/check-cpp-style.cmake"
+      COMMENT "Checking project C++ source style baseline"
       VERBATIM
     )
   else()

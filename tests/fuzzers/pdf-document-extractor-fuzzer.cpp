@@ -12,7 +12,6 @@ namespace
 
   constexpr std::size_t maximumInputBytes = 65536;
   constexpr std::uintmax_t maximumExtractedBytes = 8192;
-  constexpr std::uintmax_t maximumSegmentBytes = 4096;
   constexpr std::size_t maximumSegments = 16;
 
   std::filesystem::path fuzzPdfPath()
@@ -39,7 +38,6 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   uburu::document::PdfDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
   options.maximumExtractedBytes = maximumExtractedBytes;
-  options.maximumSegmentBytes = maximumSegmentBytes;
   options.maximumSegments = maximumSegments;
 
   static_cast<void>(

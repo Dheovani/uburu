@@ -326,6 +326,8 @@ This document is the project's operational plan. Milestone order represents real
   - [ ] Extract basic DOCX metadata and improve table/location reporting.
   - [ ] Add hostile DOCX regression fixtures for oversized XML, malformed packages, unsupported ZIP features, and cancellation paths.
 - [ ] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
+  - [x] Implement initial bounded XLSX extraction from workbook, shared strings, and worksheet XML through the shared ZIP archive layer for direct search, indexing, and preview.
+  - [ ] Expand XLSX support for formulas, richer cell types, multiple sheet relationship mapping, and hostile workbook fixtures.
 - [ ] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate support for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model planned for OOXML.

@@ -138,6 +138,26 @@ namespace uburu::tests::fixtures
   }
 
   [[nodiscard]]
+  inline std::vector<unsigned char> minimalXlsxBytes(
+    std::string_view worksheetXml,
+    std::string_view sharedStringsXml,
+    std::string_view workbookXml =
+      "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheets><sheet name=\"Sheet One\" sheetId=\"1\"/></sheets></workbook>")
+  {
+    return storedZipBytes({
+      StoredZipEntryFixture{.name = "[Content_Types].xml",
+                            .content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                                      "<Types xmlns=\"http://schemas.openxmlformats.org/"
+                                      "package/2006/content-types\"/>"},
+      StoredZipEntryFixture{.name = "xl/workbook.xml", .content = std::string{workbookXml}},
+      StoredZipEntryFixture{.name = "xl/sharedStrings.xml",
+                            .content = std::string{sharedStringsXml}},
+      StoredZipEntryFixture{.name = "xl/worksheets/sheet1.xml",
+                            .content = std::string{worksheetXml}}});
+  }
+
+  [[nodiscard]]
   inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
   {
     return {0xEFU, 0xBBU, 0xBFU, 'o', 'n', 'e', '\n', 't', 'w', 'o', '\r',

@@ -380,6 +380,32 @@ TEST_CASE("desktop preview uses visible text for docx files")
   CHECK_FALSE(controller.previewText().contains(QStringLiteral("<w:t>")));
 }
 
+TEST_CASE("desktop preview uses visible text for xlsx files")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-xlsx-preview-settings-test");
+  uburu::tests::TemporaryDirectory previewDirectory("uburu-controller-xlsx-preview-test");
+  const auto filePath = previewDirectory.path() / "preview.xlsx";
+
+  isolateSettings(settingsDirectory.path(), QStringLiteral("xlsx-preview-test"));
+  uburu::tests::writeBytes(
+    filePath,
+    uburu::tests::fixtures::minimalXlsxBytes(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData></worksheet>",
+      "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<si><t>Visible xlsx needle</t></si>"
+      "</sst>"));
+
+  uburu::app::SearchController controller;
+  controller.loadPreview(qtPath(filePath), QStringLiteral("1:14"), {}, {});
+
+  REQUIRE(waitUntil([&] { return !controller.previewLoading(); }));
+
+  CHECK(controller.previewText().contains(QStringLiteral("Visible xlsx needle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("sharedStrings.xml")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("<worksheet")));
+}
+
 TEST_CASE("search result model exposes result roles")
 {
   auto& application = testApplication();

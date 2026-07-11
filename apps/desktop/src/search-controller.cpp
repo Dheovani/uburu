@@ -5,6 +5,7 @@
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
+#include "core/document/xlsx-document-extractor.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/index/persistent-index-service.hpp"
@@ -228,6 +229,7 @@ namespace uburu::app
       static const document::HtmlDocumentExtractor htmlExtractor;
       static const document::RtfDocumentExtractor rtfExtractor;
       static const document::SubtitleDocumentExtractor subtitleExtractor;
+      static const document::XlsxDocumentExtractor xlsxExtractor;
 
       if (docxExtractor.supports(path))
         return &docxExtractor;
@@ -240,6 +242,9 @@ namespace uburu::app
 
       if (subtitleExtractor.supports(path))
         return &subtitleExtractor;
+
+      if (xlsxExtractor.supports(path))
+        return &xlsxExtractor;
 
       return nullptr;
     }

@@ -4,6 +4,7 @@
 #include "core/document/plain-text-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
+#include "core/document/xlsx-document-extractor.hpp"
 #include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
@@ -198,6 +199,68 @@ TEST_CASE("docx document extractor reports malformed packages as parser failures
     path,
     uburu::tests::fixtures::storedZipBytes(
       {uburu::tests::fixtures::StoredZipEntryFixture{.name = "word/missing.xml", .content = "<xml/>"}}));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
+}
+
+TEST_CASE("xlsx document extractor supports xlsx extension")
+{
+  uburu::document::XlsxDocumentExtractor extractor;
+
+  CHECK(extractor.supports("document.xlsx"));
+  CHECK(extractor.supports("DOCUMENT.XLSX"));
+  CHECK_FALSE(extractor.supports("document.xls"));
+}
+
+TEST_CASE("xlsx document extractor emits shared and inline worksheet text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-visible-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalXlsxBytes(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheetData>"
+      "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"inlineStr\"><is><t>inline needle</t></is></c></row>"
+      "<row r=\"2\"><c r=\"A2\"><v>42</v></c></row>"
+      "</sheetData>"
+      "</worksheet>",
+      "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<si><t>Shared &amp; value</t></si>"
+      "</sst>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Shared & value\tinline needle\n42");
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::sheet);
+  CHECK(segments.front().location.primary == 1);
+  CHECK(segments.front().location.label == "Sheet One");
+}
+
+TEST_CASE("xlsx document extractor reports malformed packages as parser failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-malformed-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes(
+      {uburu::tests::fixtures::StoredZipEntryFixture{.name = "xl/workbook.xml", .content = "<xml/>"}}));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });

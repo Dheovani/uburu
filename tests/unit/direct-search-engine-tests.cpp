@@ -653,6 +653,36 @@ TEST_CASE("direct search uses visible text for docx content")
   CHECK(summary.matches == 1);
 }
 
+TEST_CASE("direct search uses visible text for xlsx content")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-xlsx-content-test");
+  const auto path = directory.path() / "sample.xlsx";
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalXlsxBytes(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData></worksheet>",
+      "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<si><t>Visible xlsx needle</t></si>"
+      "</sst>"));
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "sample.xlsx");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().lineText == "Visible xlsx needle");
+  CHECK(results.front().line == 1);
+  CHECK(summary.matches == 1);
+}
+
 TEST_CASE("direct search skips sampled binary files without reporting read errors")
 {
   const uburu::tests::TemporaryFile file("uburu-search-binary-content.bin");

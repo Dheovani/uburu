@@ -6,6 +6,8 @@ add_library(uburu_core STATIC
   document/plain-text-extractor.cpp
   document/rtf-document-extractor.cpp
   document/subtitle-document-extractor.cpp
+  document/xlsx-document-extractor.cpp
+  document/xml-document-utils.cpp
   diagnostics/diagnostic-report.cpp
   diagnostics/file-structured-logger.cpp
   diagnostics/search-tracing.cpp

@@ -173,6 +173,9 @@ namespace uburu::document::xml
     [[nodiscard]]
     bool xmlNamesMatch(std::string_view left, std::string_view right)
     {
+      if (right.find(':') != std::string_view::npos)
+        return lowerAscii(left) == lowerAscii(right);
+
       return localNameFromTag(left) == lowerAscii(right);
     }
 

@@ -178,6 +178,46 @@ namespace uburu::tests::fixtures
                             .content = std::string{worksheetXml}}});
   }
 
+  /**
+   * Builds a minimal PPTX-like archive with one slide and optional speaker notes.
+   */
+  [[nodiscard]]
+  inline std::vector<unsigned char> minimalPptxBytes(
+    std::string_view slideXml,
+    std::string_view notesXml = {})
+  {
+    std::vector<StoredZipEntryFixture> entries{
+      StoredZipEntryFixture{.name = "[Content_Types].xml",
+                            .content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                                      "<Types xmlns=\"http://schemas.openxmlformats.org/"
+                                      "package/2006/content-types\"/>"},
+      StoredZipEntryFixture{.name = "ppt/presentation.xml",
+                            .content = "<p:presentation xmlns:p=\"http://schemas.openxmlformats.org/"
+                                      "presentationml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/"
+                                      "officeDocument/2006/relationships\"><p:sldIdLst><p:sldId id=\"256\" "
+                                      "r:id=\"rId1\"/></p:sldIdLst></p:presentation>"},
+      StoredZipEntryFixture{.name = "ppt/_rels/presentation.xml.rels",
+                            .content = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/"
+                                      "relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats."
+                                      "org/officeDocument/2006/relationships/slide\" Target=\"slides/slide1.xml\"/>"
+                                      "</Relationships>"},
+      StoredZipEntryFixture{.name = "ppt/slides/slide1.xml", .content = std::string{slideXml}},
+    };
+
+    if (!notesXml.empty()) {
+      entries.push_back(StoredZipEntryFixture{
+        .name = "ppt/slides/_rels/slide1.xml.rels",
+        .content = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                  "<Relationship Id=\"rIdNotes\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/"
+                  "relationships/notesSlide\" Target=\"../notesSlides/notesSlide1.xml\"/></Relationships>"});
+      entries.push_back(StoredZipEntryFixture{
+        .name = "ppt/notesSlides/notesSlide1.xml",
+        .content = std::string{notesXml}});
+    }
+
+    return storedZipBytes(std::move(entries));
+  }
+
   [[nodiscard]]
   inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
   {

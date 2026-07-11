@@ -222,7 +222,7 @@ namespace uburu::document
 
         if (!xml::isClosingTag(tagContent) && xml::localNameFromTag(tagContent) == "sheet") {
           auto name = xml::attributeValue(tagContent, "name").value_or("");
-          auto relationshipId = xml::attributeValue(tagContent, "id").value_or("");
+          auto relationshipId = xml::attributeValue(tagContent, "r:id").value_or("");
 
           if (!name.empty())
             sheets.push_back({.name = std::move(name), .relationshipId = std::move(relationshipId)});

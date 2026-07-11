@@ -2,6 +2,7 @@
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
+#include "core/document/pptx-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
 #include "core/document/xlsx-document-extractor.hpp"
@@ -649,6 +650,141 @@ TEST_CASE("xlsx document extractor reports malformed packages as parser failures
     path,
     uburu::tests::fixtures::storedZipBytes(
       {uburu::tests::fixtures::StoredZipEntryFixture{.name = "xl/workbook.xml", .content = "<xml/>"}}));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
+}
+
+TEST_CASE("pptx document extractor supports pptx extension")
+{
+  uburu::document::PptxDocumentExtractor extractor;
+
+  CHECK(extractor.supports("document.pptx"));
+  CHECK(extractor.supports("DOCUMENT.PPTX"));
+  CHECK_FALSE(extractor.supports("document.docx"));
+}
+
+TEST_CASE("pptx document extractor emits slide and speaker-note text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pptx-visible-test");
+  const auto path = directory.path() / "document.pptx";
+  uburu::document::PptxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalPptxBytes(
+      "<p:sld><p:cSld><p:spTree><a:t>Slide title</a:t><a:t>Slide body</a:t></p:spTree></p:cSld></p:sld>",
+      "<p:notes><p:cSld><p:spTree><a:t>Speaker note</a:t></p:spTree></p:cSld></p:notes>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 2);
+  CHECK(segments[0].text == "Slide title\nSlide body");
+  CHECK(segments[0].location.kind == uburu::document::DocumentLocationKind::slide);
+  CHECK(segments[0].location.primary == 1);
+  CHECK(segments[0].location.label == "slide 1");
+  CHECK(segments[1].text == "Speaker note");
+  CHECK(segments[1].location.secondary == 1);
+  CHECK(segments[1].location.label == "slide 1 notes");
+}
+
+TEST_CASE("pptx document extractor applies extracted byte limits before publishing")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pptx-limit-test");
+  const auto path = directory.path() / "document.pptx";
+  uburu::document::PptxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumExtractedBytes = 3;
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalPptxBytes(
+      "<p:sld><p:cSld><p:spTree><a:t>too large</a:t></p:spTree></p:cSld></p:sld>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(summary.segmentsExtracted == 0);
+  CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("pptx document extractor reports cancellation before reading package content")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pptx-cancel-test");
+  const auto path = directory.path() / "document.pptx";
+  uburu::document::PptxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::stop_source stopSource;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalPptxBytes(
+      "<p:sld><p:cSld><p:spTree><a:t>cancel me</a:t></p:spTree></p:cSld></p:sld>"));
+  stopSource.request_stop();
+
+  const auto summary = extractor.extract(
+    path,
+    options,
+    [](const uburu::document::ExtractedTextSegment&) { return true; },
+    stopSource.get_token());
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
+}
+
+TEST_CASE("pptx document extractor treats unsupported zip features as safety failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pptx-unsupported-zip-test");
+  const auto path = directory.path() / "document.pptx";
+  uburu::document::PptxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    storedZipBytesWithUnsupportedCompression({
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "ppt/slides/slide1.xml",
+        .content = "<p:sld><p:cSld><p:spTree><a:t>hidden</a:t></p:spTree></p:cSld></p:sld>"},
+    }));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+}
+
+TEST_CASE("pptx document extractor reports malformed presentation relationship graphs")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pptx-malformed-relationships-test");
+  const auto path = directory.path() / "document.pptx";
+  uburu::document::PptxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes({
+      uburu::tests::fixtures::StoredZipEntryFixture{.name = "ppt/presentation.xml",
+                                                    .content = "<p:presentation><p:sldIdLst><p:sldId r:id=\"missing\"/>"
+                                                               "</p:sldIdLst></p:presentation>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{.name = "ppt/_rels/presentation.xml.rels",
+                                                    .content = "<Relationships></Relationships>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "ppt/slides/slide1.xml",
+        .content = "<p:sld><p:cSld><p:spTree><a:t>orphan</a:t></p:spTree></p:cSld></p:sld>"},
+    }));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });

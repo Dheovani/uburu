@@ -2,6 +2,7 @@
 
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
+#include "core/document/pptx-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
 #include "core/document/xlsx-document-extractor.hpp"
@@ -203,6 +204,7 @@ namespace uburu::search
     {
       static const document::DocxDocumentExtractor docxExtractor;
       static const document::HtmlDocumentExtractor htmlExtractor;
+      static const document::PptxDocumentExtractor pptxExtractor;
       static const document::RtfDocumentExtractor rtfExtractor;
       static const document::SubtitleDocumentExtractor subtitleExtractor;
       static const document::XlsxDocumentExtractor xlsxExtractor;
@@ -212,6 +214,9 @@ namespace uburu::search
 
       if (htmlExtractor.supports(path))
         return &htmlExtractor;
+
+      if (pptxExtractor.supports(path))
+        return &pptxExtractor;
 
       if (rtfExtractor.supports(path))
         return &rtfExtractor;

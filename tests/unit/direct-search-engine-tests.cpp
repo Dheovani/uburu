@@ -398,7 +398,7 @@ TEST_CASE("direct search finds file names through the recursive scanner")
   const uburu::tests::TemporaryDirectory directory("uburu-direct-search-real-file-name-test");
   const auto& root = directory.path();
   const auto path = root / "docs" / "important-report.pdf";
-  uburu::tests::writeBytes(path, {0x25U, 0x50U, 0x44U, 0x46U, 0x00U});
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT (Report title) Tj ET"));
 
   auto scanner = std::make_shared<uburu::filesystem::RecursiveFileScanner>();
   uburu::search::DirectSearchEngine engine(scanner);
@@ -569,6 +569,29 @@ TEST_CASE("direct search uses visible text for html content")
   CHECK(visibleSummary.matches == 1);
   CHECK(hiddenResults.empty());
   CHECK(hiddenSummary.matches == 0);
+}
+
+TEST_CASE("direct search uses visible text for pdf content")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-pdf-content-test");
+  const auto path = directory.path() / "sample.pdf";
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT (Visible pdf needle) Tj ET"));
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "sample.pdf");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().lineText == "Visible pdf needle");
+  CHECK(results.front().line == 1);
+  CHECK(summary.matches == 1);
 }
 
 TEST_CASE("direct search uses cue text for subtitle content")

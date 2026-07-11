@@ -2,6 +2,7 @@
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/open-document-extractor.hpp"
+#include "core/document/pdf-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
 #include "core/document/pptx-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
@@ -975,6 +976,132 @@ TEST_CASE("open document extractor reports packages without content xml as parse
     path,
     uburu::tests::fixtures::storedZipBytes(
       {uburu::tests::fixtures::StoredZipEntryFixture{.name = "meta.xml", .content = "<office:meta/>"}}));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
+}
+
+TEST_CASE("pdf document extractor supports pdf extension")
+{
+  uburu::document::PdfDocumentExtractor extractor;
+
+  CHECK(extractor.supports("document.pdf"));
+  CHECK(extractor.supports("DOCUMENT.PDF"));
+  CHECK_FALSE(extractor.supports("document.odt"));
+}
+
+TEST_CASE("pdf document extractor emits page scoped literal text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-visible-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT (Hello PDF) Tj (Second line) Tj ET"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Hello PDF Second line");
+  CHECK(segments.front().location.kind == uburu::document::DocumentLocationKind::page);
+  CHECK(segments.front().location.primary == 1);
+  CHECK(segments.front().location.label == "page 1");
+}
+
+TEST_CASE("pdf document extractor decodes hex strings in page streams")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-hex-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT <48657820504446> Tj ET"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Hex PDF");
+}
+
+TEST_CASE("pdf document extractor applies extracted byte limits before publishing")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-limit-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumExtractedBytes = 3;
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT (too large) Tj ET"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(summary.segmentsExtracted == 0);
+  CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("pdf document extractor reports cancellation before parsing")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-cancel-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::stop_source stopSource;
+
+  uburu::tests::writeFile(path, uburu::tests::fixtures::minimalPdfText("BT (cancel me) Tj ET"));
+  stopSource.request_stop();
+
+  const auto summary = extractor.extract(
+    path,
+    options,
+    [](const uburu::document::ExtractedTextSegment&) { return true; },
+    stopSource.get_token());
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
+}
+
+TEST_CASE("pdf document extractor reports encrypted documents as protected")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-encrypted-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeFile(path, "%PDF-1.4\ntrailer\n<< /Encrypt 5 0 R >>\n%%EOF\n");
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::encryptedOrProtected);
+}
+
+TEST_CASE("pdf document extractor reports malformed files as parser failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-malformed-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeFile(path, "not a pdf");
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });

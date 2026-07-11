@@ -321,6 +321,9 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Add a safe archive catalog reader for ZIP-backed formats, validating entry names, entry counts, expanded sizes, compression ratios, and unsupported ZIP64 packages before any OOXML/OpenDocument extractor reads payload bytes.
 - [x] Add bounded ZIP entry payload reading for stored and deflated entries, so OOXML/OpenDocument extractors can request specific internal files without extracting whole packages.
 - [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
+  - [x] Implement initial bounded PDF extraction for simple unencrypted page content streams, including literal and hex text strings.
+  - [x] Add PDF regression fixtures for page-scoped text, encrypted/protected files, extraction limits, cancellation, and malformed files.
+  - [ ] Evaluate a permissively licensed PDF backend for broader real-world coverage, especially compressed/object-stream-heavy PDFs, custom encodings, ToUnicode maps, forms, annotations, and layout-aware ordering.
 - [x] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
   - [x] Implement initial bounded DOCX body extraction from `word/document.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
   - [x] Extract basic DOCX metadata and emit table-scoped text segments with explicit labels.
@@ -399,10 +402,10 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Specialized preview for relevant formats without compromising security.
 - [ ] Stable local automation API.
 - [ ] Evaluate SIMD acceleration and memory mapping only with benchmarks and portable fallback.
-- [ ] Revisit end-to-end search and indexing performance with real user datasets after Milestone 12, including startup latency, direct search latency, indexing throughput, preview latency, and UI responsiveness before choosing optimization strategies.
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
 - [ ] Evaluate future image-content search with OCR or metadata extraction for formats such as PNG, JPEG, TIFF, and screenshots, keeping it opt-in and benchmarked because it may add heavy dependencies and CPU cost.
+- [ ] Revisit end-to-end search and indexing performance with real user datasets after Milestone 12, including startup latency, direct search latency, indexing throughput, preview latency, and UI responsiveness before choosing optimization strategies.
 
 ## Gates for considering version 1.0 professional
 

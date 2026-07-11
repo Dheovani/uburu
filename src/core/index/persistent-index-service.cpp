@@ -4,6 +4,7 @@
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/open-document-extractor.hpp"
+#include "core/document/pdf-document-extractor.hpp"
 #include "core/document/plain-text-extractor.hpp"
 #include "core/document/pptx-document-extractor.hpp"
 #include "core/document/rtf-document-extractor.hpp"
@@ -73,6 +74,7 @@ namespace uburu::index
         configuredRegistry.add(std::make_shared<document::DocxDocumentExtractor>());
         configuredRegistry.add(std::make_shared<document::HtmlDocumentExtractor>());
         configuredRegistry.add(std::make_shared<document::OpenDocumentExtractor>());
+        configuredRegistry.add(std::make_shared<document::PdfDocumentExtractor>());
         configuredRegistry.add(std::make_shared<document::PptxDocumentExtractor>());
         configuredRegistry.add(std::make_shared<document::RtfDocumentExtractor>());
         configuredRegistry.add(std::make_shared<document::SubtitleDocumentExtractor>());
@@ -99,7 +101,7 @@ namespace uburu::index
     [[nodiscard]]
     bool hasUnsupportedDocumentExtension(const std::filesystem::path& path)
     {
-      constexpr std::array unsupportedExtensions{".pdf", ".doc", ".epub", ".zip"};
+      constexpr std::array unsupportedExtensions{".doc", ".epub", ".zip"};
       const auto extension = lowerAscii(path.extension().string());
 
       for (const auto unsupportedExtension : unsupportedExtensions) {

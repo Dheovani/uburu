@@ -37,7 +37,7 @@ if (-not $SkipBuild) {
       exit $LASTEXITCODE
     }
 
-    & cmake --build --preset $Preset
+    & cmake --build --preset $Preset --target uburu_desktop
     if ($LASTEXITCODE -ne 0) {
       exit $LASTEXITCODE
     }

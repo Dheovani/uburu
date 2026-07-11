@@ -237,6 +237,35 @@ namespace uburu::tests::fixtures
     return storedZipBytes(std::move(entries));
   }
 
+  /**
+   * Builds a minimal uncompressed PDF with one page content stream.
+   */
+  [[nodiscard]]
+  inline std::string minimalPdfText(std::string_view contentStream)
+  {
+    return "%PDF-1.4\n"
+           "1 0 obj\n"
+           "<< /Type /Catalog /Pages 2 0 R >>\n"
+           "endobj\n"
+           "2 0 obj\n"
+           "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+           "endobj\n"
+           "3 0 obj\n"
+           "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+           "endobj\n"
+           "4 0 obj\n"
+           "<< /Length " +
+           std::to_string(contentStream.size()) +
+           " >>\n"
+           "stream\n" +
+           std::string{contentStream} +
+           "\nendstream\n"
+           "endobj\n"
+           "trailer\n"
+           "<< /Root 1 0 R >>\n"
+           "%%EOF\n";
+  }
+
   [[nodiscard]]
   inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
   {

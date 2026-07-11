@@ -498,6 +498,45 @@ TEST_CASE("persistent index service stores extracted html visible text")
 #endif
 }
 
+TEST_CASE("persistent index service stores extracted pdf visible text")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-pdf-extraction-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "docs" / "sample.pdf", uburu::tests::fixtures::minimalPdfText("BT (Visible pdf needle) Tj ET"));
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "docs/sample.pdf"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
+  query.options.target = uburu::SearchTarget::content;
+
+  const auto results = indexService.search(query);
+  const auto stored = storage.findDocument("worktree-id", "docs/sample.pdf");
+
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == std::filesystem::path("docs/sample.pdf"));
+  CHECK(results.front().lineText == "Visible pdf needle");
+  REQUIRE(stored.has_value());
+  REQUIRE(stored->indexedText.has_value());
+  CHECK(*stored->indexedText == "Visible pdf needle");
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service stores extracted subtitle cue text")
 {
 #if defined(UBURU_HAS_SQLITE)

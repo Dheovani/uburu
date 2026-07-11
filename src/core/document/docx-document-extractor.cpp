@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -24,6 +25,7 @@ namespace uburu::document
     constexpr std::string_view documentLocationLabel = "document";
     constexpr std::string_view metadataLocationLabel = "metadata";
     constexpr std::string_view tableLocationPrefix = "table ";
+    constexpr std::uintmax_t xmlSafetyMultiplier = 16;
     constexpr char tableCellSeparator = '\t';
 
     struct WordDocumentText
@@ -87,6 +89,36 @@ namespace uburu::document
     bool wouldExceedSegmentLimit(const DocumentExtractionOptions& options, std::size_t segments)
     {
       return options.maximumSegments > 0 && segments > options.maximumSegments;
+    }
+
+    [[nodiscard]]
+    std::uint64_t scaledXmlSafetyLimit(std::uintmax_t extractedBytes)
+    {
+      if (extractedBytes == 0)
+        return text::defaultMaximumSingleExpandedEntryBytes;
+
+      if (extractedBytes > std::numeric_limits<std::uint64_t>::max() / xmlSafetyMultiplier)
+        return text::defaultMaximumSingleExpandedEntryBytes;
+
+      return static_cast<std::uint64_t>(extractedBytes * xmlSafetyMultiplier);
+    }
+
+    [[nodiscard]]
+    text::RichFormatSafetyLimits ooxmlSafetyLimits(const DocumentExtractionOptions& options)
+    {
+      auto limits = text::RichFormatSafetyLimits{};
+
+      if (options.maximumExtractedBytes == 0)
+        return limits;
+
+      limits.maximumSingleExpandedEntryBytes = std::min(
+        limits.maximumSingleExpandedEntryBytes,
+        scaledXmlSafetyLimit(options.maximumExtractedBytes));
+      limits.maximumExpandedArchiveBytes = std::min(
+        limits.maximumExpandedArchiveBytes,
+        limits.maximumSingleExpandedEntryBytes * 4U);
+
+      return limits;
     }
 
     [[nodiscard]]
@@ -257,6 +289,7 @@ namespace uburu::document
       const std::filesystem::path& path,
       const archive::ZipArchiveCatalog& catalog,
       std::string_view rawName,
+      text::RichFormatSafetyLimits safetyLimits,
       DocumentExtractionSummary& summary,
       std::stop_token stopToken)
     {
@@ -265,7 +298,7 @@ namespace uburu::document
       if (entry == catalog.entries.end())
         return std::nullopt;
 
-      const auto entryRead = reader.readEntry(path, *entry, {}, stopToken);
+      const auto entryRead = reader.readEntry(path, *entry, safetyLimits, stopToken);
 
       if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
         summary.status = statusFromZipStatus(entryRead.status);
@@ -282,6 +315,7 @@ namespace uburu::document
       const archive::ZipArchiveReader& reader,
       const std::filesystem::path& path,
       const archive::ZipArchiveCatalog& catalog,
+      text::RichFormatSafetyLimits safetyLimits,
       DocumentExtractionSummary& summary,
       std::stop_token stopToken)
     {
@@ -293,7 +327,7 @@ namespace uburu::document
         MetadataField{"description", "Description"},
         MetadataField{"lastmodifiedby", "Last modified by"},
       };
-      
+
       constexpr std::array appFields{
         MetadataField{"company", "Company"},
         MetadataField{"manager", "Manager"},
@@ -302,7 +336,7 @@ namespace uburu::document
       std::string metadataText;
 
       if (const auto coreProperties =
-            readZipTextEntry(reader, path, catalog, corePropertiesXmlPath, summary, stopToken)) {
+            readZipTextEntry(reader, path, catalog, corePropertiesXmlPath, safetyLimits, summary, stopToken)) {
         appendMetadataFields(metadataText, *coreProperties, coreFields);
       }
 
@@ -310,7 +344,7 @@ namespace uburu::document
         return metadataText;
 
       if (const auto appProperties =
-            readZipTextEntry(reader, path, catalog, appPropertiesXmlPath, summary, stopToken)) {
+            readZipTextEntry(reader, path, catalog, appPropertiesXmlPath, safetyLimits, summary, stopToken)) {
         appendMetadataFields(metadataText, *appProperties, appFields);
       }
 
@@ -367,7 +401,8 @@ namespace uburu::document
   {
     DocumentExtractionSummary summary;
     archive::ZipArchiveReader reader;
-    const auto catalog = reader.readCatalog(path, {}, stopToken);
+    const auto safetyLimits = ooxmlSafetyLimits(options);
+    const auto catalog = reader.readCatalog(path, safetyLimits, stopToken);
 
     if (catalog.status != archive::ZipArchiveReadStatus::completed) {
       summary.status = statusFromZipStatus(catalog.status);
@@ -376,7 +411,7 @@ namespace uburu::document
       return summary;
     }
 
-    auto metadataText = metadataTextFromPackage(reader, path, catalog, summary, stopToken);
+    auto metadataText = metadataTextFromPackage(reader, path, catalog, safetyLimits, summary, stopToken);
 
     if (summary.status != DocumentExtractionStatus::completed)
       return summary;
@@ -396,7 +431,7 @@ namespace uburu::document
       return summary;
     }
 
-    const auto entryRead = reader.readEntry(path, *documentEntry, {}, stopToken);
+    const auto entryRead = reader.readEntry(path, *documentEntry, safetyLimits, stopToken);
 
     if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
       summary.status = statusFromZipStatus(entryRead.status);

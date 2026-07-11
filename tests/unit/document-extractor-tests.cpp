@@ -11,8 +11,48 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <stop_token>
 #include <string>
 #include <vector>
+
+namespace
+{
+
+  constexpr std::uint16_t unsupportedZipCompressionMethod = 99;
+  constexpr std::size_t zipLocalCompressionMethodOffset = 8;
+  constexpr std::size_t zipCentralCompressionMethodOffset = 10;
+  constexpr std::size_t zipLocalFixedHeaderBytes = 30;
+  constexpr std::size_t zipCentralFixedHeaderBytes = 46;
+
+  void writeLittleEndian16At(std::vector<unsigned char>& bytes, std::size_t offset, std::uint16_t value)
+  {
+    bytes[offset] = static_cast<unsigned char>(value & 0xFFU);
+    bytes[offset + 1] = static_cast<unsigned char>((value >> 8U) & 0xFFU);
+  }
+
+  [[nodiscard]]
+  std::vector<unsigned char> storedZipBytesWithUnsupportedCompression(
+    const std::vector<uburu::tests::fixtures::StoredZipEntryFixture>& entries)
+  {
+    auto bytes = uburu::tests::fixtures::storedZipBytes(entries);
+    std::size_t localOffset = 0;
+
+    for (const auto& entry : entries) {
+      writeLittleEndian16At(bytes, localOffset + zipLocalCompressionMethodOffset, unsupportedZipCompressionMethod);
+      localOffset += zipLocalFixedHeaderBytes + entry.name.size() + entry.content.size();
+    }
+
+    auto centralOffset = localOffset;
+
+    for (const auto& entry : entries) {
+      writeLittleEndian16At(bytes, centralOffset + zipCentralCompressionMethodOffset, unsupportedZipCompressionMethod);
+      centralOffset += zipCentralFixedHeaderBytes + entry.name.size();
+    }
+
+    return bytes;
+  }
+
+} // namespace
 
 TEST_CASE("plain text extractor streams line-based segments")
 {
@@ -270,6 +310,78 @@ TEST_CASE("docx document extractor applies extracted byte and segment limits bef
   CHECK(deliveredSegments == 0);
 }
 
+TEST_CASE("docx document extractor rejects oversized XML before publishing text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-oversized-xml-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumExtractedBytes = 2;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalDocxBytes(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+      "<w:body><w:p><w:r><w:t>oversized payload</w:t></w:r></w:p></w:body></w:document>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("docx document extractor reports cancellation before reading package content")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-cancel-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::stop_source stopSource;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalDocxBytes(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+      "<w:body><w:p><w:r><w:t>needle</w:t></w:r></w:p></w:body></w:document>"));
+
+  stopSource.request_stop();
+
+  const auto summary = extractor.extract(
+    path,
+    options,
+    [](const uburu::document::ExtractedTextSegment&) { return true; },
+    stopSource.get_token());
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
+}
+
+TEST_CASE("docx document extractor treats unsupported zip features as safety failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-docx-unsupported-zip-test");
+  const auto path = directory.path() / "document.docx";
+  uburu::document::DocxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    storedZipBytesWithUnsupportedCompression({
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "word/document.xml",
+        .content = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>"},
+    }));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+}
+
 TEST_CASE("docx document extractor reports malformed packages as parser failures")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-docx-malformed-test");
@@ -414,6 +526,116 @@ TEST_CASE("xlsx document extractor applies extracted byte limits before publishi
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
   CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("xlsx document extractor rejects oversized shared strings before publishing text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-oversized-shared-strings-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::size_t deliveredSegments = 0;
+
+  options.maximumExtractedBytes = 2;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalXlsxBytes(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheetData><row><c t=\"s\"><v>0</v></c></row></sheetData>"
+      "</worksheet>",
+      "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<si><t>oversized shared string</t></si>"
+      "</sst>"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
+    ++deliveredSegments;
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(deliveredSegments == 0);
+}
+
+TEST_CASE("xlsx document extractor reports cancellation before reading workbook content")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-cancel-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::stop_source stopSource;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::minimalXlsxBytes(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+      "<sheetData><row><c t=\"inlineStr\"><is><t>needle</t></is></c></row></sheetData>"
+      "</worksheet>",
+      "<sst/>"));
+
+  stopSource.request_stop();
+
+  const auto summary = extractor.extract(
+    path,
+    options,
+    [](const uburu::document::ExtractedTextSegment&) { return true; },
+    stopSource.get_token());
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
+}
+
+TEST_CASE("xlsx document extractor treats unsupported zip features as safety failures")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-unsupported-zip-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    storedZipBytesWithUnsupportedCompression({
+      uburu::tests::fixtures::StoredZipEntryFixture{.name = "xl/workbook.xml", .content = "<workbook/>"},
+    }));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+}
+
+TEST_CASE("xlsx document extractor reports malformed workbook relationship graphs")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-xlsx-malformed-relationships-test");
+  const auto path = directory.path() / "document.xlsx";
+  uburu::document::XlsxDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeBytes(
+    path,
+    uburu::tests::fixtures::storedZipBytes({
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/workbook.xml",
+        .content = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
+                   "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+                   "<sheets><sheet name=\"Missing\" sheetId=\"1\" r:id=\"rIdMissing\"/></sheets></workbook>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/_rels/workbook.xml.rels",
+        .content = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                   "<Relationship Id=\"rIdOther\" "
+                   "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" "
+                   "Target=\"worksheets/sheet1.xml\"/>"
+                   "</Relationships>"},
+      uburu::tests::fixtures::StoredZipEntryFixture{
+        .name = "xl/worksheets/sheet1.xml",
+        .content = "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                   "<sheetData><row><c t=\"inlineStr\"><is><t>orphan</t></is></c></row></sheetData></worksheet>"},
+    }));
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
 }
 
 TEST_CASE("xlsx document extractor reports malformed packages as parser failures")

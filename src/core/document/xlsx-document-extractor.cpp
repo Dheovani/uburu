@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -26,6 +27,7 @@ namespace uburu::document
       "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
     constexpr std::string_view worksheetDirectory = "xl/worksheets/";
     constexpr std::string_view worksheetExtension = ".xml";
+    constexpr std::uintmax_t xmlSafetyMultiplier = 16;
     constexpr char cellSeparator = '\t';
 
     struct WorksheetText
@@ -56,6 +58,36 @@ namespace uburu::document
     bool wouldExceedSegmentLimit(const DocumentExtractionOptions& options, std::size_t segments)
     {
       return options.maximumSegments > 0 && segments > options.maximumSegments;
+    }
+
+    [[nodiscard]]
+    std::uint64_t scaledXmlSafetyLimit(std::uintmax_t extractedBytes)
+    {
+      if (extractedBytes == 0)
+        return text::defaultMaximumSingleExpandedEntryBytes;
+
+      if (extractedBytes > std::numeric_limits<std::uint64_t>::max() / xmlSafetyMultiplier)
+        return text::defaultMaximumSingleExpandedEntryBytes;
+
+      return static_cast<std::uint64_t>(extractedBytes * xmlSafetyMultiplier);
+    }
+
+    [[nodiscard]]
+    text::RichFormatSafetyLimits ooxmlSafetyLimits(const DocumentExtractionOptions& options)
+    {
+      auto limits = text::RichFormatSafetyLimits{};
+
+      if (options.maximumExtractedBytes == 0)
+        return limits;
+
+      limits.maximumSingleExpandedEntryBytes = std::min(
+        limits.maximumSingleExpandedEntryBytes,
+        scaledXmlSafetyLimit(options.maximumExtractedBytes));
+      limits.maximumExpandedArchiveBytes = std::min(
+        limits.maximumExpandedArchiveBytes,
+        limits.maximumSingleExpandedEntryBytes * 8U);
+
+      return limits;
     }
 
     [[nodiscard]]
@@ -443,6 +475,12 @@ namespace uburu::document
       DocumentExtractionSummary& summary)
     {
       for (std::size_t index = 0; index < sheets.size(); ++index) {
+        if (stopToken.stop_requested()) {
+          summary.status = DocumentExtractionStatus::cancelled;
+
+          return;
+        }
+
         const auto& sheet = sheets[index];
         const auto relationship =
           std::ranges::find(relationships, sheet.relationshipId, &WorkbookRelationship::id);
@@ -491,7 +529,8 @@ namespace uburu::document
   {
     DocumentExtractionSummary summary;
     archive::ZipArchiveReader reader;
-    const auto catalog = reader.readCatalog(path, {}, stopToken);
+    const auto safetyLimits = ooxmlSafetyLimits(options);
+    const auto catalog = reader.readCatalog(path, safetyLimits, stopToken);
 
     if (catalog.status != archive::ZipArchiveReadStatus::completed) {
       summary.status = statusFromZipStatus(catalog.status);
@@ -504,7 +543,7 @@ namespace uburu::document
 
     // Shared strings are the common storage for repeated textual cell values in XLSX packages.
     if (const auto* sharedStringsEntry = findEntry(catalog, sharedStringsPath)) {
-      const auto entryRead = reader.readEntry(path, *sharedStringsEntry, {}, stopToken);
+      const auto entryRead = reader.readEntry(path, *sharedStringsEntry, safetyLimits, stopToken);
 
       if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
         summary.status = statusFromZipStatus(entryRead.status);
@@ -520,7 +559,7 @@ namespace uburu::document
 
     // Workbook metadata gives user-facing sheet names; worksheet files remain the source of cell text.
     if (const auto* workbookEntry = findEntry(catalog, workbookPath)) {
-      const auto entryRead = reader.readEntry(path, *workbookEntry, {}, stopToken);
+      const auto entryRead = reader.readEntry(path, *workbookEntry, safetyLimits, stopToken);
 
       if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
         summary.status = statusFromZipStatus(entryRead.status);
@@ -535,7 +574,7 @@ namespace uburu::document
     std::vector<WorkbookRelationship> relationships;
 
     if (const auto* relationshipsEntry = findEntry(catalog, workbookRelationshipsPath)) {
-      const auto entryRead = reader.readEntry(path, *relationshipsEntry, {}, stopToken);
+      const auto entryRead = reader.readEntry(path, *relationshipsEntry, safetyLimits, stopToken);
 
       if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
         summary.status = statusFromZipStatus(entryRead.status);
@@ -580,6 +619,12 @@ namespace uburu::document
 
       if (summary.status != DocumentExtractionStatus::completed)
         return summary;
+
+      if (worksheets.size() != sheets.size()) {
+        summary.status = DocumentExtractionStatus::parserFailed;
+
+        return summary;
+      }
     }
 
     if (worksheets.empty()) {
@@ -590,7 +635,7 @@ namespace uburu::document
           return summary;
         }
 
-        const auto entryRead = reader.readEntry(path, *worksheetEntries[index], {}, stopToken);
+        const auto entryRead = reader.readEntry(path, *worksheetEntries[index], safetyLimits, stopToken);
 
         if (entryRead.status != archive::ZipArchiveReadStatus::completed) {
           summary.status = statusFromZipStatus(entryRead.status);

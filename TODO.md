@@ -321,16 +321,16 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Add a safe archive catalog reader for ZIP-backed formats, validating entry names, entry counts, expanded sizes, compression ratios, and unsupported ZIP64 packages before any OOXML/OpenDocument extractor reads payload bytes.
 - [x] Add bounded ZIP entry payload reading for stored and deflated entries, so OOXML/OpenDocument extractors can request specific internal files without extracting whole packages.
 - [ ] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
-- [ ] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
+- [x] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
   - [x] Implement initial bounded DOCX body extraction from `word/document.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
   - [x] Extract basic DOCX metadata and emit table-scoped text segments with explicit labels.
   - [x] Add DOCX regression fixtures for malformed packages and extraction byte/segment limits.
-  - [ ] Add hostile DOCX regression fixtures for oversized XML payloads, unsupported ZIP features, and cancellation paths.
-- [ ] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
+  - [x] Add hostile DOCX regression fixtures for oversized XML payloads, unsupported ZIP features, and cancellation paths.
+- [x] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
   - [x] Implement initial bounded XLSX extraction from workbook, shared strings, and worksheet XML through the shared ZIP archive layer for direct search, indexing, and preview.
   - [x] Expand XLSX support for formulas, boolean/error/date/string cell types, and workbook relationship-based sheet ordering.
   - [x] Add XLSX regression fixtures for malformed packages and extraction byte limits.
-  - [ ] Add hostile XLSX regression fixtures for oversized shared strings, unsupported ZIP features, cancellation paths, and malformed relationship graphs.
+  - [x] Add hostile XLSX regression fixtures for oversized shared strings, unsupported ZIP features, cancellation paths, and malformed relationship graphs.
 - [ ] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate support for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model planned for OOXML.

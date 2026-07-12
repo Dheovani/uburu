@@ -1,6 +1,9 @@
 add_library(uburu_cli_lib STATIC
   src/cli-options.cpp
   src/cli-output.cpp
+  src/cli-runtime.cpp
+  src/cli-file-helper.cpp
+  src/cli-application.cpp
 )
 add_library(Uburu::Cli ALIAS uburu_cli_lib)
 

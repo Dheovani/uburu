@@ -6,6 +6,7 @@ add_executable(uburu_core_tests
   unit/adaptive-result-batcher-tests.cpp
   unit/backend-contract-tests.cpp
   unit/bounded-queue-tests.cpp
+  unit/contract-version-tests.cpp
   unit/content-hash-tests.cpp
   unit/diagnostics-tests.cpp
   unit/document-extractor-tests.cpp

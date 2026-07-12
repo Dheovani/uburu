@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/contracts/contract-version.hpp"
 #include "core/filesystem/file-watcher.hpp"
 
 #include <filesystem>
@@ -26,6 +27,7 @@ namespace uburu::filesystem
 
   struct FileWatcherBackendCapabilities
   {
+    contracts::ContractVersion contract{contracts::fileWatcherBackendContract};
     std::string name;
     FileWatcherBackendKind kind{FileWatcherBackendKind::polling};
     bool recursive{false};

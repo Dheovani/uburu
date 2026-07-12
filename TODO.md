@@ -365,8 +365,8 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Define interfaces for symbol and language parsers.
 - [x] Evaluate tree-sitter for symbols only behind a replaceable adapter.
 - [x] Define internal API for new index backends and watchers.
-- [ ] Version public contracts before allowing external plugins.
-- [ ] Document ABI/API stability limits.
+- [x] Version public contracts before allowing external plugins.
+- [x] Document ABI/API stability limits.
 
 ## Milestone 14 — Packaging and releases (P2)
 

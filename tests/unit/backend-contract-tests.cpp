@@ -129,6 +129,7 @@ TEST_CASE("index backend factory exposes capabilities and an index service")
   const auto capabilities = factory.capabilities();
 
   CHECK(capabilities.name == "fake-index");
+  CHECK(capabilities.contract.name == "uburu.index.backend");
   CHECK(capabilities.persistent);
   CHECK(capabilities.contentAddressedDocuments);
 
@@ -152,6 +153,7 @@ TEST_CASE("file watcher factory returns a watcher through a typed backend result
   const auto capabilities = factory.capabilities();
 
   CHECK(capabilities.name == "fake-watcher");
+  CHECK(capabilities.contract.name == "uburu.filesystem.file-watcher.backend");
   CHECK(capabilities.recursive);
   CHECK(capabilities.overflowDetection);
 

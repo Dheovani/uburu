@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/contracts/contract-version.hpp"
 #include "core/symbols/symbol-types.hpp"
 
 #include <optional>
@@ -30,6 +31,12 @@ namespace uburu::symbols
   {
   public:
     virtual ~SymbolParser() = default;
+
+    [[nodiscard]]
+    virtual contracts::ContractVersion contract() const
+    {
+      return contracts::symbolParserContract;
+    }
 
     [[nodiscard]]
     virtual bool supportsLanguage(std::string_view languageId) const = 0;

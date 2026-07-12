@@ -33,6 +33,8 @@ Result batch size is controlled by `AdaptiveResultBatcher`. Each execution start
 
 `core/symbols` defines the language and symbol parsing boundary. It is intentionally separate from `core/index`: the index may consume stable symbol data, but parser backends such as tree-sitter must remain replaceable adapters. See [symbols.md](symbols.md) for the tree-sitter evaluation and backend constraints.
 
+Replaceable backend contracts carry explicit version metadata from `core/contracts`. These contracts remain internal until the stability requirements in [api-stability.md](api-stability.md) are met.
+
 ## Concurrency
 
 `SearchController` schedules search on the `QtConcurrent` pool. Results are returned progressively to the UI thread through queued events. The core uses `std::stop_token`, allowing CLI, tests, or other interfaces to use the same cancellation model without Qt.

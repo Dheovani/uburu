@@ -100,6 +100,11 @@ TEST_CASE("symbol parser registry chooses parser for detected language")
   REQUIRE(result.symbols.size() == 1);
   CHECK(result.symbols.front().name == "main");
   CHECK(result.symbols.front().languageId == "cpp");
+
+  const auto parser = registry.parserForLanguage("cpp");
+
+  REQUIRE(parser != nullptr);
+  CHECK(parser->contract().name == "uburu.symbols.parser");
 }
 
 TEST_CASE("symbol parser registry reports cancellation before selecting parser")

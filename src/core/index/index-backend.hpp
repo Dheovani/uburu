@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/contracts/contract-version.hpp"
 #include "core/index/index-service.hpp"
 #include "core/storage/storage-service.hpp"
 
@@ -21,6 +22,7 @@ namespace uburu::index
 
   struct IndexBackendCapabilities
   {
+    contracts::ContractVersion contract{contracts::indexBackendContract};
     std::string name;
     std::string version;
     bool persistent{false};

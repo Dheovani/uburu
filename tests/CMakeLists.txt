@@ -28,6 +28,7 @@ add_executable(uburu_core_tests
   unit/search-service-tests.cpp
   unit/settings-service-tests.cpp
   unit/sqlite-storage-service-tests.cpp
+  unit/symbol-parser-tests.cpp
   unit/text-file-reader-tests.cpp
   unit/text-matcher-tests.cpp
   unit/worker-pool-tests.cpp

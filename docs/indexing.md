@@ -49,6 +49,10 @@ Indexed search queries visible documents by worktree root and supports path meta
 
 Watcher events are initially reconciled in batches by `DefaultIndexingService`. An empty batch does no work; any batch with an event, overflow, or rescan marker triggers a single transactional index update. This policy is conservative and prioritizes correctness: per-file partial reconciliation can replace the full rescan in the future without changing the service's external contract.
 
+## Symbols and language parsing
+
+Symbol indexing is behind `core/symbols`. The initial contract separates language detection (`LanguageParser`) from symbol extraction (`SymbolParser`) and routes both through `SymbolParserRegistry`. The first language detector is extension-based and intentionally deterministic; syntax-aware backends such as tree-sitter must plug in behind these interfaces instead of becoming a direct dependency of `core/index`. Symbol data is therefore an optional indexing dimension, not a replacement for document text extraction or path cataloging.
+
 ## Content hash
 
 The initial content hash algorithm is SHA-256. The choice favors correctness, stability, and a very low practical collision probability for local deduplication, even when the same content appears in different branches, worktrees, or paths.

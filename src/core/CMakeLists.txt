@@ -34,6 +34,8 @@ add_library(uburu_core STATIC
   search/search-scope.cpp
   storage/storage-paths.cpp
   storage/sqlite-storage-service.cpp
+  symbols/extension-language-parser.cpp
+  symbols/symbol-parser-registry.cpp
   text/rich-format-safety.cpp
   text/text-file-reader.cpp
   text/regex-matcher.cpp

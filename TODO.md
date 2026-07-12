@@ -356,8 +356,8 @@ This document is the project's operational plan. Milestone order represents real
 
 ## Milestone 13 — CLI and extensibility (P2)
 
-- [ ] Create a thin CLI over the same `SearchService`, without duplicating the engine.
-- [ ] Support human output, JSON Lines, and stable exit codes.
+- [x] Create a thin CLI over the same `SearchService`, without duplicating the engine.
+- [x] Support human output, JSON Lines, and stable exit codes.
 - [ ] Allow direct search, indexed search, and index status/rebuild through CLI.
 - [ ] Keep signal cancellation and streaming with backpressure.
 - [ ] Define interfaces for symbol and language parsers.

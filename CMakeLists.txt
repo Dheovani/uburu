@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(UBURU_BUILD_DESKTOP "Build the Qt desktop application" ON)
+option(UBURU_BUILD_CLI "Build the command-line application" ON)
 option(UBURU_BUILD_TESTS "Build automated tests" ON)
 option(UBURU_ENABLE_PCRE2 "Enable the future PCRE2 regex backend" ON)
 option(UBURU_ENABLE_LIBGIT2 "Enable the future libgit2 backend" ON)
@@ -237,6 +238,10 @@ add_subdirectory(src)
 
 if(UBURU_BUILD_DESKTOP)
   add_subdirectory(apps/desktop)
+endif()
+
+if(UBURU_BUILD_CLI)
+  add_subdirectory(apps/cli)
 endif()
 
 if(UBURU_BUILD_TESTS)

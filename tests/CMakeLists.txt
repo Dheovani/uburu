@@ -37,6 +37,11 @@ add_executable(uburu_core_tests
 target_link_libraries(uburu_core_tests PRIVATE Uburu::App Uburu::Core Uburu::ProjectOptions Catch2::Catch2WithMain)
 target_include_directories(uburu_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(TARGET uburu_cli_lib)
+  target_sources(uburu_core_tests PRIVATE unit/cli-options-tests.cpp)
+  target_link_libraries(uburu_core_tests PRIVATE Uburu::Cli)
+endif()
+
 if(WIN32)
   add_custom_command(TARGET uburu_core_tests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:uburu_core_tests> $<TARGET_RUNTIME_DLLS:uburu_core_tests>

@@ -151,9 +151,21 @@ TEST_CASE("zip archive reader lists safe entries without extracting payloads")
   uburu::tests::writeBytes(
     file.path(),
     makeZip(
-      {{.name = "word/document.xml", .compressedBytes = 12, .expandedBytes = 24},
-       {.name = "word/_rels/document.xml.rels", .compressedBytes = 6, .expandedBytes = 8},
-       {.name = "empty/", .compressedBytes = 0, .expandedBytes = 0, .compressionMethod = storeCompressionMethod}}));
+      {{.name = "word/document.xml",
+        .compressedBytes = 12,
+        .expandedBytes = 24,
+        .compressionMethod = deflateCompressionMethod,
+        .payload = {}},
+       {.name = "word/_rels/document.xml.rels",
+        .compressedBytes = 6,
+        .expandedBytes = 8,
+        .compressionMethod = deflateCompressionMethod,
+        .payload = {}},
+       {.name = "empty/",
+        .compressedBytes = 0,
+        .expandedBytes = 0,
+        .compressionMethod = storeCompressionMethod,
+        .payload = {}}}));
 
   const uburu::archive::ZipArchiveReader reader;
   const auto catalog = reader.readCatalog(file.path());
@@ -197,7 +209,9 @@ TEST_CASE("zip archive reader inflates raw deflate entry payloads")
   uburu::tests::writeBytes(
     file.path(),
     makeZip({{.name = "word/document.xml",
+              .compressedBytes = 0,
               .expandedBytes = 5,
+              .compressionMethod = deflateCompressionMethod,
               .payload = {0xCBU, 0x48U, 0xCDU, 0xC9U, 0xC9U, 0x07U, 0x00U}}}));
 
   const uburu::archive::ZipArchiveReader reader;
@@ -215,7 +229,13 @@ TEST_CASE("zip archive reader inflates raw deflate entry payloads")
 TEST_CASE("zip archive reader rejects unsafe entry names")
 {
   uburu::tests::TemporaryFile file("uburu-zip-unsafe-name.zip");
-  uburu::tests::writeBytes(file.path(), makeZip({{.name = "../evil.xml", .compressedBytes = 1, .expandedBytes = 1}}));
+  uburu::tests::writeBytes(
+    file.path(),
+    makeZip({{.name = "../evil.xml",
+              .compressedBytes = 1,
+              .expandedBytes = 1,
+              .compressionMethod = deflateCompressionMethod,
+              .payload = {}}}));
 
   const uburu::archive::ZipArchiveReader reader;
   const auto catalog = reader.readCatalog(file.path());
@@ -226,7 +246,11 @@ TEST_CASE("zip archive reader rejects unsafe entry names")
 TEST_CASE("zip archive reader rejects zip64 metadata until it is explicitly supported")
 {
   uburu::tests::TemporaryFile file("uburu-zip64-marker.zip");
-  auto bytes = makeZip({{.name = "word/document.xml", .compressedBytes = 1, .expandedBytes = 1}});
+  auto bytes = makeZip({{.name = "word/document.xml",
+                         .compressedBytes = 1,
+                         .expandedBytes = 1,
+                         .compressionMethod = deflateCompressionMethod,
+                         .payload = {}}});
   const auto eocdOffset = bytes.size() - endOfCentralDirectoryMinimumBytes;
   overwriteLittleEndian16(bytes, eocdOffset + eocdEntryCountOffset, zip64Marker16);
   uburu::tests::writeBytes(file.path(), bytes);
@@ -245,7 +269,8 @@ TEST_CASE("zip archive reader rejects unsupported compression methods")
     makeZip({{.name = "word/document.xml",
               .compressedBytes = 1,
               .expandedBytes = 1,
-              .compressionMethod = unsupportedCompressionMethod}}));
+              .compressionMethod = unsupportedCompressionMethod,
+              .payload = {}}}));
 
   const uburu::archive::ZipArchiveReader reader;
   const auto catalog = reader.readCatalog(file.path());
@@ -256,8 +281,13 @@ TEST_CASE("zip archive reader rejects unsupported compression methods")
 TEST_CASE("zip archive reader rejects archive safety limit violations")
 {
   uburu::tests::TemporaryFile file("uburu-zip-safety.zip");
-  uburu::tests::writeBytes(file.path(),
-                           makeZip({{.name = "word/document.xml", .compressedBytes = 1, .expandedBytes = 200}}));
+  uburu::tests::writeBytes(
+    file.path(),
+    makeZip({{.name = "word/document.xml",
+              .compressedBytes = 1,
+              .expandedBytes = 200,
+              .compressionMethod = deflateCompressionMethod,
+              .payload = {}}}));
 
   const uburu::archive::ZipArchiveReader reader;
   const uburu::text::RichFormatSafetyLimits limits{.maximumExpandedArchiveBytes = 1'000,
@@ -276,7 +306,11 @@ TEST_CASE("zip archive reader rejects excessive nested package paths")
   uburu::tests::TemporaryFile file("uburu-zip-nested-paths.zip");
   uburu::tests::writeBytes(
     file.path(),
-    makeZip({{.name = "a/b/c/d/document.xml", .compressedBytes = 1, .expandedBytes = 1}}));
+    makeZip({{.name = "a/b/c/d/document.xml",
+              .compressedBytes = 1,
+              .expandedBytes = 1,
+              .compressionMethod = deflateCompressionMethod,
+              .payload = {}}}));
 
   const uburu::archive::ZipArchiveReader reader;
   const uburu::text::RichFormatSafetyLimits limits{

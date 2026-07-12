@@ -29,6 +29,10 @@ The event channel publishes application-layer DTOs (`SearchEventDto`, `SearchRes
 
 Result batch size is controlled by `AdaptiveResultBatcher`. Each execution starts with `SearchExecutionOptions::resultBatchSize`, respects configurable minimum and maximum limits, and adjusts the next batch according to the observed latency when delivering the event to the sink. Cheap deliveries increase the batch to reduce overhead; expensive deliveries reduce it to preserve UI responsiveness.
 
+## Symbols
+
+`core/symbols` defines the language and symbol parsing boundary. It is intentionally separate from `core/index`: the index may consume stable symbol data, but parser backends such as tree-sitter must remain replaceable adapters. See [symbols.md](symbols.md) for the tree-sitter evaluation and backend constraints.
+
 ## Concurrency
 
 `SearchController` schedules search on the `QtConcurrent` pool. Results are returned progressively to the UI thread through queued events. The core uses `std::stop_token`, allowing CLI, tests, or other interfaces to use the same cancellation model without Qt.

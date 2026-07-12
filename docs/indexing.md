@@ -51,7 +51,7 @@ Watcher events are initially reconciled in batches by `DefaultIndexingService`. 
 
 ## Symbols and language parsing
 
-Symbol indexing is behind `core/symbols`. The initial contract separates language detection (`LanguageParser`) from symbol extraction (`SymbolParser`) and routes both through `SymbolParserRegistry`. The first language detector is extension-based and intentionally deterministic; syntax-aware backends such as tree-sitter must plug in behind these interfaces instead of becoming a direct dependency of `core/index`. Symbol data is therefore an optional indexing dimension, not a replacement for document text extraction or path cataloging.
+Symbol indexing is behind `core/symbols`. The initial contract separates language detection (`LanguageParser`) from symbol extraction (`SymbolParser`) and routes both through `SymbolParserRegistry`. The first language detector is extension-based and intentionally deterministic; syntax-aware backends such as tree-sitter must plug in behind these interfaces instead of becoming a direct dependency of `core/index`. Symbol data is therefore an optional indexing dimension, not a replacement for document text extraction or path cataloging. The tree-sitter evaluation and adapter constraints live in [symbols.md](symbols.md).
 
 ## Content hash
 

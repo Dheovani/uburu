@@ -364,7 +364,7 @@ This document is the project's operational plan. Milestone order represents real
   - [x] Keep long-running CLI output streaming with explicit backpressure.
 - [x] Define interfaces for symbol and language parsers.
 - [x] Evaluate tree-sitter for symbols only behind a replaceable adapter.
-- [ ] Define internal API for new index backends and watchers.
+- [x] Define internal API for new index backends and watchers.
 - [ ] Version public contracts before allowing external plugins.
 - [ ] Document ABI/API stability limits.
 

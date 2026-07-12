@@ -4,6 +4,8 @@ The persistent catalog is split between mutable worktree metadata and content-ad
 
 A logical entry contains `repositoryId`, `worktreeId`, relative path, size, mtime, content hash, optional Git blob hash, and local status. The content document can be reused when the same hash appears in another branch or worktree.
 
+`IndexBackendFactory` is the internal extension point for future index backends. A backend reports capabilities and opens an `IndexBackendHandle` containing the `IndexService` implementation and, when applicable, the backing `StorageService`. This keeps SQLite as the first implementation without making application services depend on SQLite-specific construction details, and it leaves room for auxiliary text or symbol backends behind the same service boundary.
+
 ## Versioned internal format
 
 Every indexed document has `formatVersion`. The current version is `1` and represents a content-addressed document with SHA-256 content hash, optional Git blob metadata, and working tree overlay support. This version is persisted in SQLite together with the document and the path that points to it.

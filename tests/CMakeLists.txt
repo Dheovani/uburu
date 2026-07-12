@@ -4,6 +4,7 @@ add_executable(uburu_core_tests
   integration/libgit2-git-service-integration-tests.cpp
   regression/search-regression-tests.cpp
   unit/adaptive-result-batcher-tests.cpp
+  unit/backend-contract-tests.cpp
   unit/bounded-queue-tests.cpp
   unit/content-hash-tests.cpp
   unit/diagnostics-tests.cpp

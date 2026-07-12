@@ -67,6 +67,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 
 On Linux, also run `core-linux-sanitize-debug` before sensitive changes in parsing, regex, filesystem, concurrency, or storage.
 
+The test-suite structure and fixture policy are documented in [testing.md](testing.md). Use that document when deciding whether a new check belongs in unit tests, integration tests, desktop tests, fuzzers, or benchmarks.
+
 ## Coverage
 
 Coverage is optional and intentionally isolated from normal developer builds. Use the Linux core coverage preset when validating broad test-suite changes:

@@ -385,20 +385,27 @@ This document is the project's operational plan. Milestone order represents real
 
 ## Milestone 15 — Professional documentation (P1/P2)
 
-- [ ] Create `docs/search-semantics.md`.
-- [ ] Expand `docs/architecture.md` with components and search sequence.
-- [ ] Document cancellation, ownership, and threading contracts.
+- [x] Create `docs/search-semantics.md`.
+- [x] Expand `docs/architecture.md` with components and search sequence.
+- [x] Document cancellation, ownership, and threading contracts.
 - [x] Document schema, migrations, and recovery in `docs/storage.md`.
-- [ ] Document format, generations, and invalidation in `docs/indexing.md`.
+- [x] Document format, generations, and invalidation in `docs/indexing.md`.
 - [x] Document branch/worktree/overlay in `docs/git-awareness.md`.
-- [ ] Document metrics and methodology in `docs/performance.md`.
-- [ ] Document states, shortcuts, and accessibility in `docs/ui.md`.
-- [ ] Keep per-platform build instructions tested in CI.
-- [ ] Add troubleshooting guide for Qt, vcpkg, toolchains, and runtime DLLs.
-- [ ] Record important architectural decisions as ADRs.
-- [ ] Create contributor documentation and test architecture documentation.
-- [ ] Provide documentation in Portuguese and English.
-- [ ] Remove unnecessary line breaks in the middle of paragraphs.
+- [x] Document metrics and methodology in `docs/performance.md`.
+- [x] Document states, shortcuts, and accessibility in `docs/ui.md`.
+- [x] Document privacy, telemetry, crash reports, and hostile-file boundaries in `docs/privacy.md` and `docs/threat-model.md`.
+- [x] Document licensing and redistribution obligations in `docs/licenses.md`.
+- [x] Document CLI usage, streaming, exit codes, and cancellation in `docs/cli.md`.
+- [x] Document internal API/ABI stability limits in `docs/api-stability.md`.
+- [x] Document symbol-parser strategy and tree-sitter evaluation constraints in `docs/symbols.md`.
+- [x] Document development workflow, coverage, fuzzing, and commit expectations in `docs/development.md`.
+- [x] Keep per-platform build instructions tested in CI.
+- [x] Add troubleshooting guide for Qt, vcpkg, toolchains, and runtime DLLs.
+- [x] Record important architectural decisions as ADRs.
+- [x] Create contributor documentation.
+- [x] Create test architecture documentation.
+- [x] Provide user-facing usage documentation in English and Portuguese.
+- [x] Remove unnecessary line breaks in the middle of paragraphs.
 
 ## Advanced evolutions (P3)
 

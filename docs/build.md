@@ -149,4 +149,30 @@ The `.github/workflows/ci.yml` workflow initially validates the Qt-independent c
 - tests through CTest;
 - `format-check` without modifying files.
 
-The Qt desktop application is validated locally by the `local-windows-msvc-debug` preset. A complete Qt job should be added when the Qt installation/cache pipeline is stabilized.
+The table below maps the documented build instructions to the current CI coverage:
+
+| Documented flow | CI job | Commands validated |
+| --- | --- | --- |
+| Windows core/MSVC quality gate | `Windows MSVC core` | `cmake --preset core-windows-msvc-werror-debug`, `cmake --build --preset core-windows-msvc-werror-debug`, `ctest --preset core-windows-msvc-werror-debug`, and `format-check` |
+| Linux core quality gate | `Linux core` | `cmake --preset core-linux-werror-debug`, `cmake --build --preset core-linux-werror-debug`, `ctest --preset core-linux-werror-debug`, `format-check`, and `tidy` |
+| Linux sanitizer quality gate | `Linux sanitizers` | `cmake --preset core-linux-sanitize-debug`, `cmake --build --preset core-linux-sanitize-debug`, and `ctest --preset core-linux-sanitize-debug` |
+| Linux coverage report | `Linux coverage` | `cmake --preset core-linux-coverage-debug`, `cmake --build --preset core-linux-coverage-debug`, and the `coverage` target |
+| Linux fuzz smoke | `Linux fuzz smoke` | `cmake --preset core-linux-fuzz-debug`, `cmake --build --preset core-linux-fuzz-debug`, and the `fuzz-smoke` target |
+
+Desktop Qt instructions are intentionally documented as local validation flows for now. The Windows desktop run/deploy scripts depend on a local Qt installation and `windeployqt`, and full desktop/package CI belongs to the packaging milestone. Until then, the CI-supported release confidence comes from the Qt-independent core, CLI, document extraction, indexing, storage, and quality gates above.
+
+## Troubleshooting
+
+If CMake cannot find Qt, verify that `QT_ROOT` points to the Qt CMake prefix, not only to the top-level `C:\Qt` directory. For the validated Windows/MSVC setup, the expected value is similar to `C:\Qt\6.11.1\msvc2022_64`. If you configure manually, pass that path through `CMAKE_PREFIX_PATH` or set `Qt6_DIR` to the directory containing `Qt6Config.cmake`.
+
+If CMake reports `/bin/g++.exe` or another invalid compiler path on Windows, clear the stale build directory or select a Windows/MSVC preset. This usually means VS Code or an old cache injected a MinGW compiler override into a build tree that is now expected to use MSVC.
+
+If vcpkg cannot write to its `buildtrees` directory, check that `VCPKG_ROOT` points to a writable vcpkg checkout and that no antivirus or previous process is locking files under that directory. Reconfiguring a preset may run `vcpkg install`, so the vcpkg tree must be writable even when the Uburu workspace itself is clean.
+
+If the desktop executable starts from the build directory but fails to load Qt or dependency DLLs, use `scripts/run-windows-msvc-desktop.ps1` for development runs or `scripts/deploy-windows-msvc-desktop.ps1` to create a local folder with `windeployqt` output and vcpkg DLLs. Do not copy DLLs into system directories.
+
+If PowerShell refuses to execute project scripts, run them with `powershell -ExecutionPolicy Bypass -File <script>` for the current invocation. Avoid changing the machine-wide execution policy just to build Uburu.
+
+If `format-check` fails after a manual edit, run the `format` target or format only the files you changed. The style checker intentionally accepts the project-specific readability rules from `AGENTS.md`; do not undo those rules just to match an external formatter default.
+
+If Linux sanitizer builds fail while a normal debug build passes, inspect the first sanitizer error before changing tests. AddressSanitizer and UndefinedBehaviorSanitizer often expose lifetime, bounds, or initialization problems that are hidden in the regular build.

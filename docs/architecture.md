@@ -17,6 +17,8 @@ IndexService -> GitService / StorageService / FileScanner
 
 Shared types live in `src/shared/types`. They model logical repository and worktree identity, relative path, and content identity separately. This prevents turning a path into a document identity.
 
+Important decisions that should remain stable across implementation details are recorded as ADRs in [adrs/README.md](adrs/README.md).
+
 ## Search strategies
 
 `SearchService` is the orchestration point between direct search, indexed search, and hybrid search. The choice is not inferred implicitly from the presence of an index: `SearchServiceOptions::strategy` defines whether execution uses only `SearchEngine`, only `IndexService`, or a hybrid combination.

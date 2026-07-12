@@ -10,6 +10,8 @@ Uburu is a desktop application for advanced search across files and software rep
 
 The complete evolution plan and the criteria for version 1.0 are in [TODO.md](TODO.md). Branch, commit, and local validation rules are in [docs/development.md](docs/development.md).
 
+If you only want to use the application, start with the [user guide](docs/user-guide.md).
+
 ## Dependencies
 
 - CMake 3.25+

@@ -14,7 +14,16 @@ namespace uburu::cli
   enum class CliCommand
   {
     help,
-    search
+    search,
+    indexStatus,
+    indexRebuild
+  };
+
+  enum class CliSearchStrategy
+  {
+    direct,
+    indexed,
+    hybrid
   };
 
   enum class CliOutputFormat
@@ -36,7 +45,9 @@ namespace uburu::cli
   {
     CliCommand command{CliCommand::help};
     CliOutputFormat outputFormat{CliOutputFormat::human};
+    CliSearchStrategy searchStrategy{CliSearchStrategy::direct};
     SearchQuery query;
+    std::optional<std::filesystem::path> databasePath;
     bool showHelp{false};
   };
 

@@ -160,6 +160,67 @@ namespace uburu::cli
       output << "}\n";
     }
 
+    [[nodiscard]]
+    std::string_view indexStalenessStateName(index::IndexStalenessState state)
+    {
+      switch (state) {
+      case index::IndexStalenessState::missing:
+        return "missing";
+      case index::IndexStalenessState::fresh:
+        return "fresh";
+      case index::IndexStalenessState::stale:
+        return "stale";
+      }
+
+      return "unknown";
+    }
+
+    void writeHumanIndexStatus(std::ostream& output, const index::IndexStalenessReport& report)
+    {
+      output << "state=" << indexStalenessStateName(report.state);
+      output << " headChanged=" << (report.headChanged ? "true" : "false");
+      output << " branchChanged=" << (report.branchChanged ? "true" : "false");
+      output << '\n';
+    }
+
+    void writeJsonIndexStatus(std::ostream& output, const index::IndexStalenessReport& report)
+    {
+      output << "{\"type\":\"indexStatus\"";
+      output << ",\"state\":\"" << indexStalenessStateName(report.state) << '"';
+      output << ",\"headChanged\":" << (report.headChanged ? "true" : "false");
+      output << ",\"branchChanged\":" << (report.branchChanged ? "true" : "false");
+      output << "}\n";
+    }
+
+    void writeHumanIndexUpdateSummary(std::ostream& output, const index::IndexUpdateSummary& summary)
+    {
+      output << "indexed=" << summary.indexed;
+      output << " reusedByCatalog=" << summary.reusedByCatalog;
+      output << " reusedByBlob=" << summary.reusedByBlob;
+      output << " reusedByHash=" << summary.reusedByHash;
+      output << " removed=" << summary.removed;
+      output << " failed=" << summary.failed;
+      output << " skippedUnsupportedFormat=" << summary.skippedUnsupportedFormat;
+      output << " skippedBinary=" << summary.skippedBinary;
+      output << " cancelled=" << (summary.cancelled ? "true" : "false");
+      output << '\n';
+    }
+
+    void writeJsonIndexUpdateSummary(std::ostream& output, const index::IndexUpdateSummary& summary)
+    {
+      output << "{\"type\":\"indexSummary\"";
+      output << ",\"indexed\":" << summary.indexed;
+      output << ",\"reusedByCatalog\":" << summary.reusedByCatalog;
+      output << ",\"reusedByBlob\":" << summary.reusedByBlob;
+      output << ",\"reusedByHash\":" << summary.reusedByHash;
+      output << ",\"removed\":" << summary.removed;
+      output << ",\"failed\":" << summary.failed;
+      output << ",\"skippedUnsupportedFormat\":" << summary.skippedUnsupportedFormat;
+      output << ",\"skippedBinary\":" << summary.skippedBinary;
+      output << ",\"cancelled\":" << (summary.cancelled ? "true" : "false");
+      output << "}\n";
+    }
+
   } // namespace
 
   void writeSearchResult(std::ostream& output, const SearchResult& result, CliOutputFormat format)
@@ -182,6 +243,31 @@ namespace uburu::cli
     }
 
     writeHumanSearchSummary(output, summary);
+  }
+
+  void writeIndexStatus(std::ostream& output, const index::IndexStalenessReport& report, CliOutputFormat format)
+  {
+    if (format == CliOutputFormat::jsonLines) {
+      writeJsonIndexStatus(output, report);
+
+      return;
+    }
+
+    writeHumanIndexStatus(output, report);
+  }
+
+  void writeIndexUpdateSummary(
+    std::ostream& output,
+    const index::IndexUpdateSummary& summary,
+    CliOutputFormat format)
+  {
+    if (format == CliOutputFormat::jsonLines) {
+      writeJsonIndexUpdateSummary(output, summary);
+
+      return;
+    }
+
+    writeHumanIndexUpdateSummary(output, summary);
   }
 
 } // namespace uburu::cli

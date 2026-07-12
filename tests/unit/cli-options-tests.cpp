@@ -42,6 +42,8 @@ TEST_CASE("CLI parser applies search flags")
     "needle",
     "--format",
     "jsonl",
+    "--strategy",
+    "hybrid",
     "--regex",
     "--case-sensitive",
     "--whole-word",
@@ -58,6 +60,7 @@ TEST_CASE("CLI parser applies search flags")
   const auto& options = *parsed.options;
 
   CHECK(options.outputFormat == uburu::cli::CliOutputFormat::jsonLines);
+  CHECK(options.searchStrategy == uburu::cli::CliSearchStrategy::hybrid);
   CHECK(options.query.options.mode == uburu::SearchMode::regex);
   CHECK(options.query.options.caseSensitive);
   CHECK(options.query.options.wholeWord);
@@ -67,6 +70,45 @@ TEST_CASE("CLI parser applies search flags")
   CHECK(options.query.options.extensions[0] == "cpp");
   CHECK(options.query.options.extensions[1] == "hpp");
   CHECK(options.query.options.maximumFileSize == 4U * 1024U * 1024U);
+}
+
+TEST_CASE("CLI parser creates index status request")
+{
+  const auto parsed =
+    uburu::cli::parseCliOptions(args({"index-status", "C:/repo", "--format", "jsonl", "--database", "C:/db.sqlite"}));
+
+  REQUIRE(parsed.options.has_value());
+
+  const auto& options = *parsed.options;
+
+  CHECK(options.command == uburu::cli::CliCommand::indexStatus);
+  CHECK(options.outputFormat == uburu::cli::CliOutputFormat::jsonLines);
+  CHECK(options.query.root.generic_string() == "C:/repo");
+  REQUIRE(options.databasePath.has_value());
+  CHECK(options.databasePath->generic_string() == "C:/db.sqlite");
+}
+
+TEST_CASE("CLI parser creates index rebuild request")
+{
+  const auto parsed = uburu::cli::parseCliOptions(args({"index-rebuild", "C:/repo", "--types", "txt,md"}));
+
+  REQUIRE(parsed.options.has_value());
+
+  const auto& options = *parsed.options;
+
+  CHECK(options.command == uburu::cli::CliCommand::indexRebuild);
+  CHECK(options.query.root.generic_string() == "C:/repo");
+  REQUIRE(options.query.options.extensions.size() == 2);
+  CHECK(options.query.options.extensions[0] == "txt");
+  CHECK(options.query.options.extensions[1] == "md");
+}
+
+TEST_CASE("CLI parser handles empty arguments as help")
+{
+  const auto parsed = uburu::cli::parseCliOptions({});
+
+  REQUIRE(parsed.options.has_value());
+  CHECK(parsed.options->showHelp);
 }
 
 TEST_CASE("CLI parser rejects unknown options")

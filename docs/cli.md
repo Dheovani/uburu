@@ -19,6 +19,8 @@ uburu search C:/Users/dheov/Documents truth --types txt,md --format jsonl
 Supported options:
 
 - `--format human|jsonl`: chooses human-readable output or newline-delimited JSON.
+- `--strategy direct|indexed|hybrid`: chooses the search strategy. The default is direct search.
+- `--database PATH`: overrides the CLI index database. The default CLI database is `.uburu-cli/uburu-cli-v1.db` in the current working directory and is separate from the desktop application database.
 - `--types txt,cpp,md`: restricts file extensions.
 - `--max-size-mib N`: sets the maximum file size in MiB.
 - `--regex`: treats the expression as a PCRE2 regex when the backend is available.
@@ -41,4 +43,27 @@ Exit codes are part of the CLI contract:
 
 ## Scope
 
-The first implementation intentionally supports direct search only. Indexed search, index status, rebuild commands, streaming cancellation from operating-system signals, and richer diagnostics are planned for the same CLI layer without changing the core search engine.
+The CLI supports direct search immediately and can opt into indexed or hybrid search with `--strategy indexed` or `--strategy hybrid`.
+
+## Index commands
+
+```sh
+uburu index-status <root> [options]
+uburu index-rebuild <root> [options]
+```
+
+`index-status` reports whether the current index generation is missing, fresh, or stale for the selected root.
+
+`index-rebuild` scans the selected root and publishes a new persistent index generation using a filesystem worktree identity. Git-aware CLI indexing is intentionally deferred until it can be enabled without risking command-line hangs or surprising latency.
+
+Both commands support:
+
+- `--format human|jsonl`
+- `--database PATH`
+- `--types txt,md,docx`
+- `--no-gitignore`
+- `--hidden`
+- `--binary`
+- `--no-subdirectories`
+
+Signal cancellation and richer diagnostics are planned for the same CLI layer without changing the core search engine.

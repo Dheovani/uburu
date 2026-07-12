@@ -8,12 +8,16 @@
 #include "core/storage/sqlite-storage-service.hpp"
 #include "core/storage/storage-paths.hpp"
 
+#include <chrono>
+#include <csignal>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stop_token>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -28,6 +32,55 @@ namespace
 {
 
   constexpr auto cliDatabaseFileName = "uburu-cli-v1.db";
+  constexpr auto cancellationPollInterval = std::chrono::milliseconds{20};
+
+  volatile std::sig_atomic_t cancellationSignalRequested = 0;
+
+  void handleInterruptionSignal(int signal)
+  {
+    if (signal == SIGINT)
+      cancellationSignalRequested = 1;
+  }
+
+  class CliCancellation final
+  {
+  public:
+    CliCancellation()
+    {
+      watcher = std::jthread([this](std::stop_token watcherStopToken) {
+        watchCancellationSignal(watcherStopToken);
+      });
+    }
+
+    [[nodiscard]]
+    std::stop_token stopToken() const
+    {
+      return stopSource.get_token();
+    }
+
+    [[nodiscard]]
+    bool stopRequested() const
+    {
+      return stopSource.get_token().stop_requested();
+    }
+
+  private:
+    void watchCancellationSignal(std::stop_token watcherStopToken)
+    {
+      while (!watcherStopToken.stop_requested()) {
+        if (cancellationSignalRequested != 0) {
+          stopSource.request_stop();
+
+          return;
+        }
+
+        std::this_thread::sleep_for(cancellationPollInterval);
+      }
+    }
+
+    std::stop_source stopSource;
+    std::jthread watcher;
+  };
 
 #ifdef _WIN32
   void configureConsoleEncoding()
@@ -177,6 +230,7 @@ namespace
   [[nodiscard]]
   uburu::cli::CliExitCode runSearch(const uburu::cli::CliOptions& options)
   {
+    CliCancellation cancellation;
     const auto engine = makeDirectSearchEngine();
     std::shared_ptr<uburu::storage::SQLiteStorageService> storage;
 
@@ -191,10 +245,16 @@ namespace
     uburu::app::DefaultSearchService service(engine, std::move(indexService), serviceOptions);
     auto query = normalizedSearchQuery(options.query);
     auto summary = service.search(query, [&](uburu::SearchResult result) {
+      if (cancellation.stopRequested())
+        return false;
+
       uburu::cli::writeSearchResult(std::cout, result, options.outputFormat);
 
       return true;
-    });
+    }, cancellation.stopToken());
+
+    if (cancellation.stopRequested())
+      summary.cancelled = true;
 
     uburu::cli::writeSearchSummary(std::cout, summary, options.outputFormat);
 
@@ -217,6 +277,7 @@ namespace
   [[nodiscard]]
   uburu::cli::CliExitCode runIndexRebuild(const uburu::cli::CliOptions& options)
   {
+    CliCancellation cancellation;
     auto storage = makeStorageService(options.databasePath);
     auto indexService = makeIndexService(*storage);
     const auto worktree = filesystemWorktree(options.query.root);
@@ -227,14 +288,30 @@ namespace
       worktree.root,
       options.query.options,
       [&](uburu::FileEntry file) {
+        if (cancellation.stopRequested())
+          return false;
+
         files.push_back(std::move(file));
 
         return true;
-      });
+      },
+      cancellation.stopToken());
+
+    if (cancellation.stopRequested()) {
+      uburu::index::IndexUpdateSummary summary;
+      summary.cancelled = true;
+      uburu::cli::writeIndexUpdateSummary(std::cout, summary, options.outputFormat);
+
+      return uburu::cli::CliExitCode::cancelled;
+    }
 
     storage->upsertRepository(filesystemRepository(worktree));
     storage->upsertWorktree(worktree);
-    auto summary = indexService->update(worktree, files);
+    auto summary = indexService->update(worktree, files, uburu::index::IndexProgressCallback{}, cancellation.stopToken());
+
+    if (cancellation.stopRequested())
+      summary.cancelled = true;
+
     uburu::cli::writeIndexUpdateSummary(std::cout, summary, options.outputFormat);
 
     if (summary.cancelled)
@@ -251,6 +328,8 @@ namespace
 int main(int argc, char** argv)
 {
   configureConsoleEncoding();
+  cancellationSignalRequested = 0;
+  std::signal(SIGINT, handleInterruptionSignal);
 
   auto parseResult = uburu::cli::parseCliOptions(argumentsWithoutExecutable(argc, argv));
 

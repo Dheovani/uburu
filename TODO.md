@@ -359,9 +359,9 @@ This document is the project's operational plan. Milestone order represents real
 - [x] Create a thin CLI over the same `SearchService`, without duplicating the engine.
 - [x] Support human output, JSON Lines, and stable exit codes.
 - [x] Allow direct search, indexed search, and index status/rebuild through CLI.
-- [ ] Keep signal cancellation and streaming with backpressure.
+- [x] Keep signal cancellation and streaming with backpressure.
   - [x] Handle `Ctrl+C` as cooperative cancellation for `search` and `index-rebuild`.
-  - [ ] Keep long-running CLI output streaming with explicit backpressure.
+  - [x] Keep long-running CLI output streaming with explicit backpressure.
 - [ ] Define interfaces for symbol and language parsers.
 - [ ] Evaluate tree-sitter for symbols only behind a replaceable adapter.
 - [ ] Define internal API for new index backends and watchers.

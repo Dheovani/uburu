@@ -9,6 +9,7 @@
 #include "core/storage/storage-paths.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <csignal>
 #include <filesystem>
 #include <iostream>
@@ -33,6 +34,7 @@ namespace
 
   constexpr auto cliDatabaseFileName = "uburu-cli-v1.db";
   constexpr auto cancellationPollInterval = std::chrono::milliseconds{20};
+  constexpr std::size_t cliOutputFlushInterval = 64;
 
   volatile std::sig_atomic_t cancellationSignalRequested = 0;
 
@@ -64,6 +66,11 @@ namespace
       return stopSource.get_token().stop_requested();
     }
 
+    void requestStop()
+    {
+      stopSource.request_stop();
+    }
+
   private:
     void watchCancellationSignal(std::stop_token watcherStopToken)
     {
@@ -80,6 +87,50 @@ namespace
 
     std::stop_source stopSource;
     std::jthread watcher;
+  };
+
+  class CliResultStream final
+  {
+  public:
+    CliResultStream(std::ostream& output, uburu::cli::CliOutputFormat format)
+      : output(output), format(format)
+    {}
+
+    [[nodiscard]]
+    bool write(uburu::SearchResult result)
+    {
+      if (failed)
+        return false;
+
+      uburu::cli::writeSearchResult(output, result, format);
+      ++pendingResults;
+
+      if (pendingResults >= cliOutputFlushInterval)
+        flush();
+
+      failed = failed || !output.good();
+
+      return !failed;
+    }
+
+    void flush()
+    {
+      output.flush();
+      pendingResults = 0;
+      failed = failed || !output.good();
+    }
+
+    [[nodiscard]]
+    bool outputFailed() const
+    {
+      return failed;
+    }
+
+  private:
+    std::ostream& output;
+    uburu::cli::CliOutputFormat format;
+    std::size_t pendingResults{0};
+    bool failed{false};
   };
 
 #ifdef _WIN32
@@ -244,16 +295,21 @@ namespace
 
     uburu::app::DefaultSearchService service(engine, std::move(indexService), serviceOptions);
     auto query = normalizedSearchQuery(options.query);
+    CliResultStream resultStream(std::cout, options.outputFormat);
     auto summary = service.search(query, [&](uburu::SearchResult result) {
       if (cancellation.stopRequested())
         return false;
 
-      uburu::cli::writeSearchResult(std::cout, result, options.outputFormat);
+      if (resultStream.write(std::move(result)))
+        return true;
 
-      return true;
+      cancellation.requestStop();
+
+      return false;
     }, cancellation.stopToken());
+    resultStream.flush();
 
-    if (cancellation.stopRequested())
+    if (cancellation.stopRequested() || resultStream.outputFailed())
       summary.cancelled = true;
 
     uburu::cli::writeSearchSummary(std::cout, summary, options.outputFormat);

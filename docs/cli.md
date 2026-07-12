@@ -70,4 +70,6 @@ Both commands support:
 
 Long-running `search` and `index-rebuild` commands handle `Ctrl+C` as cooperative cancellation. The CLI forwards the cancellation request to the same `std::stop_token` path used by the core engine, so partial work can stop without corrupting index state. Cancelled commands exit with code `4`.
 
+Search results are streamed synchronously to standard output. This is intentional backpressure: if the terminal, pipe, or parent process cannot keep up or closes the stream, the CLI stops requesting more results instead of accumulating an unbounded output queue in memory.
+
 Richer diagnostics are planned for the same CLI layer without changing the core search engine.

@@ -66,6 +66,23 @@ dist/windows-msvc-release/installer/uburu-setup-<version>-windows-x64.exe.sha256
 
 If `ISCC.exe` is not in `PATH`, the script also checks the default `Program Files` installation directories.
 
+## Release notes and asset manifest
+
+Release notes are versioned under `docs/releases/`. For a manual GitHub release, paste the matching note into the release description and attach the generated binaries/checksums as release assets.
+
+To prepare the Windows release assets and a machine-readable manifest in one step, run:
+
+```powershell
+.\scripts\prepare-windows-release.ps1 -AppVersion v0.1.0
+```
+
+The script builds or refreshes the portable bundle, builds the installer, copies the release notes to the distribution directory, regenerates checksums, and writes:
+
+```txt
+dist/windows-msvc-release/release-assets.json
+dist/windows-msvc-release/RELEASE-NOTES.md
+```
+
 ## Manual validation checklist
 
 Validate the portable folder on a clean Windows machine or VM before calling the artifact releasable:

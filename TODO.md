@@ -381,8 +381,8 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Produce AppImage and evaluate Flatpak on Linux.
 - [ ] Validate installation, update, and uninstallation on clean machines.
 - [ ] Separate settings, index, and cache to allow safe upgrade/uninstall.
-- [ ] Define semantic versioning and changelog.
-- [ ] Automate release artifacts and checksums.
+- [x] Define semantic versioning and changelog.
+- [x] Automate release artifacts and checksums.
 - [ ] Generate SBOM and license report.
 - [ ] Add update policy and stable/pre-release channel.
 - [ ] Create release, rollback, and database compatibility checklist.

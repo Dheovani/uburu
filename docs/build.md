@@ -57,6 +57,12 @@ To build the first Windows installer, install Inno Setup 6 and run:
 
 If Inno Setup is not installed, the script fails before modifying release artifacts and tells you to install `ISCC.exe`.
 
+To prepare the Windows release assets, checksums, and release asset manifest in one step:
+
+```powershell
+.\scripts\prepare-windows-release.ps1 -AppVersion v0.1.0
+```
+
 ## Linux
 
 With Ninja, vcpkg, and Qt available:

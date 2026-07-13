@@ -134,6 +134,10 @@ If `linuxdeployqt` is not on `PATH`, set:
 export LINUXDEPLOYQT=/path/to/linuxdeployqt
 ```
 
+If `linuxdeployqt` cannot complete the bundle on the current machine, set `APPIMAGETOOL` as well. The packaging
+script then falls back to a manual Qt AppDir bundle, copies Qt plugin and QML dependencies from `QT_ROOT`, and uses
+`appimagetool` to create the final AppImage.
+
 On newer Linux distributions, `linuxdeployqt` may reject the host glibc as too new for broadly compatible AppImages. For local validation only, use:
 
 ```sh
@@ -145,6 +149,20 @@ The default output is:
 ```txt
 dist/linux-appimage/uburu-linux-x86_64.AppImage
 dist/linux-appimage/uburu-linux-x86_64.AppImage.sha256
+```
+
+Validate the checksum from the output directory:
+
+```sh
+cd dist/linux-appimage
+sha256sum -c uburu-linux-x86_64.AppImage.sha256
+```
+
+If the validation machine does not have `libfuse.so.2`, smoke-test the AppImage through AppImage's extract-and-run
+mode:
+
+```sh
+APPIMAGE_EXTRACT_AND_RUN=1 ./uburu-linux-x86_64.AppImage
 ```
 
 Before publishing a Linux artifact, validate the AppImage on a clean distribution or VM older than the build host, confirm the file picker and file-opening actions work under the target desktop environment, and confirm user-selected paths are accessible without requiring the app to run from the repository tree.

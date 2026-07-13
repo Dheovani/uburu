@@ -91,6 +91,9 @@ bash ./scripts/package-linux-appimage.sh
 ```
 
 Set `LINUXDEPLOYQT=/path/to/linuxdeployqt` if `linuxdeployqt` is not on `PATH`.
+If `linuxdeployqt` is unavailable or fails on the local Qt/runtime combination, set
+`APPIMAGETOOL=/path/to/appimagetool`; the script falls back to a manual Qt AppDir bundle and then creates the
+AppImage with `appimagetool`.
 
 ## Core without Qt
 

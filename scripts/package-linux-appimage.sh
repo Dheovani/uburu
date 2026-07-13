@@ -34,9 +34,17 @@ if [[ -z "$linuxdeployqt" ]]; then
   linuxdeployqt="$(command -v linuxdeployqt || true)"
 fi
 
-if [[ -z "$linuxdeployqt" ]]; then
-  echo "linuxdeployqt was not found. Set LINUXDEPLOYQT or add linuxdeployqt to PATH." >&2
-  exit 1
+appimagetool="${APPIMAGETOOL:-}"
+if [[ -z "$appimagetool" ]]; then
+  appimagetool="$(command -v appimagetool || true)"
+fi
+
+qtRoot="${QT_ROOT:-}"
+if [[ -z "$qtRoot" && -n "$(command -v qmake6 || true)" ]]; then
+  qtRoot="$(qmake6 -query QT_INSTALL_PREFIX)"
+fi
+if [[ -z "$qtRoot" && -n "$(command -v qmake || true)" ]]; then
+  qtRoot="$(qmake -query QT_INSTALL_PREFIX)"
 fi
 
 rm -rf "$appdir"
@@ -49,23 +57,96 @@ cp "$executable" "$appdir/usr/bin/uburu"
 cp "$desktopFile" "$appdir/usr/share/applications/uburu.desktop"
 cp "$iconSource" "$appdir/usr/share/icons/hicolor/256x256/apps/uburu.png"
 cp "$appRunTemplate" "$appdir/AppRun"
+cp "$desktopFile" "$appdir/uburu.desktop"
+cp "$iconSource" "$appdir/uburu.png"
 chmod +x "$appdir/AppRun" "$appdir/usr/bin/uburu"
 
-linuxdeployqtArguments=(
-  "$appdir/usr/share/applications/uburu.desktop"
-  "-appimage"
-  "-bundle-non-qt-libs"
-  "-qmldir=$root/apps/desktop/qml"
-)
+copy_runtime_library() {
+  local libraryPath="$1"
+  local destinationDirectory="$appdir/usr/lib"
 
-if [[ "$allowNewGlibc" == "1" ]]; then
-  linuxdeployqtArguments+=("-unsupported-allow-new-glibc")
+  if [[ ! -f "$libraryPath" ]]; then
+    return
+  fi
+
+  mkdir -p "$destinationDirectory"
+  cp -L "$libraryPath" "$destinationDirectory/"
+}
+
+bundle_qt_dependencies() {
+  local scanRoot
+  local libraryPath
+
+  for _ in 1 2 3 4; do
+    while IFS= read -r scanRoot; do
+      while IFS= read -r libraryPath; do
+        case "$libraryPath" in
+          "$qtRoot"/*)
+            copy_runtime_library "$libraryPath"
+            ;;
+        esac
+      done < <(LD_LIBRARY_PATH="$appdir/usr/lib:$qtRoot/lib:${LD_LIBRARY_PATH:-}" ldd "$scanRoot" 2>/dev/null |
+        awk '/=>/ { print $3 }')
+    done < <(find "$appdir/usr/bin" "$appdir/usr/lib" "$appdir/usr/plugins" "$appdir/usr/qml" -type f)
+  done
+}
+
+bundle_manual_appdir() {
+  if [[ -z "$appimagetool" ]]; then
+    echo "appimagetool was not found. Set APPIMAGETOOL or add appimagetool to PATH." >&2
+    exit 1
+  fi
+
+  if [[ -z "$qtRoot" ]]; then
+    echo "Qt prefix was not found. Set QT_ROOT or add qmake/qmake6 to PATH." >&2
+    exit 1
+  fi
+
+  mkdir -p "$appdir/usr/lib" "$appdir/usr/plugins" "$appdir/usr/qml"
+
+  while IFS= read -r libraryPath; do
+    case "$libraryPath" in
+      "$qtRoot"/*)
+        copy_runtime_library "$libraryPath"
+        ;;
+    esac
+  done < <(ldd "$appdir/usr/bin/uburu" | awk '/=>/ { print $3 }')
+
+  if [[ -d "$qtRoot/plugins" ]]; then
+    cp -a "$qtRoot/plugins/." "$appdir/usr/plugins/"
+  fi
+
+  if [[ -d "$qtRoot/qml" ]]; then
+    cp -a "$qtRoot/qml/." "$appdir/usr/qml/"
+  fi
+
+  bundle_qt_dependencies
+
+  ARCH=x86_64 "$appimagetool" "$appdir" "$appimagePath"
+}
+
+if [[ -n "$linuxdeployqt" ]]; then
+  linuxdeployqtArguments=(
+    "$appdir/usr/share/applications/uburu.desktop"
+    "-appimage"
+    "-bundle-non-qt-libs"
+    "-qmldir=$root/apps/desktop/qml"
+  )
+
+  if [[ "$allowNewGlibc" == "1" ]]; then
+    linuxdeployqtArguments+=("-unsupported-allow-new-glibc")
+  fi
+
+  if ! (
+    cd "$root/$outputDirectory"
+    "$linuxdeployqt" "${linuxdeployqtArguments[@]}"
+  ); then
+    echo "linuxdeployqt failed; falling back to manual Qt AppDir bundling." >&2
+    bundle_manual_appdir
+  fi
+else
+  bundle_manual_appdir
 fi
-
-(
-  cd "$root/$outputDirectory"
-  "$linuxdeployqt" "${linuxdeployqtArguments[@]}"
-)
 
 generatedAppimage="$(find "$root/$outputDirectory" -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
 if [[ -z "$generatedAppimage" ]]; then

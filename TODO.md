@@ -378,10 +378,10 @@ This document is the project's operational plan. Milestone order represents real
   - [x] Validate installer install, launch, update, and uninstall on a clean Windows machine.
 - [ ] Sign release executables and installers.
 - [ ] Produce macOS bundle, sign, and notarize.
-- [ ] Produce AppImage and evaluate Flatpak on Linux.
+- [x] Produce AppImage and evaluate Flatpak on Linux.
   - [x] Choose AppImage as the first Linux artifact and keep Flatpak as a future sandboxed distribution target.
   - [x] Add Linux AppDir metadata and AppImage packaging script.
-  - [ ] Generate and validate the AppImage on Linux.
+  - [x] Generate and validate the AppImage on Linux.
 - [ ] Validate installation, update, and uninstallation on clean machines.
 - [x] Separate settings, index, and cache to allow safe upgrade/uninstall.
 - [x] Define semantic versioning and changelog.

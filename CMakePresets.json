@@ -33,6 +33,13 @@
       }
     },
     {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC Release",
+      "description": "Release desktop build using Visual Studio/MSVC, vcpkg and QT_ROOT.",
+      "inherits": "windows-msvc-debug",
+      "binaryDir": "${sourceDir}/build/windows-msvc-release"
+    },
+    {
       "name": "linux-debug",
       "displayName": "Linux Debug",
       "description": "Qt desktop build using Ninja, vcpkg and QT_ROOT when Qt is outside the system prefix.",
@@ -144,6 +151,11 @@
       "configuration": "Debug"
     },
     {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc-release",
+      "configuration": "Release"
+    },
+    {
       "name": "linux-debug",
       "configurePreset": "linux-debug"
     },
@@ -215,6 +227,17 @@
       "name": "windows-msvc-debug",
       "configurePreset": "windows-msvc-debug",
       "configuration": "Debug",
+      "execution": {
+        "jobs": 4
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc-release",
+      "configuration": "Release",
       "execution": {
         "jobs": 4
       },

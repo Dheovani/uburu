@@ -41,6 +41,22 @@ To create a local redistributable development folder with `windeployqt` and vcpk
 
 The script writes to `dist/windows-msvc-debug` by default.
 
+To create the initial Release portable bundle, ZIP archive, manifest, and SHA-256 checksum:
+
+```powershell
+.\scripts\package-windows-msvc-desktop.ps1
+```
+
+The script writes to `dist/windows-msvc-release` by default. See [release packaging](release.md) for the manual validation checklist and remaining installer/signing work.
+
+To build the first Windows installer, install Inno Setup 6 and run:
+
+```powershell
+.\scripts\build-windows-installer.ps1
+```
+
+If Inno Setup is not installed, the script fails before modifying release artifacts and tells you to install `ISCC.exe`.
+
 ## Linux
 
 With Ninja, vcpkg, and Qt available:

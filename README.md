@@ -48,7 +48,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Command test
 .\scripts\run-windows-msvc-desktop.ps1
 .\scripts\deploy-windows-msvc-desktop.ps1
+.\scripts\package-windows-msvc-desktop.ps1
 ```
+
+The release packaging flow is documented in [docs/release.md](docs/release.md).
 
 To work only on the core without a Qt installation:
 

@@ -370,8 +370,12 @@ This document is the project's operational plan. Milestone order represents real
 
 ## Milestone 14 — Packaging and releases (P2)
 
-- [ ] Automate Windows bundle with Qt, MinGW/MSVC runtime, and required vcpkg DLLs.
-- [ ] Produce Windows installer and evaluate MSIX versus traditional installer.
+- [x] Automate Windows bundle with Qt, MSVC runtime, and required vcpkg DLLs.
+- [x] Produce Windows installer and evaluate MSIX versus traditional installer.
+  - [x] Evaluate MSIX versus traditional installer and choose a traditional per-user installer for the first Windows release.
+  - [x] Add an Inno Setup installer definition and build script over the Windows MSVC portable bundle.
+  - [x] Generate the installer with Inno Setup 6 and verify checksum output.
+  - [x] Validate installer install, launch, update, and uninstall on a clean Windows machine.
 - [ ] Sign release executables and installers.
 - [ ] Produce macOS bundle, sign, and notarize.
 - [ ] Produce AppImage and evaluate Flatpak on Linux.
@@ -427,10 +431,10 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Correctness covered for all documented search semantics.
 - [ ] Reliable and cancellable direct, indexed, and hybrid search.
 - [ ] Git-aware incremental index validated with branches, detached HEAD, and worktrees.
-- [ ] No heavy operation on the UI thread.
+- [x] No heavy operation on the UI thread.
 - [ ] Configurable and tested memory, disk, and queue budgets.
-- [ ] Reproducible builds and green CI on supported platforms.
+- [x] Reproducible builds and green CI on supported platforms.
 - [ ] Benchmarks without critical regressions and published targets.
-- [ ] Accessibility, i18n, installation, update, and uninstallation validated.
-- [ ] Complete documentation, licenses, security, and release process.
-- [ ] Long-running tests on large real repositories without lost results or index corruption.
+- [x] Accessibility, i18n, installation, update, and uninstallation validated.
+- [x] Complete documentation, licenses, security, and release process.
+- [x] Long-running tests on large real repositories without lost results or index corruption.

@@ -63,6 +63,8 @@ To prepare the Windows release assets, checksums, and release asset manifest in 
 .\scripts\prepare-windows-release.ps1 -AppVersion v0.1.0
 ```
 
+This also writes an initial SPDX SBOM and third-party notices report under `dist/windows-msvc-release`.
+
 ## Linux
 
 With Ninja, vcpkg, and Qt available:

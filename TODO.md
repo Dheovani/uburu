@@ -380,12 +380,12 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Produce macOS bundle, sign, and notarize.
 - [ ] Produce AppImage and evaluate Flatpak on Linux.
 - [ ] Validate installation, update, and uninstallation on clean machines.
-- [ ] Separate settings, index, and cache to allow safe upgrade/uninstall.
+- [x] Separate settings, index, and cache to allow safe upgrade/uninstall.
 - [x] Define semantic versioning and changelog.
 - [x] Automate release artifacts and checksums.
-- [ ] Generate SBOM and license report.
-- [ ] Add update policy and stable/pre-release channel.
-- [ ] Create release, rollback, and database compatibility checklist.
+- [x] Generate SBOM and license report.
+- [x] Add update policy and stable/pre-release channel.
+- [x] Create release, rollback, and database compatibility checklist.
 
 ## Milestone 15 — Professional documentation (P1/P2)
 

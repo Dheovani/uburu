@@ -1,6 +1,7 @@
 param(
   [string]$PackageScript = "scripts/package-windows-msvc-desktop.ps1",
   [string]$InstallerScript = "scripts/build-windows-installer.ps1",
+  [string]$SbomScript = "scripts/generate-release-sbom.ps1",
   [string]$OutputDirectory = "dist/windows-msvc-release",
   [string]$PackageName = "uburu-windows-msvc-x64",
   [string]$ReleaseNotes = "docs/releases/v0.1.0.md",
@@ -90,6 +91,7 @@ if (-not $AppVersion) {
 $safeAppVersion = $AppVersion -replace '[^0-9A-Za-z.\-_]', '-'
 $packageScriptPath = Join-Path $root $PackageScript
 $installerScriptPath = Join-Path $root $InstallerScript
+$sbomScriptPath = Join-Path $root $SbomScript
 $outputPath = Join-Path $root $OutputDirectory
 $installerOutputPath = Join-Path $outputPath "installer"
 $releaseNotesPath = Join-Path $root $ReleaseNotes
@@ -97,6 +99,8 @@ $portableArchivePath = Join-Path $outputPath "$PackageName.zip"
 $portableChecksumPath = Join-Path $outputPath "$PackageName.sha256"
 $releaseNotesOutputPath = Join-Path $outputPath "RELEASE-NOTES.md"
 $assetsManifestPath = Join-Path $outputPath "release-assets.json"
+$sbomPath = Join-Path $outputPath "uburu-windows-msvc-x64.spdx.json"
+$licenseReportPath = Join-Path $outputPath "THIRD-PARTY-NOTICES.md"
 
 Assert-PathInsideRoot $outputPath
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
@@ -121,6 +125,12 @@ if (-not (Test-Path -LiteralPath $releaseNotesPath)) {
 
 Copy-Item -LiteralPath $releaseNotesPath -Destination $releaseNotesOutputPath -Force
 
+& $sbomScriptPath
+
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
+
 $installer = Get-ChildItem -LiteralPath $installerOutputPath -Filter "uburu-setup-*-windows-x64.exe" |
   Sort-Object -Property LastWriteTimeUtc -Descending |
   Select-Object -First 1
@@ -138,6 +148,14 @@ $assets = @(
       -Kind "windows-portable-zip" `
       -Path $portableArchivePath `
       -ChecksumPath $portableChecksumPath),
+  (New-ReleaseAsset `
+      -Kind "spdx-sbom" `
+      -Path $sbomPath `
+      -ChecksumPath "$sbomPath.sha256"),
+  (New-ReleaseAsset `
+      -Kind "third-party-notices" `
+      -Path $licenseReportPath `
+      -ChecksumPath "$licenseReportPath.sha256"),
   (New-ReleaseAsset `
       -Kind "release-notes" `
       -Path $releaseNotesOutputPath `

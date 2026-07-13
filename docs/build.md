@@ -77,6 +77,21 @@ ctest --preset linux-debug
 
 If Qt is installed outside the system's default prefixes, set `QT_ROOT` before configuring.
 
+For a Linux Release desktop build:
+
+```sh
+cmake --preset linux-release
+cmake --build --preset linux-release
+```
+
+To prepare the initial AppImage artifact on Linux:
+
+```sh
+bash ./scripts/package-linux-appimage.sh
+```
+
+Set `LINUXDEPLOYQT=/path/to/linuxdeployqt` if `linuxdeployqt` is not on `PATH`.
+
 ## Core without Qt
 
 The project supports `UBURU_BUILD_DESKTOP=OFF` to build and test the core without Qt:

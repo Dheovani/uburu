@@ -53,6 +53,16 @@
       }
     },
     {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Release Qt desktop build using Ninja, vcpkg and QT_ROOT when Qt is outside the system prefix.",
+      "inherits": "linux-debug",
+      "binaryDir": "${sourceDir}/build/linux-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
       "name": "core-windows-msvc-debug",
       "displayName": "Core-only Windows MSVC Debug",
       "description": "Build only the UI-independent core and tests using Visual Studio/MSVC; does not require Qt.",
@@ -160,6 +170,10 @@
       "configurePreset": "linux-debug"
     },
     {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
       "name": "core-windows-msvc-debug",
       "configurePreset": "core-windows-msvc-debug",
       "configuration": "Debug"
@@ -248,6 +262,16 @@
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug",
+      "execution": {
+        "jobs": 4
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release",
       "execution": {
         "jobs": 4
       },

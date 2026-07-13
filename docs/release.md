@@ -116,6 +116,39 @@ Patch releases must stay compatible with the same channel and must not introduce
 
 An automatic updater is intentionally out of scope for the first Windows preview. When added, it must verify signatures or trusted checksums before replacing binaries, must not run heavy migrations without user-visible progress, and must preserve the same storage and rollback rules described above.
 
+## Linux packaging strategy
+
+The first Linux packaging path is an AppImage built from a Qt desktop Release build. AppImage is the preferred first Linux artifact because it can be validated from a single file and does not require setting up a Flatpak runtime, portal permissions, repository hosting, or sandbox policy before the Linux desktop behavior itself is tested.
+
+Flatpak remains a strong future target for distribution, sandboxing, desktop integration, and update channels, but it requires a separate manifest, runtime selection, filesystem portal review, and a clear policy for user-selected directory access. Those details should be handled after the AppImage smoke path is working.
+
+To build the initial AppImage on Linux, install `linuxdeployqt`, configure `QT_ROOT` when Qt is not available from the system prefix, and run:
+
+```sh
+bash ./scripts/package-linux-appimage.sh
+```
+
+If `linuxdeployqt` is not on `PATH`, set:
+
+```sh
+export LINUXDEPLOYQT=/path/to/linuxdeployqt
+```
+
+On newer Linux distributions, `linuxdeployqt` may reject the host glibc as too new for broadly compatible AppImages. For local validation only, use:
+
+```sh
+UBURU_LINUXDEPLOYQT_ALLOW_NEW_GLIBC=1 bash ./scripts/package-linux-appimage.sh
+```
+
+The default output is:
+
+```txt
+dist/linux-appimage/uburu-linux-x86_64.AppImage
+dist/linux-appimage/uburu-linux-x86_64.AppImage.sha256
+```
+
+Before publishing a Linux artifact, validate the AppImage on a clean distribution or VM older than the build host, confirm the file picker and file-opening actions work under the target desktop environment, and confirm user-selected paths are accessible without requiring the app to run from the repository tree.
+
 ## Manual validation checklist
 
 Validate the portable folder on a clean Windows machine or VM before calling the artifact releasable:
@@ -146,5 +179,5 @@ The remaining packaging work includes:
 
 - code signing;
 - macOS bundle, signing, and notarization;
-- Linux AppImage and Flatpak evaluation;
+- Linux AppImage validation and future Flatpak manifest;
 - automatic update transport.

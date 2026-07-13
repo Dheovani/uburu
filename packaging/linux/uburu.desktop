@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Uburu
+Comment=Advanced local file search
+Exec=uburu
+Icon=uburu
+Categories=Utility;Development;Qt;
+Terminal=false

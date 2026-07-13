@@ -377,7 +377,12 @@ This document is the project's operational plan. Milestone order represents real
   - [x] Generate the installer with Inno Setup 6 and verify checksum output.
   - [x] Validate installer install, launch, update, and uninstall on a clean Windows machine.
 - [ ] Sign release executables and installers.
+  - [x] Add Windows signing helper and document the signing flow.
+  - [ ] Sign Windows release artifacts with a real code-signing certificate.
 - [ ] Produce macOS bundle, sign, and notarize.
+  - [x] Add macOS Release preset and package script for `.app` and `.dmg` artifacts.
+  - [ ] Generate and validate the macOS bundle on macOS.
+  - [ ] Sign and notarize with Apple Developer credentials.
 - [x] Produce AppImage and evaluate Flatpak on Linux.
   - [x] Choose AppImage as the first Linux artifact and keep Flatpak as a future sandboxed distribution target.
   - [x] Add Linux AppDir metadata and AppImage packaging script.

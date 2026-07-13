@@ -63,6 +63,19 @@
       }
     },
     {
+      "name": "macos-release",
+      "displayName": "macOS Release",
+      "description": "Release Qt desktop build using Ninja, vcpkg and QT_ROOT when Qt is outside the system prefix.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
+        "VCPKG_TARGET_TRIPLET": "x64-osx"
+      }
+    },
+    {
       "name": "core-windows-msvc-debug",
       "displayName": "Core-only Windows MSVC Debug",
       "description": "Build only the UI-independent core and tests using Visual Studio/MSVC; does not require Qt.",
@@ -174,6 +187,10 @@
       "configurePreset": "linux-release"
     },
     {
+      "name": "macos-release",
+      "configurePreset": "macos-release"
+    },
+    {
       "name": "core-windows-msvc-debug",
       "configurePreset": "core-windows-msvc-debug",
       "configuration": "Debug"
@@ -272,6 +289,16 @@
     {
       "name": "linux-release",
       "configurePreset": "linux-release",
+      "execution": {
+        "jobs": 4
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-release",
+      "configurePreset": "macos-release",
       "execution": {
         "jobs": 4
       },

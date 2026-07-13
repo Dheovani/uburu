@@ -65,6 +65,12 @@ To prepare the Windows release assets, checksums, and release asset manifest in 
 
 This also writes an initial SPDX SBOM and third-party notices report under `dist/windows-msvc-release`.
 
+Windows signing is optional and requires a local code-signing certificate plus the Windows SDK `signtool.exe`:
+
+```powershell
+.\scripts\sign-windows-release.ps1 -CertificatePath path\to\certificate.pfx
+```
+
 ## Linux
 
 With Ninja, vcpkg, and Qt available:
@@ -91,6 +97,29 @@ bash ./scripts/package-linux-appimage.sh
 ```
 
 Set `LINUXDEPLOYQT=/path/to/linuxdeployqt` if `linuxdeployqt` is not on `PATH`.
+
+## macOS
+
+For a macOS Release desktop build:
+
+```sh
+cmake --preset macos-release
+cmake --build --preset macos-release
+```
+
+To prepare the initial `.app` bundle and `.dmg`:
+
+```sh
+bash ./scripts/package-macos-bundle.sh
+```
+
+Set `MACDEPLOYQT=/path/to/macdeployqt` or `QT_ROOT=/path/to/Qt/<version>/macos` when `macdeployqt` is not on `PATH`. Signing and notarization are optional in the script and require Apple credentials:
+
+```sh
+export UBURU_MACOS_CODESIGN_IDENTITY="Developer ID Application: ..."
+export UBURU_MACOS_NOTARY_PROFILE="uburu-notary"
+bash ./scripts/package-macos-bundle.sh
+```
 If `linuxdeployqt` is unavailable or fails on the local Qt/runtime combination, set
 `APPIMAGETOOL=/path/to/appimagetool`; the script falls back to a manual Qt AppDir bundle and then creates the
 AppImage with `appimagetool`.

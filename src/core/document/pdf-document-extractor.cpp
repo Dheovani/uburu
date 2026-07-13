@@ -8,6 +8,7 @@
 #include <array>
 #include <charconv>
 #include <cctype>
+#include <cstdint>
 #include <fstream>
 #include <limits>
 #include <map>
@@ -39,11 +40,18 @@ namespace uburu::document
     constexpr std::string_view endBfCharMarker = "endbfchar";
     constexpr std::string_view beginBfRangeMarker = "beginbfrange";
     constexpr std::string_view endBfRangeMarker = "endbfrange";
-    constexpr std::uintmax_t defaultMaximumPdfBytes = 128ULL * 1024ULL * 1024ULL;
+    constexpr std::uintmax_t defaultMaximumPdfBytes = 32ULL * 1024ULL * 1024ULL;
     constexpr std::uintmax_t pdfSafetyMultiplier = 16;
     constexpr std::size_t maximumReferenceScanBytes = 2048;
     constexpr std::size_t maximumFontResourceScanBytes = 4096;
     constexpr std::size_t maximumPdfHeaderProbeBytes = 1024;
+    constexpr std::size_t maximumToUnicodeEntries = 65536;
+    constexpr std::size_t maximumToUnicodeRangeEntries = 4096;
+    constexpr std::size_t maximumToUnicodeCodeBytes = 4;
+    constexpr std::size_t maximumPdfPagesPerDocument = 300;
+    constexpr std::size_t maximumPdfStreamsPerDocument = 4096;
+    constexpr std::uintmax_t maximumPdfDecodedStreamBytes = 16ULL * 1024ULL * 1024ULL;
+    constexpr std::uintmax_t maximumPdfDecodedBytesPerDocument = 64ULL * 1024ULL * 1024ULL;
     constexpr std::size_t maximumOctalDigits = 3;
     constexpr std::size_t utf16CodeUnitBytes = 2;
     constexpr std::size_t pdfReadBufferBytes = 8192;
@@ -114,7 +122,14 @@ namespace uburu::document
       std::size_t maximumCodeBytes{0};
     };
 
-    using FontUnicodeMaps = std::map<std::string, ToUnicodeMap>;
+    struct PdfExtractionBudget
+    {
+      std::size_t streamsDecoded{0};
+      std::uintmax_t decodedBytes{0};
+    };
+
+    using ToUnicodeMapCache = std::map<int, std::optional<ToUnicodeMap>>;
+    using FontUnicodeMaps = std::map<std::string, const ToUnicodeMap*>;
 
     [[nodiscard]]
     bool wouldExceedByteLimit(const DocumentExtractionOptions& options, std::uintmax_t bytes)
@@ -660,7 +675,35 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::optional<std::string> inflateStream(std::string_view compressed)
+    bool canConsumePdfStreamBytes(
+      PdfExtractionBudget& budget,
+      std::uintmax_t streamBytes,
+      DocumentExtractionSummary& summary)
+    {
+      if (budget.streamsDecoded >= maximumPdfStreamsPerDocument) {
+        summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+
+        return false;
+      }
+
+      if (streamBytes > maximumPdfDecodedStreamBytes ||
+          budget.decodedBytes > maximumPdfDecodedBytesPerDocument - streamBytes) {
+        summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+
+        return false;
+      }
+
+      ++budget.streamsDecoded;
+      budget.decodedBytes += streamBytes;
+
+      return true;
+    }
+
+    [[nodiscard]]
+    std::optional<std::string> inflateStream(
+      std::string_view compressed,
+      PdfExtractionBudget& budget,
+      DocumentExtractionSummary& summary)
     {
       z_stream stream{};
 
@@ -684,22 +727,42 @@ namespace uburu::document
           break;
 
         const auto producedBytes = buffer.size() - static_cast<std::size_t>(stream.avail_out);
+
+        if (output.size() + producedBytes > maximumPdfDecodedStreamBytes) {
+          summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+          status = Z_DATA_ERROR;
+
+          break;
+        }
+
         output.append(reinterpret_cast<const char*>(buffer.data()), producedBytes);
       }
 
       inflateEnd(&stream);
 
+      if (summary.status == DocumentExtractionStatus::safetyLimitExceeded)
+        return std::nullopt;
+
       if (status != Z_STREAM_END)
+        return std::nullopt;
+
+      if (!canConsumePdfStreamBytes(budget, output.size(), summary))
         return std::nullopt;
 
       return output;
     }
 
     [[nodiscard]]
-    std::optional<std::string> decodedStream(PdfStream stream)
+    std::optional<std::string> decodedStream(
+      PdfStream stream,
+      PdfExtractionBudget& budget,
+      DocumentExtractionSummary& summary)
     {
       if (stream.dictionary.find(flateDecodeMarker) != std::string_view::npos)
-        return inflateStream(stream.bytes);
+        return inflateStream(stream.bytes, budget, summary);
+
+      if (!canConsumePdfStreamBytes(budget, stream.bytes.size(), summary))
+        return std::nullopt;
 
       return std::string{stream.bytes};
     }
@@ -919,6 +982,9 @@ namespace uburu::document
       if (code.empty())
         return;
 
+      if (code.size() > maximumToUnicodeCodeBytes || map.entries.size() >= maximumToUnicodeEntries)
+        return;
+
       map.maximumCodeBytes = std::max(map.maximumCodeBytes, code.size());
       map.entries[std::move(code)] = utf16BigEndianToUtf8(utf16Text);
     }
@@ -946,13 +1012,24 @@ namespace uburu::document
       if (sourceEnd < sourceStart)
         return;
 
+      if (values[0].empty() || values[0].size() > maximumToUnicodeCodeBytes)
+        return;
+
+      const auto rangeEntries = static_cast<std::uint64_t>(sourceEnd) - sourceStart + 1U;
+
+      if (rangeEntries > maximumToUnicodeRangeEntries)
+        return;
+
       if (line.find('[') != std::string_view::npos) {
-        for (std::uint32_t source = sourceStart; source <= sourceEnd && source - sourceStart + 2U < values.size();
-             ++source) {
+        const auto mappedEntries = std::min<std::uint64_t>(rangeEntries, values.size() - 2U);
+
+        for (std::uint64_t rangeOffset = 0; rangeOffset < mappedEntries; ++rangeOffset) {
+          const auto source = static_cast<std::uint32_t>(sourceStart + rangeOffset);
+
           addToUnicodeEntry(
             map,
             bigEndianBytes(source, values[0].size()),
-            values[static_cast<std::size_t>(source - sourceStart + 2U)]);
+            values[static_cast<std::size_t>(rangeOffset + 2U)]);
         }
 
         return;
@@ -963,12 +1040,11 @@ namespace uburu::document
       if (!destinationStart)
         return;
 
-      for (std::uint32_t source = sourceStart; source <= sourceEnd; ++source) {
+      for (std::uint64_t rangeOffset = 0; rangeOffset < rangeEntries; ++rangeOffset) {
+        const auto source = static_cast<std::uint32_t>(sourceStart + rangeOffset);
         std::string destination;
-        appendUtf8(destination, *destinationStart + (source - sourceStart));
-        auto code = bigEndianBytes(source, values[0].size());
-        map.maximumCodeBytes = std::max(map.maximumCodeBytes, code.size());
-        map.entries[std::move(code)] = std::move(destination);
+        appendUtf8(destination, *destinationStart + static_cast<char32_t>(rangeOffset));
+        addToUnicodeEntry(map, bigEndianBytes(source, values[0].size()), destination);
       }
     }
 
@@ -1016,40 +1092,68 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    FontUnicodeMaps fontUnicodeMapsForPage(const PdfObject& page, const std::map<int, PdfObject>& objects)
+    const ToUnicodeMap* cachedToUnicodeMapForFont(
+      int fontObjectNumber,
+      const std::map<int, PdfObject>& objects,
+      ToUnicodeMapCache& cache,
+      PdfExtractionBudget& budget,
+      DocumentExtractionSummary& summary)
+    {
+      const auto cached = cache.find(fontObjectNumber);
+
+      if (cached != cache.end())
+        return cached->second ? &*cached->second : nullptr;
+
+      std::optional<ToUnicodeMap> parsedMap;
+      const auto fontObject = objects.find(fontObjectNumber);
+
+      if (fontObject != objects.end()) {
+        const auto toUnicodeObjectNumber = objectReferenceAfter(fontObject->second.body, toUnicodeMarker);
+
+        if (toUnicodeObjectNumber) {
+          const auto toUnicodeObject = objects.find(*toUnicodeObjectNumber);
+
+          if (toUnicodeObject != objects.end()) {
+            const auto streams = streamsFromObject(toUnicodeObject->second.body);
+
+            if (!streams.empty()) {
+              const auto decoded = decodedStream(streams.front(), budget, summary);
+
+              if (decoded) {
+                auto map = parseToUnicodeMap(*decoded);
+
+                if (!map.entries.empty())
+                  parsedMap = std::move(map);
+              }
+            }
+          }
+        }
+      }
+
+      const auto [iterator, inserted] = cache.emplace(fontObjectNumber, std::move(parsedMap));
+      (void)inserted;
+
+      return iterator->second ? &*iterator->second : nullptr;
+    }
+
+    [[nodiscard]]
+    FontUnicodeMaps fontUnicodeMapsForPage(
+      const PdfObject& page,
+      const std::map<int, PdfObject>& objects,
+      ToUnicodeMapCache& cache,
+      PdfExtractionBudget& budget,
+      DocumentExtractionSummary& summary)
     {
       FontUnicodeMaps maps;
 
       for (const auto& [fontName, fontObjectNumber] : fontReferences(page.body)) {
-        const auto fontObject = objects.find(fontObjectNumber);
+        const auto* map = cachedToUnicodeMapForFont(fontObjectNumber, objects, cache, budget, summary);
 
-        if (fontObject == objects.end())
-          continue;
+        if (map != nullptr)
+          maps.emplace(fontName, map);
 
-        const auto toUnicodeObjectNumber = objectReferenceAfter(fontObject->second.body, toUnicodeMarker);
-
-        if (!toUnicodeObjectNumber)
-          continue;
-
-        const auto toUnicodeObject = objects.find(*toUnicodeObjectNumber);
-
-        if (toUnicodeObject == objects.end())
-          continue;
-
-        const auto streams = streamsFromObject(toUnicodeObject->second.body);
-
-        if (streams.empty())
-          continue;
-
-        const auto decoded = decodedStream(streams.front());
-
-        if (!decoded)
-          continue;
-
-        auto map = parseToUnicodeMap(*decoded);
-
-        if (!map.entries.empty())
-          maps.emplace(fontName, std::move(map));
+        if (summary.status != DocumentExtractionStatus::completed)
+          break;
       }
 
       return maps;
@@ -1148,9 +1252,12 @@ namespace uburu::document
           }
         }
 
+        if (offset >= streamText.size())
+          break;
+
         if (hasTokenAt(streamText, offset, "Tf")) {
           const auto font = fontMaps.find(lastName);
-          activeToUnicodeMap = font == fontMaps.end() ? nullptr : &font->second;
+          activeToUnicodeMap = font == fontMaps.end() ? nullptr : font->second;
           offset += 2;
 
           continue;
@@ -1164,6 +1271,9 @@ namespace uburu::document
           }
         }
 
+        if (offset >= streamText.size())
+          break;
+
         if (streamText[offset] == '<') {
           if (auto value = hexString(streamText, offset)) {
             appendTextToken(pageText, decodePdfTextBytes(std::move(*value), activeToUnicodeMap));
@@ -1171,6 +1281,9 @@ namespace uburu::document
             continue;
           }
         }
+
+        if (offset >= streamText.size())
+          break;
 
         ++offset;
       }
@@ -1184,10 +1297,16 @@ namespace uburu::document
     std::string pageTextFromObject(
       const PdfObject& page,
       const std::map<int, PdfObject>& objects,
+      ToUnicodeMapCache& toUnicodeMapCache,
+      PdfExtractionBudget& budget,
       DocumentExtractionSummary& summary)
     {
       std::string pageText;
-      const auto fontMaps = fontUnicodeMapsForPage(page, objects);
+      const auto fontMaps = fontUnicodeMapsForPage(page, objects, toUnicodeMapCache, budget, summary);
+
+      if (summary.status != DocumentExtractionStatus::completed)
+        return {};
+
       auto streams = streamsFromObject(page.body);
 
       for (const auto reference : contentReferences(page.body)) {
@@ -1201,10 +1320,11 @@ namespace uburu::document
       }
 
       for (const auto& stream : streams) {
-        const auto decoded = decodedStream(stream);
+        const auto decoded = decodedStream(stream, budget, summary);
 
         if (!decoded) {
-          summary.status = DocumentExtractionStatus::parserFailed;
+          if (summary.status == DocumentExtractionStatus::completed)
+            summary.status = DocumentExtractionStatus::parserFailed;
 
           return {};
         }
@@ -1255,6 +1375,8 @@ namespace uburu::document
 
     const auto objects = pdfObjects(*bytes);
     const auto mappedObjects = objectMap(objects);
+    ToUnicodeMapCache toUnicodeMapCache;
+    PdfExtractionBudget budget;
     std::vector<PdfObject> pages;
 
     for (const auto& object : objects) {
@@ -1268,6 +1390,12 @@ namespace uburu::document
       return summary;
     }
 
+    if (pages.size() > maximumPdfPagesPerDocument) {
+      summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+
+      return summary;
+    }
+
     std::uintmax_t totalBytes = 0;
 
     for (std::size_t index = 0; index < pages.size(); ++index) {
@@ -1277,7 +1405,7 @@ namespace uburu::document
         return summary;
       }
 
-      auto pageText = pageTextFromObject(pages[index], mappedObjects, summary);
+      auto pageText = pageTextFromObject(pages[index], mappedObjects, toUnicodeMapCache, budget, summary);
 
       if (summary.status != DocumentExtractionStatus::completed)
         return summary;

@@ -330,12 +330,20 @@ namespace uburu::search
       std::vector<MatchSpan> highlights;
       highlights.reserve(matches.size());
       for (const auto& highlightMatch : matches) {
+        if (highlightMatch.offset > lineText.size() || highlightMatch.length > lineText.size() - highlightMatch.offset)
+          continue;
+
         highlights.push_back(MatchSpan{.column = text::visualColumnForByteOffset(lineText, highlightMatch.offset),
                                        .byteOffset = highlightMatch.offset,
                                        .byteLength = highlightMatch.length});
       }
 
       return highlights;
+    }
+
+    bool matchFitsLine(std::string_view lineText, text::MatchPosition match)
+    {
+      return match.offset <= lineText.size() && match.length <= lineText.size() - match.offset;
     }
 
     std::vector<std::string> copyContext(const std::deque<std::string>& context)
@@ -395,6 +403,9 @@ namespace uburu::search
                                    const ResultSink& sink)
     {
       for (const auto& match : matches) {
+        if (!matchFitsLine(lineText, match))
+          continue;
+
         if (summary.matches >= query.options.resultLimit) {
           summary.limitReached = true;
 

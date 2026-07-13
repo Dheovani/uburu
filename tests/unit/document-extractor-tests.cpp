@@ -1223,6 +1223,132 @@ TEST_CASE("pdf document extractor applies simple ToUnicode font maps")
   CHECK(segments.front().text == "Ub");
 }
 
+TEST_CASE("pdf document extractor tolerates unterminated text tokens at stream end")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-unterminated-token-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(
+    path,
+    "%PDF-1.4\n"
+    "1 0 obj\n"
+    "<< /Type /Catalog /Pages 2 0 R >>\n"
+    "endobj\n"
+    "2 0 obj\n"
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+    "endobj\n"
+    "3 0 obj\n"
+    "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+    "endobj\n"
+    "4 0 obj\n"
+    "<< /Length 18 >>\n"
+    "stream\n"
+    "BT (unterminated\n"
+    "endstream\n"
+    "endobj\n"
+    "trailer\n"
+    "<< /Root 1 0 R >>\n"
+    "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  CHECK(segments.empty());
+}
+
+TEST_CASE("pdf document extractor skips oversized ToUnicode ranges")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-large-tounicode-range-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(
+    path,
+    "%PDF-1.4\n"
+    "1 0 obj\n"
+    "<< /Type /Catalog /Pages 2 0 R >>\n"
+    "endobj\n"
+    "2 0 obj\n"
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+    "endobj\n"
+    "3 0 obj\n"
+    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+    "endobj\n"
+    "4 0 obj\n"
+    "<< /Length 25 >>\n"
+    "stream\n"
+    "BT /F1 12 Tf <0001> Tj ET\n"
+    "endstream\n"
+    "endobj\n"
+    "5 0 obj\n"
+    "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\n"
+    "endobj\n"
+    "6 0 obj\n"
+    "<< /Length 120 >>\n"
+    "stream\n"
+    "beginbfrange\n"
+    "<0000> <FFFFFFFF> <0041>\n"
+    "endbfrange\n"
+    "endstream\n"
+    "endobj\n"
+    "trailer\n"
+    "<< /Root 1 0 R >>\n"
+    "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::completed);
+}
+
+TEST_CASE("pdf document extractor rejects excessive page counts")
+{
+  constexpr std::size_t excessivePageCount = 301;
+
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-page-count-limit-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::string pdf =
+    "%PDF-1.4\n"
+    "1 0 obj\n"
+    "<< /Type /Catalog /Pages 2 0 R >>\n"
+    "endobj\n"
+    "2 0 obj\n"
+    "<< /Type /Pages /Count " +
+    std::to_string(excessivePageCount) +
+    " >>\n"
+    "endobj\n";
+
+  for (std::size_t index = 0; index < excessivePageCount; ++index) {
+    pdf += std::to_string(index + 3) +
+           " 0 obj\n"
+           "<< /Type /Page /Parent 2 0 R /Contents 999 0 R >>\n"
+           "endobj\n";
+  }
+
+  pdf += "trailer\n<< /Root 1 0 R >>\n%%EOF\n";
+
+  uburu::tests::writeFile(path, pdf);
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+}
+
 TEST_CASE("pdf document extractor applies extracted byte limits before publishing")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-pdf-limit-test");

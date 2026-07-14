@@ -1,446 +1,73 @@
 # TODO — Uburu
 
-This document is the project's operational plan. Milestone order represents real dependencies: later items must not degrade correctness, cancellation, memory use, or core/UI separation just to move faster.
+This document now tracks only future work. Completed work for the first preview release is summarized in `CHANGELOG.md`, `docs/releases/v0.1.0.md`, and the project documentation.
 
 ## Backlog conventions
 
-- `[ ]` pending; `[x]` completed and validated.
-- `P0` blocks a trustworthy base; `P1` forms the main product; `P2` professionalizes and expands it; `P3` is advanced evolution.
-- An item may be marked as completed only when code, tests, documentation, and applicable metrics are updated.
+- `[ ]` means future work.
+- `P0` blocks trust in correctness or data safety.
+- `P1` improves the main product experience.
+- `P2` professionalizes distribution, maintainability, or integration.
+- `P3` is advanced evolution and must not distract from correctness, reliability, or measured performance.
+- Do not mark an item as complete unless code, tests, documentation, and applicable metrics are updated.
 - Critical core changes require automated tests. Performance changes require before/after benchmarks or a reproducible metric.
-- Visible text must exist in `pt-BR` and `en-US`.
+- Visible user text must exist in `pt-BR` and `en-US`.
 
-## Current validated state
+## Current release baseline
 
-- [x] Qt-independent `uburu_core` library.
-- [x] Application layer separated from UI.
-- [x] Minimal Qt Quick application with asynchronous search and cancellation.
-- [x] Initial recursive scanner and line-by-line literal search.
-- [x] Central types for repository, worktree, documents, and results.
-- [x] Initial search, filesystem, index, Git, and storage interfaces.
-- [x] Search scope with multiple roots and per-root exclusions in the core.
-- [x] C++23 build with CMake, Qt 6.11.1/MSVC, and vcpkg.
-- [x] Initial unit tests with Catch2.
-- [x] Automatic formatting and kebab-case convention.
+Uburu `0.1.0` is the first Windows and Linux preview. It includes the Qt/QML desktop app, CLI, direct search, persistent indexing foundations, Git-aware architecture, SQLite storage, document extractors, tests, benchmarks, documentation, Windows installer packaging, Linux AppImage packaging, checksums, SBOM, and release notes.
 
-## Milestone 0 — Reproducible engineering and repository hygiene (P0)
+Future work below should improve this baseline without reopening completed milestones as checklist noise.
 
-- [x] Initialize and document the Git repository, main branch, and commit policy.
-- [x] Add `CMakePresets.json` for Windows/MinGW, Windows/MSVC, Linux, and core-only development.
-- [x] Remove commands dependent on fixed local paths such as `C:\Qt\6.11.1`.
-- [x] Fix `README.md` and `docs/build.md` with the currently validated MSVC flow.
-- [x] Add scripts or presets to configure, build, test, format, and run the application.
-- [x] Create a local deployment target or script with `windeployqt` and vcpkg DLLs.
-- [x] Add `.editorconfig` consistent with `.clang-format` and Markdown/QML files.
-- [x] Add static analysis with clang-tidy and configure the initial rule set.
-- [x] Add warnings-as-errors validation in CI, with compiler-specific exceptions justified.
-- [x] Add sanitizers on compatible platforms: AddressSanitizer and UndefinedBehaviorSanitizer.
-- [x] Add automatic formatting verification without modifying files (`format-check`).
-- [x] Create CI for Windows, Linux, and macOS when feasible.
-- [x] Run configure, build, tests, format-check, and static analysis in CI.
-- [x] Define minimum-version policy for CMake, Qt, compilers, and vcpkg.
-- [x] Pin the vcpkg baseline for reproducible builds.
-- [x] Add `LICENSE`, `CONTRIBUTING.md`, code of conduct, and security policy.
-- [x] Document dependency licenses and Qt redistribution obligations.
+## Before a stable 1.0 release
 
-### Exit criteria
+- [ ] Validate correctness for all documented search semantics against larger real-world repositories and user datasets.
+- [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
+- [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
+- [ ] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
+- [ ] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
+- [ ] Revisit end-to-end performance with real user datasets, including startup latency, direct search latency, indexing throughput, preview latency, memory growth, and UI responsiveness before choosing optimization strategies.
+- [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
+- [ ] Sign Windows release artifacts if a real code-signing certificate becomes available.
+- [ ] Review third-party licenses again before any commercial or broader public distribution.
 
-- [x] A clean clone can be configured and tested through presets without manually editing paths.
-- [x] CI green on at least Windows/MinGW and Linux.
+## Search and indexing evolution
 
-## Milestone 1 — Correct direct-search semantics (P0)
-
-- [x] Formally specify semantics in `docs/search-semantics.md`.
-- [x] Validate `SearchQuery` and return typed errors for invalid root, empty expression, and incompatible options.
-- [x] Find all occurrences in a line, not only the first one.
-- [x] Define and test overlapping occurrence behavior.
-- [x] Implement Unicode-consistent case-sensitive and case-insensitive search.
-- [x] Implement whole word with Unicode rules and a specific option for code identifiers.
-- [x] Implement regex search with PCRE2.
-- [x] Enable PCRE2 JIT when supported and provide explicit fallback.
-- [x] Limit regex time, depth, and resources to avoid pathological patterns.
-- [x] Return regex compilation errors with position and translatable message.
-- [x] Implement file-name search separately from content search.
-- [x] Implement filters by glob, extension, directory, and size.
-- [x] Normalize extensions and define platform-specific case sensitivity.
-- [x] Implement include/exclude with documented precedence.
-- [x] Apply global and per-file result limits.
-- [x] Implement deterministic ordering and an initial relevance strategy.
-- [x] Preserve progressive results without waiting for traversal completion.
-- [x] Distinguish cancellation, partial failure, and normal completion in the summary.
-- [x] Propagate read errors without silently stopping the whole search.
-- [x] Define behavior for files changed or removed during reading.
-- [x] Avoid unnecessary copies of lines, paths, and results.
-
-### Required tests
-
-- [x] Literal search with multiple occurrences on the same line.
-- [x] Case-sensitive and case-insensitive search with ASCII and Unicode.
-- [x] Whole word, identifiers, punctuation, and Unicode boundaries.
-- [x] Valid regex, invalid regex, JIT/fallback, and cancellation.
-- [x] CRLF, LF, file without final newline, and empty lines.
-- [x] Result limits, filters, and deterministic ordering.
-- [x] Permission errors, removed files, and partial reads.
-
-## Milestone 2 — Text, encoding, and large files (P0)
-
-- [x] Create a streaming text-reader abstraction in `core/text`.
-- [x] Detect BOM and support UTF-8, UTF-16 LE, and UTF-16 BE.
-- [x] Define configurable fallback for Latin-1 and unknown encoding.
-- [x] Validate UTF-8 and define an explicit policy for invalid sequences.
-- [x] Detect binaries with robust sampling, not only per-line NUL bytes.
-- [x] Make sample size and binary policy configurable.
-- [x] Read large files in chunks without losing matches at boundaries.
-- [x] Preserve correct offsets between bytes, code points, lines, and visual columns.
-- [x] Extract previous/following context without loading the whole file.
-- [x] Produce highlight spans for multiple occurrences.
-- [x] Support LF, CRLF, and standalone CR in documented form.
-- [x] Define a limit for extremely long lines.
-
-### Exit criteria
-
-- [x] Search files larger than the memory budget without allocation proportional to file size.
-- [x] Deterministic fixtures cover all supported encodings and line endings.
-
-## Milestone 3 — Filesystem, ignore, and concurrency (P0)
-
-- [x] Implement real `.gitignore` with nested rules, negation, and precedence.
-- [x] Support global Git ignore files and `.git/info/exclude` when configured.
-- [x] Separate hidden, ignored, and binary files in metrics.
-- [x] Correctly apply included and excluded directories in the scanner.
-- [x] Normalize absolute and relative paths per platform.
-- [x] Handle long paths, UNC, and Windows case differences.
-- [x] Detect sparse files and define per-platform reading policy.
-- [x] Define policy for junctions, symlinks, and mount points.
-- [x] Detect cycles when following symlinks.
-- [x] Implement a worker pool with configurable size.
-- [x] Prioritize small files and likely candidates without breaking final determinism.
-- [x] Add a bounded queue and backpressure between scan, read, matching, and publication.
-- [x] Ensure cooperative cancellation in scan, queue, reading, and matching.
-- [x] Avoid a global mutex and measure contention.
-- [x] Implement watchers behind a common interface.
-- [x] Implement Windows backend with `ReadDirectoryChangesW`.
-- [x] Implement Linux backend with `inotify`.
-- [x] Implement macOS backend with `FSEvents`.
-- [x] Handle overflow/lost events with reconciliation rescan.
-- [x] Add a documented initial fallback when native backend is unavailable.
-
-## Milestone 4 — Complete Git integration (P1)
-
-- [x] Implement `GitService` with libgit2 and typed errors.
-- [x] Discover common repository, `.git` file/directory, and worktree root.
-- [x] Generate stable identifiers for repository and worktree.
-- [x] Detect current branch, HEAD, and detached HEAD.
-- [x] Enumerate multiple worktrees.
-- [x] Read tracked, untracked, ignored, modified, deleted, and conflicted files.
-- [x] Obtain blob OID for tracked files.
-- [x] Detect changes in HEAD, index, and relevant refs.
-- [x] Treat branch switch as incremental structural reconciliation.
-- [x] Model local overlay over versioned content.
-- [x] Handle renames and moves with content reuse.
-- [x] Define behavior for submodules and nested repositories.
-- [x] Support locked, removed, and prunable worktrees.
-- [x] Isolate Git CLI fallback behind an explicit adapter.
-- [x] Test SHA-1 repositories and prepare types for SHA-256.
-
-### Git integration tests
-
-- [x] Normal branch and detached HEAD.
-- [x] Branch switch with added, removed, and blob-identical files.
-- [x] Locally modified, new, deleted, ignored, and conflicted files.
-- [x] Multiple worktrees and submodule.
-- [x] Content reuse by blob/hash between branches and worktrees.
-
-## Milestone 5 — Professional SQLite storage (P1)
-
-- [x] Implement `StorageService` with RAII and prepared statements.
-- [x] Create a versioned migration system.
-- [x] Define schema for repositories, worktrees, generations, files, documents, and overlays.
-- [x] Separate path identity from content identity.
-- [x] Store content hash and blob hash with explicit algorithm/versioning.
-- [x] Enable WAL, foreign keys, busy timeout, and measured pragmas.
-- [x] Publish index generations in atomic transactions.
-- [x] Recover from interruption during migration or indexing.
-- [x] Validate integrity and provide safe rebuild of corrupted index.
-- [x] Implement retention and orphan-document collection.
-- [x] Persist global and per-repository preferences.
-- [x] Persist search history and saved searches.
-- [x] Persist indexing metrics without unbounded growth.
-- [x] Define default database location per platform.
-- [x] Allow custom database location and migration.
-- [x] Test concurrency between search reads and new-generation writes.
-- [x] Evaluate FTS5 by benchmark without coupling the contract to the backend.
-
-## Milestone 6 — Persistent and incremental index (P1)
-
-- [x] Define and version the internal indexed-document format.
-- [x] Choose content hash with throughput benchmark and acceptable collision risk.
-- [x] Implement cancellable and progressive initial indexing.
-- [x] Implement incremental catalog by size, mtime, hash, and Git state.
-  - [x] Reuse catalog entry when size, mtime, persisted hash, and clean status indicate unchanged file.
-  - [x] Integrate Git state/overlay into the incremental catalog before considering the item complete.
-- [x] Deduplicate documents by content hash.
-- [x] Expose storage reuse queries by content hash.
-- [x] Reuse documents by blob hash before rereading files.
-- [x] Expose storage reuse queries by Git blob hash.
-- [x] Apply working tree overlay over the versioned generation.
-  - [x] Treat Git `modified` status as invalidation of conservative catalog reuse.
-  - [x] Publish tombstones for locally deleted files when a previous document exists.
-  - [x] Translate `GitOverlayEntry` values into testable indexing candidates and tombstones.
-  - [x] Connect overlay to the incremental `IndexService` pipeline.
-  - [x] Orchestrate `GitService::workingTreeOverlay()` in the application/indexing service.
-- [x] Hide deleted files and replace modified files without stale results.
-- [x] Reconcile watcher events in transactional batches.
-- [x] Detect index staleness and expose state through `IndexService`.
-- [x] Implement indexed search by content and metadata.
-  - [x] Implement initial indexed search by path metadata.
-  - [x] Persist and query indexed content without depending only on hash.
-- [x] Combine fast index results with direct validation.
-- [x] Update, confirm, or remove results during refinement.
-- [x] Define deterministic ranking and merge between sources.
-- [x] Implement disk budget and eviction policy.
-- [x] Version schema and format for upgrades without unnecessary cache loss.
-- [x] Implement pause, resume, and manual reindexing.
-
-## Milestone 7 — Search service and observability (P1)
-
-- [x] Make `SearchService` choose direct, indexed, or hybrid search by explicit policy.
-- [x] Separate application DTOs from persistence types and engine details.
-- [x] Create an event channel for progress, results, corrections, and errors.
-- [x] Add search IDs to discard late events from cancelled queries.
-- [x] Implement adaptive result batching for the UI.
-- [x] Measure time to first result and total time in all strategies.
-- [x] Implement a concrete `MetricsSink` and structured logging.
-- [x] Add levels, categories, and log rotation.
-- [x] Remove or mask sensitive content and paths from logs by default.
-- [x] Measure files/bytes per second, queues, cache hits, and hash reuse.
-- [x] Measure approximate memory and detect growth between searches.
-- [x] Create an exportable diagnostics mode/screen.
-- [x] Add search tracing with no relevant penalty when disabled.
-
-## Milestone 8 — Productive desktop experience (P1)
-
-- [x] Redesign the main screen with responsive layout and clear empty states.
-- [x] Implement directory/repository selector with recent entries and favorites.
-- [x] Allow selecting multiple directories/repositories in the visual selector, with per-root subdirectory inclusion and exclusion.
-  - [x] Allow multiple selected roots on desktop and execute search over `SearchScope`.
-  - [x] Display selected roots as removable chips in the visual selector.
-  - [x] Allow configuring per-root subdirectory exclusions.
-  - [x] Allow configuring explicit per-root subdirectory inclusions.
-- [x] Expose all planned filters without hardcoded text.
-- [x] Add configurable debounce and search as you type.
-- [x] Show count, processed files, time to first result, and total duration.
-- [x] Show indexing status and progress.
-  - [x] Reserve a visible UI point for indexing state.
-  - [x] Connect real `IndexingService` progress to desktop.
-- [x] Virtualize the list for hundreds of thousands of results.
-- [x] Preserve selection during batches and hybrid refinement.
-- [x] Create grouping by file and navigation between occurrences.
-- [x] Implement asynchronous, cancellable, bounded file preview.
-- [x] Implement multi-occurrence highlight and context lines.
-- [x] Add line numbers, monospace font, and configurable tab width.
-- [x] Open file in the configured editor and copy path/occurrence.
-- [x] Show an Uburu-owned file action menu on right click over a listed file, with actions equivalent to common system actions: open file, open with when available, open file location, copy path, and copy occurrence.
-- [x] Customize/improve the visual style of the action menu.
-- [x] Add essential shortcuts and initial command palette.
-- [x] Complete command palette with diagnostics, history, saved searches, and advanced navigation.
-- [x] Implement history, saved searches, and favorites.
-- [x] Implement light, dark, and system themes.
-- [x] Add information icons with tooltips explaining filters, scope, document types, `.gitignore`, regex search, and other potentially ambiguous controls.
-- [x] Fix interface language inconsistencies, ensuring all visible text is in `pt-BR` or `en-US` according to the active language, without accidental mixing.
-- [x] Persist geometry, splitters, filters, and last repository.
-- [x] Show partial errors without interrupting valid results.
-- [x] Prevent regex search while the backend is unavailable or remove the misleading visual stub.
-- [x] Make cancellation immediate and visually reliable.
-- [x] Test and document initial accessibility: focus, keyboard, contrast, accessible names, and screen readers.
-- [x] Test and document responsiveness for high DPI, multiple monitors, and fractional scales.
-- [x] Complete and review `pt-BR` and `en-US` translations.
-- [x] Define strategy for pluralization, shortcuts, and technical strings.
-
-## Milestone 9 — Tests and continuous quality (P0/P1)
-
-- [x] Create RAII helpers for temporary directories and files in tests.
-- [x] Remove fixed temporary names that may collide in parallel execution.
-- [x] Create small fixtures for text, encoding, ignore, and Git.
-- [x] Add unit tests for each pure matching and filtering rule.
-- [x] Add scanner integration tests in a real temporary filesystem.
-- [x] Add SQLite integration tests with disposable database.
-- [x] Add libgit2 integration tests with disposable repositories.
-- [x] Test cancellation at different pipeline points.
-- [x] Test backpressure and memory limits.
-- [x] Test concurrency repeatedly and under ThreadSanitizer where available.
-- [x] Add Qt tests for controller/model and observable UI states.
-- [x] Add a few end-to-end tests for selecting folder, searching, cancelling, and opening result.
-- [x] Enable safe parallel CTest execution.
-- [x] Configure per-module coverage and publish report in CI.
-- [x] Define thresholds by critical behavior, without chasing cosmetic coverage.
-- [x] Create regression suite with real bugs found.
-- [x] Add fuzzing for matcher, ignore parser, encoding, and paths.
-
-## Milestone 10 — Benchmarks and performance targets (P1)
-
-- [x] Choose benchmark framework and integrate it into CMake without affecting the default build.
-- [x] Create deterministic dataset generator.
-- [x] Measure many small files and few large files.
-- [x] Measure literal case-sensitive, case-insensitive, whole word, and regex/JIT.
-- [x] Measure optional Unicode normalization cost before enabling it on the hot path.
-- [x] Measure time to first result separately from total time.
-- [x] Measure cold/hot scan and operating-system cache effects.
-- [x] Measure initial indexing, incremental indexing, and branch switch.
-- [x] Measure reuse by content hash and blob hash.
-- [x] Measure memory for queues, results, and index.
-- [x] Measure batching and UI rendering cost.
-- [x] Define baselines by hardware/dataset and store versioned results.
-- [x] Create relevant regression alerts in CI or periodic execution.
-- [x] Document quantitative targets per repository class.
-
-## Milestone 11 — Settings, privacy, and resilience (P2)
-
-- [x] Implement typed and versioned global settings.
-- [x] Implement per-repository settings with predictable inheritance.
-- [x] Separate real indexing failures from files ignored by unsupported format, binary, size, filter, or temporary parser limitation in indexing status.
-- [x] Add determinate or indeterminate bottom progress bars for active search and indexing, using exact progress when the total work is known and a clearly marked ongoing state when scanning still cannot estimate the remaining work.
-- [x] Validate limits for threads, files, results, memory, and disk.
-- [x] Add import/export for settings and saved searches.
-- [x] Define telemetry policy: disabled by default and opt-in only, if it exists.
-- [x] Provide window settings buttons for language, theme, general preferences, and quick diagnostics.
-  - [x] Add a compact top-left application menu as the entry point for settings and common commands.
-  - [x] Connect language and general-preferences actions to real settings screens.
-- [x] Never send names, paths, or content without explicit consent.
-- [x] Protect history and index according to user permissions.
-- [x] Handle inaccessible paths, removable media, and unstable network locations.
-- [x] Recover state after crash without corrupting index or preferences.
-- [x] Implement local, exportable crash reports.
-- [x] Add limits against decompression bombs and special formats when supported.
-- [x] Create a threat model for regex, hostile files, symlinks, and local database.
-
-## Milestone 12 — Document extractors and rich file formats (P1)
-
-- [x] Define a document-extraction interface independent from `core/text`, so direct search, indexing, preview, and future CLI can consume extracted text without coupling the core to one parser library.
-- [x] Preserve file-name search for every scanned file even when content extraction is unavailable, unsupported, skipped, or fails.
-- [x] Add a safe archive catalog reader for ZIP-backed formats, validating entry names, entry counts, expanded sizes, compression ratios, and unsupported ZIP64 packages before any OOXML/OpenDocument extractor reads payload bytes.
-- [x] Add bounded ZIP entry payload reading for stored and deflated entries, so OOXML/OpenDocument extractors can request specific internal files without extracting whole packages.
-- [x] Add safe text extraction for PDF files, including page-aware result locations, bounded memory use, cancellation, encrypted/protected-file handling, malformed-file errors, and regression fixtures.
-  - [x] Implement initial bounded PDF extraction for simple unencrypted page content streams, including literal and hex text strings.
-  - [x] Add PDF regression fixtures for page-scoped text, encrypted/protected files, extraction limits, cancellation, and malformed files.
-  - [x] Add support for UTF-16BE text strings, Windows-1252-compatible accented text fallback, FlateDecode streams, and simple page-local `/ToUnicode` font maps.
-  - [x] Evaluate permissively licensed PDF backend strategy: keep the bounded built-in extractor as the 1.0 default and defer optional PDFium-class integration until binary size, packaging, security-update, and maintenance costs are measured.
-- [x] Add safe text extraction for DOCX files through the OOXML package structure, including paragraph/table text, basic metadata, decompression limits, cancellation, unsupported feature reporting, and regression fixtures.
-  - [x] Implement initial bounded DOCX body extraction from `word/document.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
-  - [x] Extract basic DOCX metadata and emit table-scoped text segments with explicit labels.
-  - [x] Add DOCX regression fixtures for malformed packages and extraction byte/segment limits.
-  - [x] Add hostile DOCX regression fixtures for oversized XML payloads, unsupported ZIP features, and cancellation paths.
-- [x] Add safe text extraction for XLSX files through the OOXML package structure, including shared strings, sheet names, cell text, bounded worksheet traversal, decompression limits, cancellation, and regression fixtures.
-  - [x] Implement initial bounded XLSX extraction from workbook, shared strings, and worksheet XML through the shared ZIP archive layer for direct search, indexing, and preview.
-  - [x] Expand XLSX support for formulas, boolean/error/date/string cell types, and workbook relationship-based sheet ordering.
-  - [x] Add XLSX regression fixtures for malformed packages and extraction byte limits.
-  - [x] Add hostile XLSX regression fixtures for oversized shared strings, unsupported ZIP features, cancellation paths, and malformed relationship graphs.
-- [x] Add safe text extraction for PPTX files through the OOXML package structure, including slide text, speaker notes when feasible, slide-aware result locations, decompression limits, cancellation, and regression fixtures.
-  - [x] Implement initial bounded PPTX extraction from presentation, relationship, slide, and speaker-note XML through the shared ZIP archive layer for direct search, indexing, and preview.
-  - [x] Add PPTX regression fixtures for visible slide text, speaker notes, extraction limits, unsupported ZIP features, cancellation, and malformed relationship graphs.
-- [x] Add safe text extraction for OpenDocument formats (`.odt`, `.ods`, `.odp`) using the same archive-safety model used for OOXML.
-  - [x] Implement initial bounded OpenDocument extraction from `content.xml` and `meta.xml` through the shared ZIP archive layer for direct search, indexing, and preview.
-  - [x] Add OpenDocument regression fixtures for text documents, spreadsheets, presentations, extraction limits, unsupported ZIP features, cancellation, and malformed packages.
-- [x] Add support for RTF extraction, with explicit limits for nested groups, escaped text, embedded objects, and malformed documents.
-- [x] Add support for HTML/XHTML extraction as structured text, excluding scripts/styles by default and preserving visible text semantics for search and preview.
-- [x] Add support for common subtitle and transcript formats (`.srt`, `.vtt`) as first-class text documents, including time-aware result locations when practical.
-- [x] Define a user-visible unsupported-format policy that distinguishes "name-only searchable", "content extractor unavailable", "content extraction failed", and "content extraction skipped by safety limits".
-- [x] Add extractor-specific metrics for files processed, bytes processed, extraction time, skipped unsupported files, skipped unsafe archives, parser failures, and indexed extracted text size.
-- [x] Add fuzzing and hostile-file tests for document extractors, especially archive containers, malformed PDFs, malformed RTF, oversized shared strings, and nested/recursive package structures.
-  - [x] Add PDF hostile-file regression tests for FlateDecode streams, including valid compressed page text and invalid compressed payloads.
-  - [x] Add a PDF extractor fuzz-smoke target with bounded input, extracted byte, segment byte, and segment-count limits.
-  - [x] Add a ZIP archive reader fuzz-smoke target that exercises catalog validation and bounded entry reads.
-  - [x] Add an RTF extractor fuzz-smoke target with bounded input, output bytes, and segment counts.
-  - [x] Add nested package path regression coverage for ZIP-backed document formats.
-- [x] Document supported formats, limitations, dependencies, and security boundaries in `docs/search-semantics.md`, `docs/indexing.md`, and `docs/privacy.md`.
-
-## Milestone 13 — CLI and extensibility (P2)
-
-- [x] Create a thin CLI over the same `SearchService`, without duplicating the engine.
-- [x] Support human output, JSON Lines, and stable exit codes.
-- [x] Allow direct search, indexed search, and index status/rebuild through CLI.
-- [x] Keep signal cancellation and streaming with backpressure.
-  - [x] Handle `Ctrl+C` as cooperative cancellation for `search` and `index-rebuild`.
-  - [x] Keep long-running CLI output streaming with explicit backpressure.
-- [x] Define interfaces for symbol and language parsers.
-- [x] Evaluate tree-sitter for symbols only behind a replaceable adapter.
-- [x] Define internal API for new index backends and watchers.
-- [x] Version public contracts before allowing external plugins.
-- [x] Document ABI/API stability limits.
-
-## Milestone 14 — Packaging and releases (P2)
-
-- [x] Automate Windows bundle with Qt, MSVC runtime, and required vcpkg DLLs.
-- [x] Produce Windows installer and evaluate MSIX versus traditional installer.
-  - [x] Evaluate MSIX versus traditional installer and choose a traditional per-user installer for the first Windows release.
-  - [x] Add an Inno Setup installer definition and build script over the Windows MSVC portable bundle.
-  - [x] Generate the installer with Inno Setup 6 and verify checksum output.
-  - [x] Validate installer install, launch, search, and uninstall on a clean Windows machine.
-- [x] Document optional signing flow for future signed Windows releases.
-  - [x] Add Windows signing helper and document the signing flow.
-- [x] Produce AppImage and evaluate Flatpak on Linux.
-  - [x] Choose AppImage as the first Linux artifact and keep Flatpak as a future sandboxed distribution target.
-  - [x] Add Linux AppDir metadata and AppImage packaging script.
-  - [x] Generate and validate the AppImage on Linux.
-- [x] Validate installation and removal on supported release targets.
-  - [x] Validate Windows installer install, launch, search, and uninstall.
-  - [x] Validate Linux AppImage launch and search.
-- [x] Separate settings, index, and cache to allow safe upgrade/uninstall.
-- [x] Define semantic versioning and changelog.
-- [x] Automate release artifacts and checksums.
-- [x] Generate SBOM and license report.
-- [x] Define preview/stable release channels without requiring an automatic updater.
-- [x] Create release and database compatibility checklist.
-
-## Milestone 15 — Professional documentation (P1/P2)
-
-- [x] Create `docs/search-semantics.md`.
-- [x] Expand `docs/architecture.md` with components and search sequence.
-- [x] Document cancellation, ownership, and threading contracts.
-- [x] Document schema, migrations, and recovery in `docs/storage.md`.
-- [x] Document format, generations, and invalidation in `docs/indexing.md`.
-- [x] Document branch/worktree/overlay in `docs/git-awareness.md`.
-- [x] Document metrics and methodology in `docs/performance.md`.
-- [x] Document states, shortcuts, and accessibility in `docs/ui.md`.
-- [x] Document privacy, telemetry, crash reports, and hostile-file boundaries in `docs/privacy.md` and `docs/threat-model.md`.
-- [x] Document licensing and redistribution obligations in `docs/licenses.md`.
-- [x] Document CLI usage, streaming, exit codes, and cancellation in `docs/cli.md`.
-- [x] Document internal API/ABI stability limits in `docs/api-stability.md`.
-- [x] Document symbol-parser strategy and tree-sitter evaluation constraints in `docs/symbols.md`.
-- [x] Document development workflow, coverage, fuzzing, and commit expectations in `docs/development.md`.
-- [x] Keep per-platform build instructions tested in CI.
-- [x] Add troubleshooting guide for Qt, vcpkg, toolchains, and runtime DLLs.
-- [x] Record important architectural decisions as ADRs.
-- [x] Create contributor documentation.
-- [x] Create test architecture documentation.
-- [x] Provide user-facing usage documentation in English and Portuguese.
-- [x] Remove unnecessary line breaks in the middle of paragraphs.
-
-## Advanced evolutions (P3)
-
-- [ ] Structural and symbol search with language-aware ranking.
-- [ ] Compound queries with boolean operators and persistent filters.
+- [ ] Improve large-repository performance only with measured bottlenecks and before/after benchmarks.
+- [ ] Evaluate direct-search parallelism, deterministic result ordering, backpressure, and bounded queues as a deliberate performance project.
+- [ ] Evaluate SIMD acceleration and memory mapping only with portable fallbacks and benchmarks.
+- [ ] Improve indexed search ranking and hybrid refinement quality without losing deterministic behavior.
+- [ ] Add compound queries with boolean operators and persistent filters.
 - [ ] Search historical commit content as opt-in behavior.
-- [ ] Compare results between branches/worktrees.
-- [ ] Shareable indexes only after a safe portability and privacy model exists.
-- [ ] Specialized preview for relevant formats without compromising security.
-- [ ] Stable local automation API.
-- [ ] Evaluate SIMD acceleration and memory mapping only with benchmarks and portable fallback.
-- [ ] Evaluate macOS packaging only if macOS becomes a supported release target with access to real macOS validation hardware.
+- [ ] Compare results between branches and worktrees.
+- [ ] Explore shareable indexes only after a safe portability, privacy, and invalidation model exists.
+
+## Formats and preview evolution
+
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
 - [ ] Evaluate future image-content search with OCR or metadata extraction for formats such as PNG, JPEG, TIFF, and screenshots, keeping it opt-in and benchmarked because it may add heavy dependencies and CPU cost.
-- [ ] Revisit end-to-end search and indexing performance with real user datasets after Milestone 12, including startup latency, direct search latency, indexing throughput, preview latency, and UI responsiveness before choosing optimization strategies.
+- [ ] Improve specialized preview for relevant formats without compromising security or loading large documents unboundedly.
 
-## Gates for considering version 1.0 professional
+## Extensibility and automation
 
-- [ ] Correctness covered for all documented search semantics.
-- [ ] Reliable and cancellable direct, indexed, and hybrid search.
-- [ ] Git-aware incremental index validated with branches, detached HEAD, and worktrees.
-- [x] No heavy operation on the UI thread.
-- [ ] Configurable and tested memory, disk, and queue budgets.
-- [x] Reproducible builds and green CI on supported platforms.
-- [ ] Benchmarks without critical regressions and published targets.
-- [x] Accessibility, i18n, installation, and removal validated for supported release targets.
-- [x] Complete documentation, licenses, security, and release process.
-- [x] Long-running tests on large real repositories without lost results or index corruption.
+- [ ] Expand structural and symbol search with language-aware ranking.
+- [ ] Evaluate tree-sitter or alternative parsers behind replaceable adapters before committing to a dependency.
+- [ ] Stabilize local automation APIs only after internal CLI and service contracts stop changing frequently.
+- [ ] Define plugin boundaries only when there is a concrete extension use case and a safe ABI/API compatibility policy.
+- [ ] Evolve index-backend and file-watcher contracts with compatibility tests before allowing external implementations.
+
+## Product and UX evolution
+
+- [ ] Improve settings screens for advanced search behavior, default ignored directories, ignored extensions, thread count, memory limits, index location, and result limits.
+- [ ] Improve visual explanation for include/exclude scope modifiers without making the main search header noisy.
+- [ ] Add richer diagnostics for skipped files, unsupported formats, extractor limits, index state, and performance bottlenecks.
+- [ ] Continue accessibility validation for keyboard-only use, screen readers, high contrast, focus order, and high-DPI/fractional scaling.
+- [ ] Continue reviewing `pt-BR` and `en-US` translations as visible UI text changes.
+
+## Packaging and distribution evolution
+
+- [ ] Evaluate Flatpak only after the AppImage path is stable and Linux filesystem access behavior is clear.
+- [ ] Evaluate macOS packaging only if macOS becomes a supported release target with access to real macOS validation hardware.
+- [ ] Add automatic update transport only if the project later needs it; do not treat it as required for the current preview line.
+- [ ] Keep release notes, checksums, SBOM, license reports, and validation records updated for every public artifact.

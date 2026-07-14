@@ -86,7 +86,7 @@ The script is intentionally not run by default because signing material must not
 
 ## Release notes and asset manifest
 
-Release notes are versioned under `docs/releases/`. For a manual GitHub release, paste the matching note into the release description and attach the generated binaries/checksums as release assets.
+The top-level `CHANGELOG.md` summarizes notable project changes by version, starting with `0.1.0`. Release notes are versioned under `docs/releases/`. For a manual GitHub release, paste the matching note into the release description and attach the generated binaries/checksums as release assets.
 
 Validation records also live under `docs/releases/`. The `v0.1.0` preview uses `docs/releases/v0.1.0-validation.md` to separate what was actually tested from optional future work such as signing certificates, Flatpak packaging, or unsupported platforms.
 

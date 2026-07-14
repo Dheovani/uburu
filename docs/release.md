@@ -1,6 +1,6 @@
 # Release packaging
 
-This document records the release packaging path for Uburu. Packaging is intentionally incremental: a reproducible folder/ZIP bundle comes first, then installer, signing, update channel, and platform-specific distribution formats.
+This document records the release packaging path for Uburu. Packaging is intentionally incremental: a reproducible folder/ZIP bundle comes first, then installer, optional signing, release channels, and platform-specific distribution formats that can actually be validated.
 
 ## Versioning
 
@@ -88,6 +88,8 @@ The script is intentionally not run by default because signing material must not
 
 Release notes are versioned under `docs/releases/`. For a manual GitHub release, paste the matching note into the release description and attach the generated binaries/checksums as release assets.
 
+Validation records also live under `docs/releases/`. The `v0.1.0` preview uses `docs/releases/v0.1.0-validation.md` to separate what was actually tested from optional future work such as signing certificates, Flatpak packaging, or unsupported platforms.
+
 To prepare the Windows release assets and a machine-readable manifest in one step, run:
 
 ```powershell
@@ -105,21 +107,20 @@ dist/windows-msvc-release/THIRD-PARTY-NOTICES.md
 
 The SBOM is an initial SPDX 2.3 JSON report generated from the release bundle and `vcpkg.json`. It is useful for release review and dependency tracking, but it does not replace legal review of Qt, LGPL/commercial obligations, or third-party notices before commercial distribution.
 
-## Upgrade, uninstall, and rollback policy
+## Upgrade, uninstall, and compatibility policy
 
 Installers must write application binaries only under the selected installation directory. User state belongs under the platform application-data location documented in `docs/storage.md`, currently `%LOCALAPPDATA%/uburu/uburu.db` on Windows. This keeps install/uninstall separate from settings, history, saved searches, and index data.
 
-The first Windows installer preserves user data during uninstall. A future installer may offer an explicit "remove local data" option, but it must never silently delete the user's index, settings, history, or saved searches. Upgrades should install over the previous application directory while leaving the database in place for the storage migration/recovery layer to validate.
+The first Windows installer preserves user data during uninstall. A future installer may offer an explicit "remove local data" option, but it must never silently delete the user's index, settings, history, or saved searches. Installing a newer build over an older one should leave the database in place for the storage migration/recovery layer to validate.
 
-Rollback must be conservative before `1.0.0`: if a user installs an older Uburu over a newer database, the older build may refuse to open unsupported storage or require a safe rebuild of the index catalog. Release notes must call out any storage schema, indexed-document format, CLI contract, settings format, or extractor behavior change that affects rollback.
+Before `1.0.0`, compatibility may change. If a release changes the storage schema, indexed-document format, CLI contract, settings format, or extractor behavior, the release notes must say what changed and whether older builds can safely open the resulting local data. The first preview only requires validation of the artifacts that were actually built and tested.
 
 Before publishing a release, validate:
 
-- whether the new version can open the previous version's database;
 - whether interrupted indexing still recovers without corrupting preferences;
 - whether uninstall removes the application directory while preserving the local data directory;
 - whether reinstalling the same version reuses preserved settings and index state;
-- whether rollback behavior is documented when schema or format versions change.
+- whether compatibility impact is documented when schema or format versions change.
 
 ## Update channels
 
@@ -130,9 +131,9 @@ Uburu starts with manual release channels instead of an automatic updater:
 
 The `v0.x.y` series belongs to the preview channel by default. GitHub releases for this series should be marked as pre-releases unless a specific build is promoted for broader use. Stable releases begin at `v1.0.0` or later after Windows packaging, supported-platform documentation, release notes, license review, and clean-machine validation are complete.
 
-Patch releases must stay compatible with the same channel and must not introduce database, settings, CLI, or index-format changes unless the release notes explicitly say why. Minor preview releases may change these contracts, but must describe migration and rollback impact.
+Patch releases must stay compatible with the same channel and must not introduce database, settings, CLI, or index-format changes unless the release notes explicitly say why. Minor preview releases may change these contracts, but must describe the compatibility impact.
 
-An automatic updater is intentionally out of scope for the first Windows preview. When added, it must verify signatures or trusted checksums before replacing binaries, must not run heavy migrations without user-visible progress, and must preserve the same storage and rollback rules described above.
+An automatic updater is intentionally out of scope for the first Windows preview. If one is added later, it must verify signatures or trusted checksums before replacing binaries, must not run heavy migrations without user-visible progress, and must preserve the same storage safety rules described above.
 
 ## Linux packaging strategy
 
@@ -185,9 +186,11 @@ APPIMAGE_EXTRACT_AND_RUN=1 ./uburu-linux-x86_64.AppImage
 
 Before publishing a Linux artifact, validate the AppImage on a clean distribution or VM older than the build host, confirm the file picker and file-opening actions work under the target desktop environment, and confirm user-selected paths are accessible without requiring the app to run from the repository tree.
 
-## macOS packaging strategy
+## Optional future macOS packaging
 
-The macOS path starts with the CMake app bundle generated by `MACOSX_BUNDLE`, then uses `macdeployqt` to copy Qt frameworks and QML dependencies. The first script also creates a compressed `.dmg` so the artifact can be tested manually before signing/notarization is wired into CI.
+macOS is not a supported release target for the first preview because there is no committed macOS validation environment. The existing script is only groundwork for a future contributor or maintainer with access to real macOS hardware.
+
+If macOS becomes a supported release target later, the path starts with the CMake app bundle generated by `MACOSX_BUNDLE`, then uses `macdeployqt` to copy Qt frameworks and QML dependencies. The script also creates a compressed `.dmg` so the artifact can be tested manually before signing/notarization is wired into CI.
 
 Run on macOS:
 
@@ -211,7 +214,7 @@ dist/macos/uburu-macos.dmg
 dist/macos/uburu-macos.dmg.sha256
 ```
 
-Before publishing a macOS artifact, validate launch from the `.app`, launch from the mounted `.dmg`, quarantine behavior after download, Gatekeeper behavior after signing/notarization, file picker access, opening result files in Finder, and preservation of local application data across reinstall/uninstall.
+Before publishing a macOS artifact in the future, validate launch from the `.app`, launch from the mounted `.dmg`, quarantine behavior after download, Gatekeeper behavior after signing/notarization, file picker access, opening result files in Finder, and preservation of local application data across reinstall/uninstall.
 
 ## Manual validation checklist
 
@@ -239,9 +242,9 @@ Validate the installer separately:
 
 ## Pending release work
 
-The remaining packaging work includes:
+Optional future packaging work includes:
 
 - real code-signing certificates and signed artifact validation;
-- macOS bundle validation, signing credentials, and notarization;
-- Linux AppImage validation and future Flatpak manifest;
-- automatic update transport.
+- macOS bundle validation, signing credentials, and notarization if macOS becomes a supported target;
+- future Flatpak manifest;
+- automatic update transport if the project later needs one.

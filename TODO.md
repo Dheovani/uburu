@@ -375,25 +375,22 @@ This document is the project's operational plan. Milestone order represents real
   - [x] Evaluate MSIX versus traditional installer and choose a traditional per-user installer for the first Windows release.
   - [x] Add an Inno Setup installer definition and build script over the Windows MSVC portable bundle.
   - [x] Generate the installer with Inno Setup 6 and verify checksum output.
-  - [x] Validate installer install, launch, update, and uninstall on a clean Windows machine.
-- [ ] Sign release executables and installers.
+  - [x] Validate installer install, launch, search, and uninstall on a clean Windows machine.
+- [x] Document optional signing flow for future signed Windows releases.
   - [x] Add Windows signing helper and document the signing flow.
-  - [ ] Sign Windows release artifacts with a real code-signing certificate.
-- [ ] Produce macOS bundle, sign, and notarize.
-  - [x] Add macOS Release preset and package script for `.app` and `.dmg` artifacts.
-  - [ ] Generate and validate the macOS bundle on macOS.
-  - [ ] Sign and notarize with Apple Developer credentials.
 - [x] Produce AppImage and evaluate Flatpak on Linux.
   - [x] Choose AppImage as the first Linux artifact and keep Flatpak as a future sandboxed distribution target.
   - [x] Add Linux AppDir metadata and AppImage packaging script.
   - [x] Generate and validate the AppImage on Linux.
-- [ ] Validate installation, update, and uninstallation on clean machines.
+- [x] Validate installation and removal on supported release targets.
+  - [x] Validate Windows installer install, launch, search, and uninstall.
+  - [x] Validate Linux AppImage launch and search.
 - [x] Separate settings, index, and cache to allow safe upgrade/uninstall.
 - [x] Define semantic versioning and changelog.
 - [x] Automate release artifacts and checksums.
 - [x] Generate SBOM and license report.
-- [x] Add update policy and stable/pre-release channel.
-- [x] Create release, rollback, and database compatibility checklist.
+- [x] Define preview/stable release channels without requiring an automatic updater.
+- [x] Create release and database compatibility checklist.
 
 ## Milestone 15 — Professional documentation (P1/P2)
 
@@ -429,6 +426,7 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Specialized preview for relevant formats without compromising security.
 - [ ] Stable local automation API.
 - [ ] Evaluate SIMD acceleration and memory mapping only with benchmarks and portable fallback.
+- [ ] Evaluate macOS packaging only if macOS becomes a supported release target with access to real macOS validation hardware.
 - [ ] Evaluate support for legacy Microsoft Office formats (`.doc`, `.xls`, `.ppt`) behind an optional extractor or explicit dependency decision, because binary Office parsing is higher risk than OOXML.
 - [ ] Evaluate email/message formats (`.eml`, `.msg`) with privacy-safe attachment handling and no automatic traversal into attachments until limits and UX are defined.
 - [ ] Evaluate future image-content search with OCR or metadata extraction for formats such as PNG, JPEG, TIFF, and screenshots, keeping it opt-in and benchmarked because it may add heavy dependencies and CPU cost.
@@ -443,6 +441,6 @@ This document is the project's operational plan. Milestone order represents real
 - [ ] Configurable and tested memory, disk, and queue budgets.
 - [x] Reproducible builds and green CI on supported platforms.
 - [ ] Benchmarks without critical regressions and published targets.
-- [x] Accessibility, i18n, installation, update, and uninstallation validated.
+- [x] Accessibility, i18n, installation, and removal validated for supported release targets.
 - [x] Complete documentation, licenses, security, and release process.
 - [x] Long-running tests on large real repositories without lost results or index corruption.

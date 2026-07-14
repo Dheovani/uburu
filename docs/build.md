@@ -98,7 +98,11 @@ bash ./scripts/package-linux-appimage.sh
 
 Set `LINUXDEPLOYQT=/path/to/linuxdeployqt` if `linuxdeployqt` is not on `PATH`.
 
-## macOS
+If `linuxdeployqt` is unavailable or fails on the local Qt/runtime combination, set `APPIMAGETOOL=/path/to/appimagetool`; the script falls back to a manual Qt AppDir bundle and then creates the AppImage with `appimagetool`.
+
+## Optional future macOS packaging
+
+macOS is not a supported release target for the first preview. These commands are kept as groundwork for contributors or maintainers who have access to a real macOS validation environment.
 
 For a macOS Release desktop build:
 
@@ -120,9 +124,6 @@ export UBURU_MACOS_CODESIGN_IDENTITY="Developer ID Application: ..."
 export UBURU_MACOS_NOTARY_PROFILE="uburu-notary"
 bash ./scripts/package-macos-bundle.sh
 ```
-If `linuxdeployqt` is unavailable or fails on the local Qt/runtime combination, set
-`APPIMAGETOOL=/path/to/appimagetool`; the script falls back to a manual Qt AppDir bundle and then creates the
-AppImage with `appimagetool`.
 
 ## Core without Qt
 

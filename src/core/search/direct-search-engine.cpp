@@ -23,6 +23,7 @@
 #include <exception>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <sstream>
@@ -70,6 +71,7 @@ namespace uburu::search
     constexpr std::size_t defaultMaximumSearchWorkerCount = 8;
     constexpr std::size_t workerQueueCapacityMultiplier = 2;
     constexpr std::size_t fileResultQueueCapacity = 4;
+    constexpr std::uintmax_t automaticParallelFileSizeThreshold = 64U * 1024U;
 
     std::string pathToUtf8(const std::filesystem::path& path)
     {
@@ -716,6 +718,71 @@ namespace uburu::search
         std::make_move_iterator(fileSummary.errors.end()));
     }
 
+    bool publishResult(
+      SearchResult result,
+      const SearchQuery& query,
+      SearchSummary& summary,
+      const ResultSink& sink,
+      std::stop_source& workStopSource)
+    {
+      if (summary.matches >= query.options.resultLimit) {
+        summary.limitReached = true;
+        workStopSource.request_stop();
+
+        return false;
+      }
+
+      if (!sink(std::move(result))) {
+        workStopSource.request_stop();
+
+        return false;
+      }
+
+      ++summary.matches;
+
+      return true;
+    }
+
+    bool searchFileSynchronously(
+      const FileEntry& entry,
+      const SearchQuery& query,
+      const text::RegexMatcher* regexMatcher,
+      SearchSummary& summary,
+      const ResultSink& sink,
+      std::stop_source& workStopSource)
+    {
+      auto completion = searchFile(
+        entry,
+        query,
+        regexMatcher,
+        [&](SearchResult result) {
+          return publishResult(std::move(result), query, summary, sink, workStopSource);
+        },
+        workStopSource.get_token());
+      const bool continueSearch = completion.continueSearch;
+
+      mergeFileSummary(summary, std::move(completion.summary));
+
+      if (!continueSearch)
+        workStopSource.request_stop();
+
+      return continueSearch;
+    }
+
+    bool shouldSearchFileInParallel(
+      const SearchQuery& query,
+      const FileEntry& entry,
+      std::size_t workerCount)
+    {
+      if (workerCount == 1)
+        return false;
+
+      if (query.options.maximumThreadCount != automaticSearchThreadCount)
+        return true;
+
+      return entry.size >= automaticParallelFileSizeThreshold;
+    }
+
     bool publishFileTask(
       const FileSearchTask& task,
       const SearchQuery& query,
@@ -732,20 +799,8 @@ namespace uburu::search
           break;
 
         if (auto* result = std::get_if<SearchResult>(&*event)) {
-          if (summary.matches >= query.options.resultLimit) {
-            summary.limitReached = true;
-            workStopSource.request_stop();
-
+          if (!publishResult(std::move(*result), query, summary, sink, workStopSource))
             return false;
-          }
-
-          if (!sink(std::move(*result))) {
-            workStopSource.request_stop();
-
-            return false;
-          }
-
-          ++summary.matches;
 
           continue;
         }
@@ -821,9 +876,10 @@ namespace uburu::search
     const auto* compiledRegexMatcher = regexMatcher ? &*regexMatcher : nullptr;
     std::stop_source workStopSource;
     std::stop_callback externalCancellation(stopToken, [&] { workStopSource.request_stop(); });
-    concurrency::WorkerPool workerPool(workerCount, maximumInFlightTasks);
+    std::unique_ptr<concurrency::WorkerPool> workerPool;
     std::deque<FileSearchTask> tasks;
     bool continueSearch = true;
+    bool publishedInitialParallelTask = false;
 
     auto publishFrontTask = [&] {
       const auto task = std::move(tasks.front());
@@ -852,10 +908,26 @@ namespace uburu::search
           appendSearchDebugLog(
             "engine", "read-candidate path=" + pathToUtf8(entry.relativePath) + " size=" + std::to_string(entry.size));
 
+          if (!shouldSearchFileInParallel(query, entry, workerCount)) {
+            while (continueSearch && !tasks.empty())
+              continueSearch = publishFrontTask();
+
+            if (!continueSearch)
+              return false;
+
+            continueSearch = searchFileSynchronously(
+              entry, query, compiledRegexMatcher, summary, sink, workStopSource);
+
+            return continueSearch;
+          }
+
+          if (!workerPool)
+            workerPool = std::make_unique<concurrency::WorkerPool>(workerCount, maximumInFlightTasks);
+
           auto events = std::make_shared<concurrency::BoundedQueue<FileSearchEvent>>(fileResultQueueCapacity);
           tasks.push_back(FileSearchTask{.events = events});
 
-          const bool submitted = workerPool.submit(
+          const bool submitted = workerPool->submit(
             [entry = std::move(entry), &query, compiledRegexMatcher, events, &workStopSource](std::stop_token) {
               const auto workStopToken = workStopSource.get_token();
 
@@ -884,7 +956,8 @@ namespace uburu::search
             return false;
           }
 
-          if (summary.filesScanned == 1) {
+          if (!publishedInitialParallelTask) {
+            publishedInitialParallelTask = true;
             continueSearch = publishFrontTask();
 
             return continueSearch;
@@ -907,14 +980,16 @@ namespace uburu::search
     while (continueSearch && !tasks.empty())
       continueSearch = publishFrontTask();
 
-    if (continueSearch)
-      workerPool.close();
-    else
-      workerPool.requestStop();
+    if (workerPool) {
+      if (continueSearch)
+        workerPool->close();
+      else
+        workerPool->requestStop();
 
-    const auto workerQueueMetrics = workerPool.metrics();
-    summary.metrics.queueProducerWaits += workerQueueMetrics.producerWaits;
-    summary.metrics.queueConsumerWaits += workerQueueMetrics.consumerWaits;
+      const auto workerQueueMetrics = workerPool->metrics();
+      summary.metrics.queueProducerWaits += workerQueueMetrics.producerWaits;
+      summary.metrics.queueConsumerWaits += workerQueueMetrics.consumerWaits;
+    }
     summary.cancelled = stopToken.stop_requested();
     summary.metrics.resultsEmitted = summary.matches;
     appendSearchDebugLog(

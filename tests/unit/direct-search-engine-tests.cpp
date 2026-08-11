@@ -619,6 +619,39 @@ TEST_CASE("parallel direct search cancels active file work cooperatively")
   CHECK(summary.filesScanned > 1);
 }
 
+TEST_CASE("automatic direct search avoids worker queues for small files")
+{
+  constexpr std::size_t fileCount = 8;
+  constexpr std::size_t matchesPerFile = 8;
+  const uburu::tests::TemporaryDirectory directory("uburu-automatic-small-file-search");
+  std::vector<std::filesystem::path> paths;
+  std::string content;
+
+  for (std::size_t index = 0; index < matchesPerFile; ++index)
+    content += "needle\n";
+
+  for (std::size_t index = 0; index < fileCount; ++index) {
+    const auto path = directory.path() / ("small-" + std::to_string(index) + ".txt");
+    uburu::tests::writeFile(path, content);
+    paths.push_back(path);
+  }
+
+  auto scanner = std::make_shared<OrderedFileScanner>(std::move(paths));
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::size_t deliveredResults = 0;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult) {
+    ++deliveredResults;
+
+    return true;
+  });
+
+  CHECK(deliveredResults == fileCount * matchesPerFile);
+  CHECK(summary.metrics.queueProducerWaits == 0);
+  CHECK(summary.metrics.queueConsumerWaits == 0);
+}
+
 TEST_CASE("direct search supports CRLF, LF, empty lines and files without final newline")
 {
   const uburu::tests::TemporaryFile file("uburu-search-line-ending-test.txt");

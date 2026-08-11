@@ -18,6 +18,8 @@ namespace uburu::benchmarks
     constexpr std::size_t largeFileCount = 4;
     constexpr std::size_t largeFileLineCount = 4096;
     constexpr std::size_t largeFileMatchModulo = 16;
+    constexpr std::size_t sparseMatchLargeFileCount = 16;
+    constexpr std::size_t sparseMatchLargeFileLineCount = 16'384;
     constexpr std::size_t binaryFileCount = 24;
     constexpr std::size_t visibleTextFileCount = 64;
     constexpr std::size_t hiddenTextFileCount = 12;
@@ -172,6 +174,30 @@ namespace uburu::benchmarks
       if (matchedFile)
         ++dataset.expectedMatchingFiles;
 
+      writeTextFile(dataset.root / ("large-" + std::to_string(fileIndex) + ".txt"), content, dataset);
+    }
+
+    return TemporaryBenchmarkDataset(dataset.name, std::move(dataset));
+  }
+
+  TemporaryBenchmarkDataset makeSparseMatchLargeFilesDataset()
+  {
+    BenchmarkDataset dataset;
+    dataset.name = "sparse-match-large-files";
+    dataset.root = uniqueDatasetRoot("uburu-benchmark-sparse-match-large-files");
+    dataset.expression = "needle";
+    dataset.options = defaultContentOptions();
+    dataset.options.extensions = {"txt"};
+
+    for (std::size_t fileIndex = 0; fileIndex < sparseMatchLargeFileCount; ++fileIndex) {
+      std::string content;
+
+      for (std::size_t lineIndex = 1; lineIndex < sparseMatchLargeFileLineCount; ++lineIndex)
+        addNonMatchingLine(content);
+
+      addMatchingLine(content, dataset.expression);
+      ++dataset.expectedMatches;
+      ++dataset.expectedMatchingFiles;
       writeTextFile(dataset.root / ("large-" + std::to_string(fileIndex) + ".txt"), content, dataset);
     }
 

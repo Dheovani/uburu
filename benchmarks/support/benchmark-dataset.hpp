@@ -55,6 +55,9 @@ namespace uburu::benchmarks
   TemporaryBenchmarkDataset makeFewLargeFilesDataset();
 
   [[nodiscard]]
+  TemporaryBenchmarkDataset makeSparseMatchLargeFilesDataset();
+
+  [[nodiscard]]
   TemporaryBenchmarkDataset makeMixedTextAndBinaryDataset();
 
   [[nodiscard]]

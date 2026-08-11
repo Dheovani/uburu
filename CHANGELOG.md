@@ -6,7 +6,7 @@ The project follows semantic versioning. Versions before `1.0.0` are preview rel
 
 ## [Unreleased]
 
-- Parallelize direct file processing with bounded queues while preserving progressive first results, deterministic publication, cooperative cancellation, and measured queue contention.
+- Parallelize direct file processing with bounded queues while preserving progressive first results, deterministic publication, cooperative cancellation, and measured queue contention; automatic mode now avoids worker queues for small files and retains parallel throughput for larger sparse-match workloads.
 - Continue validating large real-world repositories and performance baselines before the first stable release.
 - Continue hardening search/index memory budgets, release signing, and optional future distribution targets.
 

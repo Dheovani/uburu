@@ -23,7 +23,7 @@ Supported options:
 - `--database PATH`: overrides the CLI index database. The default CLI database is `.uburu-cli/uburu-cli-v1.db` in the current working directory and is separate from the desktop application database.
 - `--types txt,cpp,md`: restricts file extensions.
 - `--max-size-mib N`: sets the maximum file size in MiB.
-- `--threads auto|N`: selects direct-search workers. `auto` uses the bounded hardware-aware default; an explicit value must be between 1 and 256.
+- `--threads auto|N`: selects direct-search workers. `auto` avoids worker-queue overhead for small files and uses the bounded hardware-aware pool for larger files; an explicit value must be between 1 and 256.
 - `--regex`: treats the expression as a PCRE2 regex when the backend is available.
 - `--case-sensitive`: enables case-sensitive matching.
 - `--whole-word`: matches whole words.

@@ -126,6 +126,19 @@ namespace
     runSearchServiceScenario(state, uburu::benchmarks::makeFewLargeFilesDataset);
   }
 
+  void BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling(benchmark::State& state)
+  {
+    runSearchServiceScenario(
+      state,
+      uburu::benchmarks::makeSparseMatchLargeFilesDataset,
+      fixedWorkerRunOptions(static_cast<std::size_t>(state.range(0))));
+  }
+
+  void BM_SearchService_Direct_SparseMatchLargeFiles_Literal(benchmark::State& state)
+  {
+    runSearchServiceScenario(state, uburu::benchmarks::makeSparseMatchLargeFilesDataset);
+  }
+
   void BM_SearchService_Direct_ManySmallFiles_Regex(benchmark::State& state)
   {
     runSearchServiceScenario(state, uburu::benchmarks::makeRegexHeavyContentDataset);
@@ -269,6 +282,12 @@ BENCHMARK(BM_SearchService_Direct_FewLargeFiles_Literal_WorkerScaling)
   ->Arg(twoSearchWorkerCount)
   ->Arg(fourSearchWorkerCount)
   ->Arg(eightSearchWorkerCount);
+BENCHMARK(BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling)
+  ->Arg(singleSearchWorkerCount)
+  ->Arg(twoSearchWorkerCount)
+  ->Arg(fourSearchWorkerCount)
+  ->Arg(eightSearchWorkerCount);
+BENCHMARK(BM_SearchService_Direct_SparseMatchLargeFiles_Literal);
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Regex);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseInsensitive);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseSensitive);

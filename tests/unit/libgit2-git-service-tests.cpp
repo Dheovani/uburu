@@ -193,8 +193,12 @@ namespace
     options.ref = featureBranch;
 
     git_worktree* worktree = nullptr;
-    REQUIRE(
-      git_worktree_add(&worktree, repository, std::string(name).c_str(), worktreeRoot.string().c_str(), &options) == 0);
+    const auto addResult =
+      git_worktree_add(&worktree, repository, std::string(name).c_str(), worktreeRoot.string().c_str(), &options);
+    const auto* addError = git_error_last();
+
+    INFO("libgit2 error: " << (addError != nullptr ? addError->message : "no error details"));
+    REQUIRE(addResult == 0);
 
     git_worktree_free(worktree);
     git_reference_free(featureBranch);
@@ -318,7 +322,7 @@ TEST_CASE("git cli fallback is isolated behind an explicit adapter")
 TEST_CASE("libgit2 git service enumerates linked worktrees")
 {
 #if defined(UBURU_HAS_LIBGIT2)
-  TemporaryDirectory directory("uburu-libgit2-git-service-linked-worktree-test");
+  TemporaryDirectory directory("uburu-libgit2-linked-worktree-test");
   const auto repositoryRoot = directory.path() / "repo";
   const auto linkedRoot = directory.path() / "feature-worktree";
 
@@ -349,7 +353,7 @@ TEST_CASE("libgit2 git service enumerates linked worktrees")
 TEST_CASE("libgit2 git service reports locked and prunable worktrees")
 {
 #if defined(UBURU_HAS_LIBGIT2)
-  TemporaryDirectory directory("uburu-libgit2-git-service-worktree-state-test");
+  TemporaryDirectory directory("uburu-libgit2-worktree-state-test");
   const auto repositoryRoot = directory.path() / "repo";
   const auto linkedRoot = directory.path() / "locked-worktree";
   const auto removedRoot = directory.path() / "removed-worktree";

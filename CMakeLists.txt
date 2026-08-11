@@ -255,6 +255,7 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
 
   if(UBURU_GCOVR_EXECUTABLE)
     set(UBURU_COVERAGE_DIRECTORY "${CMAKE_BINARY_DIR}/coverage")
+    set(UBURU_GCOVR_PARSE_ERROR_POLICY "negative_hits.warn_once_per_file")
 
     add_custom_target(coverage-core
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${UBURU_COVERAGE_DIRECTORY}"
@@ -265,6 +266,7 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/core.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/core.xml"
         --print-summary
+        --gcov-ignore-parse-errors "${UBURU_GCOVR_PARSE_ERROR_POLICY}"
         --fail-under-line "${UBURU_COVERAGE_CORE_LINE_THRESHOLD}"
         --fail-under-branch "${UBURU_COVERAGE_CORE_BRANCH_THRESHOLD}"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
@@ -281,6 +283,7 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/app.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/app.xml"
         --print-summary
+        --gcov-ignore-parse-errors "${UBURU_GCOVR_PARSE_ERROR_POLICY}"
         --fail-under-line "${UBURU_COVERAGE_APP_LINE_THRESHOLD}"
         --fail-under-branch "${UBURU_COVERAGE_APP_BRANCH_THRESHOLD}"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
@@ -298,6 +301,7 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/core.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/core.xml"
         --print-summary
+        --gcov-ignore-parse-errors "${UBURU_GCOVR_PARSE_ERROR_POLICY}"
         --fail-under-line "${UBURU_COVERAGE_CORE_LINE_THRESHOLD}"
         --fail-under-branch "${UBURU_COVERAGE_CORE_BRANCH_THRESHOLD}"
       COMMAND "${UBURU_GCOVR_EXECUTABLE}"
@@ -307,6 +311,7 @@ if(UBURU_ENABLE_COVERAGE AND UBURU_BUILD_TESTS)
         --html-details "${UBURU_COVERAGE_DIRECTORY}/app.html"
         --xml "${UBURU_COVERAGE_DIRECTORY}/app.xml"
         --print-summary
+        --gcov-ignore-parse-errors "${UBURU_GCOVR_PARSE_ERROR_POLICY}"
         --fail-under-line "${UBURU_COVERAGE_APP_LINE_THRESHOLD}"
         --fail-under-branch "${UBURU_COVERAGE_APP_BRANCH_THRESHOLD}"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"

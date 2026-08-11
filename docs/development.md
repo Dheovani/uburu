@@ -83,6 +83,8 @@ The `coverage` target runs the test suite and generates per-module reports under
 
 The initial thresholds are intentionally modest and behavior-oriented: `src/core` and `src/app` both require 30% line coverage and 15% branch coverage. They are not a vanity score; their job is to prevent accidental collapse while the regression suite grows. Raise them only when a critical behavior is covered by deterministic tests and the new value is sustainable in CI.
 
+The coverage targets tolerate only the known negative branch-hit records occasionally emitted by GCC's `gcov` instrumentation. `gcovr` reports those records once per affected file and continues calculating the report; coverage thresholds and every other parser failure remain enforced.
+
 ## Fuzzing
 
 Fuzzing is optional and isolated in a Clang/libFuzzer preset:

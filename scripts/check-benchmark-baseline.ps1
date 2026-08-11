@@ -38,20 +38,36 @@ function Get-BenchmarkMetric {
 function Find-Benchmark {
   param(
     [Parameter(Mandatory = $true)]$Benchmarks,
-    [Parameter(Mandatory = $true)][string]$Name
+    [Parameter(Mandatory = $true)][string]$Name,
+    [string]$Aggregate = "median"
   )
 
-  $exact = @($Benchmarks | Where-Object { $_.name -eq $Name })
+  $matching = @($Benchmarks | Where-Object {
+    $runNameProperty = $_.PSObject.Properties["run_name"]
+    $_.name -eq $Name -or
+    ($null -ne $runNameProperty -and $runNameProperty.Value -eq $Name) -or
+    $_.name -like "$Name/*"
+  })
+
+  if ($matching.Count -eq 0) {
+    return $null
+  }
+
+  $aggregateMatch = @($matching | Where-Object {
+    $property = $_.PSObject.Properties["aggregate_name"]
+    $null -ne $property -and $property.Value -eq $Aggregate
+  })
+
+  if ($aggregateMatch.Count -gt 0) {
+    return $aggregateMatch[0]
+  }
+
+  $exact = @($matching | Where-Object { $_.name -eq $Name })
   if ($exact.Count -gt 0) {
     return $exact[0]
   }
 
-  $prefixed = @($Benchmarks | Where-Object { $_.name -like "$Name/*" })
-  if ($prefixed.Count -gt 0) {
-    return $prefixed[0]
-  }
-
-  return $null
+  return $matching[0]
 }
 
 $resultsJson = Read-JsonFile -Path $Results
@@ -68,7 +84,12 @@ if ($null -eq $baselineJson.checks) {
 $failures = 0
 
 foreach ($check in $baselineJson.checks) {
-  $benchmark = Find-Benchmark -Benchmarks $resultsJson.benchmarks -Name $check.benchmark
+  $aggregate = "median"
+  if ($null -ne $check.PSObject.Properties["aggregate"]) {
+    $aggregate = [string]$check.aggregate
+  }
+
+  $benchmark = Find-Benchmark -Benchmarks $resultsJson.benchmarks -Name $check.benchmark -Aggregate $aggregate
   if ($null -eq $benchmark) {
     $message = "MISSING benchmark=$($check.benchmark)"
     if ($AllowMissing) {

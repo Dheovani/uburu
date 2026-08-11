@@ -827,6 +827,8 @@ namespace uburu::search
       const auto queueMetrics = task.events->metrics();
       summary.metrics.queueProducerWaits += queueMetrics.producerWaits;
       summary.metrics.queueConsumerWaits += queueMetrics.consumerWaits;
+      summary.metrics.fileResultQueuePeakItems =
+        std::max(summary.metrics.fileResultQueuePeakItems, queueMetrics.peakSize);
 
       return !stopToken.stop_requested();
     }
@@ -989,6 +991,7 @@ namespace uburu::search
       const auto workerQueueMetrics = workerPool->metrics();
       summary.metrics.queueProducerWaits += workerQueueMetrics.producerWaits;
       summary.metrics.queueConsumerWaits += workerQueueMetrics.consumerWaits;
+      summary.metrics.workerQueuePeakItems = workerQueueMetrics.peakSize;
     }
     summary.cancelled = stopToken.stop_requested();
     summary.metrics.resultsEmitted = summary.matches;

@@ -570,6 +570,8 @@ TEST_CASE("parallel direct search preserves scanner order and applies result bac
     CHECK(results[index].path == fastPath.filename());
 
   CHECK(summary.metrics.queueProducerWaits > 0);
+  CHECK(summary.metrics.workerQueuePeakItems <= 4);
+  CHECK(summary.metrics.fileResultQueuePeakItems == 4);
   CHECK(summary.matches == results.size());
 }
 
@@ -650,6 +652,8 @@ TEST_CASE("automatic direct search avoids worker queues for small files")
   CHECK(deliveredResults == fileCount * matchesPerFile);
   CHECK(summary.metrics.queueProducerWaits == 0);
   CHECK(summary.metrics.queueConsumerWaits == 0);
+  CHECK(summary.metrics.workerQueuePeakItems == 0);
+  CHECK(summary.metrics.fileResultQueuePeakItems == 0);
 }
 
 TEST_CASE("direct search supports CRLF, LF, empty lines and files without final newline")

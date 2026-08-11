@@ -52,6 +52,8 @@ namespace uburu::diagnostics
                                       numericField("binary_files_skipped", metrics.binaryFilesSkipped),
                                       numericField("queue_producer_waits", metrics.queueProducerWaits),
                                       numericField("queue_consumer_waits", metrics.queueConsumerWaits),
+                                      numericField("worker_queue_peak_items", metrics.workerQueuePeakItems),
+                                      numericField("file_result_queue_peak_items", metrics.fileResultQueuePeakItems),
                                       numericField("cache_hits", metrics.cacheHits),
                                       numericField("cache_misses", metrics.cacheMisses),
                                       numericField("reused_by_catalog", metrics.reusedByCatalog),

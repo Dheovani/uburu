@@ -20,7 +20,7 @@ In the current state, `SearchSummary::metrics` aggregates basic direct-search co
 
 The structured logger supports filtering by minimum level and enabled categories. `FileStructuredLogger` writes JSON Lines and rotates by size, keeping a configurable number of old files. Fields marked as sensitive are masked by default; full paths, line content, and potentially private expressions should not be added as public fields without an explicit application-layer decision.
 
-Search metrics include derived throughput (`filesPerSecond` and `bytesPerSecond`), queue wait counters, index cache hits/misses, reuse by catalog/blob/hash, and an estimate of memory occupied by emitted results. The memory estimate does not replace a profiler: it sums approximate result structure sizes and observable string/vector capacities. `SearchService` compares that estimate with the previous search to signal growth between executions.
+Search metrics include derived throughput (`filesPerSecond` and `bytesPerSecond`), queue wait counters, peak occupancy for the worker-task and per-file result queues, index cache hits/misses, reuse by catalog/blob/hash, and an estimate of memory occupied by emitted results. The memory estimate does not replace a profiler: it sums approximate result structure sizes and observable string/vector capacities. `SearchService` compares that estimate with the previous search to signal growth between executions.
 
 `DiagnosticReport` defines the initial exportable diagnostics format: structured logs, search metrics, and tracing events in JSON. Fields marked as sensitive remain masked by default in exported reports. The Milestone 8 diagnostics UI should consume this contract instead of reading internal service details directly.
 
@@ -29,6 +29,8 @@ Search metrics include derived throughput (`filesPerSecond` and `bytesPerSecond`
 Direct search uses an adaptive bounded worker pipeline. In automatic mode, files below 64 KiB are processed synchronously to avoid per-file task and queue overhead, while larger files use at most eight hardware-aware workers. Explicit callers may request between 1 and 256 workers; one worker selects the synchronous path, while larger explicit counts force parallel processing for repeatable tuning. The first parallel candidate is published immediately to preserve progressive time to first result, later files may be read and matched concurrently, and publication remains in scanner order for deterministic output. Each parallel file has a small bounded result queue, the number of in-flight tasks is bounded relative to the worker count, and cooperative cancellation reaches the scanner, task queue, file readers, matchers, and result queues. Pending parallel files are drained before a synchronous file is processed, preserving scanner order across both paths.
 
 The benchmark suite contains many-small-file, dense-match large-file, and sparse-match large-file scenarios for automatic worker selection and fixed counts of 1, 2, 4, and 8 workers. Separating dense and sparse matches distinguishes file-processing throughput from ordered result-publication contention. Further tuning must use reproducible before/after results rather than increasing concurrency blindly.
+
+The stable-release benchmark gate runs a selected Release-mode scenario set five times and compares median aggregates with versioned guardrails. It also fails when the bounded worker or file-result queues exceed their expected capacities, providing repeatable evidence that throughput improvements do not silently remove backpressure.
 
 ## Developer benchmarks
 
@@ -58,6 +60,12 @@ Check the exported output against the versioned developer baseline with:
 powershell -ExecutionPolicy Bypass -File .\scripts\check-benchmark-baseline.ps1 `
   -Results benchmark-results.json `
   -Baseline benchmarks\baselines\reference-developer.json
+```
+
+Configure, build, execute the selected release scenarios, and validate their median counters in one command with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-benchmark-validation.ps1
 ```
 
 Initial scenarios cover many small files, dense-match large files, and sparse-match large files in automatic, 1-worker, 2-worker, 4-worker, and 8-worker modes, case-insensitive literal search, case-sensitive literal search, whole-word literal search, precomposed-versus-decomposed Unicode normalization cost, regex/JIT-heavy content, `.gitignore`-heavy trees, mixed text/binary filtering, repeated scans over the same dataset, initial persistent indexing, unchanged incremental indexing, branch-switch indexing, content-hash reuse, Git blob-hash reuse, and result batching. The repeated-scan scenario does not clear the operating-system cache; it publishes `first_pass_*`, `second_pass_*`, and `second_pass_speedup` counters as a practical signal of cache effects between an observed first pass and an immediate hot pass. The persistent-index scenarios use disposable SQLite databases; incremental and branch-switch scenarios pause benchmark timing while preparing the first generation, then measure the operation under study. Memory counters are approximate: search scenarios publish result memory and peak batch payload, while index scenarios publish the in-memory file-catalog estimate and resulting SQLite file bytes. Batching scenarios use a deterministic event-sink workload as an application-layer proxy for UI delivery cost; future Qt/QML profiling should measure actual scene-graph rendering separately. Future benchmark targets should reuse `uburu_benchmark_support` for deterministic datasets and consistent counter publication.

@@ -139,6 +139,8 @@ namespace uburu::app
     dto.binaryFilesSkipped = metrics.binaryFilesSkipped;
     dto.queueProducerWaits = metrics.queueProducerWaits;
     dto.queueConsumerWaits = metrics.queueConsumerWaits;
+    dto.workerQueuePeakItems = metrics.workerQueuePeakItems;
+    dto.fileResultQueuePeakItems = metrics.fileResultQueuePeakItems;
     dto.cacheHits = metrics.cacheHits;
     dto.cacheMisses = metrics.cacheMisses;
     dto.reusedByCatalog = metrics.reusedByCatalog;

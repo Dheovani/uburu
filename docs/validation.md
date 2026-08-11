@@ -67,6 +67,14 @@ cmake --build --preset core-linux-tsan-debug
 ctest --preset core-linux-tsan-debug
 ```
 
+On Windows, run the selected stable-release performance scenarios in Release mode with repeated median-based guardrails:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-benchmark-validation.ps1
+```
+
+On Linux, pass the corresponding configured benchmark build directory with `-BuildDirectory`. The gate validates throughput, time to first result, regex JIT, batching, index reuse, branch-switch behavior, and bounded queue occupancy before manual large-dataset observations begin.
+
 ## Correctness scenarios
 
 Run these scenarios through the desktop application and repeat the central search cases through the CLI. Compare results by file, occurrence, line, column, and completion state rather than only by the visible result count.

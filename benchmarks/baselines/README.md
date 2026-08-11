@@ -7,7 +7,7 @@ Baselines are not universal truth. They are reference snapshots for a named hard
 Use `scripts/check-benchmark-baseline.ps1` to compare Google Benchmark JSON output against a baseline file:
 
 ```powershell
-.\build\core-windows-msvc-debug\benchmarks\Debug\uburu-search-service-benchmark.exe `
+.\build\core-windows-msvc-debug\benchmarks\Release\uburu-search-service-benchmark.exe `
   --benchmark_format=json `
   --benchmark_out=benchmark-results.json
 
@@ -17,3 +17,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-benchmark-baseline.ps1 
 ```
 
 The initial `reference-developer.json` is intentionally conservative. It exists to catch order-of-magnitude regressions and missing counters while the project is still evolving. Tighten or add hardware-specific baselines only after repeated runs on the same machine show stable ranges.
+
+For the repeatable Release build, selected scenarios, five repetitions, median selection, and baseline check, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-benchmark-validation.ps1
+```

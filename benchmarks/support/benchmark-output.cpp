@@ -63,6 +63,8 @@ namespace uburu::benchmarks
       benchmark::Counter(asDouble(result.consumedBytes), benchmark::Counter::kAvgIterations);
     state.counters["result_queue_peak_items"] = asDouble(result.peakBatchResults);
     state.counters["result_queue_peak_bytes"] = asDouble(result.peakBatchBytes);
+    state.counters["worker_queue_peak_items"] = asDouble(metrics.workerQueuePeakItems);
+    state.counters["file_result_queue_peak_items"] = asDouble(metrics.fileResultQueuePeakItems);
     state.counters["simulated_ui_render_bytes"] = asDouble(result.simulatedUiRenderBytes);
     state.counters["simulated_ui_render_checksum"] = asDouble(result.simulatedUiRenderChecksum);
 

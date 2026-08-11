@@ -2,11 +2,12 @@
   "schemaVersion": 1,
   "target": "uburu-search-service-benchmark",
   "hardwareClass": "developer-reference",
-  "toolchain": "platform-default-debug",
-  "buildType": "Debug",
+  "toolchain": "platform-default-release",
+  "buildType": "Release",
   "datasetProfiles": [
     "many-small-files",
     "few-large-files",
+    "sparse-match-large-files",
     "regex-heavy-content",
     "indexing-disposable-sqlite"
   ],
@@ -26,6 +27,31 @@
       "benchmark": "BM_SearchService_Direct_FewLargeFiles_Literal",
       "metric": "bytes_per_second",
       "minimum": 1000000
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling/1",
+      "metric": "bytes_per_second",
+      "minimum": 1000000
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling/8",
+      "metric": "bytes_per_second",
+      "minimum": 10000000
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling/8",
+      "metric": "result_queue_peak_bytes",
+      "maximum": 1048576
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling/8",
+      "metric": "worker_queue_peak_items",
+      "maximum": 16
+    },
+    {
+      "benchmark": "BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling/8",
+      "metric": "file_result_queue_peak_items",
+      "maximum": 4
     },
     {
       "benchmark": "BM_SearchService_Direct_ManySmallFiles_Regex",

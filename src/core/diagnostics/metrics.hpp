@@ -24,6 +24,8 @@ namespace uburu::diagnostics
     std::uint64_t binaryFilesSkipped{0};
     std::uint64_t queueProducerWaits{0};
     std::uint64_t queueConsumerWaits{0};
+    std::uint64_t workerQueuePeakItems{0};
+    std::uint64_t fileResultQueuePeakItems{0};
     std::uint64_t cacheHits{0};
     std::uint64_t cacheMisses{0};
     std::uint64_t reusedByCatalog{0};

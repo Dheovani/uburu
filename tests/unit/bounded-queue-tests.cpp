@@ -36,6 +36,8 @@ TEST_CASE("bounded queue preserves FIFO order")
   REQUIRE(queue.push(1));
   REQUIRE(queue.push(2));
 
+  CHECK(queue.metrics().peakSize == 2);
+
   CHECK(queue.pop() == std::optional<int>{1});
   CHECK(queue.pop() == std::optional<int>{2});
 }
@@ -80,6 +82,7 @@ TEST_CASE("bounded queue applies backpressure without growing past capacity")
   CHECK(queue.size() == 2);
   CHECK(queue.pop() == std::optional<int>{2});
   CHECK(queue.pop() == std::optional<int>{3});
+  CHECK(queue.metrics().peakSize == 2);
 }
 
 TEST_CASE("bounded queue returns empty when closed")

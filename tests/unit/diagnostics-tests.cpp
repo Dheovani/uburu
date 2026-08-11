@@ -272,6 +272,8 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   constexpr std::uint64_t hiddenFiles = 1;
   constexpr std::uint64_t binaryFiles = 4;
   constexpr std::uint64_t binaryFilesSkipped = 4;
+  constexpr std::uint64_t workerQueuePeakItems = 12;
+  constexpr std::uint64_t fileResultQueuePeakItems = 4;
   constexpr std::uint64_t cacheHits = 8;
   constexpr std::uint64_t reusedByHash = 6;
   constexpr std::uint64_t approximateMemoryBytes = 4096;
@@ -292,6 +294,8 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   metrics.hiddenFiles = hiddenFiles;
   metrics.binaryFiles = binaryFiles;
   metrics.binaryFilesSkipped = binaryFilesSkipped;
+  metrics.workerQueuePeakItems = workerQueuePeakItems;
+  metrics.fileResultQueuePeakItems = fileResultQueuePeakItems;
   metrics.cacheHits = cacheHits;
   metrics.reusedByHash = reusedByHash;
   metrics.approximateMemoryBytes = approximateMemoryBytes;
@@ -306,7 +310,7 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   CHECK(event.level == uburu::diagnostics::LogLevel::info);
   CHECK(event.category == uburu::diagnostics::LogCategory::search);
   CHECK(event.message == "search metrics");
-  REQUIRE(event.fields.size() == 21);
+  REQUIRE(event.fields.size() == 23);
   CHECK(event.fields[0].key == "time_to_first_result_ns");
   CHECK(event.fields[0].value == "7");
   CHECK(event.fields[1].key == "total_time_ns");
@@ -317,16 +321,20 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   CHECK(event.fields[5].value == "512");
   CHECK(event.fields[6].key == "results_emitted");
   CHECK(event.fields[6].value == "2");
-  CHECK(event.fields[13].key == "cache_hits");
-  CHECK(event.fields[13].value == "8");
-  CHECK(event.fields[17].key == "reused_by_hash");
-  CHECK(event.fields[17].value == "6");
-  CHECK(event.fields[18].key == "approximate_memory_bytes");
-  CHECK(event.fields[18].value == "4096");
-  CHECK(event.fields[19].key == "memory_growth_bytes");
-  CHECK(event.fields[19].value == "128");
-  CHECK(event.fields[20].key == "memory_increased");
-  CHECK(event.fields[20].value == "true");
+  CHECK(event.fields[13].key == "worker_queue_peak_items");
+  CHECK(event.fields[13].value == "12");
+  CHECK(event.fields[14].key == "file_result_queue_peak_items");
+  CHECK(event.fields[14].value == "4");
+  CHECK(event.fields[15].key == "cache_hits");
+  CHECK(event.fields[15].value == "8");
+  CHECK(event.fields[19].key == "reused_by_hash");
+  CHECK(event.fields[19].value == "6");
+  CHECK(event.fields[20].key == "approximate_memory_bytes");
+  CHECK(event.fields[20].value == "4096");
+  CHECK(event.fields[21].key == "memory_growth_bytes");
+  CHECK(event.fields[21].value == "128");
+  CHECK(event.fields[22].key == "memory_increased");
+  CHECK(event.fields[22].value == "true");
 }
 
 TEST_CASE("structured metrics sink rejects a missing logger")

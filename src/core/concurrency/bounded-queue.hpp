@@ -16,6 +16,7 @@ namespace uburu::concurrency
   {
     std::uint64_t producerWaits{0};
     std::uint64_t consumerWaits{0};
+    std::uint64_t peakSize{0};
   };
 
   /**
@@ -46,6 +47,11 @@ namespace uburu::concurrency
         return false;
 
       queue.push_back(std::move(value));
+      const auto currentSize = static_cast<std::uint64_t>(queue.size());
+
+      if (currentSize > metricsValue.peakSize)
+        metricsValue.peakSize = currentSize;
+
       notEmpty.notify_one();
 
       return true;

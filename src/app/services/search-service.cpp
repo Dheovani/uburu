@@ -175,18 +175,6 @@ namespace uburu::app
       return summary;
     }
 
-    bool emitRefinedResults(const search::SearchResultRefinement& refinement,
-                            search::ResultSink& sink,
-                            std::vector<SearchResult>& emittedResults)
-    {
-      for (const auto& result : refinement.merged) {
-        if (!emitResult(result, sink, emittedResults))
-          return false;
-      }
-
-      return true;
-    }
-
   } // namespace
 
   DefaultSearchService::DefaultSearchService(std::shared_ptr<const search::SearchEngine> directEngine)
@@ -266,7 +254,7 @@ namespace uburu::app
     }
 
     std::vector<SearchResult> emittedResults;
-    const auto indexedResults = indexService->search(query, stopToken);
+    auto indexedResults = indexService->search(query, stopToken);
 
     if (options.strategy == SearchStrategy::indexed) {
       static_cast<void>(emitIndexedResults(indexedResults, query, sink, emittedResults));
@@ -277,36 +265,41 @@ namespace uburu::app
       return summary;
     }
 
-    std::vector<SearchResult> directResults;
+    search::sortAndRemoveDuplicateSearchResults(indexedResults);
+    std::size_t emittedResultCount = 0;
+    std::uint64_t emittedResultMemoryBytes = 0;
+    std::uint64_t cacheHits = 0;
+    std::uint64_t cacheMisses = 0;
     auto summary = directEngine->search(
       query,
       [&](SearchResult result) {
-        directResults.push_back(std::move(result));
+        const auto cacheHit = search::orderedSearchResultsContain(indexedResults, result);
+        const auto resultMemoryBytes = searchResultMemoryBytes(result);
+
+        if (!sink(std::move(result)))
+          return false;
+
+        if (cacheHit)
+          ++cacheHits;
+        else
+          ++cacheMisses;
+
+        ++emittedResultCount;
+        emittedResultMemoryBytes += resultMemoryBytes;
 
         return !stopToken.stop_requested();
       },
       stopToken);
 
-    if (summary.cancelled || stopToken.stop_requested()) {
-      summary.matches = 0;
-      summary.metrics.resultsEmitted = 0;
-      finalizeRuntimeMetrics(summary, startedAt, 0);
+    summary.cancelled = summary.cancelled || stopToken.stop_requested();
+    summary.matches = emittedResultCount;
+    summary.limitReached = summary.limitReached || emittedResultCount >= query.options.resultLimit;
+    summary.metrics.resultsEmitted = emittedResultCount;
+    summary.metrics.cacheHits = cacheHits;
+    summary.metrics.cacheMisses = cacheMisses;
 
-      return summary;
-    }
-
-    const auto refinement = search::refineSearchResults(indexedResults, directResults, query.options.resultLimit);
-
-    if (!emitRefinedResults(refinement, sink, emittedResults))
-      summary.cancelled = summary.cancelled || stopToken.stop_requested();
-
-    summary.matches = emittedResults.size();
-    summary.limitReached = summary.limitReached || emittedResults.size() >= query.options.resultLimit;
-    summary.metrics.resultsEmitted = emittedResults.size();
-    summary.metrics.cacheHits = refinement.confirmed.size();
-    summary.metrics.cacheMisses = refinement.added.size();
-
-    finalizeRuntimeMetrics(summary, startedAt, searchResultsMemoryBytes(emittedResults));
+    const auto retainedIndexMemoryBytes = searchResultsMemoryBytes(indexedResults);
+    finalizeRuntimeMetrics(summary, startedAt, retainedIndexMemoryBytes + emittedResultMemoryBytes);
 
     return summary;
   }

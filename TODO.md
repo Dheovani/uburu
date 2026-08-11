@@ -22,12 +22,32 @@ Future work below should improve this baseline without reopening completed miles
 ## Before a stable 1.0 release
 
 - [ ] Execute the repeatable validation matrix in `docs/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
+  - [x] Define the repeatable Windows/Linux validation matrix, dataset profiles, evidence format, and acceptance rules.
+  - [x] Automate the Windows core, Werror, format, test, and stable benchmark gates used before manual validation.
+  - [ ] Record a complete Windows validation cycle against representative real-world datasets.
+  - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
+  - [x] Implement bounded parallel direct search with cooperative cancellation, backpressure, deterministic publication, and configurable worker count.
+  - [x] Make hybrid direct validation authoritative so stale indexed matches are not exposed as final results.
+  - [x] Replace quadratic hybrid refinement with ordered lookup and stream authoritative direct results without retaining a second complete result collection.
+  - [x] Add automated regression coverage for pre-cancellation, sink cancellation, partial failures, stale indexed entries, and hybrid cache classification.
+  - [ ] Exercise cancellation, partial failures, and hybrid convergence against the large real-world validation datasets.
 - [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
+  - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.
+  - [ ] Repeat the complete Git matrix in larger real repositories and record the evidence.
 - [ ] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
+  - [x] Enforce bounded direct-search queues, configurable worker count, result-count limits, bounded previews, extractor limits, and index disk budget.
+  - [ ] Connect the persisted global/per-repository memory budget to direct, indexed, and hybrid result production.
+  - [ ] Audit and expose consistent budget-exhaustion status through the core summary, CLI, and desktop UI.
 - [ ] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
+  - [x] Add versioned deterministic baselines and median-based regression gates for direct search, queues, indexing, hashing, extraction, batching, and hybrid refinement.
+  - [ ] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.
 - [ ] Revisit end-to-end performance with real user datasets, including startup latency, direct search latency, indexing throughput, preview latency, memory growth, and UI responsiveness before choosing optimization strategies.
+  - [x] Measure and tune direct-search worker scaling, queue occupancy, sparse-match workloads, cancellation behavior, and hybrid refinement on deterministic datasets.
+  - [ ] Record end-to-end observations for startup, search, indexing, preview, memory, and UI responsiveness on real datasets.
 - [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
+  - [x] Document clean-machine artifact, smoke-test, evidence, and release acceptance requirements.
+  - [ ] Execute the final Windows installer and Linux AppImage smoke tests for the stable release candidate.
 - [ ] Sign Windows release artifacts if a real code-signing certificate becomes available.
 - [ ] Review third-party licenses again before any commercial or broader public distribution.
 

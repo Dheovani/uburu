@@ -24,13 +24,6 @@ namespace uburu::search
                         result.lineText};
     }
 
-    void sortAndRemoveDuplicates(std::vector<SearchResult>& results)
-    {
-      std::ranges::sort(results, searchResultLess);
-      const auto duplicateBegin = std::ranges::unique(results, searchResultSameMatch).begin();
-      results.erase(duplicateBegin, results.end());
-    }
-
   } // namespace
 
   bool searchResultLess(const SearchResult& left, const SearchResult& right)
@@ -43,6 +36,18 @@ namespace uburu::search
     return resultSortKey(left) == resultSortKey(right);
   }
 
+  void sortAndRemoveDuplicateSearchResults(std::vector<SearchResult>& results)
+  {
+    std::ranges::sort(results, searchResultLess);
+    const auto duplicateBegin = std::ranges::unique(results, searchResultSameMatch).begin();
+    results.erase(duplicateBegin, results.end());
+  }
+
+  bool orderedSearchResultsContain(std::span<const SearchResult> orderedResults, const SearchResult& candidate)
+  {
+    return std::ranges::binary_search(orderedResults, candidate, searchResultLess);
+  }
+
   SearchResultRefinement refineSearchResults(std::span<const SearchResult> indexedResults,
                                              std::span<const SearchResult> directResults,
                                              std::size_t resultLimit)
@@ -51,8 +56,8 @@ namespace uburu::search
     std::vector<SearchResult> orderedIndexed(indexedResults.begin(), indexedResults.end());
     std::vector<SearchResult> orderedDirect(directResults.begin(), directResults.end());
 
-    sortAndRemoveDuplicates(orderedIndexed);
-    sortAndRemoveDuplicates(orderedDirect);
+    sortAndRemoveDuplicateSearchResults(orderedIndexed);
+    sortAndRemoveDuplicateSearchResults(orderedDirect);
 
     auto indexed = orderedIndexed.begin();
     auto direct = orderedDirect.begin();
@@ -101,7 +106,7 @@ namespace uburu::search
   {
     std::vector<SearchResult> merged(indexedResults.begin(), indexedResults.end());
     merged.insert(merged.end(), directResults.begin(), directResults.end());
-    sortAndRemoveDuplicates(merged);
+    sortAndRemoveDuplicateSearchResults(merged);
 
     if (merged.size() > resultLimit)
       merged.resize(resultLimit);

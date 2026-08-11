@@ -69,6 +69,25 @@ TEST_CASE("search result merge removes duplicate indexed matches")
   CHECK(merged[1].path == std::filesystem::path("src/b.cpp"));
 }
 
+TEST_CASE("ordered search result lookup finds only exact normalized matches")
+{
+  const auto expected = result(uburu::SearchResultKind::content, "src/b.cpp", 2, 1, "bbb");
+  std::vector results{
+    result(uburu::SearchResultKind::content, "src/c.cpp", 3, 1, "ccc"),
+    expected,
+    expected,
+    result(uburu::SearchResultKind::content, "src/a.cpp", 1, 1, "aaa"),
+  };
+
+  uburu::search::sortAndRemoveDuplicateSearchResults(results);
+
+  REQUIRE(results.size() == 3);
+  CHECK(uburu::search::orderedSearchResultsContain(results, expected));
+  CHECK_FALSE(uburu::search::orderedSearchResultsContain(
+    results,
+    result(uburu::SearchResultKind::content, "src/b.cpp", 2, 1, "changed")));
+}
+
 TEST_CASE("search result refinement classifies confirmed added and removed matches")
 {
   const auto confirmed = result(uburu::SearchResultKind::content, "src/confirmed.cpp", 2, 1, "aaa");

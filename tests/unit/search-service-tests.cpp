@@ -23,11 +23,14 @@ namespace
     search(const uburu::SearchQuery&, uburu::search::ResultSink sink, std::stop_token = {}) const override
     {
       ++calls;
+      searchRunning = true;
 
       for (const auto& result : results) {
         if (!sink(result))
           break;
       }
+
+      searchRunning = false;
 
       uburu::search::SearchSummary summary;
       summary.filesScanned = scannedFiles;
@@ -41,6 +44,7 @@ namespace
     }
 
     mutable std::size_t calls{0};
+    mutable bool searchRunning{false};
     std::size_t scannedFiles{7};
     std::uint64_t bytesProcessed{256};
     std::vector<uburu::SearchResult> results;
@@ -231,7 +235,7 @@ TEST_CASE("default search service rejects indexed strategies without an index se
     std::invalid_argument);
 }
 
-TEST_CASE("default search service emits only direct results after hybrid refinement")
+TEST_CASE("default search service streams authoritative direct results during hybrid refinement")
 {
   TemporaryDirectory directory("uburu-search-service-hybrid-test");
   auto directEngine = std::make_shared<FakeSearchEngine>();
@@ -246,21 +250,24 @@ TEST_CASE("default search service emits only direct results after hybrid refinem
   directEngine->results = {duplicate, directOnly};
 
   const uburu::app::DefaultSearchService service(directEngine, indexService);
+  bool resultObservedDuringDirectSearch = false;
   const auto summary = service.search(validQuery(directory.path()), [&](uburu::SearchResult searchResult) {
+    resultObservedDuringDirectSearch = resultObservedDuringDirectSearch || directEngine->searchRunning;
     emittedResults.push_back(std::move(searchResult));
 
     return true;
   });
 
   REQUIRE(emittedResults.size() == 2);
-  CHECK(emittedResults[0].path == std::filesystem::path("src/direct.cpp"));
-  CHECK(emittedResults[1].path == std::filesystem::path("src/shared.cpp"));
+  CHECK(emittedResults[0].path == std::filesystem::path("src/shared.cpp"));
+  CHECK(emittedResults[1].path == std::filesystem::path("src/direct.cpp"));
   CHECK(summary.matches == emittedResults.size());
   CHECK(summary.metrics.resultsEmitted == emittedResults.size());
   CHECK(summary.metrics.cacheHits == 1);
   CHECK(summary.metrics.cacheMisses == 1);
   CHECK(indexService->calls == 1);
   CHECK(directEngine->calls == 1);
+  CHECK(resultObservedDuringDirectSearch);
 }
 
 TEST_CASE("default search service detects approximate memory growth between searches")

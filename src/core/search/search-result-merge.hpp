@@ -26,6 +26,11 @@ namespace uburu::search
   [[nodiscard]]
   bool searchResultSameMatch(const SearchResult& left, const SearchResult& right);
 
+  void sortAndRemoveDuplicateSearchResults(std::vector<SearchResult>& results);
+
+  [[nodiscard]]
+  bool orderedSearchResultsContain(std::span<const SearchResult> orderedResults, const SearchResult& candidate);
+
   [[nodiscard]]
   SearchResultRefinement refineSearchResults(
     std::span<const SearchResult> indexedResults,

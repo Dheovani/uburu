@@ -67,6 +67,29 @@ namespace uburu::cli
     }
 
     [[nodiscard]]
+    std::optional<std::size_t> parseThreadCount(std::string_view value)
+    {
+      if (value == "auto")
+        return automaticSearchThreadCount;
+
+      std::size_t parsed = 0;
+      const auto* first = value.data();
+      const auto* last = value.data() + value.size();
+      const auto [position, error] = std::from_chars(first, last, parsed);
+
+      if (error != std::errc{} || position != last || parsed == 0 || parsed > maximumSearchThreadCount)
+        return std::nullopt;
+
+      return parsed;
+    }
+
+    [[nodiscard]]
+    std::string threadCountUsageError()
+    {
+      return "--threads requires auto or an integer from 1 to " + std::to_string(maximumSearchThreadCount);
+    }
+
+    [[nodiscard]]
     bool parseOutputFormat(CliOptions& options, std::string_view format)
     {
       if (format == "human") {
@@ -220,6 +243,16 @@ namespace uburu::cli
             return usageError("--max-size-mib requires a numeric value");
 
           options.query.options.maximumFileSize = *maximumFileSize;
+        } else if (argument == "--threads") {
+          if (index + 1 >= arguments.size())
+            return usageError(threadCountUsageError());
+
+          const auto maximumThreadCount = parseThreadCount(arguments[++index]);
+
+          if (!maximumThreadCount)
+            return usageError(threadCountUsageError());
+
+          options.query.options.maximumThreadCount = *maximumThreadCount;
         } else if (isHelpArgument(argument)) {
           options.showHelp = true;
         } else {
@@ -334,6 +367,8 @@ namespace uburu::cli
     output << "  --database PATH            Override the CLI index database path.\n";
     output << "  --types txt,cpp,md         Restrict file extensions.\n";
     output << "  --max-size-mib N           Maximum file size in MiB.\n";
+    output << "  --threads auto|N           Direct-search workers; N must be from 1 to " << maximumSearchThreadCount
+           << ".\n";
     output << "  --regex                    Treat expression as PCRE2 regex.\n";
     output << "  --case-sensitive           Enable case-sensitive matching.\n";
     output << "  --whole-word               Match only whole words.\n";

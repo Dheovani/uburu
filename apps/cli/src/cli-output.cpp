@@ -55,7 +55,8 @@ namespace uburu::cli
 
     void writeHumanSearchResult(std::ostream& output, const SearchResult& result)
     {
-      output << pathString(result.path) << ':' << result.line << ':' << result.column << "  " << result.lineText << '\n';
+      output << pathString(result.path) << ':' << result.line << ':' << result.column << "  " << result.lineText
+             << '\n';
     }
 
     void writeJsonSearchResult(std::ostream& output, const SearchResult& result)
@@ -99,6 +100,8 @@ namespace uburu::cli
         return "invalidPerFileResultLimit";
       case search::SearchErrorCode::invalidMaximumFileSize:
         return "invalidMaximumFileSize";
+      case search::SearchErrorCode::invalidMaximumThreadCount:
+        return "invalidMaximumThreadCount";
       case search::SearchErrorCode::fileOpenFailed:
         return "fileOpenFailed";
       case search::SearchErrorCode::fileReadFailed:
@@ -256,10 +259,7 @@ namespace uburu::cli
     writeHumanIndexStatus(output, report);
   }
 
-  void writeIndexUpdateSummary(
-    std::ostream& output,
-    const index::IndexUpdateSummary& summary,
-    CliOutputFormat format)
+  void writeIndexUpdateSummary(std::ostream& output, const index::IndexUpdateSummary& summary, CliOutputFormat format)
   {
     if (format == CliOutputFormat::jsonLines) {
       writeJsonIndexUpdateSummary(output, summary);

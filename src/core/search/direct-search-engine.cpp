@@ -68,7 +68,6 @@ namespace uburu::search
     };
 
     constexpr std::size_t defaultMaximumSearchWorkerCount = 8;
-    constexpr std::size_t maximumSupportedSearchWorkerCount = 256;
     constexpr std::size_t workerQueueCapacityMultiplier = 2;
     constexpr std::size_t fileResultQueueCapacity = 4;
 
@@ -692,8 +691,8 @@ namespace uburu::search
 
     std::size_t normalizedWorkerCount(std::size_t requestedWorkerCount)
     {
-      if (requestedWorkerCount != 0)
-        return std::min(requestedWorkerCount, maximumSupportedSearchWorkerCount);
+      if (requestedWorkerCount != automaticSearchThreadCount)
+        return std::min(requestedWorkerCount, maximumSearchThreadCount);
 
       const auto hardwareWorkerCount = static_cast<std::size_t>(std::thread::hardware_concurrency());
 

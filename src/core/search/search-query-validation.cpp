@@ -91,6 +91,9 @@ namespace uburu::search
     appendIf(query.options.resultLimit == 0, errors, SearchErrorCode::invalidResultLimit);
     appendIf(query.options.perFileResultLimit == 0, errors, SearchErrorCode::invalidPerFileResultLimit);
     appendIf(query.options.maximumFileSize == 0, errors, SearchErrorCode::invalidMaximumFileSize);
+    appendIf(query.options.maximumThreadCount > maximumSearchThreadCount,
+             errors,
+             SearchErrorCode::invalidMaximumThreadCount);
     appendIf(query.options.regexMatchLimit == 0 || query.options.regexDepthLimit == 0 ||
                query.options.regexHeapLimitKib == 0,
              errors,

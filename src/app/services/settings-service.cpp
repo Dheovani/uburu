@@ -36,7 +36,6 @@ namespace uburu::app
     constexpr std::string_view repositoryIncludeHiddenFilesKey = "repository.includeHiddenFiles";
     constexpr std::string_view repositoryRelevantExtensionsKey = "repository.relevantExtensions";
     constexpr std::size_t defaultResultLimit = 10000;
-    constexpr std::size_t maximumThreadCountLimit = 256;
     constexpr std::uintmax_t maximumFileSizeLimitBytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
     constexpr std::size_t maximumResultLimit = 1000000;
     constexpr std::uintmax_t maximumMemoryBudgetLimitBytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
@@ -645,7 +644,7 @@ namespace uburu::app
 
     normalized.schemaVersion = currentGlobalSettingsSchemaVersion;
 
-    normalized.maximumThreadCount = limitedSize(normalized.maximumThreadCount, maximumThreadCountLimit);
+    normalized.maximumThreadCount = limitedSize(normalized.maximumThreadCount, maximumSearchThreadCount);
     normalized.maximumFileSizeBytes = limitedUnsignedMax(normalized.maximumFileSizeBytes, maximumFileSizeLimitBytes);
     normalized.memoryBudgetBytes = limitedUnsignedMax(normalized.memoryBudgetBytes, maximumMemoryBudgetLimitBytes);
     normalized.diskBudgetBytes = limitedUnsignedMax(normalized.diskBudgetBytes, maximumDiskBudgetLimitBytes);
@@ -673,7 +672,7 @@ namespace uburu::app
     auto normalized = settings;
 
     normalized.schemaVersion = currentGlobalSettingsSchemaVersion;
-    normalized.maximumThreadCount = limitedOptionalSize(normalized.maximumThreadCount, maximumThreadCountLimit);
+    normalized.maximumThreadCount = limitedOptionalSize(normalized.maximumThreadCount, maximumSearchThreadCount);
     normalized.maximumFileSizeBytes =
       limitedOptionalUnsignedMax(normalized.maximumFileSizeBytes, maximumFileSizeLimitBytes);
     normalized.memoryBudgetBytes =

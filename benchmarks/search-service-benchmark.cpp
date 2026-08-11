@@ -14,6 +14,9 @@ namespace
   constexpr std::size_t adaptiveMaximumBatchSize = 512;
   constexpr std::uint32_t simulatedUiRenderPasses = 8;
   constexpr std::size_t singleSearchWorkerCount = 1;
+  constexpr std::size_t twoSearchWorkerCount = 2;
+  constexpr std::size_t fourSearchWorkerCount = 4;
+  constexpr std::size_t eightSearchWorkerCount = 8;
 
   [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions fixedBatchRunOptions(std::size_t batchSize)
   {
@@ -36,12 +39,12 @@ namespace
     };
   }
 
-  [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions singleWorkerRunOptions()
+  [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions fixedWorkerRunOptions(std::size_t workerCount)
   {
     return uburu::benchmarks::SearchBenchmarkRunOptions{
       .executionOptions = uburu::app::SearchExecutionOptions{.adaptiveBatching = false},
       .simulatedUiRenderPasses = 0,
-      .maximumThreadCount = singleSearchWorkerCount,
+      .maximumThreadCount = workerCount,
     };
   }
 
@@ -102,9 +105,20 @@ namespace
     runSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset);
   }
 
-  void BM_SearchService_Direct_ManySmallFiles_Literal_SingleWorker(benchmark::State& state)
+  void BM_SearchService_Direct_ManySmallFiles_Literal_WorkerScaling(benchmark::State& state)
   {
-    runSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset, singleWorkerRunOptions());
+    runSearchServiceScenario(
+      state,
+      uburu::benchmarks::makeManySmallFilesDataset,
+      fixedWorkerRunOptions(static_cast<std::size_t>(state.range(0))));
+  }
+
+  void BM_SearchService_Direct_FewLargeFiles_Literal_WorkerScaling(benchmark::State& state)
+  {
+    runSearchServiceScenario(
+      state,
+      uburu::benchmarks::makeFewLargeFilesDataset,
+      fixedWorkerRunOptions(static_cast<std::size_t>(state.range(0))));
   }
 
   void BM_SearchService_Direct_FewLargeFiles_Literal(benchmark::State& state)
@@ -244,8 +258,17 @@ namespace
 } // namespace
 
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal);
-BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal_SingleWorker);
+BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal_WorkerScaling)
+  ->Arg(singleSearchWorkerCount)
+  ->Arg(twoSearchWorkerCount)
+  ->Arg(fourSearchWorkerCount)
+  ->Arg(eightSearchWorkerCount);
 BENCHMARK(BM_SearchService_Direct_FewLargeFiles_Literal);
+BENCHMARK(BM_SearchService_Direct_FewLargeFiles_Literal_WorkerScaling)
+  ->Arg(singleSearchWorkerCount)
+  ->Arg(twoSearchWorkerCount)
+  ->Arg(fourSearchWorkerCount)
+  ->Arg(eightSearchWorkerCount);
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Regex);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseInsensitive);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseSensitive);

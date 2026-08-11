@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -51,6 +52,8 @@ TEST_CASE("CLI parser applies search flags")
     "cpp,hpp",
     "--max-size-mib",
     "4",
+    "--threads",
+    "4",
     "--no-gitignore",
     "--no-subdirectories",
   }));
@@ -70,6 +73,33 @@ TEST_CASE("CLI parser applies search flags")
   CHECK(options.query.options.extensions[0] == "cpp");
   CHECK(options.query.options.extensions[1] == "hpp");
   CHECK(options.query.options.maximumFileSize == 4U * 1024U * 1024U);
+  CHECK(options.query.options.maximumThreadCount == 4);
+}
+
+TEST_CASE("CLI parser accepts automatic direct search worker selection")
+{
+  const auto parsed = uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--threads", "auto"}));
+
+  REQUIRE(parsed.options.has_value());
+  CHECK(parsed.options->query.options.maximumThreadCount == uburu::automaticSearchThreadCount);
+}
+
+TEST_CASE("CLI parser rejects invalid direct search worker counts")
+{
+  const auto excessiveValue = std::to_string(uburu::maximumSearchThreadCount + 1);
+  const auto zero = uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--threads", "0"}));
+  const auto excessive =
+    uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--threads", excessiveValue}));
+  const auto malformed = uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--threads", "many"}));
+  const auto expectedError =
+    "--threads requires auto or an integer from 1 to " + std::to_string(uburu::maximumSearchThreadCount);
+
+  CHECK_FALSE(zero.options.has_value());
+  CHECK_FALSE(excessive.options.has_value());
+  CHECK_FALSE(malformed.options.has_value());
+  CHECK(zero.error == expectedError);
+  CHECK(excessive.error == zero.error);
+  CHECK(malformed.error == zero.error);
 }
 
 TEST_CASE("CLI parser creates index status request")
@@ -131,7 +161,6 @@ TEST_CASE("CLI JSON Lines output escapes result payload")
   std::ostringstream output;
   uburu::cli::writeSearchResult(output, result, uburu::cli::CliOutputFormat::jsonLines);
 
-  CHECK(output.str() ==
-        "{\"type\":\"result\",\"path\":\"C:/repo/file.txt\",\"line\":7,\"column\":3,\"matchLength\":5,"
-        "\"text\":\"hello \\\"needle\\\"\"}\n");
+  CHECK(output.str() == "{\"type\":\"result\",\"path\":\"C:/repo/file.txt\",\"line\":7,\"column\":3,\"matchLength\":5,"
+                        "\"text\":\"hello \\\"needle\\\"\"}\n");
 }

@@ -34,6 +34,8 @@ namespace uburu::search
       return "search.error.invalidPerFileResultLimit";
     case SearchErrorCode::invalidMaximumFileSize:
       return "search.error.invalidMaximumFileSize";
+    case SearchErrorCode::invalidMaximumThreadCount:
+      return "search.error.invalidMaximumThreadCount";
     case SearchErrorCode::fileOpenFailed:
       return "search.error.fileOpenFailed";
     case SearchErrorCode::fileReadFailed:

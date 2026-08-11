@@ -29,6 +29,7 @@ namespace uburu::search
     invalidResultLimit,
     invalidPerFileResultLimit,
     invalidMaximumFileSize,
+    invalidMaximumThreadCount,
     fileOpenFailed,
     fileReadFailed
   };
@@ -77,10 +78,7 @@ namespace uburu::search
     virtual ~SearchEngine() = default;
 
     [[nodiscard]]
-    virtual SearchSummary search(
-      const SearchQuery& query,
-      ResultSink sink,
-      std::stop_token stopToken = {}) const = 0;
+    virtual SearchSummary search(const SearchQuery& query, ResultSink sink, std::stop_token stopToken = {}) const = 0;
   };
 
 } // namespace uburu::search

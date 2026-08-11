@@ -131,3 +131,14 @@ TEST_CASE("search query validation reports invalid regex limits")
 
   CHECK(hasError(errors, uburu::search::SearchErrorCode::invalidRegexLimit));
 }
+
+TEST_CASE("search query validation rejects excessive direct search worker counts")
+{
+  uburu::SearchQuery query{
+    .root = std::filesystem::temp_directory_path(), .scope = {}, .expression = "needle", .options = {}};
+  query.options.maximumThreadCount = uburu::maximumSearchThreadCount + 1;
+
+  const auto errors = uburu::search::validateSearchQuery(query);
+
+  CHECK(hasError(errors, uburu::search::SearchErrorCode::invalidMaximumThreadCount));
+}

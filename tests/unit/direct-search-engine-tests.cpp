@@ -573,6 +573,52 @@ TEST_CASE("parallel direct search preserves scanner order and applies result bac
   CHECK(summary.matches == results.size());
 }
 
+TEST_CASE("parallel direct search cancels active file work cooperatively")
+{
+  constexpr std::size_t matchingFileCount = 12;
+  constexpr std::size_t matchesPerFile = 64;
+  constexpr std::size_t configuredWorkerCount = 4;
+  const uburu::tests::TemporaryDirectory directory("uburu-parallel-direct-search-cancellation");
+  std::vector<std::filesystem::path> paths;
+  std::string matchingContent;
+
+  for (std::size_t index = 0; index < matchesPerFile; ++index)
+    matchingContent += "needle\n";
+
+  const auto warmupPath = directory.path() / "first-warmup.txt";
+  uburu::tests::writeFile(warmupPath, "no match\n");
+  paths.push_back(warmupPath);
+
+  for (std::size_t index = 0; index < matchingFileCount; ++index) {
+    const auto path = directory.path() / ("match-" + std::to_string(index) + ".txt");
+    uburu::tests::writeFile(path, matchingContent);
+    paths.push_back(path);
+  }
+
+  auto scanner = std::make_shared<OrderedFileScanner>(std::move(paths));
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::stop_source cancellation;
+  std::size_t deliveredResults = 0;
+
+  query.options.maximumThreadCount = configuredWorkerCount;
+
+  const auto summary = engine.search(
+    query,
+    [&](uburu::SearchResult) {
+      ++deliveredResults;
+      cancellation.request_stop();
+
+      return true;
+    },
+    cancellation.get_token());
+
+  CHECK(summary.cancelled);
+  CHECK(deliveredResults == 1);
+  CHECK(summary.matches == deliveredResults);
+  CHECK(summary.filesScanned > 1);
+}
+
 TEST_CASE("direct search supports CRLF, LF, empty lines and files without final newline")
 {
   const uburu::tests::TemporaryFile file("uburu-search-line-ending-test.txt");

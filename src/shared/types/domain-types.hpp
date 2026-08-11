@@ -10,6 +10,9 @@
 namespace uburu
 {
 
+  inline constexpr std::size_t automaticSearchThreadCount = 0;
+  inline constexpr std::size_t maximumSearchThreadCount = 256;
+
   using RepositoryId = std::string;
   using WorktreeId = std::string;
 
@@ -107,7 +110,7 @@ namespace uburu
     bool includeBinary{false};
     bool followSymlinks{false};
     bool includeSubdirectories{true};
-    std::size_t maximumThreadCount{0};
+    std::size_t maximumThreadCount{automaticSearchThreadCount};
     std::uintmax_t maximumFileSize{16U * 1024U * 1024U};
     std::size_t resultLimit{10'000};
     std::size_t perFileResultLimit{1'000};

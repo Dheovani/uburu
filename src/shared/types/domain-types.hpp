@@ -114,6 +114,7 @@ namespace uburu
     std::uintmax_t maximumFileSize{16U * 1024U * 1024U};
     std::size_t resultLimit{10'000};
     std::size_t perFileResultLimit{1'000};
+    std::uintmax_t resultMemoryBudgetBytes{0};
     std::uint32_t regexMatchLimit{100'000};
     std::uint32_t regexDepthLimit{1'000};
     std::uint32_t regexHeapLimitKib{16U * 1024U};

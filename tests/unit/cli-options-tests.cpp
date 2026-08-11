@@ -52,6 +52,8 @@ TEST_CASE("CLI parser applies search flags")
     "cpp,hpp",
     "--max-size-mib",
     "4",
+    "--memory-budget-mib",
+    "32",
     "--threads",
     "4",
     "--no-gitignore",
@@ -73,6 +75,7 @@ TEST_CASE("CLI parser applies search flags")
   CHECK(options.query.options.extensions[0] == "cpp");
   CHECK(options.query.options.extensions[1] == "hpp");
   CHECK(options.query.options.maximumFileSize == 4U * 1024U * 1024U);
+  CHECK(options.query.options.resultMemoryBudgetBytes == 32U * 1024U * 1024U);
   CHECK(options.query.options.maximumThreadCount == 4);
 }
 
@@ -163,4 +166,18 @@ TEST_CASE("CLI JSON Lines output escapes result payload")
 
   CHECK(output.str() == "{\"type\":\"result\",\"path\":\"C:/repo/file.txt\",\"line\":7,\"column\":3,\"matchLength\":5,"
                         "\"text\":\"hello \\\"needle\\\"\"}\n");
+}
+
+TEST_CASE("CLI search summary exposes result memory exhaustion")
+{
+  uburu::search::SearchSummary summary;
+  summary.matches = 3;
+  summary.resultMemoryBytes = 4096;
+  summary.memoryLimitReached = true;
+
+  std::ostringstream output;
+  uburu::cli::writeSearchSummary(output, summary, uburu::cli::CliOutputFormat::jsonLines);
+
+  CHECK(output.str().find("\"memoryLimitReached\":true") != std::string::npos);
+  CHECK(output.str().find("\"resultMemoryBytes\":4096") != std::string::npos);
 }

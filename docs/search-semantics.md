@@ -182,6 +182,10 @@ When the limit is reached:
 - `SearchSummary::filesWithMatchLimitReached` is incremented;
 - `SearchSummary::limitReached` remains reserved for the global limit.
 
+`resultMemoryBudgetBytes` independently limits the approximate retained memory of published results. A value of zero means unlimited. Before publishing a result, direct and indexed search estimate the memory owned by its paths, text, context, and highlight storage. If the next result would exceed the budget, it is not published, `SearchSummary::memoryLimitReached` is set, and `SearchSummary::resultMemoryBytes` retains the accepted-result total. This state is distinct from cancellation, result-count exhaustion, and partial file failures.
+
+Hybrid search applies the same query budget to indexed candidates and to the authoritative direct-result stream. Indexed candidates are used only for cache/refinement classification; final published results still obey the direct stream's count and memory limits.
+
 ## Deterministic order
 
 Direct search publishes files in deterministic path order. The scanner sorts entries in each directory by normalized path before visiting files and subdirectories.
@@ -230,6 +234,7 @@ The summary explicitly distinguishes:
 - normal completion;
 - cancellation;
 - limit reached;
+- result memory budget reached;
 - partial read failure;
 - invalid query.
 

@@ -298,6 +298,8 @@
     <message><source>%1 oculto(s)</source><translation>%1 hidden</translation></message>
     <message><source>%1 binário(s)</source><translation>%1 binary</translation></message>
     <message><source> — ignorados: %1</source><translation> — skipped: %1</translation></message>
+    <message><source> — limite de memória dos resultados atingido</source><translation> — result memory limit reached</translation></message>
+    <message><source> — limite de resultados atingido</source><translation> — result limit reached</translation></message>
     <message><source>, </source><translation>, </translation></message>
     <message><source>Arquivo não encontrado: %1</source><translation>File not found: %1</translation></message>
     <message><source>Arquivo aberto</source><translation>File opened</translation></message>

@@ -104,6 +104,17 @@ namespace uburu::index
     std::optional<IndexGenerationMetadata> latestGeneration;
   };
 
+  /**
+   * Returns bounded indexed results together with the reason publication stopped.
+   */
+  struct IndexSearchResult
+  {
+    std::vector<SearchResult> results;
+    std::uint64_t resultMemoryBytes{0};
+    bool resultLimitReached{false};
+    bool memoryLimitReached{false};
+  };
+
   using IndexProgressCallback = std::function<void(const IndexUpdateProgress&)>;
 
   /**
@@ -140,7 +151,7 @@ namespace uburu::index
     virtual IndexStalenessReport staleness(const WorktreeInfo& worktree) const = 0;
 
     [[nodiscard]]
-    virtual std::vector<SearchResult> search(
+    virtual IndexSearchResult search(
       const SearchQuery& query,
       std::stop_token stopToken = {}) const = 0;
   };

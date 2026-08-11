@@ -146,6 +146,9 @@ namespace uburu::cli
       output << " filesScanned=" << summary.filesScanned;
       output << " readErrors=" << summary.filesWithReadErrors;
       output << " cancelled=" << (summary.cancelled ? "true" : "false");
+      output << " resultLimitReached=" << (summary.limitReached ? "true" : "false");
+      output << " memoryLimitReached=" << (summary.memoryLimitReached ? "true" : "false");
+      output << " resultMemoryBytes=" << summary.resultMemoryBytes;
       output << '\n';
     }
 
@@ -160,6 +163,9 @@ namespace uburu::cli
       output << ",\"filesWithReadErrors\":" << summary.filesWithReadErrors;
       output << ",\"cancelled\":" << (summary.cancelled ? "true" : "false");
       output << ",\"partialFailure\":" << (summary.partialFailure ? "true" : "false");
+      output << ",\"resultLimitReached\":" << (summary.limitReached ? "true" : "false");
+      output << ",\"memoryLimitReached\":" << (summary.memoryLimitReached ? "true" : "false");
+      output << ",\"resultMemoryBytes\":" << summary.resultMemoryBytes;
       output << "}\n";
     }
 

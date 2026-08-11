@@ -35,7 +35,7 @@ The search header should expose lightweight operational metrics to reinforce the
 - time to first result;
 - total search duration.
 
-These values are computed by the controller from the summary returned by `SearchService`. QML only presents observable properties; it must not measure search, infer core progress, or access worker threads directly.
+These values are computed by the controller from the summary returned by `SearchService`. QML only presents observable properties; it must not measure search, infer core progress, or access worker threads directly. The controller resolves the persisted global/per-repository memory budget before starting work; for a multi-root scope it uses the smallest nonzero effective budget so every selected root respects the strictest configured limit. When result memory or count is exhausted, the final status reports that bounded completion without presenting it as cancellation or a read failure.
 
 The footer has a fixed spot for indexing state. In the current desktop integration, search uses the direct engine and the status appears as inactive indexing; when `IndexingService` is connected to the window, the same spot should display real progress without blocking direct search.
 
@@ -43,7 +43,7 @@ The footer has a fixed spot for indexing state. In the current desktop integrati
 
 The result list uses `ListView` with delegate reuse and limited visual cache. This avoids instantiating QML components for every result when there are many items, keeping rendering proportional to the visible area and a small navigation margin.
 
-The C++ model still retains results published by search. Future memory optimizations should evolve the model contract, not replace visual virtualization with manual QML logic.
+The C++ model retains only results accepted by the configured result-memory and count budgets. Future memory optimizations should evolve the model contract, not replace visual virtualization with manual QML logic.
 
 During progressive result publication, the list preserves the current selection when new items are appended. If search has no selection yet and the first result arrives, the UI selects the first occurrence automatically to load preview without requiring an extra click. Linear navigation between visible occurrences uses `F4` to move forward and `Shift+F4` to move backward.
 

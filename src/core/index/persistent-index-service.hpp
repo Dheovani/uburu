@@ -42,7 +42,7 @@ namespace uburu::index
     IndexStalenessReport staleness(const WorktreeInfo& worktree) const override;
 
     [[nodiscard]]
-    std::vector<SearchResult> search(
+    IndexSearchResult search(
       const SearchQuery& query,
       std::stop_token stopToken = {}) const override;
 

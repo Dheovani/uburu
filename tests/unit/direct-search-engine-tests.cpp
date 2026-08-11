@@ -1,6 +1,7 @@
 #include "core/filesystem/file-scanner.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/search/direct-search-engine.hpp"
+#include "core/search/search-result-memory.hpp"
 #include "fixtures/test-fixtures.hpp"
 #include "helpers/temporary-paths.hpp"
 
@@ -963,6 +964,41 @@ TEST_CASE("direct search applies the global result limit before publishing")
   CHECK(results.front().column == 1);
   CHECK(summary.matches == 1);
   CHECK(summary.limitReached);
+}
+
+TEST_CASE("direct search stops before exceeding the result memory budget")
+{
+  const uburu::tests::TemporaryFile file("uburu-search-memory-limit-test.txt");
+  const auto& path = file.path();
+  uburu::tests::writeFile(path, "needle needle\n");
+
+  auto scanner = std::make_shared<SingleFileScanner>(path);
+  uburu::search::DirectSearchEngine engine(scanner);
+  auto query = makeQuery(path.parent_path(), "needle");
+  std::vector<uburu::SearchResult> unlimitedResults;
+
+  const auto unlimitedSummary = engine.search(query, [&](uburu::SearchResult result) {
+    unlimitedResults.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(unlimitedResults.size() == 2);
+  query.options.resultMemoryBudgetBytes = uburu::search::approximateSearchResultMemoryBytes(unlimitedResults.front());
+
+  std::vector<uburu::SearchResult> boundedResults;
+  const auto boundedSummary = engine.search(query, [&](uburu::SearchResult result) {
+    boundedResults.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(boundedResults.size() == 1);
+  CHECK(unlimitedSummary.matches == 2);
+  CHECK(boundedSummary.matches == 1);
+  CHECK(boundedSummary.memoryLimitReached);
+  CHECK_FALSE(boundedSummary.limitReached);
+  CHECK(boundedSummary.resultMemoryBytes == query.options.resultMemoryBudgetBytes);
 }
 
 TEST_CASE("direct search applies the per-file result limit without stopping the full search")

@@ -9,8 +9,9 @@ The project follows semantic versioning. Versions before `1.0.0` are preview rel
 - Parallelize direct file processing with bounded queues while preserving progressive first results, deterministic publication, cooperative cancellation, measured queue contention, and observable queue occupancy; automatic mode now avoids worker queues for small files and retains parallel throughput for larger sparse-match workloads.
 - Add a repeatable Release-mode benchmark gate with five repetitions, median-based guardrails, sparse-match worker-scaling coverage, bounded-queue limits, regex JIT checks, adaptive batching checks, and persistent-index reuse checks.
 - Make direct validation authoritative and progressive for hybrid-search results, remove stale indexed matches, avoid retaining a second direct-result collection, preserve partial-failure completion events, short-circuit pre-cancelled runs, and replace quadratic refinement scans with deterministic ordered reconciliation.
+- Enforce an overflow-safe result-memory budget in direct, indexed, and hybrid search, resolve persisted global/per-repository limits in the desktop application, expose explicit exhaustion state through DTOs and CLI summaries, and avoid publishing the result that would exceed the budget.
 - Continue validating large real-world repositories before the first stable release.
-- Continue hardening search/index memory budgets, release signing, and optional future distribution targets.
+- Continue hardening broader indexing, preview, and extraction budgets, release signing, and optional future distribution targets.
 
 ## [0.1.0] - 2026-07-13
 

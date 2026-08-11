@@ -126,8 +126,10 @@ namespace uburu::app
     std::size_t matches{0};
     std::size_t filesWithMatchLimitReached{0};
     std::size_t filesWithReadErrors{0};
+    std::uint64_t resultMemoryBytes{0};
     bool cancelled{false};
     bool limitReached{false};
+    bool memoryLimitReached{false};
     bool partialFailure{false};
     std::vector<SearchErrorDto> errors;
     std::string regexExecutionMode;

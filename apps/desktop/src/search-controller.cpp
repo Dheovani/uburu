@@ -1,6 +1,7 @@
 #include "search-controller.hpp"
 
 #include "app/services/indexing-service.hpp"
+#include "app/services/settings-service.hpp"
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/open-document-extractor.hpp"
@@ -14,6 +15,7 @@
 #include "core/index/persistent-index-service.hpp"
 #include "core/search/direct-search-engine.hpp"
 #include "core/search/search-errors.hpp"
+#include "core/search/search-scope.hpp"
 #include "core/storage/sqlite-storage-service.hpp"
 #include "core/storage/storage-paths.hpp"
 #include "core/text/text-file-reader.hpp"
@@ -346,6 +348,33 @@ namespace uburu::app
                           .headOid = "filesystem"};
     }
 
+    std::uintmax_t configuredResultMemoryBudget(const SearchQuery& query)
+    {
+      try {
+        storage::SQLiteStorageService storageService(localDataPath());
+        storageService.initialize();
+        StorageSettingsService settingsService(storageService);
+        const auto gitService = makeGitService();
+        std::uintmax_t memoryBudgetBytes = 0;
+
+        for (const auto& root : search::effectiveSearchRoots(query)) {
+          const auto worktree = worktreeForRoot(*gitService, root.path).value_or(filesystemWorktreeForRoot(root.path));
+          const auto effectiveSettings = settingsService.resolveRepositorySettings(worktree.repositoryId);
+          const auto rootMemoryBudgetBytes = effectiveSettings.memoryBudgetBytes;
+
+          if (rootMemoryBudgetBytes == 0)
+            continue;
+
+          memoryBudgetBytes =
+            memoryBudgetBytes == 0 ? rootMemoryBudgetBytes : std::min(memoryBudgetBytes, rootMemoryBudgetBytes);
+        }
+
+        return memoryBudgetBytes;
+      } catch (const std::exception&) {
+        return 0;
+      }
+    }
+
     RepositoryInfo repositoryForWorktree(const WorktreeInfo& worktree)
     {
       return RepositoryInfo{.id = worktree.repositoryId,
@@ -523,6 +552,11 @@ namespace uburu::app
 
       if (!skipped.empty())
         status += receiver->tr(" — ignorados: %1").arg(skipped.join(receiver->tr(", ")));
+
+      if (summary.memoryLimitReached)
+        status += receiver->tr(" — limite de memória dos resultados atingido");
+      else if (summary.limitReached)
+        status += receiver->tr(" — limite de resultados atingido");
 
       return status;
     }
@@ -1510,8 +1544,9 @@ namespace uburu::app
       activeWatcher = nullptr;
     });
     activeWatcher->setFuture(
-      QtConcurrent::run([this, query = std::move(query), token, startedAt, firstResultNanoseconds] {
+      QtConcurrent::run([this, query = std::move(query), token, startedAt, firstResultNanoseconds]() mutable {
         try {
+          query.options.resultMemoryBudgetBytes = configuredResultMemoryBudget(query);
           auto summary = searchService->search(
             query,
             [this, startedAt, firstResultNanoseconds](SearchResult result) {

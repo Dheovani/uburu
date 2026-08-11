@@ -1,4 +1,5 @@
 #include "core/index/persistent-index-service.hpp"
+#include "core/search/search-result-memory.hpp"
 #include "core/storage/sqlite-storage-service.hpp"
 #include "fixtures/test-fixtures.hpp"
 
@@ -405,7 +406,7 @@ TEST_CASE("persistent index search hides deleted paths and returns modified repl
   uburu::SearchQuery query{.root = root, .scope = {}, .expression = "cpp", .options = {}};
   query.options.target = uburu::SearchTarget::fileName;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
 
   CHECK(initialSummary.indexed == 1);
   CHECK(overlaySummary.indexed == 1);
@@ -442,7 +443,7 @@ TEST_CASE("persistent index search returns indexed content matches")
   uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
 
   CHECK(summary.indexed == 1);
   REQUIRE(results.size() == 1);
@@ -484,8 +485,8 @@ TEST_CASE("persistent index service stores extracted html visible text")
   uburu::SearchQuery hiddenQuery{.root = root, .scope = {}, .expression = "hiddenNeedle", .options = {}};
   hiddenQuery.options.target = uburu::SearchTarget::content;
 
-  const auto visibleResults = indexService.search(visibleQuery);
-  const auto hiddenResults = indexService.search(hiddenQuery);
+  const auto visibleResults = indexService.search(visibleQuery).results;
+  const auto hiddenResults = indexService.search(hiddenQuery).results;
 
   CHECK(summary.indexed == 1);
   CHECK(summary.failed == 0);
@@ -521,7 +522,7 @@ TEST_CASE("persistent index service stores extracted pdf visible text")
   uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
   const auto stored = storage.findDocument("worktree-id", "docs/sample.pdf");
 
   CHECK(summary.indexed == 1);
@@ -560,7 +561,7 @@ TEST_CASE("persistent index service stores extracted subtitle cue text")
   uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
 
   CHECK(summary.indexed == 1);
   CHECK(summary.failed == 0);
@@ -598,8 +599,8 @@ TEST_CASE("persistent index service stores extracted rtf visible text")
   uburu::SearchQuery hiddenQuery{.root = root, .scope = {}, .expression = "hiddenNeedle", .options = {}};
   hiddenQuery.options.target = uburu::SearchTarget::content;
 
-  const auto visibleResults = indexService.search(visibleQuery);
-  const auto hiddenResults = indexService.search(hiddenQuery);
+  const auto visibleResults = indexService.search(visibleQuery).results;
+  const auto hiddenResults = indexService.search(hiddenQuery).results;
 
   CHECK(summary.indexed == 1);
   CHECK(summary.failed == 0);
@@ -639,7 +640,7 @@ TEST_CASE("persistent index service stores extracted docx visible text")
   uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
   const auto stored = storage.findDocument("worktree-id", "docs/sample.docx");
 
   CHECK(summary.indexed == 1);
@@ -685,7 +686,7 @@ TEST_CASE("persistent index service stores extracted xlsx visible text")
   uburu::SearchQuery query{.root = root, .scope = {}, .expression = "needle", .options = {}};
   query.options.target = uburu::SearchTarget::content;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
   const auto stored = storage.findDocument("worktree-id", "docs/sample.xlsx");
 
   CHECK(summary.indexed == 1);
@@ -1012,8 +1013,8 @@ TEST_CASE("persistent index service keeps unsupported formats searchable by file
   contentQuery.expression = "packaged";
   contentQuery.options.target = uburu::SearchTarget::content;
 
-  const auto fileNameResults = indexService.search(fileNameQuery);
-  const auto contentResults = indexService.search(contentQuery);
+  const auto fileNameResults = indexService.search(fileNameQuery).results;
+  const auto contentResults = indexService.search(contentQuery).results;
 
   CHECK_FALSE(summary.cancelled);
   CHECK(summary.skippedUnsupportedFormat == 1);
@@ -1095,13 +1096,52 @@ TEST_CASE("persistent index service keeps binary files searchable by file name")
   query.expression = "image";
   query.options.target = uburu::SearchTarget::fileName;
 
-  const auto results = indexService.search(query);
+  const auto results = indexService.search(query).results;
 
   CHECK_FALSE(summary.cancelled);
   CHECK(summary.skippedBinary == 1);
   REQUIRE(results.size() == 1);
   CHECK(results.front().kind == uburu::SearchResultKind::fileName);
   CHECK(results.front().path == std::filesystem::path("src/image.png"));
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index search reports result memory exhaustion before retaining an oversized result")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-memory-budget-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "note.txt", "memory budget needle\n");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{fileEntry(root, "note.txt")};
+  static_cast<void>(indexService.update(worktreeInfo(root), files));
+
+  uburu::SearchQuery query;
+  query.root = root;
+  query.expression = "needle";
+  query.options.target = uburu::SearchTarget::content;
+
+  const auto unlimited = indexService.search(query);
+
+  REQUIRE(unlimited.results.size() == 1);
+  REQUIRE(unlimited.resultMemoryBytes > 1);
+
+  query.options.resultMemoryBudgetBytes = unlimited.resultMemoryBytes - 1;
+  const auto bounded = indexService.search(query);
+
+  CHECK(bounded.results.empty());
+  CHECK(bounded.memoryLimitReached);
+  CHECK_FALSE(bounded.resultLimitReached);
+  CHECK(bounded.resultMemoryBytes == 0);
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

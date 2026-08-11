@@ -178,8 +178,10 @@ namespace uburu::app
     dto.matches = summary.matches;
     dto.filesWithMatchLimitReached = summary.filesWithMatchLimitReached;
     dto.filesWithReadErrors = summary.filesWithReadErrors;
+    dto.resultMemoryBytes = summary.resultMemoryBytes;
     dto.cancelled = summary.cancelled;
     dto.limitReached = summary.limitReached;
+    dto.memoryLimitReached = summary.memoryLimitReached;
     dto.partialFailure = summary.partialFailure;
     dto.errors = std::move(errors);
     dto.regexExecutionMode = regexExecutionModeName(summary.regexExecutionMode);

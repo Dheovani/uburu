@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <limits>
 #include <sstream>
 #include <utility>
 
@@ -60,7 +61,7 @@ namespace uburu::cli
       const auto* last = value.data() + value.size();
       const auto [position, error] = std::from_chars(first, last, parsed);
 
-      if (error != std::errc{} || position != last)
+      if (error != std::errc{} || position != last || parsed > std::numeric_limits<std::uintmax_t>::max() / bytesPerMib)
         return std::nullopt;
 
       return parsed * bytesPerMib;
@@ -243,6 +244,16 @@ namespace uburu::cli
             return usageError("--max-size-mib requires a numeric value");
 
           options.query.options.maximumFileSize = *maximumFileSize;
+        } else if (argument == "--memory-budget-mib") {
+          if (index + 1 >= arguments.size())
+            return usageError("--memory-budget-mib requires a numeric value");
+
+          const auto memoryBudget = parseMib(arguments[++index]);
+
+          if (!memoryBudget)
+            return usageError("--memory-budget-mib requires a numeric value");
+
+          options.query.options.resultMemoryBudgetBytes = *memoryBudget;
         } else if (argument == "--threads") {
           if (index + 1 >= arguments.size())
             return usageError(threadCountUsageError());
@@ -367,6 +378,7 @@ namespace uburu::cli
     output << "  --database PATH            Override the CLI index database path.\n";
     output << "  --types txt,cpp,md         Restrict file extensions.\n";
     output << "  --max-size-mib N           Maximum file size in MiB.\n";
+    output << "  --memory-budget-mib N      Maximum retained result memory in MiB; 0 means unlimited.\n";
     output << "  --threads auto|N           Direct-search workers; N must be from 1 to " << maximumSearchThreadCount
            << ".\n";
     output << "  --regex                    Treat expression as PCRE2 regex.\n";

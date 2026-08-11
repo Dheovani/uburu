@@ -12,6 +12,7 @@
 #include "core/document/xlsx-document-extractor.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
+#include "core/search/search-result-memory.hpp"
 #include "core/search/search-scope.hpp"
 #include "core/text/regex-matcher.hpp"
 #include "core/text/text-file-reader.hpp"
@@ -732,6 +733,16 @@ namespace uburu::search
         return false;
       }
 
+      const auto resultMemoryBytes = approximateSearchResultMemoryBytes(result);
+
+      if (!searchResultFitsMemoryBudget(
+            summary.resultMemoryBytes, resultMemoryBytes, query.options.resultMemoryBudgetBytes)) {
+        summary.memoryLimitReached = true;
+        workStopSource.request_stop();
+
+        return false;
+      }
+
       if (!sink(std::move(result))) {
         workStopSource.request_stop();
 
@@ -739,6 +750,7 @@ namespace uburu::search
       }
 
       ++summary.matches;
+      summary.resultMemoryBytes += resultMemoryBytes;
 
       return true;
     }

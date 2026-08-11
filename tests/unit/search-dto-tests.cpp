@@ -47,6 +47,8 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   summary.matches = 4;
   summary.filesWithMatchLimitReached = 2;
   summary.filesWithReadErrors = 1;
+  summary.resultMemoryBytes = 768;
+  summary.memoryLimitReached = true;
   summary.partialFailure = true;
   summary.regexExecutionMode = uburu::search::RegexExecutionMode::jit;
   summary.metrics.filesPerSecond = 17;
@@ -74,6 +76,8 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   CHECK(dto.matches == 4);
   CHECK(dto.filesWithMatchLimitReached == 2);
   CHECK(dto.filesWithReadErrors == 1);
+  CHECK(dto.resultMemoryBytes == 768);
+  CHECK(dto.memoryLimitReached);
   CHECK(dto.partialFailure);
   CHECK(dto.regexExecutionMode == "jit");
   CHECK(dto.metrics.filesPerSecond == 17);

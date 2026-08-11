@@ -198,8 +198,10 @@ namespace
       return summary;
     }
 
-    [[nodiscard]] std::vector<uburu::SearchResult> search(const uburu::SearchQuery& query,
-                                                          std::stop_token stopToken = {}) const override
+    [[nodiscard]]
+    uburu::index::IndexSearchResult search(
+      const uburu::SearchQuery& query,
+      std::stop_token stopToken = {}) const override
     {
       static_cast<void>(query);
       static_cast<void>(stopToken);

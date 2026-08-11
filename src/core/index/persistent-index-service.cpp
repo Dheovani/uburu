@@ -12,6 +12,7 @@
 #include "core/document/xlsx-document-extractor.hpp"
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
+#include "core/search/search-result-memory.hpp"
 #include "core/text/regex-matcher.hpp"
 #include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
@@ -485,17 +486,31 @@ namespace uburu::index
                               const SearchQuery& query,
                               std::size_t& fileMatches,
                               const std::deque<std::string>& contextBefore,
-                              std::vector<SearchResult>& results)
+                              IndexSearchResult& searchResult)
     {
       for (const auto& match : matches) {
-        if (results.size() >= query.options.resultLimit)
+        if (searchResult.results.size() >= query.options.resultLimit) {
+          searchResult.resultLimitReached = true;
+
           return false;
+        }
 
         if (fileMatches >= query.options.perFileResultLimit)
           return true;
 
+        auto result = makeIndexedResult(document, kind, line, lineText, match, matches, query, contextBefore);
+        const auto resultMemoryBytes = search::approximateSearchResultMemoryBytes(result);
+
+        if (!search::searchResultFitsMemoryBudget(
+              searchResult.resultMemoryBytes, resultMemoryBytes, query.options.resultMemoryBudgetBytes)) {
+          searchResult.memoryLimitReached = true;
+
+          return false;
+        }
+
         ++fileMatches;
-        results.push_back(makeIndexedResult(document, kind, line, lineText, match, matches, query, contextBefore));
+        searchResult.resultMemoryBytes += resultMemoryBytes;
+        searchResult.results.push_back(std::move(result));
       }
 
       return true;
@@ -515,7 +530,7 @@ namespace uburu::index
                                      const SearchQuery& query,
                                      const std::optional<text::RegexMatcher>& regex,
                                      std::size_t& fileMatches,
-                                     std::vector<SearchResult>& results)
+                                     IndexSearchResult& searchResult)
     {
       std::deque<std::string> contextBefore;
       std::size_t lineNumber = 0;
@@ -540,7 +555,7 @@ namespace uburu::index
                                                        query,
                                                        fileMatches,
                                                        contextBefore,
-                                                       results))
+                                                       searchResult))
           return false;
 
         rememberContextLine(contextBefore, lineText, query);
@@ -793,7 +808,9 @@ namespace uburu::index
                                 .latestGeneration = std::move(latestGeneration)};
   }
 
-  std::vector<SearchResult> PersistentIndexService::search(const SearchQuery& query, std::stop_token stopToken) const
+  IndexSearchResult PersistentIndexService::search(
+    const SearchQuery& query,
+    std::stop_token stopToken) const
   {
     if (query.expression.empty() || (!searchesFileName(query) && !searchesContent(query)))
       return {};
@@ -803,7 +820,7 @@ namespace uburu::index
     if (query.options.mode == SearchMode::regex && !regex)
       return {};
 
-    std::vector<SearchResult> results;
+    IndexSearchResult searchResult;
     const auto documents = storageService->visibleDocumentsForRoot(query.root);
 
     for (const auto& document : documents) {
@@ -817,16 +834,16 @@ namespace uburu::index
         const auto matches = indexedPathMatches(pathText, query, regex);
 
         if (!appendIndexedResults(
-              document, SearchResultKind::fileName, 0, pathText, matches, query, fileMatches, {}, results))
-          return results;
+              document, SearchResultKind::fileName, 0, pathText, matches, query, fileMatches, {}, searchResult))
+          return searchResult;
       }
 
       if (searchesContent(query) && document.indexedText &&
-          !appendIndexedContentResults(document, *document.indexedText, query, regex, fileMatches, results))
-        return results;
+          !appendIndexedContentResults(document, *document.indexedText, query, regex, fileMatches, searchResult))
+        return searchResult;
     }
 
-    return results;
+    return searchResult;
   }
 
 } // namespace uburu::index

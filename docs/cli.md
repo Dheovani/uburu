@@ -23,6 +23,7 @@ Supported options:
 - `--database PATH`: overrides the CLI index database. The default CLI database is `.uburu-cli/uburu-cli-v1.db` in the current working directory and is separate from the desktop application database.
 - `--types txt,cpp,md`: restricts file extensions.
 - `--max-size-mib N`: sets the maximum file size in MiB.
+- `--memory-budget-mib N`: limits the approximate memory retained by published search results; `0` keeps the budget unlimited.
 - `--threads auto|N`: selects direct-search workers. `auto` avoids worker-queue overhead for small files and uses the bounded hardware-aware pool for larger files; an explicit value must be between 1 and 256.
 - `--regex`: treats the expression as a PCRE2 regex when the backend is available.
 - `--case-sensitive`: enables case-sensitive matching.
@@ -72,5 +73,7 @@ Both commands support:
 Long-running `search` and `index-rebuild` commands handle `Ctrl+C` as cooperative cancellation. The CLI forwards the cancellation request to the same `std::stop_token` path used by the core engine, so partial work can stop without corrupting index state. Cancelled commands exit with code `4`.
 
 Search results are streamed synchronously to standard output. This is intentional backpressure: if the terminal, pipe, or parent process cannot keep up or closes the stream, the CLI stops requesting more results instead of accumulating an unbounded output queue in memory.
+
+Search summaries expose `resultLimitReached`, `memoryLimitReached`, and `resultMemoryBytes` in both human and JSON Lines output. Memory exhaustion is a successful bounded completion rather than cancellation or a parser failure: already emitted results remain valid, and the next result that would exceed the configured budget is not published.
 
 Richer diagnostics are planned for the same CLI layer without changing the core search engine.

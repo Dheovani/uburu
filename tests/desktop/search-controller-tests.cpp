@@ -91,7 +91,10 @@ namespace
 
       observedStop = true;
 
-      return uburu::search::SearchSummary{.cancelled = true};
+      uburu::search::SearchSummary summary;
+      summary.cancelled = true;
+
+      return summary;
     }
 
     [[nodiscard]]

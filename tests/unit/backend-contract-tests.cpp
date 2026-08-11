@@ -52,7 +52,7 @@ namespace
     }
 
     [[nodiscard]]
-    std::vector<uburu::SearchResult> search(const uburu::SearchQuery&, std::stop_token = {}) const override
+    uburu::index::IndexSearchResult search(const uburu::SearchQuery&, std::stop_token = {}) const override
     {
       return {};
     }

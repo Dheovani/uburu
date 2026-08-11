@@ -37,8 +37,9 @@ Future work below should improve this baseline without reopening completed miles
   - [ ] Repeat the complete Git matrix in larger real repositories and record the evidence.
 - [ ] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
   - [x] Enforce bounded direct-search queues, configurable worker count, result-count limits, bounded previews, extractor limits, and index disk budget.
-  - [ ] Connect the persisted global/per-repository memory budget to direct, indexed, and hybrid result production.
-  - [ ] Audit and expose consistent budget-exhaustion status through the core summary, CLI, and desktop UI.
+  - [x] Connect the persisted global/per-repository memory budget to direct, indexed, and hybrid result production.
+  - [x] Audit and expose consistent budget-exhaustion status through the core summary, CLI, and desktop UI.
+  - [ ] Apply the configured memory budget to indexing working sets and report indexing-memory exhaustion separately from skipped files and extractor safety limits.
 - [ ] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
   - [x] Add versioned deterministic baselines and median-based regression gates for direct search, queues, indexing, hashing, extraction, batching, and hybrid refinement.
   - [ ] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.

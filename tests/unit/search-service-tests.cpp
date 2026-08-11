@@ -1,4 +1,5 @@
 #include "app/services/search-service.hpp"
+#include "core/search/search-result-memory.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -24,17 +25,23 @@ namespace
     {
       ++calls;
       searchRunning = true;
+      std::size_t emittedResults = 0;
+      std::uint64_t resultMemoryBytes = 0;
 
       for (const auto& result : results) {
         if (!sink(result))
           break;
+
+        ++emittedResults;
+        resultMemoryBytes += uburu::search::approximateSearchResultMemoryBytes(result);
       }
 
       searchRunning = false;
 
       uburu::search::SearchSummary summary;
       summary.filesScanned = scannedFiles;
-      summary.matches = results.size();
+      summary.matches = emittedResults;
+      summary.resultMemoryBytes = resultMemoryBytes;
       summary.partialFailure = partialFailure;
       summary.errors = errors;
       summary.metrics.filesProcessed = scannedFiles;
@@ -85,16 +92,20 @@ namespace
       return {};
     }
 
-    [[nodiscard]] std::vector<uburu::SearchResult> search(const uburu::SearchQuery&,
-                                                          std::stop_token = {}) const override
+    [[nodiscard]]
+    uburu::index::IndexSearchResult search(const uburu::SearchQuery&, std::stop_token = {}) const override
     {
       ++calls;
 
-      return results;
+      auto searchResult = configuredSearchResult;
+      searchResult.results = results;
+
+      return searchResult;
     }
 
     mutable std::size_t calls{0};
     std::vector<uburu::SearchResult> results;
+    uburu::index::IndexSearchResult configuredSearchResult;
   };
 
   class TemporaryDirectory
@@ -219,6 +230,26 @@ TEST_CASE("default search service uses indexed strategy explicitly")
   CHECK(summary.metrics.cacheHits == emittedResults.size());
   CHECK(directEngine->calls == 0);
   CHECK(indexService->calls == 1);
+}
+
+TEST_CASE("default search service exposes indexed result memory exhaustion")
+{
+  TemporaryDirectory directory("uburu-search-service-indexed-memory-budget-test");
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  auto indexService = std::make_shared<FakeIndexService>();
+
+  indexService->results = {result(uburu::SearchResultKind::content, "src/indexed.cpp", 1, "needle indexed")};
+  indexService->configuredSearchResult.memoryLimitReached = true;
+  indexService->configuredSearchResult.resultMemoryBytes =
+    uburu::search::approximateSearchResultMemoryBytes(indexService->results.front());
+
+  const uburu::app::DefaultSearchService service(
+    directEngine, indexService, uburu::app::SearchServiceOptions{.strategy = uburu::app::SearchStrategy::indexed});
+  const auto summary = service.search(validQuery(directory.path()), [](uburu::SearchResult) { return true; });
+
+  CHECK(summary.memoryLimitReached);
+  CHECK(summary.resultMemoryBytes == indexService->configuredSearchResult.resultMemoryBytes);
+  CHECK(summary.metrics.approximateMemoryBytes == summary.resultMemoryBytes);
 }
 
 TEST_CASE("default search service rejects indexed strategies without an index service")

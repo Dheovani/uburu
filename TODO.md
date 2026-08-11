@@ -34,7 +34,7 @@ Future work below should improve this baseline without reopening completed miles
 ## Search and indexing evolution
 
 - [ ] Improve large-repository performance only with measured bottlenecks and before/after benchmarks.
-- [ ] Evaluate direct-search parallelism, deterministic result ordering, backpressure, and bounded queues as a deliberate performance project.
+- [ ] Benchmark and tune the bounded parallel direct-search pipeline on representative Windows and Linux datasets, including worker-count scaling, queue contention, cancellation latency, deterministic publication overhead, and memory use.
 - [ ] Evaluate SIMD acceleration and memory mapping only with portable fallbacks and benchmarks.
 - [ ] Improve indexed search ranking and hybrid refinement quality without losing deterministic behavior.
 - [ ] Add compound queries with boolean operators and persistent filters.

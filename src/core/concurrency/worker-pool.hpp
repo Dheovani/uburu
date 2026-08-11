@@ -77,6 +77,12 @@ namespace uburu::concurrency
       return workers.size();
     }
 
+    [[nodiscard]]
+    BoundedQueueMetrics metrics() const
+    {
+      return queue.metrics();
+    }
+
   private:
     static constexpr std::size_t defaultQueueCapacityMultiplier = 2;
 

@@ -49,7 +49,8 @@ namespace uburu::benchmarks
     auto engine = std::make_shared<search::DirectSearchEngine>(std::make_shared<filesystem::RecursiveFileScanner>());
     app::DefaultSearchService service(std::move(engine));
     SearchBenchmarkResult result;
-    const auto query = makeSearchQuery(dataset);
+    auto query = makeSearchQuery(dataset);
+    query.options.maximumThreadCount = options.maximumThreadCount;
 
     const auto summary = service.searchWithEvents(
       query,

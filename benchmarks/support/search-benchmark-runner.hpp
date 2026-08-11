@@ -17,6 +17,7 @@ namespace uburu::benchmarks
   {
     app::SearchExecutionOptions executionOptions{.adaptiveBatching = false};
     std::uint32_t simulatedUiRenderPasses{0};
+    std::size_t maximumThreadCount{0};
   };
 
   /**

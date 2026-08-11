@@ -13,12 +13,14 @@ namespace
   constexpr std::size_t adaptiveMinimumBatchSize = 16;
   constexpr std::size_t adaptiveMaximumBatchSize = 512;
   constexpr std::uint32_t simulatedUiRenderPasses = 8;
+  constexpr std::size_t singleSearchWorkerCount = 1;
 
   [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions fixedBatchRunOptions(std::size_t batchSize)
   {
     return uburu::benchmarks::SearchBenchmarkRunOptions{
       .executionOptions = uburu::app::SearchExecutionOptions{.resultBatchSize = batchSize, .adaptiveBatching = false},
       .simulatedUiRenderPasses = simulatedUiRenderPasses,
+      .maximumThreadCount = 0,
     };
   }
 
@@ -30,6 +32,16 @@ namespace
                                                              .minimumResultBatchSize = adaptiveMinimumBatchSize,
                                                              .maximumResultBatchSize = adaptiveMaximumBatchSize},
       .simulatedUiRenderPasses = simulatedUiRenderPasses,
+      .maximumThreadCount = 0,
+    };
+  }
+
+  [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions singleWorkerRunOptions()
+  {
+    return uburu::benchmarks::SearchBenchmarkRunOptions{
+      .executionOptions = uburu::app::SearchExecutionOptions{.adaptiveBatching = false},
+      .simulatedUiRenderPasses = 0,
+      .maximumThreadCount = singleSearchWorkerCount,
     };
   }
 
@@ -88,6 +100,11 @@ namespace
   void BM_SearchService_Direct_ManySmallFiles_Literal(benchmark::State& state)
   {
     runSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset);
+  }
+
+  void BM_SearchService_Direct_ManySmallFiles_Literal_SingleWorker(benchmark::State& state)
+  {
+    runSearchServiceScenario(state, uburu::benchmarks::makeManySmallFilesDataset, singleWorkerRunOptions());
   }
 
   void BM_SearchService_Direct_FewLargeFiles_Literal(benchmark::State& state)
@@ -227,6 +244,7 @@ namespace
 } // namespace
 
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal);
+BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Literal_SingleWorker);
 BENCHMARK(BM_SearchService_Direct_FewLargeFiles_Literal);
 BENCHMARK(BM_SearchService_Direct_ManySmallFiles_Regex);
 BENCHMARK(BM_SearchService_Direct_LiteralCaseInsensitive);

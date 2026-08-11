@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -145,6 +146,44 @@ namespace
     std::filesystem::path firstPath;
     std::filesystem::path secondPath;
     std::function<void()> afterFirstEntry;
+  };
+
+  class OrderedFileScanner final : public uburu::filesystem::FileScanner
+  {
+  public:
+    explicit OrderedFileScanner(std::vector<std::filesystem::path> paths) : paths(std::move(paths)) {}
+
+    void scan(const std::filesystem::path&,
+              const uburu::SearchOptions&,
+              uburu::filesystem::FileSink sink,
+              std::stop_token stopToken,
+              uburu::diagnostics::SearchMetrics*) const override
+    {
+      for (const auto& path : paths) {
+        if (stopToken.stop_requested())
+          return;
+
+        std::error_code error;
+        const auto size = std::filesystem::file_size(path, error);
+
+        if (error)
+          return;
+
+        if (!sink(uburu::FileEntry{.absolutePath = path,
+                                   .relativePath = path.filename(),
+                                   .size = size,
+                                   .modifiedAt = {},
+                                   .hidden = false,
+                                   .binary = false,
+                                   .symlink = false,
+                                   .sparse = false,
+                                   .searchRoot = path.parent_path()}))
+          return;
+      }
+    }
+
+  private:
+    std::vector<std::filesystem::path> paths;
   };
 
   class DeletingScanner final : public uburu::filesystem::FileScanner
@@ -491,6 +530,49 @@ TEST_CASE("direct search publishes results before scanner completion")
   CHECK(summary.matches == 2);
 }
 
+TEST_CASE("parallel direct search preserves scanner order and applies result backpressure")
+{
+  constexpr std::size_t slowFileMatchCount = 32;
+  const uburu::tests::TemporaryDirectory directory("uburu-parallel-direct-search");
+  const auto warmupPath = directory.path() / "first-warmup.txt";
+  const auto slowPath = directory.path() / "second-slow.txt";
+  const auto fastPath = directory.path() / "third-fast.txt";
+  std::string slowContent;
+
+  for (std::size_t index = 0; index < slowFileMatchCount; ++index)
+    slowContent += "needle\n";
+
+  uburu::tests::writeFile(warmupPath, "no match\n");
+  uburu::tests::writeFile(slowPath, slowContent);
+  uburu::tests::writeFile(fastPath, slowContent);
+
+  auto scanner =
+    std::make_shared<OrderedFileScanner>(std::vector<std::filesystem::path>{warmupPath, slowPath, fastPath});
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  std::vector<uburu::SearchResult> results;
+
+  query.options.maximumThreadCount = 2;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+    std::this_thread::sleep_for(std::chrono::milliseconds{1});
+
+    return true;
+  });
+
+  REQUIRE(results.size() == slowFileMatchCount * 2);
+
+  for (std::size_t index = 0; index < slowFileMatchCount; ++index)
+    CHECK(results[index].path == slowPath.filename());
+
+  for (std::size_t index = slowFileMatchCount; index < results.size(); ++index)
+    CHECK(results[index].path == fastPath.filename());
+
+  CHECK(summary.metrics.queueProducerWaits > 0);
+  CHECK(summary.matches == results.size());
+}
+
 TEST_CASE("direct search supports CRLF, LF, empty lines and files without final newline")
 {
   const uburu::tests::TemporaryFile file("uburu-search-line-ending-test.txt");
@@ -653,11 +735,10 @@ TEST_CASE("direct search uses visible text for docx content")
 {
   const uburu::tests::TemporaryDirectory directory("uburu-direct-search-docx-content-test");
   const auto path = directory.path() / "sample.docx";
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalDocxBytes(
-      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
-      "<w:body><w:p><w:r><w:t>Visible docx needle</w:t></w:r></w:p></w:body></w:document>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalDocxBytes(
+                             "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                             "<w:body><w:p><w:r><w:t>Visible docx needle</w:t></w:r></w:p></w:body></w:document>"));
 
   auto scanner = std::make_shared<SingleFileScanner>(path, "sample.docx");
   uburu::search::DirectSearchEngine engine(scanner);
@@ -680,14 +761,13 @@ TEST_CASE("direct search uses visible text for xlsx content")
 {
   const uburu::tests::TemporaryDirectory directory("uburu-direct-search-xlsx-content-test");
   const auto path = directory.path() / "sample.xlsx";
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalXlsxBytes(
-      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
-      "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData></worksheet>",
-      "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
-      "<si><t>Visible xlsx needle</t></si>"
-      "</sst>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalXlsxBytes(
+                             "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                             "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData></worksheet>",
+                             "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                             "<si><t>Visible xlsx needle</t></si>"
+                             "</sst>"));
 
   auto scanner = std::make_shared<SingleFileScanner>(path, "sample.xlsx");
   uburu::search::DirectSearchEngine engine(scanner);

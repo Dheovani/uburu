@@ -107,6 +107,7 @@ namespace uburu
     bool includeBinary{false};
     bool followSymlinks{false};
     bool includeSubdirectories{true};
+    std::size_t maximumThreadCount{0};
     std::uintmax_t maximumFileSize{16U * 1024U * 1024U};
     std::size_t resultLimit{10'000};
     std::size_t perFileResultLimit{1'000};

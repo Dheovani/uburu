@@ -1,5 +1,7 @@
 #include "core/search/direct-search-engine.hpp"
 
+#include "core/concurrency/bounded-queue.hpp"
+#include "core/concurrency/worker-pool.hpp"
 #include "core/document/docx-document-extractor.hpp"
 #include "core/document/html-document-extractor.hpp"
 #include "core/document/open-document-extractor.hpp"
@@ -15,16 +17,22 @@
 #include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <deque>
+#include <exception>
 #include <fstream>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <stop_token>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace uburu::search
@@ -44,6 +52,25 @@ namespace uburu::search
       SearchResult result;
       std::size_t remainingContextLines{0};
     };
+
+    struct FileSearchCompletion
+    {
+      SearchSummary summary;
+      std::exception_ptr failure;
+      bool continueSearch{true};
+    };
+
+    using FileSearchEvent = std::variant<SearchResult, FileSearchCompletion>;
+
+    struct FileSearchTask
+    {
+      std::shared_ptr<concurrency::BoundedQueue<FileSearchEvent>> events;
+    };
+
+    constexpr std::size_t defaultMaximumSearchWorkerCount = 8;
+    constexpr std::size_t maximumSupportedSearchWorkerCount = 256;
+    constexpr std::size_t workerQueueCapacityMultiplier = 2;
+    constexpr std::size_t fileResultQueueCapacity = 4;
 
     std::string pathToUtf8(const std::filesystem::path& path)
     {
@@ -262,10 +289,10 @@ namespace uburu::search
 
     std::optional<std::vector<text::MatchPosition>> findMatches(std::string_view text,
                                                                 const SearchQuery& query,
-                                                                const std::optional<text::RegexMatcher>& regexMatcher,
+                                                                const text::RegexMatcher* regexMatcher,
                                                                 SearchSummary& summary)
     {
-      if (regexMatcher)
+      if (regexMatcher != nullptr)
         return findRegexMatches(text, *regexMatcher, summary);
 
       return findLiteralMatches(text, query);
@@ -446,6 +473,310 @@ namespace uburu::search
       return PublishDecision::continueSearch;
     }
 
+    FileSearchCompletion searchFile(
+      const FileEntry& entry,
+      const SearchQuery& query,
+      const text::RegexMatcher* regexMatcher,
+      const ResultSink& sink,
+      std::stop_token stopToken)
+    {
+      FileSearchCompletion completion;
+      auto& summary = completion.summary;
+      std::size_t fileMatches = 0;
+      std::deque<std::string> previousContext;
+      std::vector<PendingResult> pendingResults;
+
+      if (searchesFileName(query.options.target)) {
+        const auto pathText = pathToUtf8(entry.relativePath);
+        const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
+
+        if (!pathMatches) {
+          completion.continueSearch = false;
+
+          return completion;
+        }
+
+        appendSearchDebugLog(
+          "engine",
+          "file-name-check path=" + pathText + " matches=" + std::to_string(pathMatches->size()));
+
+        const auto decision = publishMatches(
+          entry,
+          SearchResultKind::fileName,
+          0,
+          pathText,
+          *pathMatches,
+          query,
+          summary,
+          fileMatches,
+          previousContext,
+          pendingResults,
+          sink);
+
+        if (!flushPending(pendingResults, sink)) {
+          completion.continueSearch = false;
+
+          return completion;
+        }
+
+        if (decision == PublishDecision::stopSearch) {
+          completion.continueSearch = false;
+
+          return completion;
+        }
+
+        if (decision == PublishDecision::stopCurrentFile)
+          return completion;
+      }
+
+      if (!searchesContent(query.options.target))
+        return completion;
+
+      bool stopCurrentFile = false;
+      bool stopSearch = false;
+      auto processLine = [&](std::string_view lineText, std::size_t lineNumber) {
+        if (!addContextAfter(pendingResults, lineText, sink)) {
+          stopSearch = true;
+
+          return false;
+        }
+
+        const auto matches = findMatches(lineText, query, regexMatcher, summary);
+
+        if (!matches)
+          return false;
+
+        if (matches->empty()) {
+          previousContext.push_back(std::string{lineText});
+          while (previousContext.size() > query.options.contextBeforeLines)
+            previousContext.pop_front();
+
+          return true;
+        }
+
+        appendSearchDebugLog(
+          "engine",
+          "content-match path=" + pathToUtf8(entry.relativePath) + " line=" + std::to_string(lineNumber) +
+            " matches=" + std::to_string(matches->size()));
+
+        const auto decision = publishMatches(
+          entry,
+          SearchResultKind::content,
+          lineNumber,
+          lineText,
+          *matches,
+          query,
+          summary,
+          fileMatches,
+          previousContext,
+          pendingResults,
+          sink);
+
+        previousContext.push_back(std::string{lineText});
+        while (previousContext.size() > query.options.contextBeforeLines)
+          previousContext.pop_front();
+
+        if (decision == PublishDecision::stopSearch) {
+          stopSearch = true;
+
+          return false;
+        }
+
+        if (decision == PublishDecision::stopCurrentFile) {
+          stopCurrentFile = true;
+
+          return false;
+        }
+
+        return true;
+      };
+
+      const auto* structuredExtractor = structuredDocumentExtractor(entry.absolutePath);
+      if (structuredExtractor != nullptr) {
+        document::DocumentExtractionOptions extractionOptions;
+
+        extractionOptions.textOptions = query.options;
+
+        const auto extractionSummary = structuredExtractor->extract(
+          entry.absolutePath,
+          extractionOptions,
+          [&](const document::ExtractedTextSegment& segment) {
+            std::size_t lineNumber = 1;
+            std::size_t lineStart = 0;
+
+            while (lineStart <= segment.text.size()) {
+              const auto lineEnd = segment.text.find('\n', lineStart);
+              const auto lineSize =
+                lineEnd == std::string::npos ? segment.text.size() - lineStart : lineEnd - lineStart;
+              const auto lineText = std::string_view{segment.text}.substr(lineStart, lineSize);
+
+              if (!processLine(lineText, lineNumber)) {
+                if (!stopSearch && !stopCurrentFile)
+                  stopSearch = true;
+
+                return false;
+              }
+
+              if (lineEnd == std::string::npos)
+                break;
+
+              lineStart = lineEnd + 1;
+              ++lineNumber;
+            }
+
+            return true;
+          },
+          stopToken);
+
+        if (!flushPending(pendingResults, sink)) {
+          completion.continueSearch = false;
+
+          return completion;
+        }
+
+        if (stopSearch) {
+          completion.continueSearch = false;
+
+          return completion;
+        }
+
+        if (stopCurrentFile)
+          return completion;
+
+        completion.continueSearch = reportDocumentExtractionSummary(summary, entry, extractionSummary);
+
+        return completion;
+      }
+
+      const auto readSummary = text::readTextFileLines(
+        entry.absolutePath,
+        query.options,
+        [&](const text::TextLine& line) {
+          if (!processLine(line.text, line.lineNumber)) {
+            if (stopSearch || stopCurrentFile)
+              return false;
+
+            stopSearch = true;
+
+            return false;
+          }
+
+          return true;
+        },
+        stopToken);
+
+      if (!flushPending(pendingResults, sink)) {
+        completion.continueSearch = false;
+
+        return completion;
+      }
+
+      if (stopSearch) {
+        completion.continueSearch = false;
+
+        return completion;
+      }
+
+      if (stopCurrentFile)
+        return completion;
+
+      appendSearchDebugLog(
+        "engine",
+        "read-summary path=" + pathToUtf8(entry.relativePath) + " status=" + textReadStatusName(readSummary.status) +
+          " lines=" + std::to_string(readSummary.linesRead));
+
+      completion.continueSearch = reportTextReadSummary(summary, entry, readSummary);
+
+      return completion;
+    }
+
+    std::size_t normalizedWorkerCount(std::size_t requestedWorkerCount)
+    {
+      if (requestedWorkerCount != 0)
+        return std::min(requestedWorkerCount, maximumSupportedSearchWorkerCount);
+
+      const auto hardwareWorkerCount = static_cast<std::size_t>(std::thread::hardware_concurrency());
+
+      if (hardwareWorkerCount == 0)
+        return 1;
+
+      return std::min(hardwareWorkerCount, defaultMaximumSearchWorkerCount);
+    }
+
+    void mergeFileSummary(SearchSummary& summary, SearchSummary fileSummary)
+    {
+      summary.filesWithMatchLimitReached += fileSummary.filesWithMatchLimitReached;
+      summary.filesWithReadErrors += fileSummary.filesWithReadErrors;
+      summary.limitReached = summary.limitReached || fileSummary.limitReached;
+      summary.partialFailure = summary.partialFailure || fileSummary.partialFailure;
+      summary.metrics.binaryFiles += fileSummary.metrics.binaryFiles;
+      summary.metrics.binaryFilesSkipped += fileSummary.metrics.binaryFilesSkipped;
+      summary.errors.insert(
+        summary.errors.end(),
+        std::make_move_iterator(fileSummary.errors.begin()),
+        std::make_move_iterator(fileSummary.errors.end()));
+    }
+
+    bool publishFileTask(
+      const FileSearchTask& task,
+      const SearchQuery& query,
+      SearchSummary& summary,
+      const ResultSink& sink,
+      std::stop_source& workStopSource)
+    {
+      const auto stopToken = workStopSource.get_token();
+
+      while (!stopToken.stop_requested()) {
+        auto event = task.events->pop(stopToken);
+
+        if (!event)
+          break;
+
+        if (auto* result = std::get_if<SearchResult>(&*event)) {
+          if (summary.matches >= query.options.resultLimit) {
+            summary.limitReached = true;
+            workStopSource.request_stop();
+
+            return false;
+          }
+
+          if (!sink(std::move(*result))) {
+            workStopSource.request_stop();
+
+            return false;
+          }
+
+          ++summary.matches;
+
+          continue;
+        }
+
+        auto completion = std::get<FileSearchCompletion>(std::move(*event));
+
+        if (completion.failure) {
+          workStopSource.request_stop();
+          std::rethrow_exception(completion.failure);
+        }
+
+        const bool continueSearch = completion.continueSearch;
+        mergeFileSummary(summary, std::move(completion.summary));
+
+        if (!continueSearch) {
+          workStopSource.request_stop();
+
+          return false;
+        }
+
+        break;
+      }
+
+      const auto queueMetrics = task.events->metrics();
+      summary.metrics.queueProducerWaits += queueMetrics.producerWaits;
+      summary.metrics.queueConsumerWaits += queueMetrics.consumerWaits;
+
+      return !stopToken.stop_requested();
+    }
+
   } // namespace
 
   DirectSearchEngine::DirectSearchEngine(std::shared_ptr<const filesystem::FileScanner> scanner)
@@ -455,7 +786,7 @@ namespace uburu::search
       throw std::invalid_argument("DirectSearchEngine requires a file scanner");
   }
 
-  SearchSummary DirectSearchEngine::search(const SearchQuery& query, ResultSink sink, std::stop_token stop_token) const
+  SearchSummary DirectSearchEngine::search(const SearchQuery& query, ResultSink sink, std::stop_token stopToken) const
   {
     logSearchStart(query);
 
@@ -486,9 +817,24 @@ namespace uburu::search
     }
 
     const auto roots = effectiveSearchRoots(query);
+    const auto workerCount = normalizedWorkerCount(query.options.maximumThreadCount);
+    const auto maximumInFlightTasks = workerCount * workerQueueCapacityMultiplier;
+    const auto* compiledRegexMatcher = regexMatcher ? &*regexMatcher : nullptr;
+    std::stop_source workStopSource;
+    std::stop_callback externalCancellation(stopToken, [&] { workStopSource.request_stop(); });
+    concurrency::WorkerPool workerPool(workerCount, maximumInFlightTasks);
+    std::deque<FileSearchTask> tasks;
+    bool continueSearch = true;
+
+    auto publishFrontTask = [&] {
+      const auto task = std::move(tasks.front());
+      tasks.pop_front();
+
+      return publishFileTask(task, query, summary, sink, workStopSource);
+    };
 
     for (const auto& root : roots) {
-      if (stop_token.stop_requested() || summary.limitReached)
+      if (workStopSource.stop_requested() || summary.limitReached)
         break;
 
       auto rootOptions = optionsForRoot(query.options, root);
@@ -498,7 +844,7 @@ namespace uburu::search
         root.path,
         rootOptions,
         [&](FileEntry entry) {
-          if (stop_token.stop_requested())
+          if (workStopSource.stop_requested())
             return false;
 
           ++summary.filesScanned;
@@ -507,193 +853,75 @@ namespace uburu::search
           appendSearchDebugLog(
             "engine", "read-candidate path=" + pathToUtf8(entry.relativePath) + " size=" + std::to_string(entry.size));
 
-          std::size_t fileMatches = 0;
-          std::deque<std::string> previousContext;
-          std::vector<PendingResult> pendingResults;
+          auto events = std::make_shared<concurrency::BoundedQueue<FileSearchEvent>>(fileResultQueueCapacity);
+          tasks.push_back(FileSearchTask{.events = events});
 
-          if (searchesFileName(query.options.target)) {
-            const auto pathText = pathToUtf8(entry.relativePath);
-            const auto pathMatches = findMatches(pathText, query, regexMatcher, summary);
+          const bool submitted = workerPool.submit(
+            [entry = std::move(entry), &query, compiledRegexMatcher, events, &workStopSource](std::stop_token) {
+              const auto workStopToken = workStopSource.get_token();
 
-            if (!pathMatches)
-              return false;
+              try {
+                auto completion = searchFile(
+                  entry,
+                  query,
+                  compiledRegexMatcher,
+                  [&](SearchResult result) { return events->push(FileSearchEvent{std::move(result)}, workStopToken); },
+                  workStopToken);
 
-            appendSearchDebugLog(
-              "engine", "file-name-check path=" + pathText + " matches=" + std::to_string(pathMatches->size()));
-
-            const auto decision = publishMatches(entry,
-                                                 SearchResultKind::fileName,
-                                                 0,
-                                                 pathText,
-                                                 *pathMatches,
-                                                 query,
-                                                 summary,
-                                                 fileMatches,
-                                                 previousContext,
-                                                 pendingResults,
-                                                 sink);
-
-            if (!flushPending(pendingResults, sink))
-              return false;
-
-            if (decision == PublishDecision::stopSearch)
-              return false;
-
-            if (decision == PublishDecision::stopCurrentFile)
-              return true;
-          }
-
-          if (!searchesContent(query.options.target))
-            return true;
-
-          bool stopCurrentFile = false;
-          bool stopSearch = false;
-          auto processLine = [&](std::string_view lineText, std::size_t lineNumber) {
-            if (!addContextAfter(pendingResults, lineText, sink)) {
-              stopSearch = true;
-
-              return false;
-            }
-
-            const auto matches = findMatches(lineText, query, regexMatcher, summary);
-
-            if (!matches)
-              return false;
-
-            if (matches->empty()) {
-              previousContext.push_back(std::string{lineText});
-              while (previousContext.size() > query.options.contextBeforeLines)
-                previousContext.pop_front();
-
-              return true;
-            }
-
-            appendSearchDebugLog("engine",
-                                 "content-match path=" + pathToUtf8(entry.relativePath) + " line=" +
-                                   std::to_string(lineNumber) + " matches=" + std::to_string(matches->size()));
-
-            const auto decision = publishMatches(entry,
-                                                 SearchResultKind::content,
-                                                 lineNumber,
-                                                 lineText,
-                                                 *matches,
-                                                 query,
-                                                 summary,
-                                                 fileMatches,
-                                                 previousContext,
-                                                 pendingResults,
-                                                 sink);
-
-            previousContext.push_back(std::string{lineText});
-            while (previousContext.size() > query.options.contextBeforeLines)
-              previousContext.pop_front();
-
-            if (decision == PublishDecision::stopSearch) {
-              stopSearch = true;
-
-              return false;
-            }
-
-            if (decision == PublishDecision::stopCurrentFile) {
-              stopCurrentFile = true;
-
-              return false;
-            }
-
-            return true;
-          };
-
-          const auto* structuredExtractor = structuredDocumentExtractor(entry.absolutePath);
-          if (structuredExtractor != nullptr) {
-            document::DocumentExtractionOptions extractionOptions;
-
-            extractionOptions.textOptions = query.options;
-
-            const auto extractionSummary = structuredExtractor->extract(
-              entry.absolutePath,
-              extractionOptions,
-              [&](const document::ExtractedTextSegment& segment) {
-                std::size_t lineNumber = 1;
-                std::size_t lineStart = 0;
-
-                while (lineStart <= segment.text.size()) {
-                  const auto lineEnd = segment.text.find('\n', lineStart);
-                  const auto lineSize =
-                    lineEnd == std::string::npos ? segment.text.size() - lineStart : lineEnd - lineStart;
-                  const auto lineText = std::string_view{segment.text}.substr(lineStart, lineSize);
-
-                  if (!processLine(lineText, lineNumber)) {
-                    if (!stopSearch && !stopCurrentFile)
-                      stopSearch = true;
-
-                    return false;
-                  }
-
-                  if (lineEnd == std::string::npos)
-                    break;
-
-                  lineStart = lineEnd + 1;
-                  ++lineNumber;
-                }
-
-                return true;
-              },
-              stop_token);
-
-            if (!flushPending(pendingResults, sink))
-              return false;
-
-            if (stopSearch)
-              return false;
-
-            if (stopCurrentFile)
-              return true;
-
-            return reportDocumentExtractionSummary(summary, entry, extractionSummary);
-          }
-
-          const auto readSummary = text::readTextFileLines(
-            entry.absolutePath,
-            query.options,
-            [&](const text::TextLine& line) {
-              if (!processLine(line.text, line.lineNumber)) {
-                if (stopSearch || stopCurrentFile)
-                  return false;
-
-                stopSearch = true;
-
-                return false;
+                (void)events->push(FileSearchEvent{std::move(completion)}, workStopToken);
+              } catch (...) {
+                FileSearchCompletion completion;
+                completion.failure = std::current_exception();
+                (void)events->push(FileSearchEvent{std::move(completion)}, workStopToken);
               }
 
-              return true;
+              events->close();
             },
-            stop_token);
+            workStopSource.get_token());
 
-          if (!flushPending(pendingResults, sink))
+          if (!submitted) {
+            tasks.pop_back();
+
             return false;
+          }
 
-          if (stopSearch)
-            return false;
+          if (summary.filesScanned == 1) {
+            continueSearch = publishFrontTask();
 
-          if (stopCurrentFile)
+            return continueSearch;
+          }
+
+          if (tasks.size() < maximumInFlightTasks)
             return true;
 
-          appendSearchDebugLog("engine",
-                               "read-summary path=" + pathToUtf8(entry.relativePath) +
-                                 " status=" + textReadStatusName(readSummary.status) +
-                                 " lines=" + std::to_string(readSummary.linesRead));
+          continueSearch = publishFrontTask();
 
-          return reportTextReadSummary(summary, entry, readSummary);
+          return continueSearch;
         },
-        stop_token,
+        workStopSource.get_token(),
         &summary.metrics);
+
+      if (!continueSearch)
+        break;
     }
 
-    summary.cancelled = stop_token.stop_requested();
+    while (continueSearch && !tasks.empty())
+      continueSearch = publishFrontTask();
+
+    if (continueSearch)
+      workerPool.close();
+    else
+      workerPool.requestStop();
+
+    const auto workerQueueMetrics = workerPool.metrics();
+    summary.metrics.queueProducerWaits += workerQueueMetrics.producerWaits;
+    summary.metrics.queueConsumerWaits += workerQueueMetrics.consumerWaits;
+    summary.cancelled = stopToken.stop_requested();
     summary.metrics.resultsEmitted = summary.matches;
-    appendSearchDebugLog("engine",
-                         "finish filesScanned=" + std::to_string(summary.filesScanned) + " matches=" +
-                           std::to_string(summary.matches) + " errors=" + std::to_string(summary.errors.size()));
+    appendSearchDebugLog(
+      "engine",
+      "finish filesScanned=" + std::to_string(summary.filesScanned) + " matches=" + std::to_string(summary.matches) +
+        " errors=" + std::to_string(summary.errors.size()));
 
     return summary;
   }

@@ -21,14 +21,16 @@ namespace uburu::index
       const WorktreeInfo& worktree,
       std::span<const FileEntry> files,
       const IndexProgressCallback& onProgress = {},
-      std::stop_token stopToken = {}) override;
+      std::stop_token stopToken = {},
+      const IndexUpdateOptions& options = {}) override;
 
     [[nodiscard]]
     IndexUpdateSummary update(
       const WorktreeInfo& worktree,
       std::span<const IndexFileCandidate> files,
       const IndexProgressCallback& onProgress = {},
-      std::stop_token stopToken = {}) override;
+      std::stop_token stopToken = {},
+      const IndexUpdateOptions& options = {}) override;
 
     [[nodiscard]]
     IndexUpdateSummary update(
@@ -36,7 +38,8 @@ namespace uburu::index
       std::span<const FileEntry> files,
       std::span<const GitOverlayEntry> overlay,
       const IndexProgressCallback& onProgress = {},
-      std::stop_token stopToken = {}) override;
+      std::stop_token stopToken = {},
+      const IndexUpdateOptions& options = {}) override;
 
     [[nodiscard]]
     IndexStalenessReport staleness(const WorktreeInfo& worktree) const override;

@@ -1,4 +1,5 @@
 #include "core/index/persistent-index-service.hpp"
+#include "core/index/index-working-memory.hpp"
 #include "core/search/search-result-memory.hpp"
 #include "core/storage/sqlite-storage-service.hpp"
 #include "fixtures/test-fixtures.hpp"
@@ -175,6 +176,57 @@ TEST_CASE("persistent index service publishes an initial generation with content
   CHECK(progressEvents.back().total == 2);
   CHECK(progressEvents.back().indexed == 1);
   CHECK(progressEvents.back().reusedByHash == 1);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("persistent index service preserves the published generation when working memory is exhausted")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-working-memory-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "old.txt", "old content");
+  writeFile(root / "new.txt", "new content");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector initialFiles{fileEntry(root, "old.txt")};
+  const auto initialSummary = indexService.update(worktreeInfo(root), initialFiles);
+  std::vector<uburu::index::IndexUpdateProgress> progressEvents;
+  const std::vector replacementFiles{fileEntry(root, "new.txt")};
+  const std::vector replacementCandidates{
+    uburu::index::IndexFileCandidate{.file = replacementFiles.front(), .metadata = {}},
+  };
+  const auto retainedInputBytes = uburu::index::approximateIndexInputsMemoryBytes(replacementFiles, {});
+  const auto candidateBytes = uburu::index::approximateIndexCandidatesMemoryBytes(replacementCandidates);
+  const auto baseWorkingMemoryBytes = retainedInputBytes + candidateBytes + sizeof(uburu::IndexDocument);
+  uburu::index::IndexUpdateOptions options;
+  options.memoryBudgetBytes = baseWorkingMemoryBytes + 4;
+  const auto boundedSummary = indexService.update(
+    worktreeInfo(root),
+    replacementFiles,
+    [&](const auto& progress) { progressEvents.push_back(progress); },
+    {},
+    options);
+
+  CHECK(initialSummary.indexed == 1);
+  CHECK(boundedSummary.memoryLimitReached);
+  CHECK_FALSE(boundedSummary.cancelled);
+  CHECK(boundedSummary.failed == 0);
+  CHECK(boundedSummary.skippedTemporaryLimitation == 0);
+  CHECK(boundedSummary.workingMemoryPeakBytes == baseWorkingMemoryBytes);
+  CHECK(boundedSummary.workingMemoryPeakBytes <= options.memoryBudgetBytes);
+  REQUIRE(progressEvents.size() == 1);
+  CHECK(progressEvents.front().memoryLimitReached);
+  CHECK(progressEvents.front().processed == 1);
+  CHECK(storage.findDocument("worktree-id", "old.txt").has_value());
+  CHECK_FALSE(storage.findDocument("worktree-id", "new.txt").has_value());
 #else
   SUCCEED("SQLite is not available in this build");
 #endif

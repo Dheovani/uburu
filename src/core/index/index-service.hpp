@@ -50,6 +50,9 @@ namespace uburu::index
     std::size_t skippedBySize{0};
     std::size_t skippedByFilter{0};
     std::size_t skippedTemporaryLimitation{0};
+    std::uint64_t workingMemoryBytes{0};
+    std::uint64_t workingMemoryPeakBytes{0};
+    bool memoryLimitReached{false};
     std::vector<IndexExtractorMetrics> extractorMetrics;
     std::filesystem::path currentPath;
   };
@@ -70,8 +73,16 @@ namespace uburu::index
     std::size_t skippedBySize{0};
     std::size_t skippedByFilter{0};
     std::size_t skippedTemporaryLimitation{0};
+    std::uint64_t workingMemoryPeakBytes{0};
     std::vector<IndexExtractorMetrics> extractorMetrics;
     bool cancelled{false};
+    bool memoryLimitReached{false};
+  };
+
+  struct IndexUpdateOptions
+  {
+    std::uintmax_t memoryBudgetBytes{0};
+    std::uint64_t retainedMemoryBytes{0};
   };
 
   /**
@@ -130,14 +141,16 @@ namespace uburu::index
       const WorktreeInfo& worktree,
       std::span<const FileEntry> files,
       const IndexProgressCallback& onProgress = {},
-      std::stop_token stopToken = {}) = 0;
+      std::stop_token stopToken = {},
+      const IndexUpdateOptions& options = {}) = 0;
 
     [[nodiscard]]
     virtual IndexUpdateSummary update(
       const WorktreeInfo& worktree,
       std::span<const IndexFileCandidate> files,
       const IndexProgressCallback& onProgress = {},
-      std::stop_token stopToken = {}) = 0;
+      std::stop_token stopToken = {},
+      const IndexUpdateOptions& options = {}) = 0;
 
     [[nodiscard]]
     virtual IndexUpdateSummary update(
@@ -145,7 +158,8 @@ namespace uburu::index
       std::span<const FileEntry> files,
       std::span<const GitOverlayEntry> overlay,
       const IndexProgressCallback& onProgress = {},
-      std::stop_token stopToken = {}) = 0;
+      std::stop_token stopToken = {},
+      const IndexUpdateOptions& options = {}) = 0;
 
     [[nodiscard]]
     virtual IndexStalenessReport staleness(const WorktreeInfo& worktree) const = 0;

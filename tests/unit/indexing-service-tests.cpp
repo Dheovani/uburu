@@ -154,43 +154,55 @@ namespace
   class FakeIndexService final : public uburu::index::IndexService
   {
   public:
-    [[nodiscard]] uburu::index::IndexUpdateSummary update(const uburu::WorktreeInfo& worktree,
-                                                          std::span<const uburu::FileEntry> files,
-                                                          const uburu::index::IndexProgressCallback& onProgress = {},
-                                                          std::stop_token stopToken = {}) override
+    [[nodiscard]]
+    uburu::index::IndexUpdateSummary update(
+      const uburu::WorktreeInfo& worktree,
+      std::span<const uburu::FileEntry> files,
+      const uburu::index::IndexProgressCallback& onProgress = {},
+      std::stop_token stopToken = {},
+      const uburu::index::IndexUpdateOptions& options = {}) override
     {
       static_cast<void>(worktree);
       static_cast<void>(files);
       static_cast<void>(onProgress);
       static_cast<void>(stopToken);
+      static_cast<void>(options);
 
       return {};
     }
 
-    [[nodiscard]] uburu::index::IndexUpdateSummary update(const uburu::WorktreeInfo& worktree,
-                                                          std::span<const uburu::index::IndexFileCandidate> files,
-                                                          const uburu::index::IndexProgressCallback& onProgress = {},
-                                                          std::stop_token stopToken = {}) override
+    [[nodiscard]]
+    uburu::index::IndexUpdateSummary update(
+      const uburu::WorktreeInfo& worktree,
+      std::span<const uburu::index::IndexFileCandidate> files,
+      const uburu::index::IndexProgressCallback& onProgress = {},
+      std::stop_token stopToken = {},
+      const uburu::index::IndexUpdateOptions& options = {}) override
     {
       static_cast<void>(worktree);
       static_cast<void>(files);
       static_cast<void>(onProgress);
       static_cast<void>(stopToken);
+      static_cast<void>(options);
 
       return {};
     }
 
-    [[nodiscard]] uburu::index::IndexUpdateSummary update(const uburu::WorktreeInfo& worktree,
-                                                          std::span<const uburu::FileEntry> files,
-                                                          std::span<const uburu::GitOverlayEntry> overlay,
-                                                          const uburu::index::IndexProgressCallback& onProgress = {},
-                                                          std::stop_token stopToken = {}) override
+    [[nodiscard]]
+    uburu::index::IndexUpdateSummary update(
+      const uburu::WorktreeInfo& worktree,
+      std::span<const uburu::FileEntry> files,
+      std::span<const uburu::GitOverlayEntry> overlay,
+      const uburu::index::IndexProgressCallback& onProgress = {},
+      std::stop_token stopToken = {},
+      const uburu::index::IndexUpdateOptions& options = {}) override
     {
       requestedWorktree = worktree;
       receivedFiles.assign(files.begin(), files.end());
       receivedOverlay.assign(overlay.begin(), overlay.end());
       static_cast<void>(onProgress);
       static_cast<void>(stopToken);
+      receivedOptions = options;
 
       uburu::index::IndexUpdateSummary summary;
       summary.indexed = receivedFiles.size();
@@ -222,6 +234,7 @@ namespace
     std::optional<uburu::WorktreeInfo> requestedWorktree;
     std::vector<uburu::FileEntry> receivedFiles;
     std::vector<uburu::GitOverlayEntry> receivedOverlay;
+    uburu::index::IndexUpdateOptions receivedOptions;
   };
 
 } // namespace
@@ -243,7 +256,9 @@ TEST_CASE("default indexing service scans files and passes git overlay to the in
   });
 
   uburu::app::DefaultIndexingService service(scanner, gitService, indexService);
-  const auto summary = service.update(worktree, uburu::SearchOptions{});
+  uburu::SearchOptions options;
+  options.resultMemoryBudgetBytes = 4096;
+  const auto summary = service.update(worktree, options);
 
   CHECK(summary.indexed == 1);
   CHECK(scanner->scannedRoot == worktree.root);
@@ -255,6 +270,29 @@ TEST_CASE("default indexing service scans files and passes git overlay to the in
   CHECK(indexService->receivedFiles.front().relativePath == std::filesystem::path("src/main.cpp"));
   REQUIRE(indexService->receivedOverlay.size() == 1);
   CHECK(indexService->receivedOverlay.front().status == uburu::GitFileStatus::modified);
+  CHECK(indexService->receivedOptions.memoryBudgetBytes == options.resultMemoryBudgetBytes);
+}
+
+TEST_CASE("default indexing service stops scanning when file metadata exceeds the memory budget")
+{
+  const auto worktree = worktreeInfo();
+  auto scanner = std::make_shared<FakeScanner>();
+  auto gitService = std::make_shared<FakeGitService>();
+  auto indexService = std::make_shared<FakeIndexService>();
+  uburu::SearchOptions options;
+
+  scanner->files.push_back(fileEntry(worktree, "src/main.cpp"));
+  options.resultMemoryBudgetBytes = 1;
+
+  uburu::app::DefaultIndexingService service(scanner, gitService, indexService);
+  const auto summary = service.update(worktree, options);
+
+  CHECK(summary.memoryLimitReached);
+  CHECK_FALSE(summary.cancelled);
+  CHECK(summary.failed == 0);
+  CHECK(summary.workingMemoryPeakBytes == 0);
+  CHECK_FALSE(gitService->requestedWorktree.has_value());
+  CHECK_FALSE(indexService->requestedWorktree.has_value());
 }
 
 TEST_CASE("default indexing service does not publish a generation when git overlay fails")

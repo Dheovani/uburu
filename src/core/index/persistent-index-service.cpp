@@ -12,15 +12,18 @@
 #include "core/document/xlsx-document-extractor.hpp"
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
+#include "core/index/index-working-memory.hpp"
 #include "core/search/search-result-memory.hpp"
 #include "core/text/regex-matcher.hpp"
 #include "core/text/text-file-reader.hpp"
 #include "core/text/text-matcher.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <deque>
 #include <exception>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -33,6 +36,34 @@ namespace uburu::index
 {
   namespace
   {
+
+    constexpr std::uint64_t approximateHashSetNodeOverheadBytes = sizeof(std::string) + 3U * sizeof(void*);
+
+    [[nodiscard]]
+    std::uint64_t saturatedAdd(std::uint64_t left, std::uint64_t right)
+    {
+      if (right > std::numeric_limits<std::uint64_t>::max() - left)
+        return std::numeric_limits<std::uint64_t>::max();
+
+      return left + right;
+    }
+
+    [[nodiscard]]
+    std::uint64_t reservedDocumentStorageBytes(std::size_t documentCount)
+    {
+      if (documentCount > std::numeric_limits<std::uint64_t>::max() / sizeof(IndexDocument))
+        return std::numeric_limits<std::uint64_t>::max();
+
+      return static_cast<std::uint64_t>(documentCount) * sizeof(IndexDocument);
+    }
+
+    [[nodiscard]]
+    IndexUpdateOptions withRetainedMemory(IndexUpdateOptions options, std::uint64_t retainedMemoryBytes)
+    {
+      options.retainedMemoryBytes = saturatedAdd(options.retainedMemoryBytes, retainedMemoryBytes);
+
+      return options;
+    }
 
     [[nodiscard]]
     std::string reusableDocumentKey(ContentHashAlgorithm algorithm, std::string_view hash)
@@ -63,6 +94,7 @@ namespace uburu::index
       std::uintmax_t indexedTextBytes{0};
       IndexSkipReason skipReason{IndexSkipReason::none};
       bool cancelled{false};
+      bool memoryLimitReached{false};
       bool failed{false};
     };
 
@@ -336,11 +368,15 @@ namespace uburu::index
     }
 
     [[nodiscard]]
-    IndexedTextReadResult
-    readIndexedText(const FileEntry& file, const SearchOptions& options, std::stop_token stopToken)
+    IndexedTextReadResult readIndexedText(
+      const FileEntry& file,
+      const SearchOptions& options,
+      std::uintmax_t maximumTextBytes,
+      std::stop_token stopToken)
     {
       std::string indexedText;
       bool firstSegment = true;
+      bool memoryLimitReached = false;
       const auto* extractor = defaultDocumentExtractorRegistry().findExtractor(file.absolutePath);
       const auto extractorName =
         extractor == nullptr ? std::string{"unsupported-format"} : std::string{extractor->name()};
@@ -359,6 +395,18 @@ namespace uburu::index
           file.absolutePath,
           extractionOptions,
           [&](const document::ExtractedTextSegment& segment) {
+            const auto separatorBytes = firstSegment ? 0U : 1U;
+            const auto segmentBytes = static_cast<std::uintmax_t>(segment.text.size());
+            const auto additionalBytes = segmentBytes + separatorBytes;
+            const auto indexedTextBytes = static_cast<std::uintmax_t>(indexedText.size());
+
+            if (maximumTextBytes > 0 &&
+                (indexedTextBytes > maximumTextBytes || additionalBytes > maximumTextBytes - indexedTextBytes)) {
+              memoryLimitReached = true;
+
+              return false;
+            }
+
             if (!firstSegment)
               indexedText.push_back('\n');
 
@@ -375,6 +423,10 @@ namespace uburu::index
       result.extractionSummary = extractionSummary;
       result.extractionTime = std::chrono::steady_clock::now() - extractionStart;
       result.indexedTextBytes = static_cast<std::uintmax_t>(indexedText.size());
+      result.memoryLimitReached = memoryLimitReached;
+
+      if (memoryLimitReached)
+        return result;
 
       const auto availability = document::documentContentAvailability(extractionSummary.status);
 
@@ -586,10 +638,12 @@ namespace uburu::index
 
   PersistentIndexService::PersistentIndexService(storage::StorageService& storage) : storageService(&storage) {}
 
-  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
-                                                    std::span<const FileEntry> files,
-                                                    const IndexProgressCallback& onProgress,
-                                                    std::stop_token stopToken)
+  IndexUpdateSummary PersistentIndexService::update(
+    const WorktreeInfo& worktree,
+    std::span<const FileEntry> files,
+    const IndexProgressCallback& onProgress,
+    std::stop_token stopToken,
+    const IndexUpdateOptions& options)
   {
     std::vector<IndexFileCandidate> candidates;
     candidates.reserve(files.size());
@@ -598,21 +652,62 @@ namespace uburu::index
       candidates.push_back(defaultCandidate(file));
     }
 
-    return update(worktree, candidates, onProgress, stopToken);
+    const auto retainedInputBytes = approximateIndexInputsMemoryBytes(files, {});
+
+    return update(worktree, candidates, onProgress, stopToken, withRetainedMemory(options, retainedInputBytes));
   }
 
-  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
-                                                    std::span<const IndexFileCandidate> files,
-                                                    const IndexProgressCallback& onProgress,
-                                                    std::stop_token stopToken)
+  IndexUpdateSummary PersistentIndexService::update(
+    const WorktreeInfo& worktree,
+    std::span<const IndexFileCandidate> files,
+    const IndexProgressCallback& onProgress,
+    std::stop_token stopToken,
+    const IndexUpdateOptions& options)
   {
     IndexUpdateSummary summary;
     IndexUpdateProgress progress;
     std::unordered_set<std::string> hashesSeenInUpdate;
     std::vector<IndexDocument> documents;
+    auto retainedMemoryBytes = saturatedAdd(options.retainedMemoryBytes, approximateIndexCandidatesMemoryBytes(files));
+    retainedMemoryBytes = saturatedAdd(retainedMemoryBytes, reservedDocumentStorageBytes(files.size()));
 
     progress.total = files.size();
+    progress.workingMemoryBytes = retainedMemoryBytes;
+    progress.workingMemoryPeakBytes = retainedMemoryBytes;
+    summary.workingMemoryPeakBytes = retainedMemoryBytes;
+
+    auto reachMemoryLimit = [&] {
+      summary.memoryLimitReached = true;
+      progress.memoryLimitReached = true;
+      publishProgress(onProgress, progress);
+    };
+
+    if (!indexWorkingMemoryFitsBudget(0, retainedMemoryBytes, options.memoryBudgetBytes)) {
+      reachMemoryLimit();
+
+      return summary;
+    }
+
     documents.reserve(files.size());
+
+    auto retainDocument = [&](IndexDocument document, std::uint64_t additionalHashMemoryBytes = 0) {
+      const auto documentMemoryBytes = approximateIndexDocumentMemoryBytes(document) - sizeof(IndexDocument);
+      const auto additionalMemoryBytes = saturatedAdd(documentMemoryBytes, additionalHashMemoryBytes);
+
+      if (!indexWorkingMemoryFitsBudget(retainedMemoryBytes, additionalMemoryBytes, options.memoryBudgetBytes)) {
+        reachMemoryLimit();
+
+        return false;
+      }
+
+      retainedMemoryBytes += additionalMemoryBytes;
+      progress.workingMemoryBytes = retainedMemoryBytes;
+      progress.workingMemoryPeakBytes = std::max(progress.workingMemoryPeakBytes, retainedMemoryBytes);
+      summary.workingMemoryPeakBytes = std::max(summary.workingMemoryPeakBytes, retainedMemoryBytes);
+      documents.push_back(std::move(document));
+
+      return true;
+    };
 
     for (const auto& candidate : files) {
       if (stopToken.stop_requested()) {
@@ -628,22 +723,24 @@ namespace uburu::index
       const auto reusableCatalogDocument = storageService->findDocument(worktree.id, file.relativePath);
 
       if (isDeletedOverlay(candidate.metadata)) {
+        if (reusableCatalogDocument && !reusableCatalogDocument->contentHash.empty() &&
+            !retainDocument(makeDeletedIndexDocument(worktree, file, candidate.metadata, *reusableCatalogDocument)))
+          break;
+
         ++summary.removed;
         ++progress.removed;
-
-        if (reusableCatalogDocument && !reusableCatalogDocument->contentHash.empty())
-          documents.push_back(makeDeletedIndexDocument(worktree, file, candidate.metadata, *reusableCatalogDocument));
-
         publishProgress(onProgress, progress);
 
         continue;
       }
 
       if (reusableCatalogDocument && canReuseCatalogDocument(*reusableCatalogDocument, candidate)) {
+        if (!retainDocument(
+              makeReusedIndexDocument(worktree, file, candidate.metadata, reusableIdentity(*reusableCatalogDocument))))
+          break;
+
         ++summary.reusedByCatalog;
         ++progress.reusedByCatalog;
-        documents.push_back(
-          makeReusedIndexDocument(worktree, file, candidate.metadata, reusableIdentity(*reusableCatalogDocument)));
         publishProgress(onProgress, progress);
 
         continue;
@@ -654,9 +751,11 @@ namespace uburu::index
           candidate.metadata.gitBlob->algorithm, candidate.metadata.gitBlob->value);
 
         if (reusableBlobDocument) {
+          if (!retainDocument(makeReusedIndexDocument(worktree, file, candidate.metadata, *reusableBlobDocument)))
+            break;
+
           ++summary.reusedByBlob;
           ++progress.reusedByBlob;
-          documents.push_back(makeReusedIndexDocument(worktree, file, candidate.metadata, *reusableBlobDocument));
           publishProgress(onProgress, progress);
 
           continue;
@@ -688,9 +787,11 @@ namespace uburu::index
         recordExtractorMetrics(
           summary, progress, "binary-sample", file.size, extractionSummary, std::chrono::nanoseconds{}, 0);
         recordSkip(IndexSkipReason::binary, summary, progress);
+        if (!retainDocument(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt)))
+          break;
+
         ++summary.indexed;
         ++progress.indexed;
-        documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
         publishProgress(onProgress, progress);
 
         continue;
@@ -703,15 +804,20 @@ namespace uburu::index
         recordExtractorMetrics(
           summary, progress, "unsupported-format", file.size, extractionSummary, std::chrono::nanoseconds{}, 0);
         recordSkip(IndexSkipReason::unsupportedFormat, summary, progress);
+        if (!retainDocument(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt)))
+          break;
+
         ++summary.indexed;
         ++progress.indexed;
-        documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
         publishProgress(onProgress, progress);
 
         continue;
       }
 
-      auto indexedText = readIndexedText(file, SearchOptions{}, stopToken);
+      const auto remainingMemoryBytes = options.memoryBudgetBytes == 0
+                                          ? 0
+                                          : options.memoryBudgetBytes - retainedMemoryBytes;
+      auto indexedText = readIndexedText(file, SearchOptions{}, remainingMemoryBytes, stopToken);
 
       recordExtractorMetrics(
         summary,
@@ -723,6 +829,12 @@ namespace uburu::index
         indexedText.indexedTextBytes);
 
       if (!indexedText.text) {
+        if (indexedText.memoryLimitReached) {
+          reachMemoryLimit();
+
+          break;
+        }
+
         if (stopToken.stop_requested() || indexedText.cancelled) {
           summary.cancelled = true;
 
@@ -731,13 +843,17 @@ namespace uburu::index
 
         if (indexedText.skipReason != IndexSkipReason::none) {
           recordSkip(indexedText.skipReason, summary, progress);
+          if (!retainDocument(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt)))
+            break;
+
           ++summary.indexed;
           ++progress.indexed;
-          documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
         } else {
+          if (!retainDocument(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt)))
+            break;
+
           ++summary.failed;
           ++progress.failed;
-          documents.push_back(makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::nullopt));
         }
 
         publishProgress(onProgress, progress);
@@ -750,6 +866,15 @@ namespace uburu::index
       const auto alreadyStored =
         storageService->findReusableDocumentByContentHash(contentHash->algorithm, contentHash->value).has_value();
 
+      const auto hashMemoryBytes = alreadySeenInUpdate
+                                     ? 0
+                                     : approximateHashSetNodeOverheadBytes +
+                                         static_cast<std::uint64_t>(hashKey.capacity());
+      auto document = makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::move(indexedText.text));
+
+      if (!retainDocument(std::move(document), hashMemoryBytes))
+        break;
+
       if (alreadySeenInUpdate || alreadyStored) {
         ++summary.reusedByHash;
         ++progress.reusedByHash;
@@ -759,12 +884,10 @@ namespace uburu::index
       }
 
       hashesSeenInUpdate.insert(hashKey);
-      documents.push_back(
-        makeIndexDocument(worktree, file, candidate.metadata, *contentHash, std::move(indexedText.text)));
       publishProgress(onProgress, progress);
     }
 
-    if (summary.cancelled)
+    if (summary.cancelled || summary.memoryLimitReached)
       return summary;
 
     storageService->publishGeneration(IndexGeneration{.repositoryId = worktree.repositoryId,
@@ -777,15 +900,18 @@ namespace uburu::index
     return summary;
   }
 
-  IndexUpdateSummary PersistentIndexService::update(const WorktreeInfo& worktree,
-                                                    std::span<const FileEntry> files,
-                                                    std::span<const GitOverlayEntry> overlay,
-                                                    const IndexProgressCallback& onProgress,
-                                                    std::stop_token stopToken)
+  IndexUpdateSummary PersistentIndexService::update(
+    const WorktreeInfo& worktree,
+    std::span<const FileEntry> files,
+    std::span<const GitOverlayEntry> overlay,
+    const IndexProgressCallback& onProgress,
+    std::stop_token stopToken,
+    const IndexUpdateOptions& options)
   {
     auto plan = buildOverlayIndexCandidates(worktree, files, overlay);
+    const auto retainedInputBytes = approximateIndexInputsMemoryBytes(files, overlay);
 
-    return update(worktree, plan.candidates, onProgress, stopToken);
+    return update(worktree, plan.candidates, onProgress, stopToken, withRetainedMemory(options, retainedInputBytes));
   }
 
   IndexStalenessReport PersistentIndexService::staleness(const WorktreeInfo& worktree) const

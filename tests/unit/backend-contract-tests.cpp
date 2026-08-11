@@ -19,7 +19,8 @@ namespace
       const uburu::WorktreeInfo&,
       std::span<const uburu::FileEntry>,
       const uburu::index::IndexProgressCallback& = {},
-      std::stop_token = {}) override
+      std::stop_token = {},
+      const uburu::index::IndexUpdateOptions& = {}) override
     {
       return {};
     }
@@ -29,7 +30,8 @@ namespace
       const uburu::WorktreeInfo&,
       std::span<const uburu::index::IndexFileCandidate>,
       const uburu::index::IndexProgressCallback& = {},
-      std::stop_token = {}) override
+      std::stop_token = {},
+      const uburu::index::IndexUpdateOptions& = {}) override
     {
       return {};
     }
@@ -40,7 +42,8 @@ namespace
       std::span<const uburu::FileEntry>,
       std::span<const uburu::GitOverlayEntry>,
       const uburu::index::IndexProgressCallback& = {},
-      std::stop_token = {}) override
+      std::stop_token = {},
+      const uburu::index::IndexUpdateOptions& = {}) override
     {
       return {};
     }

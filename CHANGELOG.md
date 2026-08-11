@@ -10,8 +10,9 @@ The project follows semantic versioning. Versions before `1.0.0` are preview rel
 - Add a repeatable Release-mode benchmark gate with five repetitions, median-based guardrails, sparse-match worker-scaling coverage, bounded-queue limits, regex JIT checks, adaptive batching checks, and persistent-index reuse checks.
 - Make direct validation authoritative and progressive for hybrid-search results, remove stale indexed matches, avoid retaining a second direct-result collection, preserve partial-failure completion events, short-circuit pre-cancelled runs, and replace quadratic refinement scans with deterministic ordered reconciliation.
 - Enforce an overflow-safe result-memory budget in direct, indexed, and hybrid search, resolve persisted global/per-repository limits in the desktop application, expose explicit exhaustion state through DTOs and CLI summaries, and avoid publishing the result that would exceed the budget.
+- Bound indexing working memory across scanned metadata, Git-overlay candidates, extracted text, hash state, and documents awaiting atomic publication; preserve the previous generation on exhaustion and expose distinct progress, desktop, and CLI status.
 - Continue validating large real-world repositories before the first stable release.
-- Continue hardening broader indexing, preview, and extraction budgets, release signing, and optional future distribution targets.
+- Continue validating resource budgets on real-world datasets, release signing, and optional future distribution targets.
 
 ## [0.1.0] - 2026-07-13
 

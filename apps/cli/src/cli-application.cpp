@@ -7,6 +7,7 @@
 #include "app/services/search-service.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/index/persistent-index-service.hpp"
+#include "core/index/index-working-memory.hpp"
 #include "core/search/direct-search-engine.hpp"
 #include "core/storage/sqlite-storage-service.hpp"
 #include "core/storage/storage-paths.hpp"
@@ -158,6 +159,8 @@ namespace uburu::cli
     const auto worktree = uburu::cli::filesystemWorktree(options.query.root);
     uburu::filesystem::RecursiveFileScanner scanner;
     std::vector<uburu::FileEntry> files;
+    std::uint64_t retainedMemoryBytes = 0;
+    bool memoryLimitReached = false;
 
     scanner.scan(
       worktree.root,
@@ -166,6 +169,16 @@ namespace uburu::cli
         if (cancellation.stopRequested())
           return false;
 
+        const auto fileMemoryBytes = uburu::index::approximateFileEntryMemoryBytes(file);
+
+        if (!uburu::index::indexWorkingMemoryFitsBudget(
+              retainedMemoryBytes, fileMemoryBytes, options.query.options.resultMemoryBudgetBytes)) {
+          memoryLimitReached = true;
+
+          return false;
+        }
+
+        retainedMemoryBytes += fileMemoryBytes;
         files.push_back(std::move(file));
 
         return true;
@@ -180,9 +193,25 @@ namespace uburu::cli
       return uburu::cli::CliExitCode::cancelled;
     }
 
+    if (memoryLimitReached) {
+      uburu::index::IndexUpdateSummary summary;
+      summary.workingMemoryPeakBytes = retainedMemoryBytes;
+      summary.memoryLimitReached = true;
+      uburu::cli::writeIndexUpdateSummary(std::cout, summary, options.outputFormat);
+
+      return uburu::cli::CliExitCode::searchFailed;
+    }
+
     storage->upsertRepository(uburu::cli::filesystemRepository(worktree));
     storage->upsertWorktree(worktree);
-    auto summary = indexService->update(worktree, files, uburu::index::IndexProgressCallback{}, cancellation.stopToken());
+    uburu::index::IndexUpdateOptions indexOptions;
+    indexOptions.memoryBudgetBytes = options.query.options.resultMemoryBudgetBytes;
+    auto summary = indexService->update(
+      worktree,
+      files,
+      uburu::index::IndexProgressCallback{},
+      cancellation.stopToken(),
+      indexOptions);
 
     if (cancellation.stopRequested())
       summary.cancelled = true;
@@ -192,7 +221,7 @@ namespace uburu::cli
     if (summary.cancelled)
       return uburu::cli::CliExitCode::cancelled;
 
-    if (summary.failed > 0)
+    if (summary.failed > 0 || summary.memoryLimitReached)
       return uburu::cli::CliExitCode::searchFailed;
 
     return uburu::cli::CliExitCode::ok;

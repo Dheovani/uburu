@@ -120,7 +120,7 @@ The last selected directory is restored by `SearchController`, together with dir
 
 The main-screen footer reserves a permanent area for indexing state. In Milestone 8, this area receives real progress from `IndexingService`, triggered by the command palette with `Reindex scope` (`Ctrl+Alt+I`) and cancellable with `Cancel indexing` (`Ctrl+Alt+Esc`).
 
-Reindexing runs outside the graphics thread. `SearchController` creates the indexing service in a worker, discovers each selected root's Git worktree when one exists, runs `requestManualReindex()`, and forwards `IndexUpdateProgress` events through queued connection. The UI shows textual status, a compact progress bar, and a final summary with indexed, reused, removed, and failed documents.
+Reindexing runs outside the graphics thread. `SearchController` creates the indexing service in a worker, discovers each selected root's Git worktree when one exists, resolves its effective persisted memory budget, runs `requestManualReindex()`, and forwards `IndexUpdateProgress` events through queued connection. The UI shows textual status, a compact progress bar, and a final summary with indexed, reused, removed, and failed documents. Memory exhaustion has its own translated status and does not appear as cancellation, parser failure, or an ignored-file count; the prior complete generation remains available.
 
 Roots that are not Git repositories yet are indexed as regular directories, with synthetic identity based on the normalized path and no Git overlay. This preserves support for standalone directories without diluting Git-aware treatment for real repositories.
 

@@ -21,7 +21,11 @@ Every indexed document has `formatVersion`. The current version is `1` and repre
 5. Apply the working tree overlay for added, modified, and deleted files.
 6. Publish a new index generation atomically.
 
-A branch switch invalidates the visible catalog, not the content-addressed storage. Backpressure and a memory budget must limit parsing and result queues.
+A branch switch invalidates the visible catalog, not the content-addressed storage. Backpressure and the effective global/per-repository memory budget limit scanning metadata, Git-overlay candidates, extracted text, hash-deduplication state, and documents staged for atomic publication.
+
+Indexing accounts approximate owned memory at each retained stage. The scanner stops before adding file metadata that would exceed the configured budget. `PersistentIndexService` then accounts caller-retained inputs, candidates, reserved document storage, document-owned paths and text, and content-hash tracking. Extraction receives only the remaining text allowance and stops through its sink before appending a segment that would exceed it. A zero budget remains unlimited.
+
+Memory exhaustion is not cancellation, a parser failure, or an ignored file. `IndexUpdateProgress` and `IndexUpdateSummary` expose `memoryLimitReached` and the observed `workingMemoryPeakBytes`. No partial generation is published after exhaustion, so the last complete generation remains visible and can be searched safely. The user can increase the budget and retry without rebuilding or repairing the prior index.
 
 The first incremental base compares the persisted catalog entry with the current `FileEntry`. When the path in the same worktree is still clean, not deleted, has the same size, the same `mtime`, and a valid persisted hash, the indexer reuses the document identity without rereading the file. This optimization is deliberately conservative: modified files, deleted files, unknown statuses, or files later marked by Git overlay return to the revalidation/reindexing path.
 

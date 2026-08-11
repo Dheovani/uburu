@@ -1,5 +1,7 @@
 #include "app/services/indexing-service.hpp"
 
+#include "core/index/index-working-memory.hpp"
+
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -24,6 +26,16 @@ namespace uburu::app
     {
       index::IndexUpdateSummary summary;
       summary.failed = 1;
+
+      return summary;
+    }
+
+    [[nodiscard]]
+    index::IndexUpdateSummary memoryLimitedSummary(std::uint64_t workingMemoryBytes)
+    {
+      index::IndexUpdateSummary summary;
+      summary.workingMemoryPeakBytes = workingMemoryBytes;
+      summary.memoryLimitReached = true;
 
       return summary;
     }
@@ -77,6 +89,8 @@ namespace uburu::app
       return cancelledSummary();
 
     std::vector<FileEntry> files;
+    std::uint64_t retainedMemoryBytes = 0;
+    bool memoryLimitReached = false;
 
     scanner->scan(
       worktree.root,
@@ -85,6 +99,16 @@ namespace uburu::app
         if (stopToken.stop_requested())
           return false;
 
+        const auto fileMemoryBytes = index::approximateFileEntryMemoryBytes(file);
+
+        if (!index::indexWorkingMemoryFitsBudget(
+              retainedMemoryBytes, fileMemoryBytes, options.resultMemoryBudgetBytes)) {
+          memoryLimitReached = true;
+
+          return false;
+        }
+
+        retainedMemoryBytes += fileMemoryBytes;
         files.push_back(std::move(file));
 
         return true;
@@ -94,13 +118,19 @@ namespace uburu::app
     if (stopToken.stop_requested())
       return cancelledSummary();
 
+    if (memoryLimitReached)
+      return memoryLimitedSummary(retainedMemoryBytes);
+
     const auto overlayResult = gitService->workingTreeOverlay(worktree);
     const auto* overlay = std::get_if<std::vector<GitOverlayEntry>>(&overlayResult);
 
     if (overlay == nullptr)
       return failedSummary();
 
-    return indexService->update(worktree, files, *overlay, onProgress, stopToken);
+    index::IndexUpdateOptions indexOptions;
+    indexOptions.memoryBudgetBytes = options.resultMemoryBudgetBytes;
+
+    return indexService->update(worktree, files, *overlay, onProgress, stopToken, indexOptions);
   }
 
   index::IndexUpdateSummary DefaultIndexingService::reconcile(const WorktreeInfo& worktree,

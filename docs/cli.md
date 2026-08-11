@@ -23,7 +23,7 @@ Supported options:
 - `--database PATH`: overrides the CLI index database. The default CLI database is `.uburu-cli/uburu-cli-v1.db` in the current working directory and is separate from the desktop application database.
 - `--types txt,cpp,md`: restricts file extensions.
 - `--max-size-mib N`: sets the maximum file size in MiB.
-- `--memory-budget-mib N`: limits the approximate memory retained by published search results; `0` keeps the budget unlimited.
+- `--memory-budget-mib N`: limits approximate retained search-result memory and `index-rebuild` working memory; `0` keeps the budget unlimited.
 - `--threads auto|N`: selects direct-search workers. `auto` avoids worker-queue overhead for small files and uses the bounded hardware-aware pool for larger files; an explicit value must be between 1 and 256.
 - `--regex`: treats the expression as a PCRE2 regex when the backend is available.
 - `--case-sensitive`: enables case-sensitive matching.
@@ -57,6 +57,8 @@ uburu index-rebuild <root> [options]
 `index-status` reports whether the current index generation is missing, fresh, or stale for the selected root.
 
 `index-rebuild` scans the selected root and publishes a new persistent index generation using a filesystem worktree identity. Git-aware CLI indexing is intentionally deferred until it can be enabled without risking command-line hangs or surprising latency.
+
+When `index-rebuild` reaches its working-memory budget, it exits with code `3`, leaves the previous complete generation untouched, and reports `memoryLimitReached` plus `workingMemoryPeakBytes` in human and JSON Lines summaries. This state is distinct from `Ctrl+C`, skipped unsupported files, and extractor safety limits.
 
 Both commands support:
 

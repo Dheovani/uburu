@@ -19,6 +19,11 @@ Uburu `0.1.0` is the first Windows and Linux preview. It includes the Qt/QML des
 
 Future work below should improve this baseline without reopening completed milestones as checklist noise.
 
+## Before releasing a commercial version
+
+- [ ] Sign Windows release artifacts if a real code-signing certificate becomes available.
+- [ ] Review third-party licenses again before any commercial or broader public distribution.
+
 ## Before a stable 1.0 release
 
 - [ ] Execute the repeatable validation matrix in `docs/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
@@ -35,11 +40,11 @@ Future work below should improve this baseline without reopening completed miles
 - [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
   - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.
   - [ ] Repeat the complete Git matrix in larger real repositories and record the evidence.
-- [ ] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
+- [x] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
   - [x] Enforce bounded direct-search queues, configurable worker count, result-count limits, bounded previews, extractor limits, and index disk budget.
   - [x] Connect the persisted global/per-repository memory budget to direct, indexed, and hybrid result production.
   - [x] Audit and expose consistent budget-exhaustion status through the core summary, CLI, and desktop UI.
-  - [ ] Apply the configured memory budget to indexing working sets and report indexing-memory exhaustion separately from skipped files and extractor safety limits.
+  - [x] Apply the configured memory budget to indexing working sets and report indexing-memory exhaustion separately from skipped files and extractor safety limits.
 - [ ] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
   - [x] Add versioned deterministic baselines and median-based regression gates for direct search, queues, indexing, hashing, extraction, batching, and hybrid refinement.
   - [ ] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.
@@ -49,8 +54,6 @@ Future work below should improve this baseline without reopening completed miles
 - [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
   - [x] Document clean-machine artifact, smoke-test, evidence, and release acceptance requirements.
   - [ ] Execute the final Windows installer and Linux AppImage smoke tests for the stable release candidate.
-- [ ] Sign Windows release artifacts if a real code-signing certificate becomes available.
-- [ ] Review third-party licenses again before any commercial or broader public distribution.
 
 ## Search and indexing evolution
 

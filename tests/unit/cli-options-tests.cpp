@@ -181,3 +181,16 @@ TEST_CASE("CLI search summary exposes result memory exhaustion")
   CHECK(output.str().find("\"memoryLimitReached\":true") != std::string::npos);
   CHECK(output.str().find("\"resultMemoryBytes\":4096") != std::string::npos);
 }
+
+TEST_CASE("CLI index summary exposes working memory exhaustion")
+{
+  uburu::index::IndexUpdateSummary summary;
+  summary.workingMemoryPeakBytes = 8192;
+  summary.memoryLimitReached = true;
+
+  std::ostringstream output;
+  uburu::cli::writeIndexUpdateSummary(output, summary, uburu::cli::CliOutputFormat::jsonLines);
+
+  CHECK(output.str().find("\"memoryLimitReached\":true") != std::string::npos);
+  CHECK(output.str().find("\"workingMemoryPeakBytes\":8192") != std::string::npos);
+}

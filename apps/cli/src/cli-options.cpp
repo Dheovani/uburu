@@ -378,7 +378,7 @@ namespace uburu::cli
     output << "  --database PATH            Override the CLI index database path.\n";
     output << "  --types txt,cpp,md         Restrict file extensions.\n";
     output << "  --max-size-mib N           Maximum file size in MiB.\n";
-    output << "  --memory-budget-mib N      Maximum retained result memory in MiB; 0 means unlimited.\n";
+    output << "  --memory-budget-mib N      Search-result or index working-memory budget; 0 means unlimited.\n";
     output << "  --threads auto|N           Direct-search workers; N must be from 1 to " << maximumSearchThreadCount
            << ".\n";
     output << "  --regex                    Treat expression as PCRE2 regex.\n";

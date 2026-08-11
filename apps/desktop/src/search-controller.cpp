@@ -13,6 +13,7 @@
 #include "core/filesystem/recursive-file-scanner.hpp"
 #include "core/git/git-cli-git-service.hpp"
 #include "core/index/persistent-index-service.hpp"
+#include "core/index/index-working-memory.hpp"
 #include "core/search/direct-search-engine.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/search/search-scope.hpp"
@@ -384,12 +385,20 @@ namespace uburu::app
                             .headOid = worktree.headOid};
     }
 
-    std::vector<FileEntry> scanFilesForIndex(const filesystem::FileScanner& scanner,
-                                             const std::filesystem::path& root,
-                                             const SearchOptions& options,
-                                             std::stop_token stopToken)
+    struct IndexScanResult
     {
       std::vector<FileEntry> files;
+      std::uint64_t workingMemoryBytes{0};
+      bool memoryLimitReached{false};
+    };
+
+    IndexScanResult scanFilesForIndex(
+      const filesystem::FileScanner& scanner,
+      const std::filesystem::path& root,
+      const SearchOptions& options,
+      std::stop_token stopToken)
+    {
+      IndexScanResult result;
 
       scanner.scan(
         root,
@@ -398,13 +407,23 @@ namespace uburu::app
           if (stopToken.stop_requested())
             return false;
 
-          files.push_back(std::move(file));
+          const auto fileMemoryBytes = index::approximateFileEntryMemoryBytes(file);
+
+          if (!index::indexWorkingMemoryFitsBudget(
+                result.workingMemoryBytes, fileMemoryBytes, options.resultMemoryBudgetBytes)) {
+            result.memoryLimitReached = true;
+
+            return false;
+          }
+
+          result.workingMemoryBytes += fileMemoryBytes;
+          result.files.push_back(std::move(file));
 
           return true;
         },
         stopToken);
 
-      return files;
+      return result;
     }
 
     void addIndexSummary(index::IndexUpdateSummary& target, const index::IndexUpdateSummary& source)
@@ -420,7 +439,9 @@ namespace uburu::app
       target.skippedBySize += source.skippedBySize;
       target.skippedByFilter += source.skippedByFilter;
       target.skippedTemporaryLimitation += source.skippedTemporaryLimitation;
+      target.workingMemoryPeakBytes = std::max(target.workingMemoryPeakBytes, source.workingMemoryPeakBytes);
       target.cancelled = target.cancelled || source.cancelled;
+      target.memoryLimitReached = target.memoryLimitReached || source.memoryLimitReached;
     }
 
     std::size_t skippedIndexingFiles(const index::IndexUpdateSummary& summary)
@@ -1617,6 +1638,8 @@ namespace uburu::app
 
       if (summary.cancelled) {
         setIndexingProgress(tr("Indexação cancelada"), indexingProgressValue);
+      } else if (summary.memoryLimitReached) {
+        setIndexingProgress(tr("Indexação interrompida: limite de memória atingido"), indexingProgressValue);
       } else {
         const auto reusedDocuments = summary.reusedByCatalog + summary.reusedByBlob + summary.reusedByHash;
         auto status =
@@ -1641,6 +1664,7 @@ namespace uburu::app
       try {
         auto storageService = std::make_shared<storage::SQLiteStorageService>(databasePath);
         storageService->initialize();
+        StorageSettingsService settingsService(*storageService);
 
         auto gitService = makeGitService();
         auto scanner = std::make_shared<filesystem::RecursiveFileScanner>();
@@ -1665,24 +1689,42 @@ namespace uburu::app
             auto filesystemWorktree = filesystemWorktreeForRoot(nativeRoot);
             storageService->upsertRepository(repositoryForWorktree(filesystemWorktree));
             storageService->upsertWorktree(filesystemWorktree);
+            auto rootOptions = options;
+            rootOptions.resultMemoryBudgetBytes =
+              settingsService.resolveRepositorySettings(filesystemWorktree.repositoryId).memoryBudgetBytes;
 
-            auto files = scanFilesForIndex(*scanner, filesystemWorktree.root, options, token);
+            auto scanResult = scanFilesForIndex(*scanner, filesystemWorktree.root, rootOptions, token);
 
             if (token.stop_requested()) {
               totalSummary.cancelled = true;
               break;
             }
 
+            if (scanResult.memoryLimitReached) {
+              totalSummary.memoryLimitReached = true;
+              totalSummary.workingMemoryPeakBytes =
+                std::max(totalSummary.workingMemoryPeakBytes, scanResult.workingMemoryBytes);
+              break;
+            }
+
+            index::IndexUpdateOptions indexOptions;
+            indexOptions.memoryBudgetBytes = rootOptions.resultMemoryBudgetBytes;
+
             auto summary = indexService->update(
               filesystemWorktree,
-              files,
+              scanResult.files,
               [this](const index::IndexUpdateProgress& progress) {
                 QMetaObject::invokeMethod(
                   this, [this, progress] { updateIndexingProgress(progress); }, Qt::QueuedConnection);
               },
-              token);
+              token,
+              indexOptions);
 
             addIndexSummary(totalSummary, summary);
+
+            if (summary.memoryLimitReached)
+              break;
+
             continue;
           }
 
@@ -1691,10 +1733,13 @@ namespace uburu::app
 
           storageService->upsertRepository(repositoryForWorktree(*worktree));
           storageService->upsertWorktree(*worktree);
+          auto rootOptions = options;
+          rootOptions.resultMemoryBudgetBytes =
+            settingsService.resolveRepositorySettings(worktree->repositoryId).memoryBudgetBytes;
 
           auto summary = indexingService.requestManualReindex(
             *worktree,
-            options,
+            rootOptions,
             [this](const index::IndexUpdateProgress& progress) {
               QMetaObject::invokeMethod(
                 this, [this, progress] { updateIndexingProgress(progress); }, Qt::QueuedConnection);
@@ -1702,6 +1747,9 @@ namespace uburu::app
             token);
 
           addIndexSummary(totalSummary, summary);
+
+          if (summary.memoryLimitReached)
+            break;
         }
       } catch (const std::exception&) {
         ++totalSummary.failed;
@@ -1854,6 +1902,12 @@ namespace uburu::app
 
     const auto currentPath = QString::fromUtf8(pathToUtf8(progress.currentPath));
     auto status = tr("Indexando %1/%2").arg(progress.processed).arg(progress.total);
+
+    if (progress.memoryLimitReached) {
+      setIndexingProgress(tr("Indexação interrompida: limite de memória atingido"), progressPercent);
+
+      return;
+    }
 
     if (!currentPath.isEmpty())
       status = tr("Indexando %1/%2: %3").arg(progress.processed).arg(progress.total).arg(currentPath);

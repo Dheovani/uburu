@@ -26,6 +26,7 @@ add_library(uburu_core STATIC
   index/content-hash.cpp
   index/index-document-format.cpp
   index/index-overlay.cpp
+  index/index-working-memory.cpp
   index/persistent-index-service.cpp
   search/direct-search-engine.cpp
   search/search-errors.cpp

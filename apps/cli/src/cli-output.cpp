@@ -211,6 +211,8 @@ namespace uburu::cli
       output << " failed=" << summary.failed;
       output << " skippedUnsupportedFormat=" << summary.skippedUnsupportedFormat;
       output << " skippedBinary=" << summary.skippedBinary;
+      output << " workingMemoryPeakBytes=" << summary.workingMemoryPeakBytes;
+      output << " memoryLimitReached=" << (summary.memoryLimitReached ? "true" : "false");
       output << " cancelled=" << (summary.cancelled ? "true" : "false");
       output << '\n';
     }
@@ -226,6 +228,8 @@ namespace uburu::cli
       output << ",\"failed\":" << summary.failed;
       output << ",\"skippedUnsupportedFormat\":" << summary.skippedUnsupportedFormat;
       output << ",\"skippedBinary\":" << summary.skippedBinary;
+      output << ",\"workingMemoryPeakBytes\":" << summary.workingMemoryPeakBytes;
+      output << ",\"memoryLimitReached\":" << (summary.memoryLimitReached ? "true" : "false");
       output << ",\"cancelled\":" << (summary.cancelled ? "true" : "false");
       output << "}\n";
     }

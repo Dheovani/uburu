@@ -44,7 +44,7 @@ Exit codes are part of the CLI contract:
 
 ## Scope
 
-The CLI supports direct search immediately and can opt into indexed or hybrid search with `--strategy indexed` or `--strategy hybrid`.
+The CLI supports direct search immediately and can opt into indexed or hybrid search with `--strategy indexed` or `--strategy hybrid`. Hybrid output is emitted after direct validation so its append-only stream cannot leave stale indexed matches in the final result set.
 
 ## Index commands
 

@@ -91,7 +91,28 @@ TEST_CASE("search result refinement classifies confirmed added and removed match
   CHECK(refinement.confirmed.front().path == std::filesystem::path("src/confirmed.cpp"));
   CHECK(refinement.added.front().path == std::filesystem::path("src/added.cpp"));
   CHECK(refinement.removed.front().path == std::filesystem::path("src/removed.cpp"));
-  CHECK(refinement.merged.size() == 3);
+  REQUIRE(refinement.merged.size() == 2);
+  CHECK(refinement.merged[0].path == std::filesystem::path("src/added.cpp"));
+  CHECK(refinement.merged[1].path == std::filesystem::path("src/confirmed.cpp"));
+}
+
+TEST_CASE("search result refinement removes duplicate direct matches from the authoritative result set")
+{
+  const auto duplicate = result(uburu::SearchResultKind::content, "src/duplicate.cpp", 2, 1, "aaa");
+  const std::vector indexedResults{
+    result(uburu::SearchResultKind::content, "src/stale.cpp", 1, 1, "stale"),
+  };
+  const std::vector directResults{
+    duplicate,
+    duplicate,
+  };
+
+  const auto refinement = uburu::search::refineSearchResults(indexedResults, directResults, generousResultLimit);
+
+  REQUIRE(refinement.merged.size() == 1);
+  CHECK(refinement.merged.front().path == std::filesystem::path("src/duplicate.cpp"));
+  REQUIRE(refinement.removed.size() == 1);
+  CHECK(refinement.removed.front().path == std::filesystem::path("src/stale.cpp"));
 }
 
 TEST_CASE("search result merge respects the result limit after ordering")

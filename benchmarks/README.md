@@ -16,6 +16,8 @@ Memory counters are approximate and intended for regression comparison, not heap
 
 Batching scenarios compare fixed small batches, fixed large batches, and adaptive batching while the event sink performs deterministic in-memory work over each result payload. This is a proxy for application-layer UI delivery cost, not a replacement for future Qt/QML scene-graph profiling.
 
+The stale-index refinement scenario compares 10,000 indexed and direct results with confirmed, added, and removed matches. It protects both authoritative removal of stale results and the ordered `O(n log n)` reconciliation path from returning to quadratic scans.
+
 ```powershell
 cmake --preset core-windows-msvc-debug -DUBURU_BUILD_BENCHMARKS=ON
 cmake --build build/core-windows-msvc-debug --config Debug --target uburu-search-service-benchmark

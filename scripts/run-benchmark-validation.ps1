@@ -48,6 +48,7 @@ $filter = "^(BM_SearchService_Direct_ManySmallFiles_Literal|" +
   "BM_SearchService_Direct_SparseMatchLargeFiles_Literal_WorkerScaling/(1|8)|" +
   "BM_SearchService_Direct_ManySmallFiles_Regex|" +
   "BM_SearchService_Batching_Adaptive_RenderCost|" +
+  "BM_SearchResultRefinement_StaleIndex/10000|" +
   "BM_IndexService_Initial_ManySmallFiles|" +
   "BM_IndexService_Incremental_ManySmallFiles|" +
   "BM_IndexService_BranchSwitch_ManySmallFiles|" +

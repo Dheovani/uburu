@@ -24,9 +24,11 @@ namespace uburu::search
                         result.lineText};
     }
 
-    [[nodiscard]] bool containsSameMatch(std::span<const SearchResult> results, const SearchResult& candidate)
+    void sortAndRemoveDuplicates(std::vector<SearchResult>& results)
     {
-      return std::ranges::any_of(results, [&](const auto& result) { return searchResultSameMatch(result, candidate); });
+      std::ranges::sort(results, searchResultLess);
+      const auto duplicateBegin = std::ranges::unique(results, searchResultSameMatch).begin();
+      results.erase(duplicateBegin, results.end());
     }
 
   } // namespace
@@ -46,26 +48,49 @@ namespace uburu::search
                                              std::size_t resultLimit)
   {
     SearchResultRefinement refinement;
+    std::vector<SearchResult> orderedIndexed(indexedResults.begin(), indexedResults.end());
+    std::vector<SearchResult> orderedDirect(directResults.begin(), directResults.end());
 
-    for (const auto& indexedResult : indexedResults) {
-      if (containsSameMatch(directResults, indexedResult)) {
-        refinement.confirmed.push_back(indexedResult);
+    sortAndRemoveDuplicates(orderedIndexed);
+    sortAndRemoveDuplicates(orderedDirect);
+
+    auto indexed = orderedIndexed.begin();
+    auto direct = orderedDirect.begin();
+
+    while (indexed != orderedIndexed.end() && direct != orderedDirect.end()) {
+      if (searchResultSameMatch(*indexed, *direct)) {
+        refinement.confirmed.push_back(*direct);
+        ++indexed;
+        ++direct;
 
         continue;
       }
 
-      refinement.removed.push_back(indexedResult);
+      if (searchResultLess(*indexed, *direct)) {
+        refinement.removed.push_back(*indexed);
+        ++indexed;
+
+        continue;
+      }
+
+      refinement.added.push_back(*direct);
+      ++direct;
     }
 
-    for (const auto& directResult : directResults) {
-      if (!containsSameMatch(indexedResults, directResult))
-        refinement.added.push_back(directResult);
+    while (indexed != orderedIndexed.end()) {
+      refinement.removed.push_back(*indexed);
+      ++indexed;
     }
 
-    std::ranges::sort(refinement.confirmed, searchResultLess);
-    std::ranges::sort(refinement.added, searchResultLess);
-    std::ranges::sort(refinement.removed, searchResultLess);
-    refinement.merged = mergeSearchResults(indexedResults, directResults, resultLimit);
+    while (direct != orderedDirect.end()) {
+      refinement.added.push_back(*direct);
+      ++direct;
+    }
+
+    refinement.merged = std::move(orderedDirect);
+
+    if (refinement.merged.size() > resultLimit)
+      refinement.merged.resize(resultLimit);
 
     return refinement;
   }
@@ -74,19 +99,9 @@ namespace uburu::search
                                                std::span<const SearchResult> directResults,
                                                std::size_t resultLimit)
   {
-    std::vector<SearchResult> merged;
-    merged.reserve(indexedResults.size() + directResults.size());
-
-    for (const auto& result : directResults) {
-      merged.push_back(result);
-    }
-
-    for (const auto& result : indexedResults) {
-      if (!containsSameMatch(merged, result))
-        merged.push_back(result);
-    }
-
-    std::ranges::sort(merged, searchResultLess);
+    std::vector<SearchResult> merged(indexedResults.begin(), indexedResults.end());
+    merged.insert(merged.end(), directResults.begin(), directResults.end());
+    sortAndRemoveDuplicates(merged);
 
     if (merged.size() > resultLimit)
       merged.resize(resultLimit);

@@ -32,6 +32,8 @@ namespace
       uburu::search::SearchSummary summary;
       summary.filesScanned = scannedFiles;
       summary.matches = results.size();
+      summary.partialFailure = partialFailure;
+      summary.errors = errors;
       summary.metrics.filesProcessed = scannedFiles;
       summary.metrics.bytesProcessed = bytesProcessed;
 
@@ -42,6 +44,8 @@ namespace
     std::size_t scannedFiles{7};
     std::uint64_t bytesProcessed{256};
     std::vector<uburu::SearchResult> results;
+    std::vector<uburu::search::SearchError> errors;
+    bool partialFailure{false};
   };
 
   class FakeIndexService final : public uburu::index::IndexService
@@ -227,7 +231,7 @@ TEST_CASE("default search service rejects indexed strategies without an index se
     std::invalid_argument);
 }
 
-TEST_CASE("default search service emits indexed results before direct refinements")
+TEST_CASE("default search service emits only direct results after hybrid refinement")
 {
   TemporaryDirectory directory("uburu-search-service-hybrid-test");
   auto directEngine = std::make_shared<FakeSearchEngine>();
@@ -248,13 +252,12 @@ TEST_CASE("default search service emits indexed results before direct refinement
     return true;
   });
 
-  REQUIRE(emittedResults.size() == 3);
-  CHECK(emittedResults[0].path == std::filesystem::path("src/indexed.cpp"));
+  REQUIRE(emittedResults.size() == 2);
+  CHECK(emittedResults[0].path == std::filesystem::path("src/direct.cpp"));
   CHECK(emittedResults[1].path == std::filesystem::path("src/shared.cpp"));
-  CHECK(emittedResults[2].path == std::filesystem::path("src/direct.cpp"));
   CHECK(summary.matches == emittedResults.size());
   CHECK(summary.metrics.resultsEmitted == emittedResults.size());
-  CHECK(summary.metrics.cacheHits == 2);
+  CHECK(summary.metrics.cacheHits == 1);
   CHECK(summary.metrics.cacheMisses == 1);
   CHECK(indexService->calls == 1);
   CHECK(directEngine->calls == 1);
@@ -292,6 +295,31 @@ TEST_CASE("default search service validates hybrid queries before consulting sou
   const auto summary = service.search(query, [](uburu::SearchResult) { return true; });
 
   CHECK_FALSE(summary.errors.empty());
+  CHECK(indexService->calls == 0);
+  CHECK(directEngine->calls == 0);
+}
+
+TEST_CASE("default search service cancels hybrid search before consulting either source")
+{
+  TemporaryDirectory directory("uburu-search-service-hybrid-cancelled-test");
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  auto indexService = std::make_shared<FakeIndexService>();
+  const uburu::app::DefaultSearchService service(directEngine, indexService);
+  std::stop_source cancellation;
+  std::vector<uburu::SearchResult> emittedResults;
+
+  cancellation.request_stop();
+  const auto summary = service.search(
+    validQuery(directory.path()),
+    [&](uburu::SearchResult searchResult) {
+      emittedResults.push_back(std::move(searchResult));
+
+      return true;
+    },
+    cancellation.get_token());
+
+  CHECK(summary.cancelled);
+  CHECK(emittedResults.empty());
   CHECK(indexService->calls == 0);
   CHECK(directEngine->calls == 0);
 }
@@ -410,4 +438,34 @@ TEST_CASE("default search service emits failed events for invalid hybrid queries
   CHECK_FALSE(summary.errors.empty());
   CHECK(indexService->calls == 0);
   CHECK(directEngine->calls == 0);
+}
+
+TEST_CASE("default search service completes event delivery when individual files fail")
+{
+  auto directEngine = std::make_shared<FakeSearchEngine>();
+  std::vector<uburu::app::SearchEventDto> events;
+
+  directEngine->partialFailure = true;
+  uburu::search::SearchError readError;
+
+  readError.code = uburu::search::SearchErrorCode::fileReadFailed;
+  readError.translationKey = "search.error.file_read_failed";
+  readError.context = "unreadable.txt";
+  directEngine->errors.push_back(std::move(readError));
+
+  const uburu::app::DefaultSearchService service(directEngine);
+  const auto summary = service.searchWithEvents(
+    uburu::SearchQuery{},
+    [&](const uburu::app::SearchEventDto& event) {
+      events.push_back(event);
+
+      return true;
+    });
+
+  REQUIRE(events.size() == 2);
+  CHECK(events.front().kind == uburu::app::SearchEventKind::started);
+  CHECK(events.back().kind == uburu::app::SearchEventKind::completed);
+  CHECK(events.back().summary.partialFailure);
+  REQUIRE(events.back().summary.errors.size() == 1);
+  CHECK(summary.partialFailure);
 }

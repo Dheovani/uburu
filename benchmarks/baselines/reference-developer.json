@@ -69,6 +69,29 @@
       "minimum": 1
     },
     {
+      "benchmark": "BM_SearchResultRefinement_StaleIndex/10000",
+      "metric": "items_per_second",
+      "minimum": 5000
+    },
+    {
+      "benchmark": "BM_SearchResultRefinement_StaleIndex/10000",
+      "metric": "confirmed_results",
+      "minimum": 7500,
+      "maximum": 7500
+    },
+    {
+      "benchmark": "BM_SearchResultRefinement_StaleIndex/10000",
+      "metric": "removed_results",
+      "minimum": 2500,
+      "maximum": 2500
+    },
+    {
+      "benchmark": "BM_SearchResultRefinement_StaleIndex/10000",
+      "metric": "final_results",
+      "minimum": 10000,
+      "maximum": 10000
+    },
+    {
       "benchmark": "BM_IndexService_Initial_ManySmallFiles",
       "metric": "indexed",
       "minimum": 1

@@ -10,7 +10,7 @@ namespace uburu::search
 {
 
   /**
-   * Splits direct-search validation into confirmed, added, removed, and final merged result sets.
+   * Splits direct validation into confirmed, added, removed, and authoritative final results.
    */
   struct SearchResultRefinement
   {

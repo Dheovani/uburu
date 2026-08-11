@@ -1,9 +1,16 @@
 #include "benchmark-dataset.hpp"
 #include "benchmark-output.hpp"
+#include "core/search/search-result-merge.hpp"
 #include "index-benchmark-runner.hpp"
 #include "search-benchmark-runner.hpp"
 
 #include <benchmark/benchmark.h>
+
+#include <cstddef>
+#include <filesystem>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -17,6 +24,21 @@ namespace
   constexpr std::size_t twoSearchWorkerCount = 2;
   constexpr std::size_t fourSearchWorkerCount = 4;
   constexpr std::size_t eightSearchWorkerCount = 8;
+  constexpr std::size_t refinementChangeInterval = 4;
+
+  [[nodiscard]] uburu::SearchResult refinementResult(std::filesystem::path path)
+  {
+    return uburu::SearchResult{.kind = uburu::SearchResultKind::content,
+                               .path = std::move(path),
+                               .line = 1,
+                               .column = 1,
+                               .matchLength = 6,
+                               .lineText = "needle",
+                               .highlights = {},
+                               .contextBefore = {},
+                               .contextAfter = {},
+                               .searchRoot = "repository"};
+  }
 
   [[nodiscard]] uburu::benchmarks::SearchBenchmarkRunOptions fixedBatchRunOptions(std::size_t batchSize)
   {
@@ -200,6 +222,39 @@ namespace
     runSearchServiceScenario(state, datasetFactory, adaptiveBatchRunOptions());
   }
 
+  void BM_SearchResultRefinement_StaleIndex(benchmark::State& state)
+  {
+    const auto resultCount = static_cast<std::size_t>(state.range(0));
+    std::vector<uburu::SearchResult> indexedResults;
+    std::vector<uburu::SearchResult> directResults;
+
+    indexedResults.reserve(resultCount);
+    directResults.reserve(resultCount);
+
+    for (std::size_t index = 0; index < resultCount; ++index) {
+      auto indexedResult = refinementResult("src/file-" + std::to_string(index) + ".cpp");
+      indexedResults.push_back(indexedResult);
+
+      if (index % refinementChangeInterval == 0)
+        directResults.push_back(refinementResult("src/new-file-" + std::to_string(index) + ".cpp"));
+      else
+        directResults.push_back(std::move(indexedResult));
+    }
+
+    for (auto _ : state) {
+      auto refinement = uburu::search::refineSearchResults(indexedResults, directResults, indexedResults.size());
+      auto* mergedData = refinement.merged.data();
+
+      benchmark::DoNotOptimize(mergedData);
+      state.counters["confirmed_results"] = static_cast<double>(refinement.confirmed.size());
+      state.counters["added_results"] = static_cast<double>(refinement.added.size());
+      state.counters["removed_results"] = static_cast<double>(refinement.removed.size());
+      state.counters["final_results"] = static_cast<double>(refinement.merged.size());
+    }
+
+    state.SetItemsProcessed(state.iterations() * state.range(0));
+  }
+
   void BM_IndexService_Initial_ManySmallFiles(benchmark::State& state)
   {
     const auto dataset = uburu::benchmarks::makeManySmallFilesDataset();
@@ -299,6 +354,7 @@ BENCHMARK(BM_SearchService_Direct_RepeatedManySmallFiles_CacheEffect);
 BENCHMARK(BM_SearchService_Batching_FixedSmallBatch_RenderCost);
 BENCHMARK(BM_SearchService_Batching_FixedLargeBatch_RenderCost);
 BENCHMARK(BM_SearchService_Batching_Adaptive_RenderCost);
+BENCHMARK(BM_SearchResultRefinement_StaleIndex)->Arg(10'000);
 BENCHMARK(BM_IndexService_Initial_ManySmallFiles);
 BENCHMARK(BM_IndexService_Incremental_ManySmallFiles);
 BENCHMARK(BM_IndexService_BranchSwitch_ManySmallFiles);

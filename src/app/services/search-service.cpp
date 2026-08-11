@@ -116,13 +116,21 @@ namespace uburu::app
 
     [[nodiscard]] SearchEventKind completionEventKind(const search::SearchSummary& summary)
     {
-      if (!summary.errors.empty())
-        return SearchEventKind::failed;
-
       if (summary.cancelled)
         return SearchEventKind::cancelled;
 
+      if (!summary.errors.empty() && !summary.partialFailure)
+        return SearchEventKind::failed;
+
       return SearchEventKind::completed;
+    }
+
+    [[nodiscard]] search::SearchSummary cancelledSearchSummary()
+    {
+      search::SearchSummary summary;
+      summary.cancelled = true;
+
+      return summary;
     }
 
     bool emitResult(SearchResult result, search::ResultSink& sink, std::vector<SearchResult>& emittedResults)
@@ -151,8 +159,11 @@ namespace uburu::app
       return true;
     }
 
-    [[nodiscard]] search::SearchSummary
-    indexedSummary(const std::vector<SearchResult>& emittedResults, const SearchQuery& query, std::stop_token stopToken)
+    [[nodiscard]]
+    search::SearchSummary indexedSummary(
+      const std::vector<SearchResult>& emittedResults,
+      const SearchQuery& query,
+      std::stop_token stopToken)
     {
       search::SearchSummary summary;
       summary.matches = emittedResults.size();
@@ -164,14 +175,11 @@ namespace uburu::app
       return summary;
     }
 
-    bool emitDirectRefinements(const std::vector<SearchResult>& directResults,
-                               const SearchQuery& query,
-                               search::ResultSink& sink,
-                               std::vector<SearchResult>& emittedResults)
+    bool emitRefinedResults(const search::SearchResultRefinement& refinement,
+                            search::ResultSink& sink,
+                            std::vector<SearchResult>& emittedResults)
     {
-      const auto refinement = search::refineSearchResults(emittedResults, directResults, query.options.resultLimit);
-
-      for (const auto& result : refinement.added) {
+      for (const auto& result : refinement.merged) {
         if (!emitResult(result, sink, emittedResults))
           return false;
       }
@@ -250,6 +258,13 @@ namespace uburu::app
       return summary;
     }
 
+    if (stopToken.stop_requested()) {
+      auto summary = cancelledSearchSummary();
+      finalizeRuntimeMetrics(summary, startedAt, 0);
+
+      return summary;
+    }
+
     std::vector<SearchResult> emittedResults;
     const auto indexedResults = indexService->search(query, stopToken);
 
@@ -262,14 +277,6 @@ namespace uburu::app
       return summary;
     }
 
-    if (!emitIndexedResults(indexedResults, query, sink, emittedResults)) {
-      auto summary = indexedSummary(emittedResults, query, stopToken);
-      finalizeRuntimeMetrics(summary, startedAt, searchResultsMemoryBytes(emittedResults));
-
-      return summary;
-    }
-
-    const auto indexedHitCount = emittedResults.size();
     std::vector<SearchResult> directResults;
     auto summary = directEngine->search(
       query,
@@ -280,14 +287,24 @@ namespace uburu::app
       },
       stopToken);
 
-    if (!emitDirectRefinements(directResults, query, sink, emittedResults))
+    if (summary.cancelled || stopToken.stop_requested()) {
+      summary.matches = 0;
+      summary.metrics.resultsEmitted = 0;
+      finalizeRuntimeMetrics(summary, startedAt, 0);
+
+      return summary;
+    }
+
+    const auto refinement = search::refineSearchResults(indexedResults, directResults, query.options.resultLimit);
+
+    if (!emitRefinedResults(refinement, sink, emittedResults))
       summary.cancelled = summary.cancelled || stopToken.stop_requested();
 
     summary.matches = emittedResults.size();
     summary.limitReached = summary.limitReached || emittedResults.size() >= query.options.resultLimit;
     summary.metrics.resultsEmitted = emittedResults.size();
-    summary.metrics.cacheHits = indexedHitCount;
-    summary.metrics.cacheMisses = emittedResults.size() - indexedHitCount;
+    summary.metrics.cacheHits = refinement.confirmed.size();
+    summary.metrics.cacheMisses = refinement.added.size();
 
     finalizeRuntimeMetrics(summary, startedAt, searchResultsMemoryBytes(emittedResults));
 

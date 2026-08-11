@@ -90,6 +90,8 @@ The top-level `CHANGELOG.md` summarizes notable project changes by version, star
 
 Validation records also live under `docs/releases/`. The `v0.1.0` preview uses `docs/releases/v0.1.0-validation.md` to separate what was actually tested from optional future work such as signing certificates, Flatpak packaging, or unsupported platforms.
 
+The repeatable correctness, Git/indexing, resource, and performance validation matrix for future release candidates is defined in `docs/validation.md`. Release-specific records should reference that matrix and retain only the observed evidence and release decision.
+
 To prepare the Windows release assets and a machine-readable manifest in one step, run:
 
 ```powershell

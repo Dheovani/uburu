@@ -21,7 +21,7 @@ Future work below should improve this baseline without reopening completed miles
 
 ## Before a stable 1.0 release
 
-- [ ] Validate correctness for all documented search semantics against larger real-world repositories and user datasets.
+- [ ] Execute the repeatable validation matrix in `docs/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
 - [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
 - [ ] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.

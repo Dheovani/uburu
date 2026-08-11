@@ -14,6 +14,8 @@ Fuzzers live in `tests/fuzzers`. They are smoke-oriented in CI and should have e
 
 Benchmarks live in `benchmarks`. They must not be used as correctness checks. Their job is to produce comparable timing, throughput, memory, batching, and indexing counters for known scenarios.
 
+Product validation against representative real-world datasets is defined in `docs/validation.md`. It complements this automated test architecture and must not replace deterministic regression tests for bugs discovered during manual validation.
+
 ## Fixtures and temporary resources
 
 Shared tiny fixtures live in `tests/fixtures`. Prefer semantic fixture helpers over checked-in large files. When a test needs real files, use the RAII helpers in `tests/helpers` so temporary paths are unique, cleaned up, and safe for parallel CTest execution.

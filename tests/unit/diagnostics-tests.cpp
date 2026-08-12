@@ -300,6 +300,9 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   metrics.reusedByHash = reusedByHash;
   metrics.approximateMemoryBytes = approximateMemoryBytes;
   metrics.memoryGrowthBytes = memoryGrowthBytes;
+  metrics.documentExtractionSafetyLimited = 5;
+  metrics.documentExtractionProtected = 2;
+  metrics.documentExtractionParserFailures = 1;
   metrics.memoryIncreased = true;
 
   sink.record(metrics);
@@ -310,7 +313,7 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   CHECK(event.level == uburu::diagnostics::LogLevel::info);
   CHECK(event.category == uburu::diagnostics::LogCategory::search);
   CHECK(event.message == "search metrics");
-  REQUIRE(event.fields.size() == 23);
+  REQUIRE(event.fields.size() == 32);
   CHECK(event.fields[0].key == "time_to_first_result_ns");
   CHECK(event.fields[0].value == "7");
   CHECK(event.fields[1].key == "total_time_ns");
@@ -333,8 +336,14 @@ TEST_CASE("structured metrics sink records search metrics as structured log fiel
   CHECK(event.fields[20].value == "4096");
   CHECK(event.fields[21].key == "memory_growth_bytes");
   CHECK(event.fields[21].value == "128");
-  CHECK(event.fields[22].key == "memory_increased");
-  CHECK(event.fields[22].value == "true");
+  CHECK(event.fields[28].key == "document_extraction_safety_limited");
+  CHECK(event.fields[28].value == "5");
+  CHECK(event.fields[29].key == "document_extraction_parser_failures");
+  CHECK(event.fields[29].value == "1");
+  CHECK(event.fields[30].key == "document_extraction_protected");
+  CHECK(event.fields[30].value == "2");
+  CHECK(event.fields[31].key == "memory_increased");
+  CHECK(event.fields[31].value == "true");
 }
 
 TEST_CASE("structured metrics sink rejects a missing logger")

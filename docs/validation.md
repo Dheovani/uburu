@@ -127,7 +127,7 @@ The same command works on Linux with the Linux `uburu` executable and shell-appr
 
 Formal evidence requires a clean Git worktree and an optimized Release build by default, ensuring that the recorded commit identifies the tested source exactly and that timings represent the shipped configuration. During development, `-DUBURU_REQUIRE_CLEAN_WORKTREE=OFF` or `-DUBURU_REQUIRE_RELEASE_BUILD=OFF` may be used for a preliminary diagnostic run, but its record must not be promoted to release evidence.
 
-The generated record compares final match counts, requires a fresh index, rejects cancellation, partial failure, result-limit exhaustion, memory-limit exhaustion, and indexing failures, and records aggregate timing, throughput, queue, memory, and reuse counters. It deliberately cannot validate visual responsiveness, preview behavior, cancellation latency, partial-failure presentation, branch switching, or clean-machine artifacts; those scenarios remain manual responsibilities.
+The generated record compares final match counts, requires a fresh index, rejects undeclared partial or indexing failures, cancellation, result-limit exhaustion, and memory-limit exhaustion, and records aggregate timing, throughput, queue, memory, reuse, and document-extraction status counters. Extraction counters distinguish completed, unsupported, safety-limited, protected, open/read failure, invalid-encoding, and parser-failure outcomes without retaining private paths. It deliberately cannot validate visual responsiveness, preview behavior, cancellation latency, partial-failure presentation, branch switching, or clean-machine artifacts; those scenarios remain manual responsibilities.
 
 ## Git and incremental-index scenarios
 

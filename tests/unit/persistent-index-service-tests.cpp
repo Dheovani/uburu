@@ -824,6 +824,43 @@ TEST_CASE("persistent index service records metrics for document extractors")
 #endif
 }
 
+TEST_CASE("persistent index service classifies protected and malformed PDF extraction")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-pdf-failure-metrics-test");
+  const auto root = directory.path() / "repo";
+
+  writeFile(root / "protected.pdf", "%PDF-1.4\ntrailer\n<< /Encrypt 5 0 R >>\n%%EOF\n");
+  writeFile(root / "malformed.pdf", "not a pdf");
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, "protected.pdf"),
+    fileEntry(root, "malformed.pdf"),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+  const auto pdfMetrics =
+    std::ranges::find(summary.extractorMetrics, "pdf", &uburu::index::IndexExtractorMetrics::extractorName);
+
+  REQUIRE(pdfMetrics != summary.extractorMetrics.end());
+  CHECK(summary.failed == 1);
+  CHECK(summary.skippedTemporaryLimitation == 1);
+  CHECK(pdfMetrics->filesProcessed == 2);
+  CHECK(pdfMetrics->skippedProtected == 1);
+  CHECK(pdfMetrics->parserFailures == 1);
+  CHECK(pdfMetrics->openFailures == 0);
+  CHECK(pdfMetrics->readFailures == 0);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service reports missing fresh and stale generations")
 {
 #if defined(UBURU_HAS_SQLITE)

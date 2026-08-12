@@ -28,6 +28,9 @@ namespace uburu::index
     std::size_t skippedBinary{0};
     std::size_t skippedSafetyLimited{0};
     std::size_t skippedProtected{0};
+    std::size_t openFailures{0};
+    std::size_t readFailures{0};
+    std::size_t invalidEncoding{0};
     std::size_t parserFailures{0};
     std::uintmax_t indexedTextBytes{0};
   };

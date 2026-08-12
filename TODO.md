@@ -33,6 +33,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Make validation evidence require Release builds, record binary/subdirectory/file-size scope, enforce known matches, and distinguish declared partial failures from fatal failures.
   - [x] Record a preliminary Windows cycle against the Uburu repository to validate the evidence workflow.
   - [x] Record a preliminary Windows document-corpus cycle over all 217 PDFs up to 256 MiB and fix the Unicode-path and embedded-NUL regressions it exposed.
+  - [x] Add privacy-safe extraction-status counters and align PDF source limits between direct search, scanning, and indexing.
   - [ ] Classify and reduce the PDF extraction failures exposed by the Windows document corpus before promoting the run to formal evidence.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.

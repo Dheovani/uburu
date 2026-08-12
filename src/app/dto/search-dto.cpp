@@ -137,6 +137,15 @@ namespace uburu::app
     dto.hiddenFiles = metrics.hiddenFiles;
     dto.binaryFiles = metrics.binaryFiles;
     dto.binaryFilesSkipped = metrics.binaryFilesSkipped;
+    dto.documentExtractionsCompleted = metrics.documentExtractionsCompleted;
+    dto.documentExtractionsCancelled = metrics.documentExtractionsCancelled;
+    dto.documentExtractionsUnsupported = metrics.documentExtractionsUnsupported;
+    dto.documentExtractionOpenFailures = metrics.documentExtractionOpenFailures;
+    dto.documentExtractionReadFailures = metrics.documentExtractionReadFailures;
+    dto.documentExtractionInvalidEncoding = metrics.documentExtractionInvalidEncoding;
+    dto.documentExtractionSafetyLimited = metrics.documentExtractionSafetyLimited;
+    dto.documentExtractionParserFailures = metrics.documentExtractionParserFailures;
+    dto.documentExtractionProtected = metrics.documentExtractionProtected;
     dto.queueProducerWaits = metrics.queueProducerWaits;
     dto.queueConsumerWaits = metrics.queueConsumerWaits;
     dto.workerQueuePeakItems = metrics.workerQueuePeakItems;

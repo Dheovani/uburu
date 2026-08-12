@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace
@@ -204,6 +205,9 @@ TEST_CASE("CLI search summary exposes result memory exhaustion")
   summary.metrics.totalTime = std::chrono::nanoseconds{900};
   summary.metrics.filesProcessed = 12;
   summary.metrics.bytesProcessed = 40960;
+  summary.metrics.documentExtractionSafetyLimited = 5;
+  summary.metrics.documentExtractionProtected = 2;
+  summary.metrics.documentExtractionParserFailures = 1;
 
   std::ostringstream output;
   uburu::cli::writeSearchSummary(output, summary, uburu::cli::CliOutputFormat::jsonLines);
@@ -214,17 +218,32 @@ TEST_CASE("CLI search summary exposes result memory exhaustion")
   CHECK(output.str().find("\"totalTimeNanoseconds\":900") != std::string::npos);
   CHECK(output.str().find("\"filesProcessed\":12") != std::string::npos);
   CHECK(output.str().find("\"bytesProcessed\":40960") != std::string::npos);
+  CHECK(output.str().find("\"extractionSafetyLimited\":5") != std::string::npos);
+  CHECK(output.str().find("\"extractionProtected\":2") != std::string::npos);
+  CHECK(output.str().find("\"extractionParserFailures\":1") != std::string::npos);
 }
 
 TEST_CASE("CLI index summary exposes working memory exhaustion")
 {
   uburu::index::IndexUpdateSummary summary;
+  uburu::index::IndexExtractorMetrics extractorMetrics;
+
   summary.workingMemoryPeakBytes = 8192;
   summary.memoryLimitReached = true;
+  extractorMetrics.extractorName = "pdf";
+  extractorMetrics.filesProcessed = 9;
+  extractorMetrics.skippedSafetyLimited = 5;
+  extractorMetrics.skippedProtected = 2;
+  extractorMetrics.parserFailures = 1;
+  summary.extractorMetrics.push_back(std::move(extractorMetrics));
 
   std::ostringstream output;
   uburu::cli::writeIndexUpdateSummary(output, summary, uburu::cli::CliOutputFormat::jsonLines);
 
   CHECK(output.str().find("\"memoryLimitReached\":true") != std::string::npos);
   CHECK(output.str().find("\"workingMemoryPeakBytes\":8192") != std::string::npos);
+  CHECK(output.str().find("\"extractionFilesProcessed\":9") != std::string::npos);
+  CHECK(output.str().find("\"extractionSafetyLimited\":5") != std::string::npos);
+  CHECK(output.str().find("\"extractionProtected\":2") != std::string::npos);
+  CHECK(output.str().find("\"extractionParserFailures\":1") != std::string::npos);
 }

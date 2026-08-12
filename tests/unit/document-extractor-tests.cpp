@@ -1371,6 +1371,30 @@ TEST_CASE("pdf document extractor applies extracted byte limits before publishin
   CHECK(deliveredSegments == 0);
 }
 
+TEST_CASE("pdf document extractor applies the configured source file size limit")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-source-size-limit-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  const auto pdf = uburu::tests::fixtures::minimalPdfText("BT (visible content) Tj ET");
+  options.textOptions.maximumFileSize = static_cast<std::uintmax_t>(pdf.size() - 1);
+  uburu::tests::writeFile(path, pdf);
+
+  const auto limited = extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) {
+    return true;
+  });
+
+  options.textOptions.maximumFileSize = static_cast<std::uintmax_t>(pdf.size());
+  const auto accepted = extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) {
+    return true;
+  });
+
+  CHECK(limited.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(accepted.status == uburu::document::DocumentExtractionStatus::completed);
+}
+
 TEST_CASE("pdf document extractor reports cancellation before parsing")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-pdf-cancel-test");

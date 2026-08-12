@@ -22,6 +22,15 @@ namespace uburu::diagnostics
     std::uint64_t hiddenFiles{0};
     std::uint64_t binaryFiles{0};
     std::uint64_t binaryFilesSkipped{0};
+    std::uint64_t documentExtractionsCompleted{0};
+    std::uint64_t documentExtractionsCancelled{0};
+    std::uint64_t documentExtractionsUnsupported{0};
+    std::uint64_t documentExtractionOpenFailures{0};
+    std::uint64_t documentExtractionReadFailures{0};
+    std::uint64_t documentExtractionInvalidEncoding{0};
+    std::uint64_t documentExtractionSafetyLimited{0};
+    std::uint64_t documentExtractionParserFailures{0};
+    std::uint64_t documentExtractionProtected{0};
     std::uint64_t queueProducerWaits{0};
     std::uint64_t queueConsumerWaits{0};
     std::uint64_t workerQueuePeakItems{0};

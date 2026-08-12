@@ -155,6 +155,14 @@ namespace uburu::cli
       output << " bytesProcessed=" << summary.metrics.bytesProcessed;
       output << " filesPerSecond=" << summary.metrics.filesPerSecond;
       output << " bytesPerSecond=" << summary.metrics.bytesPerSecond;
+      output << " extractionCompleted=" << summary.metrics.documentExtractionsCompleted;
+      output << " extractionUnsupported=" << summary.metrics.documentExtractionsUnsupported;
+      output << " extractionOpenFailures=" << summary.metrics.documentExtractionOpenFailures;
+      output << " extractionReadFailures=" << summary.metrics.documentExtractionReadFailures;
+      output << " extractionInvalidEncoding=" << summary.metrics.documentExtractionInvalidEncoding;
+      output << " extractionSafetyLimited=" << summary.metrics.documentExtractionSafetyLimited;
+      output << " extractionParserFailures=" << summary.metrics.documentExtractionParserFailures;
+      output << " extractionProtected=" << summary.metrics.documentExtractionProtected;
       output << " workerQueuePeakItems=" << summary.metrics.workerQueuePeakItems;
       output << " fileResultQueuePeakItems=" << summary.metrics.fileResultQueuePeakItems;
       output << '\n';
@@ -180,6 +188,14 @@ namespace uburu::cli
       output << ",\"bytesProcessed\":" << summary.metrics.bytesProcessed;
       output << ",\"filesPerSecond\":" << summary.metrics.filesPerSecond;
       output << ",\"bytesPerSecond\":" << summary.metrics.bytesPerSecond;
+      output << ",\"extractionCompleted\":" << summary.metrics.documentExtractionsCompleted;
+      output << ",\"extractionUnsupported\":" << summary.metrics.documentExtractionsUnsupported;
+      output << ",\"extractionOpenFailures\":" << summary.metrics.documentExtractionOpenFailures;
+      output << ",\"extractionReadFailures\":" << summary.metrics.documentExtractionReadFailures;
+      output << ",\"extractionInvalidEncoding\":" << summary.metrics.documentExtractionInvalidEncoding;
+      output << ",\"extractionSafetyLimited\":" << summary.metrics.documentExtractionSafetyLimited;
+      output << ",\"extractionParserFailures\":" << summary.metrics.documentExtractionParserFailures;
+      output << ",\"extractionProtected\":" << summary.metrics.documentExtractionProtected;
       output << ",\"workerQueuePeakItems\":" << summary.metrics.workerQueuePeakItems;
       output << ",\"fileResultQueuePeakItems\":" << summary.metrics.fileResultQueuePeakItems;
       output << "}\n";
@@ -198,6 +214,39 @@ namespace uburu::cli
       }
 
       return "unknown";
+    }
+
+    struct IndexExtractionTotals
+    {
+      std::size_t filesProcessed{0};
+      std::size_t unsupported{0};
+      std::size_t binary{0};
+      std::size_t safetyLimited{0};
+      std::size_t protectedFiles{0};
+      std::size_t openFailures{0};
+      std::size_t readFailures{0};
+      std::size_t invalidEncoding{0};
+      std::size_t parserFailures{0};
+    };
+
+    [[nodiscard]]
+    IndexExtractionTotals indexExtractionTotals(const index::IndexUpdateSummary& summary)
+    {
+      IndexExtractionTotals totals;
+
+      for (const auto& metrics : summary.extractorMetrics) {
+        totals.filesProcessed += metrics.filesProcessed;
+        totals.unsupported += metrics.skippedUnsupportedFormat;
+        totals.binary += metrics.skippedBinary;
+        totals.safetyLimited += metrics.skippedSafetyLimited;
+        totals.protectedFiles += metrics.skippedProtected;
+        totals.openFailures += metrics.openFailures;
+        totals.readFailures += metrics.readFailures;
+        totals.invalidEncoding += metrics.invalidEncoding;
+        totals.parserFailures += metrics.parserFailures;
+      }
+
+      return totals;
     }
 
     void writeHumanIndexStatus(std::ostream& output, const index::IndexStalenessReport& report)
@@ -219,6 +268,8 @@ namespace uburu::cli
 
     void writeHumanIndexUpdateSummary(std::ostream& output, const index::IndexUpdateSummary& summary)
     {
+      const auto extraction = indexExtractionTotals(summary);
+
       output << "indexed=" << summary.indexed;
       output << " reusedByCatalog=" << summary.reusedByCatalog;
       output << " reusedByBlob=" << summary.reusedByBlob;
@@ -227,6 +278,13 @@ namespace uburu::cli
       output << " failed=" << summary.failed;
       output << " skippedUnsupportedFormat=" << summary.skippedUnsupportedFormat;
       output << " skippedBinary=" << summary.skippedBinary;
+      output << " extractionFilesProcessed=" << extraction.filesProcessed;
+      output << " extractionSafetyLimited=" << extraction.safetyLimited;
+      output << " extractionProtected=" << extraction.protectedFiles;
+      output << " extractionOpenFailures=" << extraction.openFailures;
+      output << " extractionReadFailures=" << extraction.readFailures;
+      output << " extractionInvalidEncoding=" << extraction.invalidEncoding;
+      output << " extractionParserFailures=" << extraction.parserFailures;
       output << " workingMemoryPeakBytes=" << summary.workingMemoryPeakBytes;
       output << " memoryLimitReached=" << (summary.memoryLimitReached ? "true" : "false");
       output << " cancelled=" << (summary.cancelled ? "true" : "false");
@@ -235,6 +293,8 @@ namespace uburu::cli
 
     void writeJsonIndexUpdateSummary(std::ostream& output, const index::IndexUpdateSummary& summary)
     {
+      const auto extraction = indexExtractionTotals(summary);
+
       output << "{\"type\":\"indexSummary\"";
       output << ",\"indexed\":" << summary.indexed;
       output << ",\"reusedByCatalog\":" << summary.reusedByCatalog;
@@ -244,6 +304,15 @@ namespace uburu::cli
       output << ",\"failed\":" << summary.failed;
       output << ",\"skippedUnsupportedFormat\":" << summary.skippedUnsupportedFormat;
       output << ",\"skippedBinary\":" << summary.skippedBinary;
+      output << ",\"extractionFilesProcessed\":" << extraction.filesProcessed;
+      output << ",\"extractionUnsupported\":" << extraction.unsupported;
+      output << ",\"extractionBinary\":" << extraction.binary;
+      output << ",\"extractionSafetyLimited\":" << extraction.safetyLimited;
+      output << ",\"extractionProtected\":" << extraction.protectedFiles;
+      output << ",\"extractionOpenFailures\":" << extraction.openFailures;
+      output << ",\"extractionReadFailures\":" << extraction.readFailures;
+      output << ",\"extractionInvalidEncoding\":" << extraction.invalidEncoding;
+      output << ",\"extractionParserFailures\":" << extraction.parserFailures;
       output << ",\"workingMemoryPeakBytes\":" << summary.workingMemoryPeakBytes;
       output << ",\"memoryLimitReached\":" << (summary.memoryLimitReached ? "true" : "false");
       output << ",\"cancelled\":" << (summary.cancelled ? "true" : "false");

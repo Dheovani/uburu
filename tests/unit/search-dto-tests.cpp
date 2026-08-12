@@ -58,6 +58,9 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   summary.metrics.cacheHits = 3;
   summary.metrics.cacheMisses = 1;
   summary.metrics.reusedByHash = 2;
+  summary.metrics.documentExtractionSafetyLimited = 5;
+  summary.metrics.documentExtractionProtected = 2;
+  summary.metrics.documentExtractionParserFailures = 1;
   summary.metrics.approximateMemoryBytes = 1024;
   summary.metrics.memoryGrowthBytes = 64;
   summary.metrics.memoryIncreased = true;
@@ -87,6 +90,9 @@ TEST_CASE("search summary dto maps internal enum values to stable names")
   CHECK(dto.metrics.cacheHits == 3);
   CHECK(dto.metrics.cacheMisses == 1);
   CHECK(dto.metrics.reusedByHash == 2);
+  CHECK(dto.metrics.documentExtractionSafetyLimited == 5);
+  CHECK(dto.metrics.documentExtractionProtected == 2);
+  CHECK(dto.metrics.documentExtractionParserFailures == 1);
   CHECK(dto.metrics.approximateMemoryBytes == 1024);
   CHECK(dto.metrics.memoryGrowthBytes == 64);
   CHECK(dto.metrics.memoryIncreased);

@@ -760,6 +760,40 @@ TEST_CASE("direct search uses visible text for pdf content")
   CHECK(summary.matches == 1);
 }
 
+TEST_CASE("direct search classifies protected PDF extraction failures")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-protected-pdf-metrics-test");
+  const auto path = directory.path() / "protected.pdf";
+  uburu::tests::writeFile(path, "%PDF-1.4\ntrailer\n<< /Encrypt 5 0 R >>\n%%EOF\n");
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "protected.pdf");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+
+  CHECK(summary.filesWithReadErrors == 1);
+  CHECK(summary.metrics.documentExtractionProtected == 1);
+  CHECK(summary.metrics.documentExtractionParserFailures == 0);
+}
+
+TEST_CASE("direct search classifies malformed PDF parser failures")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-malformed-pdf-metrics-test");
+  const auto path = directory.path() / "malformed.pdf";
+  uburu::tests::writeFile(path, "not a pdf");
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "malformed.pdf");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+
+  const auto summary = engine.search(query, [](uburu::SearchResult) { return true; });
+
+  CHECK(summary.filesWithReadErrors == 1);
+  CHECK(summary.metrics.documentExtractionProtected == 0);
+  CHECK(summary.metrics.documentExtractionParserFailures == 1);
+}
+
 TEST_CASE("direct search uses cue text for subtitle content")
 {
   const uburu::tests::TemporaryDirectory directory("uburu-direct-search-subtitle-content-test");

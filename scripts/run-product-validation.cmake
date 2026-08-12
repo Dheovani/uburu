@@ -158,7 +158,9 @@ function(runSearch strategy prefix)
   foreach(field IN ITEMS matches filesScanned filesWithReadErrors cancelled partialFailure resultLimitReached
                          memoryLimitReached resultMemoryBytes timeToFirstResultNanoseconds totalTimeNanoseconds
                          filesProcessed bytesProcessed filesPerSecond bytesPerSecond workerQueuePeakItems
-                         fileResultQueuePeakItems)
+                         fileResultQueuePeakItems extractionCompleted extractionUnsupported extractionOpenFailures
+                         extractionReadFailures extractionInvalidEncoding extractionSafetyLimited
+                         extractionParserFailures extractionProtected)
     readJsonField("${summaryJson}" "${field}" fieldValue)
     set(${prefix}_${field} "${fieldValue}")
     set(${prefix}_${field} "${fieldValue}" PARENT_SCOPE)
@@ -307,6 +309,15 @@ foreach(field IN ITEMS
         failed
         skippedUnsupportedFormat
         skippedBinary
+        extractionFilesProcessed
+        extractionUnsupported
+        extractionBinary
+        extractionSafetyLimited
+        extractionProtected
+        extractionOpenFailures
+        extractionReadFailures
+        extractionInvalidEncoding
+        extractionParserFailures
         workingMemoryPeakBytes
         memoryLimitReached
         cancelled)
@@ -431,6 +442,17 @@ string(APPEND report
   "${hybrid_bytesPerSecond} | ${hybrid_resultMemoryBytes} B | "
   "${hybrid_workerQueuePeakItems}/${hybrid_fileResultQueuePeakItems} |\n\n"
 )
+string(APPEND report "### Direct document extraction\n\n")
+string(APPEND report
+  "| Completed | Unsupported | Safety limited | Protected | Open failures | Read failures | Invalid encoding | "
+  "Parser failures |\n"
+)
+string(APPEND report "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+string(APPEND report
+  "| ${direct_extractionCompleted} | ${direct_extractionUnsupported} | ${direct_extractionSafetyLimited} | "
+  "${direct_extractionProtected} | ${direct_extractionOpenFailures} | ${direct_extractionReadFailures} | "
+  "${direct_extractionInvalidEncoding} | ${direct_extractionParserFailures} |\n\n"
+)
 string(APPEND report "## Index evidence\n\n")
 string(APPEND report
   "| Run | Indexed | Catalog reuse | Blob reuse | Hash reuse | Removed | Failed | Unsupported | Binary | "
@@ -448,6 +470,19 @@ string(APPEND report
   "${incrementalIndex_reusedByBlob} | ${incrementalIndex_reusedByHash} | ${incrementalIndex_removed} | "
   "${incrementalIndex_failed} | ${incrementalIndex_skippedUnsupportedFormat} | "
   "${incrementalIndex_skippedBinary} | ${incrementalIndex_workingMemoryPeakBytes} B |\n\n"
+)
+string(APPEND report "### Initial index document extraction\n\n")
+string(APPEND report
+  "| Processed | Unsupported | Binary | Safety limited | Protected | Open failures | Read failures | "
+  "Invalid encoding | Parser failures |\n"
+)
+string(APPEND report "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+string(APPEND report
+  "| ${initialIndex_extractionFilesProcessed} | ${initialIndex_extractionUnsupported} | "
+  "${initialIndex_extractionBinary} | ${initialIndex_extractionSafetyLimited} | "
+  "${initialIndex_extractionProtected} | ${initialIndex_extractionOpenFailures} | "
+  "${initialIndex_extractionReadFailures} | ${initialIndex_extractionInvalidEncoding} | "
+  "${initialIndex_extractionParserFailures} |\n\n"
 )
 string(APPEND report "- Index status after rebuild: `${indexStatus_state}`\n")
 string(APPEND report "- HEAD changed: `${indexStatus_headChanged}`\n")

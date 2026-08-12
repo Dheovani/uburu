@@ -61,6 +61,33 @@ namespace uburu::diagnostics
                                       numericField("reused_by_hash", metrics.reusedByHash),
                                       numericField("approximate_memory_bytes", metrics.approximateMemoryBytes),
                                       numericField("memory_growth_bytes", metrics.memoryGrowthBytes),
+                                      numericField(
+                                        "document_extractions_completed",
+                                        metrics.documentExtractionsCompleted),
+                                      numericField(
+                                        "document_extractions_cancelled",
+                                        metrics.documentExtractionsCancelled),
+                                      numericField(
+                                        "document_extractions_unsupported",
+                                        metrics.documentExtractionsUnsupported),
+                                      numericField(
+                                        "document_extraction_open_failures",
+                                        metrics.documentExtractionOpenFailures),
+                                      numericField(
+                                        "document_extraction_read_failures",
+                                        metrics.documentExtractionReadFailures),
+                                      numericField(
+                                        "document_extraction_invalid_encoding",
+                                        metrics.documentExtractionInvalidEncoding),
+                                      numericField(
+                                        "document_extraction_safety_limited",
+                                        metrics.documentExtractionSafetyLimited),
+                                      numericField(
+                                        "document_extraction_parser_failures",
+                                        metrics.documentExtractionParserFailures),
+                                      numericField(
+                                        "document_extraction_protected",
+                                        metrics.documentExtractionProtected),
                                       booleanField("memory_increased", metrics.memoryIncreased)},
                            .timestamp = {}});
   }

@@ -210,7 +210,16 @@ namespace uburu::index
         if (availability == document::DocumentContentAvailability::nameOnlyProtected)
           ++item.skippedProtected;
 
-        if (availability == document::DocumentContentAvailability::extractionFailed)
+        if (extractionSummary.status == document::DocumentExtractionStatus::openFailed)
+          ++item.openFailures;
+
+        if (extractionSummary.status == document::DocumentExtractionStatus::readFailed)
+          ++item.readFailures;
+
+        if (extractionSummary.status == document::DocumentExtractionStatus::invalidEncoding)
+          ++item.invalidEncoding;
+
+        if (extractionSummary.status == document::DocumentExtractionStatus::parserFailed)
           ++item.parserFailures;
       };
 
@@ -818,7 +827,11 @@ namespace uburu::index
       const auto remainingMemoryBytes = options.memoryBudgetBytes == 0
                                           ? 0
                                           : options.memoryBudgetBytes - retainedMemoryBytes;
-      auto indexedText = readIndexedText(file, SearchOptions{}, remainingMemoryBytes, stopToken);
+      SearchOptions extractionOptions;
+
+      extractionOptions.maximumFileSize = file.size;
+
+      auto indexedText = readIndexedText(file, extractionOptions, remainingMemoryBytes, stopToken);
 
       recordExtractorMetrics(
         summary,

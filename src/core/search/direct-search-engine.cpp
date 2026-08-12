@@ -307,6 +307,43 @@ namespace uburu::search
       summary.errors.push_back(makeSearchError(code, pathToUtf8(entry.relativePath)));
     }
 
+    void recordDocumentExtractionStatus(
+      diagnostics::SearchMetrics& metrics,
+      document::DocumentExtractionStatus status)
+    {
+      switch (status) {
+      case document::DocumentExtractionStatus::completed:
+        ++metrics.documentExtractionsCompleted;
+        return;
+      case document::DocumentExtractionStatus::cancelled:
+        ++metrics.documentExtractionsCancelled;
+        return;
+      case document::DocumentExtractionStatus::unsupportedFormat:
+        ++metrics.documentExtractionsUnsupported;
+        return;
+      case document::DocumentExtractionStatus::openFailed:
+        ++metrics.documentExtractionOpenFailures;
+        return;
+      case document::DocumentExtractionStatus::readFailed:
+        ++metrics.documentExtractionReadFailures;
+        return;
+      case document::DocumentExtractionStatus::binarySkipped:
+        return;
+      case document::DocumentExtractionStatus::invalidEncoding:
+        ++metrics.documentExtractionInvalidEncoding;
+        return;
+      case document::DocumentExtractionStatus::safetyLimitExceeded:
+        ++metrics.documentExtractionSafetyLimited;
+        return;
+      case document::DocumentExtractionStatus::parserFailed:
+        ++metrics.documentExtractionParserFailures;
+        return;
+      case document::DocumentExtractionStatus::encryptedOrProtected:
+        ++metrics.documentExtractionProtected;
+        return;
+      }
+    }
+
     bool reportTextReadSummary(SearchSummary& summary, const FileEntry& entry, text::TextReadSummary readSummary)
     {
       if (readSummary.status == text::TextReadStatus::completed)
@@ -333,6 +370,8 @@ namespace uburu::search
                                          const FileEntry& entry,
                                          document::DocumentExtractionSummary extractionSummary)
     {
+      recordDocumentExtractionStatus(summary.metrics, extractionSummary.status);
+
       if (extractionSummary.status == document::DocumentExtractionStatus::completed)
         return true;
 
@@ -713,6 +752,15 @@ namespace uburu::search
       summary.partialFailure = summary.partialFailure || fileSummary.partialFailure;
       summary.metrics.binaryFiles += fileSummary.metrics.binaryFiles;
       summary.metrics.binaryFilesSkipped += fileSummary.metrics.binaryFilesSkipped;
+      summary.metrics.documentExtractionsCompleted += fileSummary.metrics.documentExtractionsCompleted;
+      summary.metrics.documentExtractionsCancelled += fileSummary.metrics.documentExtractionsCancelled;
+      summary.metrics.documentExtractionsUnsupported += fileSummary.metrics.documentExtractionsUnsupported;
+      summary.metrics.documentExtractionOpenFailures += fileSummary.metrics.documentExtractionOpenFailures;
+      summary.metrics.documentExtractionReadFailures += fileSummary.metrics.documentExtractionReadFailures;
+      summary.metrics.documentExtractionInvalidEncoding += fileSummary.metrics.documentExtractionInvalidEncoding;
+      summary.metrics.documentExtractionSafetyLimited += fileSummary.metrics.documentExtractionSafetyLimited;
+      summary.metrics.documentExtractionParserFailures += fileSummary.metrics.documentExtractionParserFailures;
+      summary.metrics.documentExtractionProtected += fileSummary.metrics.documentExtractionProtected;
       summary.errors.insert(
         summary.errors.end(),
         std::make_move_iterator(fileSummary.errors.begin()),

@@ -146,13 +146,19 @@ namespace uburu::document
     [[nodiscard]]
     std::uintmax_t maximumSourceBytes(const DocumentExtractionOptions& options)
     {
+      const auto configuredFileLimit = options.textOptions.maximumFileSize > 0
+                                         ? options.textOptions.maximumFileSize
+                                         : defaultMaximumPdfBytes;
+
       if (options.maximumExtractedBytes == 0)
-        return defaultMaximumPdfBytes;
+        return configuredFileLimit;
 
       if (options.maximumExtractedBytes > std::numeric_limits<std::uintmax_t>::max() / pdfSafetyMultiplier)
-        return defaultMaximumPdfBytes;
+        return configuredFileLimit;
 
-      return std::max(options.maximumExtractedBytes * pdfSafetyMultiplier, options.maximumExtractedBytes);
+      const auto extractionDerivedLimit = options.maximumExtractedBytes * pdfSafetyMultiplier;
+
+      return std::min(configuredFileLimit, extractionDerivedLimit);
     }
 
     [[nodiscard]]

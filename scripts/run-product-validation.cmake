@@ -79,6 +79,17 @@ file(MAKE_DIRECTORY "${outputDirectory}")
 get_filename_component(projectRoot "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(privateDirectory "${projectRoot}/build/product-validation-private/${UBURU_DATASET_ID}")
 set(databasePath "${privateDirectory}/uburu-validation.db")
+
+if(IS_DIRECTORY "${outputPath}")
+  message(FATAL_ERROR "UBURU_OUTPUT must name a Markdown file, not an existing directory")
+endif()
+
+cmake_path(IS_PREFIX privateDirectory "${outputPath}" NORMALIZE outputInsidePrivateDirectory)
+
+if(outputInsidePrivateDirectory)
+  message(FATAL_ERROR "UBURU_OUTPUT must remain outside the disposable private validation directory")
+endif()
+
 file(REMOVE_RECURSE "${privateDirectory}")
 file(MAKE_DIRECTORY "${privateDirectory}")
 

@@ -38,8 +38,8 @@ namespace
   }
 
   [[nodiscard]]
-  std::vector<unsigned char> storedZipBytesWithUnsupportedCompression(
-    const std::vector<uburu::tests::fixtures::StoredZipEntryFixture>& entries)
+  std::vector<unsigned char>
+  storedZipBytesWithUnsupportedCompression(const std::vector<uburu::tests::fixtures::StoredZipEntryFixture>& entries)
   {
     auto bytes = uburu::tests::fixtures::storedZipBytes(entries);
     std::size_t localOffset = 0;
@@ -65,12 +65,11 @@ namespace
     auto destinationBytes = compressBound(static_cast<uLong>(text.size()));
     std::string compressed(destinationBytes, '\0');
 
-    const auto status = compress2(
-      reinterpret_cast<Bytef*>(compressed.data()),
-      &destinationBytes,
-      reinterpret_cast<const Bytef*>(text.data()),
-      static_cast<uLong>(text.size()),
-      zlibCompressionLevel);
+    const auto status = compress2(reinterpret_cast<Bytef*>(compressed.data()),
+                                  &destinationBytes,
+                                  reinterpret_cast<const Bytef*>(text.data()),
+                                  static_cast<uLong>(text.size()),
+                                  zlibCompressionLevel);
 
     REQUIRE(status == Z_OK);
 
@@ -93,9 +92,7 @@ namespace
            "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
            "endobj\n"
            "4 0 obj\n" +
-           std::string{dictionary} +
-           "\nstream\n" +
-           std::string{contentStream} +
+           std::string{dictionary} + "\nstream\n" + std::string{contentStream} +
            "\nendstream\n"
            "endobj\n"
            "trailer\n"
@@ -264,16 +261,15 @@ TEST_CASE("docx document extractor emits visible wordprocessing text")
   uburu::document::DocumentExtractionOptions options;
   std::vector<uburu::document::ExtractedTextSegment> segments;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalDocxBytes(
-      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
-      "<w:body>"
-      "<w:p><w:r><w:t>Hello &amp; needle</w:t></w:r></w:p>"
-      "<w:p><w:r><w:t>Second</w:t><w:tab/><w:t>line</w:t></w:r></w:p>"
-      "</w:body>"
-      "</w:document>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalDocxBytes(
+                             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                             "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                             "<w:body>"
+                             "<w:p><w:r><w:t>Hello &amp; needle</w:t></w:r></w:p>"
+                             "<w:p><w:r><w:t>Second</w:t><w:tab/><w:t>line</w:t></w:r></w:p>"
+                             "</w:body>"
+                             "</w:document>"));
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
     segments.push_back(segment);
@@ -379,11 +375,10 @@ TEST_CASE("docx document extractor rejects oversized XML before publishing text"
 
   options.maximumExtractedBytes = 2;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalDocxBytes(
-      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
-      "<w:body><w:p><w:r><w:t>oversized payload</w:t></w:r></w:p></w:body></w:document>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalDocxBytes(
+                             "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                             "<w:body><w:p><w:r><w:t>oversized payload</w:t></w:r></w:p></w:body></w:document>"));
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
     ++deliveredSegments;
@@ -403,19 +398,15 @@ TEST_CASE("docx document extractor reports cancellation before reading package c
   uburu::document::DocumentExtractionOptions options;
   std::stop_source stopSource;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalDocxBytes(
-      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
-      "<w:body><w:p><w:r><w:t>needle</w:t></w:r></w:p></w:body></w:document>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalDocxBytes(
+                             "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                             "<w:body><w:p><w:r><w:t>needle</w:t></w:r></w:p></w:body></w:document>"));
 
   stopSource.request_stop();
 
   const auto summary = extractor.extract(
-    path,
-    options,
-    [](const uburu::document::ExtractedTextSegment&) { return true; },
-    stopSource.get_token());
+    path, options, [](const uburu::document::ExtractedTextSegment&) { return true; }, stopSource.get_token());
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
 }
@@ -448,10 +439,9 @@ TEST_CASE("docx document extractor reports malformed packages as parser failures
   uburu::document::DocxDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::storedZipBytes(
-      {uburu::tests::fixtures::StoredZipEntryFixture{.name = "word/missing.xml", .content = "<xml/>"}}));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::storedZipBytes({uburu::tests::fixtures::StoredZipEntryFixture{
+                             .name = "word/missing.xml", .content = "<xml/>"}}));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
@@ -569,13 +559,12 @@ TEST_CASE("xlsx document extractor applies extracted byte limits before publishi
 
   options.maximumExtractedBytes = 3;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalXlsxBytes(
-      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
-      "<sheetData><row><c t=\"inlineStr\"><is><t>too large</t></is></c></row></sheetData>"
-      "</worksheet>",
-      "<sst/>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalXlsxBytes(
+                             "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                             "<sheetData><row><c t=\"inlineStr\"><is><t>too large</t></is></c></row></sheetData>"
+                             "</worksheet>",
+                             "<sst/>"));
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
     ++deliveredSegments;
@@ -597,15 +586,14 @@ TEST_CASE("xlsx document extractor rejects oversized shared strings before publi
 
   options.maximumExtractedBytes = 2;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalXlsxBytes(
-      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
-      "<sheetData><row><c t=\"s\"><v>0</v></c></row></sheetData>"
-      "</worksheet>",
-      "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
-      "<si><t>oversized shared string</t></si>"
-      "</sst>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalXlsxBytes(
+                             "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                             "<sheetData><row><c t=\"s\"><v>0</v></c></row></sheetData>"
+                             "</worksheet>",
+                             "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                             "<si><t>oversized shared string</t></si>"
+                             "</sst>"));
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
     ++deliveredSegments;
@@ -625,21 +613,17 @@ TEST_CASE("xlsx document extractor reports cancellation before reading workbook 
   uburu::document::DocumentExtractionOptions options;
   std::stop_source stopSource;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalXlsxBytes(
-      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
-      "<sheetData><row><c t=\"inlineStr\"><is><t>needle</t></is></c></row></sheetData>"
-      "</worksheet>",
-      "<sst/>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalXlsxBytes(
+                             "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"
+                             "<sheetData><row><c t=\"inlineStr\"><is><t>needle</t></is></c></row></sheetData>"
+                             "</worksheet>",
+                             "<sst/>"));
 
   stopSource.request_stop();
 
   const auto summary = extractor.extract(
-    path,
-    options,
-    [](const uburu::document::ExtractedTextSegment&) { return true; },
-    stopSource.get_token());
+    path, options, [](const uburu::document::ExtractedTextSegment&) { return true; }, stopSource.get_token());
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
 }
@@ -704,10 +688,9 @@ TEST_CASE("xlsx document extractor reports malformed packages as parser failures
   uburu::document::XlsxDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::storedZipBytes(
-      {uburu::tests::fixtures::StoredZipEntryFixture{.name = "xl/workbook.xml", .content = "<xml/>"}}));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::storedZipBytes({uburu::tests::fixtures::StoredZipEntryFixture{
+                             .name = "xl/workbook.xml", .content = "<xml/>"}}));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
@@ -764,10 +747,9 @@ TEST_CASE("pptx document extractor applies extracted byte limits before publishi
   std::size_t deliveredSegments = 0;
 
   options.maximumExtractedBytes = 3;
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalPptxBytes(
-      "<p:sld><p:cSld><p:spTree><a:t>too large</a:t></p:spTree></p:cSld></p:sld>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalPptxBytes(
+                             "<p:sld><p:cSld><p:spTree><a:t>too large</a:t></p:spTree></p:cSld></p:sld>"));
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment&) {
     ++deliveredSegments;
@@ -788,17 +770,13 @@ TEST_CASE("pptx document extractor reports cancellation before reading package c
   uburu::document::DocumentExtractionOptions options;
   std::stop_source stopSource;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::minimalPptxBytes(
-      "<p:sld><p:cSld><p:spTree><a:t>cancel me</a:t></p:spTree></p:cSld></p:sld>"));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::minimalPptxBytes(
+                             "<p:sld><p:cSld><p:spTree><a:t>cancel me</a:t></p:spTree></p:cSld></p:sld>"));
   stopSource.request_stop();
 
   const auto summary = extractor.extract(
-    path,
-    options,
-    [](const uburu::document::ExtractedTextSegment&) { return true; },
-    stopSource.get_token());
+    path, options, [](const uburu::document::ExtractedTextSegment&) { return true; }, stopSource.get_token());
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
 }
@@ -810,13 +788,12 @@ TEST_CASE("pptx document extractor treats unsupported zip features as safety fai
   uburu::document::PptxDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
 
-  uburu::tests::writeBytes(
-    path,
-    storedZipBytesWithUnsupportedCompression({
-      uburu::tests::fixtures::StoredZipEntryFixture{
-        .name = "ppt/slides/slide1.xml",
-        .content = "<p:sld><p:cSld><p:spTree><a:t>hidden</a:t></p:spTree></p:cSld></p:sld>"},
-    }));
+  uburu::tests::writeBytes(path,
+                           storedZipBytesWithUnsupportedCompression({
+                             uburu::tests::fixtures::StoredZipEntryFixture{
+                               .name = "ppt/slides/slide1.xml",
+                               .content = "<p:sld><p:cSld><p:spTree><a:t>hidden</a:t></p:spTree></p:cSld></p:sld>"},
+                           }));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
@@ -992,10 +969,7 @@ TEST_CASE("open document extractor reports cancellation before reading package c
   stopSource.request_stop();
 
   const auto summary = extractor.extract(
-    path,
-    options,
-    [](const uburu::document::ExtractedTextSegment&) { return true; },
-    stopSource.get_token());
+    path, options, [](const uburu::document::ExtractedTextSegment&) { return true; }, stopSource.get_token());
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
 }
@@ -1011,8 +985,7 @@ TEST_CASE("open document extractor treats unsupported zip features as safety fai
     path,
     storedZipBytesWithUnsupportedCompression({
       uburu::tests::fixtures::StoredZipEntryFixture{
-        .name = "content.xml",
-        .content = "<office:document-content><text:p>hidden</text:p></office:document-content>"},
+        .name = "content.xml", .content = "<office:document-content><text:p>hidden</text:p></office:document-content>"},
     }));
 
   const auto summary =
@@ -1028,10 +1001,9 @@ TEST_CASE("open document extractor reports packages without content xml as parse
   uburu::document::OpenDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
 
-  uburu::tests::writeBytes(
-    path,
-    uburu::tests::fixtures::storedZipBytes(
-      {uburu::tests::fixtures::StoredZipEntryFixture{.name = "meta.xml", .content = "<office:meta/>"}}));
+  uburu::tests::writeBytes(path,
+                           uburu::tests::fixtures::storedZipBytes({uburu::tests::fixtures::StoredZipEntryFixture{
+                             .name = "meta.xml", .content = "<office:meta/>"}}));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
@@ -1072,6 +1044,46 @@ TEST_CASE("pdf document extractor emits page scoped literal text")
   CHECK(segments.front().location.label == "page 1");
 }
 
+TEST_CASE("pdf document extractor finds a page type after unrelated type entries")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-multiple-type-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Metadata << /Type /Metadata >> /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 27 >>\n"
+                          "stream\n"
+                          "BT (Visible page text) Tj ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "Visible page text");
+}
+
 TEST_CASE("pdf document extractor decodes hex strings in page streams")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-pdf-hex-test");
@@ -1104,9 +1116,7 @@ TEST_CASE("pdf document extractor inflates FlateDecode page streams")
 
   uburu::tests::writeFile(
     path,
-    minimalPdfWithStream(
-      "<< /Length " + std::to_string(compressed.size()) + " /Filter /FlateDecode >>",
-      compressed));
+    minimalPdfWithStream("<< /Length " + std::to_string(compressed.size()) + " /Filter /FlateDecode >>", compressed));
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
     segments.push_back(segment);
@@ -1126,9 +1136,7 @@ TEST_CASE("pdf document extractor reports invalid FlateDecode streams as parser 
   uburu::document::PdfDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
 
-  uburu::tests::writeFile(
-    path,
-    minimalPdfWithStream("<< /Length 12 /Filter /FlateDecode >>", "not deflated"));
+  uburu::tests::writeFile(path, minimalPdfWithStream("<< /Length 12 /Filter /FlateDecode >>", "not deflated"));
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
@@ -1178,6 +1186,209 @@ TEST_CASE("pdf document extractor decodes single byte accented text as UTF-8")
   CHECK(segments.front().text == "COMUNICAÇÃO");
 }
 
+TEST_CASE("pdf document extractor decodes MacRoman font text")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-mac-roman-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Resources 6 0 R /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 38 >>\n"
+                          "stream\n"
+                          "BT /F1 12 Tf <61707265656E738B6F> Tj ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "5 0 obj\n"
+                          "<< /Type /Font /Subtype /Type1 /Encoding /MacRomanEncoding >>\n"
+                          "endobj\n"
+                          "6 0 obj\n"
+                          "<< /Font << /F1 5 0 R >> >>\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "apreensão");
+}
+
+TEST_CASE("pdf document extractor preserves phrases across adjacent text objects")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-adjacent-text-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(
+    path, uburu::tests::fixtures::minimalPdfText("BT (a scientific) Tj ET BT (phrase continues) Tj ET"));
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "a scientific phrase continues");
+}
+
+TEST_CASE("pdf document extractor reconstructs spaces from font widths and glyph positions")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-positioned-spacing-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 57 >>\n"
+                          "stream\n"
+                          "BT /F1 10 Tf 1 0 0 1 0 0 Tm [<41> 0 <42> -400 <43>] TJ ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "5 0 obj\n"
+                          "<< /Type /Font /Subtype /Type1 /FirstChar 65 /Widths 6 0 R >>\n"
+                          "endobj\n"
+                          "6 0 obj\n"
+                          "[500 500 500]\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "AB C");
+}
+
+TEST_CASE("pdf document extractor applies text line offsets from the line origin")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-line-origin-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 66 >>\n"
+                          "stream\n"
+                          "BT /F1 10 Tf 1 0 0 1 0 0 Tm [<41> 0 <42>] TJ 10 0 Td [<43>] TJ ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "5 0 obj\n"
+                          "<< /Type /Font /Subtype /Type1 /FirstChar 65 /Widths [500 500 500] >>\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "ABC");
+}
+
+TEST_CASE("pdf document extractor decodes TeX ligatures from encoding differences")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-tex-ligature-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+  std::vector<uburu::document::ExtractedTextSegment> segments;
+
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 41 >>\n"
+                          "stream\n"
+                          "BT /F1 12 Tf <6369656E74ED1C6361> Tj ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "5 0 obj\n"
+                          "<< /Type /Font /Subtype /Type1 /Encoding 6 0 R >>\n"
+                          "endobj\n"
+                          "6 0 obj\n"
+                          "<< /Type /Encoding /Differences [28 /fi 237 /iacute] >>\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
+
+  const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
+    segments.push_back(segment);
+
+    return true;
+  });
+
+  REQUIRE(summary.status == uburu::document::DocumentExtractionStatus::completed);
+  REQUIRE(segments.size() == 1);
+  CHECK(segments.front().text == "científica");
+}
+
 TEST_CASE("pdf document extractor applies simple ToUnicode font maps")
 {
   uburu::tests::TemporaryDirectory directory("uburu-document-pdf-tounicode-test");
@@ -1186,39 +1397,38 @@ TEST_CASE("pdf document extractor applies simple ToUnicode font maps")
   uburu::document::DocumentExtractionOptions options;
   std::vector<uburu::document::ExtractedTextSegment> segments;
 
-  uburu::tests::writeFile(
-    path,
-    "%PDF-1.4\n"
-    "1 0 obj\n"
-    "<< /Type /Catalog /Pages 2 0 R >>\n"
-    "endobj\n"
-    "2 0 obj\n"
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
-    "endobj\n"
-    "3 0 obj\n"
-    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
-    "endobj\n"
-    "4 0 obj\n"
-    "<< /Length 23 >>\n"
-    "stream\n"
-    "BT /F1 12 Tf <0102> Tj ET\n"
-    "endstream\n"
-    "endobj\n"
-    "5 0 obj\n"
-    "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\n"
-    "endobj\n"
-    "6 0 obj\n"
-    "<< /Length 101 >>\n"
-    "stream\n"
-    "beginbfchar\n"
-    "<01> <0055>\n"
-    "<02> <0062>\n"
-    "endbfchar\n"
-    "endstream\n"
-    "endobj\n"
-    "trailer\n"
-    "<< /Root 1 0 R >>\n"
-    "%%EOF\n");
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 23 >>\n"
+                          "stream\n"
+                          "BT /F1 12 Tf <0102> Tj ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "5 0 obj\n"
+                          "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\n"
+                          "endobj\n"
+                          "6 0 obj\n"
+                          "<< /Length 101 >>\n"
+                          "stream\n"
+                          "beginbfchar\n"
+                          "<01> <0055>\n"
+                          "<02> <0062>\n"
+                          "endbfchar\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
     segments.push_back(segment);
@@ -1239,27 +1449,26 @@ TEST_CASE("pdf document extractor tolerates unterminated text tokens at stream e
   uburu::document::DocumentExtractionOptions options;
   std::vector<uburu::document::ExtractedTextSegment> segments;
 
-  uburu::tests::writeFile(
-    path,
-    "%PDF-1.4\n"
-    "1 0 obj\n"
-    "<< /Type /Catalog /Pages 2 0 R >>\n"
-    "endobj\n"
-    "2 0 obj\n"
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
-    "endobj\n"
-    "3 0 obj\n"
-    "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
-    "endobj\n"
-    "4 0 obj\n"
-    "<< /Length 18 >>\n"
-    "stream\n"
-    "BT (unterminated\n"
-    "endstream\n"
-    "endobj\n"
-    "trailer\n"
-    "<< /Root 1 0 R >>\n"
-    "%%EOF\n");
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 18 >>\n"
+                          "stream\n"
+                          "BT (unterminated\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
     segments.push_back(segment);
@@ -1279,38 +1488,37 @@ TEST_CASE("pdf document extractor skips oversized ToUnicode ranges")
   uburu::document::DocumentExtractionOptions options;
   std::vector<uburu::document::ExtractedTextSegment> segments;
 
-  uburu::tests::writeFile(
-    path,
-    "%PDF-1.4\n"
-    "1 0 obj\n"
-    "<< /Type /Catalog /Pages 2 0 R >>\n"
-    "endobj\n"
-    "2 0 obj\n"
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
-    "endobj\n"
-    "3 0 obj\n"
-    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
-    "endobj\n"
-    "4 0 obj\n"
-    "<< /Length 25 >>\n"
-    "stream\n"
-    "BT /F1 12 Tf <0001> Tj ET\n"
-    "endstream\n"
-    "endobj\n"
-    "5 0 obj\n"
-    "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\n"
-    "endobj\n"
-    "6 0 obj\n"
-    "<< /Length 120 >>\n"
-    "stream\n"
-    "beginbfrange\n"
-    "<0000> <FFFFFFFF> <0041>\n"
-    "endbfrange\n"
-    "endstream\n"
-    "endobj\n"
-    "trailer\n"
-    "<< /Root 1 0 R >>\n"
-    "%%EOF\n");
+  uburu::tests::writeFile(path,
+                          "%PDF-1.4\n"
+                          "1 0 obj\n"
+                          "<< /Type /Catalog /Pages 2 0 R >>\n"
+                          "endobj\n"
+                          "2 0 obj\n"
+                          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+                          "endobj\n"
+                          "3 0 obj\n"
+                          "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+                          "endobj\n"
+                          "4 0 obj\n"
+                          "<< /Length 25 >>\n"
+                          "stream\n"
+                          "BT /F1 12 Tf <0001> Tj ET\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "5 0 obj\n"
+                          "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R >>\n"
+                          "endobj\n"
+                          "6 0 obj\n"
+                          "<< /Length 120 >>\n"
+                          "stream\n"
+                          "beginbfrange\n"
+                          "<0000> <FFFFFFFF> <0041>\n"
+                          "endbfrange\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "trailer\n"
+                          "<< /Root 1 0 R >>\n"
+                          "%%EOF\n");
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
     segments.push_back(segment);
@@ -1329,22 +1537,20 @@ TEST_CASE("pdf document extractor rejects excessive page counts")
   const auto path = directory.path() / "document.pdf";
   uburu::document::PdfDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
-  std::string pdf =
-    "%PDF-1.4\n"
-    "1 0 obj\n"
-    "<< /Type /Catalog /Pages 2 0 R >>\n"
-    "endobj\n"
-    "2 0 obj\n"
-    "<< /Type /Pages /Count " +
-    std::to_string(excessivePageCount) +
-    " >>\n"
-    "endobj\n";
+  std::string pdf = "%PDF-1.4\n"
+                    "1 0 obj\n"
+                    "<< /Type /Catalog /Pages 2 0 R >>\n"
+                    "endobj\n"
+                    "2 0 obj\n"
+                    "<< /Type /Pages /Count " +
+                    std::to_string(excessivePageCount) +
+                    " >>\n"
+                    "endobj\n";
 
   for (std::size_t index = 0; index < excessivePageCount; ++index) {
-    pdf += std::to_string(index + 3) +
-           " 0 obj\n"
-           "<< /Type /Page /Parent 2 0 R /Contents 999 0 R >>\n"
-           "endobj\n";
+    pdf += std::to_string(index + 3) + " 0 obj\n"
+                                       "<< /Type /Page /Parent 2 0 R /Contents 999 0 R >>\n"
+                                       "endobj\n";
   }
 
   pdf += "trailer\n<< /Root 1 0 R >>\n%%EOF\n";
@@ -1391,14 +1597,12 @@ TEST_CASE("pdf document extractor applies the configured source file size limit"
   options.textOptions.maximumFileSize = static_cast<std::uintmax_t>(pdf.size() - 1);
   uburu::tests::writeFile(path, pdf);
 
-  const auto limited = extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) {
-    return true;
-  });
+  const auto limited =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
 
   options.textOptions.maximumFileSize = static_cast<std::uintmax_t>(pdf.size());
-  const auto accepted = extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) {
-    return true;
-  });
+  const auto accepted =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
 
   CHECK(limited.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
   CHECK(limited.issue == uburu::document::DocumentExtractionIssue::sourceFileSizeLimit);
@@ -1417,10 +1621,7 @@ TEST_CASE("pdf document extractor reports cancellation before parsing")
   stopSource.request_stop();
 
   const auto summary = extractor.extract(
-    path,
-    options,
-    [](const uburu::document::ExtractedTextSegment&) { return true; },
-    stopSource.get_token());
+    path, options, [](const uburu::document::ExtractedTextSegment&) { return true; }, stopSource.get_token());
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::cancelled);
 }
@@ -1462,16 +1663,15 @@ TEST_CASE("pdf document extractor reports compressed object streams as unsupport
   uburu::document::PdfDocumentExtractor extractor;
   uburu::document::DocumentExtractionOptions options;
 
-  uburu::tests::writeFile(
-    path,
-    "%PDF-1.5\n"
-    "1 0 obj\n"
-    "<< /Type /ObjStm /N 1 /First 4 >>\n"
-    "stream\n"
-    "2 0 << /Type /Page >>\n"
-    "endstream\n"
-    "endobj\n"
-    "%%EOF\n");
+  uburu::tests::writeFile(path,
+                          "%PDF-1.5\n"
+                          "1 0 obj\n"
+                          "<< /Type /ObjStm /N 1 /First 4 >>\n"
+                          "stream\n"
+                          "2 0 << /Type /Page >>\n"
+                          "endstream\n"
+                          "endobj\n"
+                          "%%EOF\n");
 
   const auto summary =
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
@@ -1614,8 +1814,7 @@ TEST_CASE("rtf document extractor emits visible text and decodes common escapes"
   std::vector<uburu::document::ExtractedTextSegment> segments;
 
   uburu::tests::writeFile(
-    path,
-    "{\\rtf1\\ansi Visible \\b bold\\b0\\par Unicode \\u233\\'e9 caf\\'e9 {\\fonttbl hiddenNeedle}}");
+    path, "{\\rtf1\\ansi Visible \\b bold\\b0\\par Unicode \\u233\\'e9 caf\\'e9 {\\fonttbl hiddenNeedle}}");
 
   const auto summary = extractor.extract(path, options, [&](const uburu::document::ExtractedTextSegment& segment) {
     segments.push_back(segment);

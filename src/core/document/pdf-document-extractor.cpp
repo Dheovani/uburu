@@ -6,8 +6,9 @@
 
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <cctype>
+#include <charconv>
+#include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <limits>
@@ -16,6 +17,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -29,9 +31,16 @@ namespace uburu::document
     constexpr std::string_view encryptedDocumentMarker = "/Encrypt";
     constexpr std::string_view pageTypeMarker = "/Type";
     constexpr std::string_view pageMarker = "/Page";
+    constexpr std::string_view pagesMarker = "/Pages";
     constexpr std::string_view contentsMarker = "/Contents";
+    constexpr std::string_view resourcesMarker = "/Resources";
     constexpr std::string_view fontMarker = "/Font";
+    constexpr std::string_view encodingMarker = "/Encoding";
+    constexpr std::string_view differencesMarker = "/Differences";
+    constexpr std::string_view firstCharacterMarker = "/FirstChar";
+    constexpr std::string_view widthsMarker = "/Widths";
     constexpr std::string_view toUnicodeMarker = "/ToUnicode";
+    constexpr std::string_view macRomanEncodingMarker = "/MacRomanEncoding";
     constexpr std::string_view streamMarker = "stream";
     constexpr std::string_view endStreamMarker = "endstream";
     constexpr std::string_view flateDecodeMarker = "/FlateDecode";
@@ -68,6 +77,14 @@ namespace uburu::document
     constexpr std::size_t utf16CodeUnitBytes = 2;
     constexpr std::size_t pdfReadBufferBytes = 8192;
     constexpr std::size_t zlibOutputBufferBytes = 8192;
+    constexpr std::size_t textMatrixOperandCount = 6;
+    constexpr double lineChangeToleranceFactor = 0.5;
+    constexpr double minimumGlyphAdvanceFactor = 0.1;
+    constexpr double maximumGlyphAdvanceFactor = 1.2;
+    constexpr double minimumWordGapFactor = 0.65;
+    constexpr double relativeWordGapFactor = 1.5;
+    constexpr double pdfGlyphWidthScale = 1000.0;
+    constexpr double measuredWordGapFactor = 0.12;
     constexpr unsigned char utf16BigEndianBomFirst = 0xFEU;
     constexpr unsigned char utf16BigEndianBomSecond = 0xFFU;
     constexpr char32_t replacementScalar = 0xFFFDU;
@@ -82,38 +99,58 @@ namespace uburu::document
     constexpr int zlibWindowBits = 15;
 
     constexpr std::array<char32_t, 32> windows1252ControlScalars{
-      0x20ACU,                    // 0x80
-      undefinedSingleByteScalar,  // 0x81
-      0x201AU,                    // 0x82
-      0x0192U,                    // 0x83
-      0x201EU,                    // 0x84
-      0x2026U,                    // 0x85
-      0x2020U,                    // 0x86
-      0x2021U,                    // 0x87
-      0x02C6U,                    // 0x88
-      0x2030U,                    // 0x89
-      0x0160U,                    // 0x8A
-      0x2039U,                    // 0x8B
-      0x0152U,                    // 0x8C
-      undefinedSingleByteScalar,  // 0x8D
-      0x017DU,                    // 0x8E
-      undefinedSingleByteScalar,  // 0x8F
-      undefinedSingleByteScalar,  // 0x90
-      0x2018U,                    // 0x91
-      0x2019U,                    // 0x92
-      0x201CU,                    // 0x93
-      0x201DU,                    // 0x94
-      0x2022U,                    // 0x95
-      0x2013U,                    // 0x96
-      0x2014U,                    // 0x97
-      0x02DCU,                    // 0x98
-      0x2122U,                    // 0x99
-      0x0161U,                    // 0x9A
-      0x203AU,                    // 0x9B
-      0x0153U,                    // 0x9C
-      undefinedSingleByteScalar,  // 0x9D
-      0x017EU,                    // 0x9E
-      0x0178U,                    // 0x9F
+      0x20ACU,                   // 0x80
+      undefinedSingleByteScalar, // 0x81
+      0x201AU,                   // 0x82
+      0x0192U,                   // 0x83
+      0x201EU,                   // 0x84
+      0x2026U,                   // 0x85
+      0x2020U,                   // 0x86
+      0x2021U,                   // 0x87
+      0x02C6U,                   // 0x88
+      0x2030U,                   // 0x89
+      0x0160U,                   // 0x8A
+      0x2039U,                   // 0x8B
+      0x0152U,                   // 0x8C
+      undefinedSingleByteScalar, // 0x8D
+      0x017DU,                   // 0x8E
+      undefinedSingleByteScalar, // 0x8F
+      undefinedSingleByteScalar, // 0x90
+      0x2018U,                   // 0x91
+      0x2019U,                   // 0x92
+      0x201CU,                   // 0x93
+      0x201DU,                   // 0x94
+      0x2022U,                   // 0x95
+      0x2013U,                   // 0x96
+      0x2014U,                   // 0x97
+      0x02DCU,                   // 0x98
+      0x2122U,                   // 0x99
+      0x0161U,                   // 0x9A
+      0x203AU,                   // 0x9B
+      0x0153U,                   // 0x9C
+      undefinedSingleByteScalar, // 0x9D
+      0x017EU,                   // 0x9E
+      0x0178U,                   // 0x9F
+    };
+
+    constexpr std::array<char32_t, 128> macRomanScalars{
+      0x00C4U, 0x00C5U, 0x00C7U, 0x00C9U, 0x00D1U, 0x00D6U, 0x00DCU, 0x00E1U, 0x00E0U, 0x00E2U, 0x00E4U, 0x00E3U,
+      0x00E5U, 0x00E7U, 0x00E9U, 0x00E8U, 0x00EAU, 0x00EBU, 0x00EDU, 0x00ECU, 0x00EEU, 0x00EFU, 0x00F1U, 0x00F3U,
+      0x00F2U, 0x00F4U, 0x00F6U, 0x00F5U, 0x00FAU, 0x00F9U, 0x00FBU, 0x00FCU, 0x2020U, 0x00B0U, 0x00A2U, 0x00A3U,
+      0x00A7U, 0x2022U, 0x00B6U, 0x00DFU, 0x00AEU, 0x00A9U, 0x2122U, 0x00B4U, 0x00A8U, 0x2260U, 0x00C6U, 0x00D8U,
+      0x221EU, 0x00B1U, 0x2264U, 0x2265U, 0x00A5U, 0x00B5U, 0x2202U, 0x2211U, 0x220FU, 0x03C0U, 0x222BU, 0x00AAU,
+      0x00BAU, 0x03A9U, 0x00E6U, 0x00F8U, 0x00BFU, 0x00A1U, 0x00ACU, 0x221AU, 0x0192U, 0x2248U, 0x2206U, 0x00ABU,
+      0x00BBU, 0x2026U, 0x00A0U, 0x00C0U, 0x00C3U, 0x00D5U, 0x0152U, 0x0153U, 0x2013U, 0x2014U, 0x201CU, 0x201DU,
+      0x2018U, 0x2019U, 0x00F7U, 0x25CAU, 0x00FFU, 0x0178U, 0x2044U, 0x20ACU, 0x2039U, 0x203AU, 0xFB01U, 0xFB02U,
+      0x2021U, 0x00B7U, 0x201AU, 0x201EU, 0x2030U, 0x00C2U, 0x00CAU, 0x00C1U, 0x00CBU, 0x00C8U, 0x00CDU, 0x00CEU,
+      0x00CFU, 0x00CCU, 0x00D3U, 0x00D4U, 0xF8FFU, 0x00D2U, 0x00DAU, 0x00DBU, 0x00D9U, 0x0131U, 0x02C6U, 0x02DCU,
+      0x00AFU, 0x02D8U, 0x02D9U, 0x02DAU, 0x00B8U, 0x02DDU, 0x02DBU, 0x02C7U,
+    };
+
+    enum class PdfSingleByteEncoding
+    {
+      windows1252,
+      macRoman,
     };
 
     struct PdfObject
@@ -134,6 +171,28 @@ namespace uburu::document
       std::size_t maximumCodeBytes{0};
     };
 
+    struct FontTextDecoder
+    {
+      const ToUnicodeMap* unicodeMap{nullptr};
+      PdfSingleByteEncoding fallbackEncoding{PdfSingleByteEncoding::windows1252};
+      std::array<double, 256> glyphWidths{};
+      bool hasGlyphWidths{false};
+    };
+
+    struct PdfTextLayoutState
+    {
+      std::optional<double> currentX;
+      std::optional<double> currentY;
+      std::optional<double> lineX;
+      std::optional<double> lineY;
+      std::optional<double> previousX;
+      std::optional<double> previousY;
+      std::optional<double> previousEndX;
+      double fontSize{0.0};
+      double previousFontSize{0.0};
+      double previousAdvance{0.0};
+    };
+
     struct PdfExtractionBudget
     {
       std::size_t streamsDecoded{0};
@@ -141,7 +200,7 @@ namespace uburu::document
     };
 
     using ToUnicodeMapCache = std::map<int, std::optional<ToUnicodeMap>>;
-    using FontUnicodeMaps = std::map<std::string, const ToUnicodeMap*>;
+    using FontTextDecoders = std::map<std::string, FontTextDecoder>;
 
     [[nodiscard]]
     bool wouldExceedByteLimit(const DocumentExtractionOptions& options, std::uintmax_t bytes)
@@ -158,9 +217,8 @@ namespace uburu::document
     [[nodiscard]]
     std::uintmax_t maximumSourceBytes(const DocumentExtractionOptions& options)
     {
-      const auto configuredFileLimit = options.textOptions.maximumFileSize > 0
-                                         ? options.textOptions.maximumFileSize
-                                         : defaultMaximumPdfBytes;
+      const auto configuredFileLimit =
+        options.textOptions.maximumFileSize > 0 ? options.textOptions.maximumFileSize : defaultMaximumPdfBytes;
 
       if (options.maximumExtractedBytes == 0)
         return configuredFileLimit;
@@ -176,34 +234,21 @@ namespace uburu::document
     [[nodiscard]]
     bool isAsciiWhitespace(char character)
     {
-      return character == '\0' ||
-             character == '\t' ||
-             character == '\n' ||
-             character == '\f' ||
-             character == '\r' ||
+      return character == '\0' || character == '\t' || character == '\n' || character == '\f' || character == '\r' ||
              character == ' ';
     }
 
     [[nodiscard]]
     bool isPdfDelimiter(char character)
     {
-      return character == '(' ||
-             character == ')' ||
-             character == '<' ||
-             character == '>' ||
-             character == '[' ||
-             character == ']' ||
-             character == '{' ||
-             character == '}' ||
-             character == '/' ||
-             character == '%';
+      return character == '(' || character == ')' || character == '<' || character == '>' || character == '[' ||
+             character == ']' || character == '{' || character == '}' || character == '/' || character == '%';
     }
 
     [[nodiscard]]
     bool hasUtf16BigEndianBom(std::string_view bytes)
     {
-      return bytes.size() >= utf16CodeUnitBytes &&
-             static_cast<unsigned char>(bytes[0]) == utf16BigEndianBomFirst &&
+      return bytes.size() >= utf16CodeUnitBytes && static_cast<unsigned char>(bytes[0]) == utf16BigEndianBomFirst &&
              static_cast<unsigned char>(bytes[1]) == utf16BigEndianBomSecond;
     }
 
@@ -292,12 +337,21 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::string singleBytePdfTextToUtf8(std::string_view bytes)
+    char32_t pdfSingleByteScalar(unsigned char byte, PdfSingleByteEncoding encoding)
+    {
+      if (encoding == PdfSingleByteEncoding::macRoman && byte >= 0x80U)
+        return macRomanScalars[byte - 0x80U];
+
+      return windows1252Scalar(byte);
+    }
+
+    [[nodiscard]]
+    std::string singleBytePdfTextToUtf8(std::string_view bytes, PdfSingleByteEncoding encoding)
     {
       std::string output;
 
       for (const auto byte : bytes) {
-        appendUtf8(output, windows1252Scalar(static_cast<unsigned char>(byte)));
+        appendUtf8(output, pdfSingleByteScalar(static_cast<unsigned char>(byte), encoding));
       }
 
       return output;
@@ -364,6 +418,66 @@ namespace uburu::document
     }
 
     [[nodiscard]]
+    std::optional<double> parseReal(std::string_view text, std::size_t& offset)
+    {
+      skipWhitespace(text, offset);
+
+      if (offset >= text.size())
+        return std::nullopt;
+
+      const auto begin = text.data() + offset;
+      const auto end = text.data() + text.size();
+      double value = 0.0;
+      const auto result = std::from_chars(begin, end, value);
+
+      if (result.ec != std::errc{} || result.ptr == begin)
+        return std::nullopt;
+
+      offset = static_cast<std::size_t>(result.ptr - text.data());
+
+      return value;
+    }
+
+    [[nodiscard]]
+    std::pair<std::array<double, 256>, bool> fontGlyphWidths(std::string_view fontBody, std::string_view widthsBody)
+    {
+      std::array<double, 256> widths{};
+      const auto firstCharacterOffset = fontBody.find(firstCharacterMarker);
+      const auto widthsOffset = fontBody.find(widthsMarker);
+
+      if (firstCharacterOffset == std::string_view::npos || widthsOffset == std::string_view::npos)
+        return {widths, false};
+
+      auto firstCharacterValueOffset = firstCharacterOffset + firstCharacterMarker.size();
+      const auto firstCharacter = parseInteger(fontBody, firstCharacterValueOffset);
+      auto arrayOffset = widthsBody == fontBody ? widthsOffset + widthsMarker.size() : 0;
+
+      arrayOffset = widthsBody.find('[', arrayOffset);
+
+      if (!firstCharacter || *firstCharacter < 0 || *firstCharacter >= static_cast<int>(widths.size()) ||
+          arrayOffset == std::string_view::npos) {
+        return {widths, false};
+      }
+
+      ++arrayOffset;
+      auto characterCode = static_cast<std::size_t>(*firstCharacter);
+      bool parsedAnyWidth = false;
+
+      while (arrayOffset < widthsBody.size() && widthsBody[arrayOffset] != ']' && characterCode < widths.size()) {
+        const auto width = parseReal(widthsBody, arrayOffset);
+
+        if (!width)
+          break;
+
+        widths[characterCode] = std::max(0.0, *width);
+        parsedAnyWidth = true;
+        ++characterCode;
+      }
+
+      return {widths, parsedAnyWidth};
+    }
+
+    [[nodiscard]]
     std::optional<std::string> parseName(std::string_view text, std::size_t& offset)
     {
       skipWhitespace(text, offset);
@@ -385,11 +499,10 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::optional<std::string> readPdfBytes(
-      const std::filesystem::path& path,
-      const DocumentExtractionOptions& options,
-      DocumentExtractionSummary& summary,
-      std::stop_token stopToken)
+    std::optional<std::string> readPdfBytes(const std::filesystem::path& path,
+                                            const DocumentExtractionOptions& options,
+                                            DocumentExtractionSummary& summary,
+                                            std::stop_token stopToken)
     {
       std::ifstream file(path, std::ios::binary);
 
@@ -438,9 +551,8 @@ namespace uburu::document
     [[nodiscard]]
     bool hasPdfHeader(std::string_view bytes)
     {
-      return bytes
-        .substr(0, std::min(bytes.size(), maximumPdfHeaderProbeBytes))
-        .find(pdfHeaderMarker) != std::string_view::npos;
+      return bytes.substr(0, std::min(bytes.size(), maximumPdfHeaderProbeBytes)).find(pdfHeaderMarker) !=
+             std::string_view::npos;
     }
 
     [[nodiscard]]
@@ -494,17 +606,34 @@ namespace uburu::document
     }
 
     [[nodiscard]]
+    bool containsPdfName(std::string_view text, std::string_view name)
+    {
+      auto offset = text.find(name);
+
+      while (offset != std::string_view::npos) {
+        if (tokenBoundary(text, offset + name.size()))
+          return true;
+
+        offset = text.find(name, offset + name.size());
+      }
+
+      return false;
+    }
+
+    [[nodiscard]]
     bool isPageObject(std::string_view body)
     {
+      if (body.find(objectStreamMarker) != std::string_view::npos)
+        return false;
+
       const auto typeOffset = body.find(pageTypeMarker);
 
       if (typeOffset == std::string_view::npos)
         return false;
 
-      auto valueOffset = typeOffset + pageTypeMarker.size();
-      const auto typeName = parseName(body, valueOffset);
+      const auto afterType = body.substr(typeOffset + pageTypeMarker.size());
 
-      return typeName == pageMarker.substr(1);
+      return containsPdfName(afterType, pageMarker) && !containsPdfName(afterType, pagesMarker);
     }
 
     [[nodiscard]]
@@ -596,11 +725,7 @@ namespace uburu::document
     {
       std::map<std::string, int> references;
       const auto fontOffset = pageBody.find(fontMarker);
-
-      if (fontOffset == std::string_view::npos)
-        return references;
-
-      auto scan = fontOffset + fontMarker.size();
+      auto scan = fontOffset == std::string_view::npos ? 0 : fontOffset + fontMarker.size();
       const auto scanEnd = std::min(pageBody.size(), scan + maximumFontResourceScanBytes);
 
       while (scan < scanEnd) {
@@ -680,10 +805,9 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    bool canConsumePdfStreamBytes(
-      PdfExtractionBudget& budget,
-      std::uintmax_t streamBytes,
-      DocumentExtractionSummary& summary)
+    bool canConsumePdfStreamBytes(PdfExtractionBudget& budget,
+                                  std::uintmax_t streamBytes,
+                                  DocumentExtractionSummary& summary)
     {
       if (budget.streamsDecoded >= maximumPdfStreamsPerDocument) {
         summary.status = DocumentExtractionStatus::safetyLimitExceeded;
@@ -713,10 +837,8 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::optional<std::string> inflateStream(
-      std::string_view compressed,
-      PdfExtractionBudget& budget,
-      DocumentExtractionSummary& summary)
+    std::optional<std::string>
+    inflateStream(std::string_view compressed, PdfExtractionBudget& budget, DocumentExtractionSummary& summary)
     {
       z_stream stream{};
 
@@ -770,10 +892,8 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::optional<std::string> decodedStream(
-      PdfStream stream,
-      PdfExtractionBudget& budget,
-      DocumentExtractionSummary& summary)
+    std::optional<std::string>
+    decodedStream(PdfStream stream, PdfExtractionBudget& budget, DocumentExtractionSummary& summary)
     {
       const auto unsupportedFilter = std::ranges::find_if(unsupportedStreamFilterMarkers, [&](const auto marker) {
         return stream.dictionary.find(marker) != std::string_view::npos;
@@ -1055,9 +1175,7 @@ namespace uburu::document
           const auto source = static_cast<std::uint32_t>(sourceStart + rangeOffset);
 
           addToUnicodeEntry(
-            map,
-            bigEndianBytes(source, values[0].size()),
-            values[static_cast<std::size_t>(rangeOffset + 2U)]);
+            map, bigEndianBytes(source, values[0].size()), values[static_cast<std::size_t>(rangeOffset + 2U)]);
         }
 
         return;
@@ -1086,9 +1204,8 @@ namespace uburu::document
 
       while (offset < cmapText.size()) {
         const auto lineEnd = cmapText.find_first_of("\r\n", offset);
-        auto line = lineEnd == std::string_view::npos
-          ? cmapText.substr(offset)
-          : cmapText.substr(offset, lineEnd - offset);
+        auto line =
+          lineEnd == std::string_view::npos ? cmapText.substr(offset) : cmapText.substr(offset, lineEnd - offset);
         trimAsciiWhitespace(line);
 
         if (line.find(beginBfCharMarker) != std::string_view::npos) {
@@ -1120,12 +1237,102 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    const ToUnicodeMap* cachedToUnicodeMapForFont(
-      int fontObjectNumber,
-      const std::map<int, PdfObject>& objects,
-      ToUnicodeMapCache& cache,
-      PdfExtractionBudget& budget,
-      DocumentExtractionSummary& summary)
+    std::optional<std::string> pdfGlyphNameText(std::string_view name)
+    {
+      constexpr std::array<std::pair<std::string_view, char32_t>, 34> latinGlyphs{
+        std::pair{"Aacute", 0x00C1U},      std::pair{"Acircumflex", 0x00C2U}, std::pair{"Agrave", 0x00C0U},
+        std::pair{"Atilde", 0x00C3U},      std::pair{"Ccedilla", 0x00C7U},    std::pair{"Eacute", 0x00C9U},
+        std::pair{"Ecircumflex", 0x00CAU}, std::pair{"Egrave", 0x00C8U},      std::pair{"Iacute", 0x00CDU},
+        std::pair{"Icircumflex", 0x00CEU}, std::pair{"Igrave", 0x00CCU},      std::pair{"Ntilde", 0x00D1U},
+        std::pair{"Oacute", 0x00D3U},      std::pair{"Ocircumflex", 0x00D4U}, std::pair{"Ograve", 0x00D2U},
+        std::pair{"Otilde", 0x00D5U},      std::pair{"Uacute", 0x00DAU},      std::pair{"Ucircumflex", 0x00DBU},
+        std::pair{"Ugrave", 0x00D9U},      std::pair{"aacute", 0x00E1U},      std::pair{"acircumflex", 0x00E2U},
+        std::pair{"agrave", 0x00E0U},      std::pair{"atilde", 0x00E3U},      std::pair{"ccedilla", 0x00E7U},
+        std::pair{"eacute", 0x00E9U},      std::pair{"ecircumflex", 0x00EAU}, std::pair{"egrave", 0x00E8U},
+        std::pair{"iacute", 0x00EDU},      std::pair{"icircumflex", 0x00EEU}, std::pair{"igrave", 0x00ECU},
+        std::pair{"ntilde", 0x00F1U},      std::pair{"oacute", 0x00F3U},      std::pair{"ocircumflex", 0x00F4U},
+        std::pair{"otilde", 0x00F5U},
+      };
+
+      if (name.size() == 1)
+        return std::string{name};
+
+      if (name == "space")
+        return std::string{" "};
+
+      if (name == "fi" || name == "fl")
+        return std::string{name};
+
+      const auto glyph = std::ranges::find_if(latinGlyphs, [&](const auto& entry) { return entry.first == name; });
+
+      if (glyph == latinGlyphs.end())
+        return std::nullopt;
+
+      std::string text;
+      appendUtf8(text, glyph->second);
+
+      return text;
+    }
+
+    [[nodiscard]]
+    ToUnicodeMap parseEncodingDifferences(std::string_view encodingBody)
+    {
+      ToUnicodeMap map;
+      auto offset = encodingBody.find(differencesMarker);
+
+      if (offset == std::string_view::npos)
+        return map;
+
+      offset = encodingBody.find('[', offset + differencesMarker.size());
+
+      if (offset == std::string_view::npos)
+        return map;
+
+      ++offset;
+      std::optional<int> characterCode;
+
+      while (offset < encodingBody.size() && encodingBody[offset] != ']' && map.entries.size() < 256) {
+        skipWhitespace(encodingBody, offset);
+
+        if (offset >= encodingBody.size() || encodingBody[offset] == ']')
+          break;
+
+        if (std::isdigit(static_cast<unsigned char>(encodingBody[offset]))) {
+          characterCode = parseInteger(encodingBody, offset);
+
+          continue;
+        }
+
+        if (encodingBody[offset] == '/' && characterCode) {
+          const auto name = parseName(encodingBody, offset);
+
+          if (name && *characterCode >= 0 && *characterCode <= 255) {
+            const auto glyphText = pdfGlyphNameText(*name);
+
+            if (glyphText) {
+              const auto encodedCharacter = static_cast<char>(static_cast<unsigned char>(*characterCode));
+              map.entries.insert_or_assign(std::string(1, encodedCharacter), *glyphText);
+              map.maximumCodeBytes = 1;
+            }
+
+            ++*characterCode;
+          }
+
+          continue;
+        }
+
+        ++offset;
+      }
+
+      return map;
+    }
+
+    [[nodiscard]]
+    const ToUnicodeMap* cachedToUnicodeMapForFont(int fontObjectNumber,
+                                                  const std::map<int, PdfObject>& objects,
+                                                  ToUnicodeMapCache& cache,
+                                                  PdfExtractionBudget& budget,
+                                                  DocumentExtractionSummary& summary)
     {
       const auto cached = cache.find(fontObjectNumber);
 
@@ -1156,6 +1363,23 @@ namespace uburu::document
             }
           }
         }
+
+        if (!parsedMap) {
+          auto encodingBody = fontObject->second.body;
+          const auto encodingObjectNumber = objectReferenceAfter(fontObject->second.body, encodingMarker);
+
+          if (encodingObjectNumber) {
+            const auto encodingObject = objects.find(*encodingObjectNumber);
+
+            if (encodingObject != objects.end())
+              encodingBody = encodingObject->second.body;
+          }
+
+          auto differencesMap = parseEncodingDifferences(encodingBody);
+
+          if (!differencesMap.entries.empty())
+            parsedMap = std::move(differencesMap);
+        }
       }
 
       const auto [iterator, inserted] = cache.emplace(fontObjectNumber, std::move(parsedMap));
@@ -1165,31 +1389,83 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    FontUnicodeMaps fontUnicodeMapsForPage(
-      const PdfObject& page,
-      const std::map<int, PdfObject>& objects,
-      ToUnicodeMapCache& cache,
-      PdfExtractionBudget& budget,
-      DocumentExtractionSummary& summary)
+    FontTextDecoders fontTextDecodersForPage(const PdfObject& page,
+                                             const std::map<int, PdfObject>& objects,
+                                             ToUnicodeMapCache& cache,
+                                             PdfExtractionBudget& budget,
+                                             DocumentExtractionSummary& summary)
     {
-      FontUnicodeMaps maps;
+      FontTextDecoders decoders;
+      std::vector<std::string_view> resourceBodies{page.body};
+      const auto resourceObjectNumber = objectReferenceAfter(page.body, resourcesMarker);
 
-      for (const auto& [fontName, fontObjectNumber] : fontReferences(page.body)) {
-        const auto* map = cachedToUnicodeMapForFont(fontObjectNumber, objects, cache, budget, summary);
+      if (resourceObjectNumber) {
+        const auto resourceObject = objects.find(*resourceObjectNumber);
 
-        if (map != nullptr)
-          maps.emplace(fontName, map);
-
-        if (summary.status != DocumentExtractionStatus::completed)
-          break;
+        if (resourceObject != objects.end())
+          resourceBodies.push_back(resourceObject->second.body);
       }
 
-      return maps;
+      for (const auto resourceBody : resourceBodies) {
+        std::vector<std::string_view> fontResourceBodies{resourceBody};
+        const auto fontResourceObjectNumber = objectReferenceAfter(resourceBody, fontMarker);
+
+        if (fontResourceObjectNumber) {
+          const auto fontResourceObject = objects.find(*fontResourceObjectNumber);
+
+          if (fontResourceObject != objects.end())
+            fontResourceBodies.push_back(fontResourceObject->second.body);
+        }
+
+        for (const auto fontResourceBody : fontResourceBodies) {
+          for (const auto& [fontName, fontObjectNumber] : fontReferences(fontResourceBody)) {
+            const auto* map = cachedToUnicodeMapForFont(fontObjectNumber, objects, cache, budget, summary);
+            const auto fontObject = objects.find(fontObjectNumber);
+            auto fallbackEncoding = PdfSingleByteEncoding::windows1252;
+
+            if (fontObject != objects.end() &&
+                fontObject->second.body.find(macRomanEncodingMarker) != std::string_view::npos) {
+              fallbackEncoding = PdfSingleByteEncoding::macRoman;
+            }
+
+            std::array<double, 256> glyphWidths{};
+            bool hasGlyphWidths = false;
+
+            if (fontObject != objects.end()) {
+              auto widthsBody = fontObject->second.body;
+              const auto widthsObjectNumber = objectReferenceAfter(fontObject->second.body, widthsMarker);
+
+              if (widthsObjectNumber) {
+                const auto widthsObject = objects.find(*widthsObjectNumber);
+
+                if (widthsObject != objects.end())
+                  widthsBody = widthsObject->second.body;
+              }
+
+              std::tie(glyphWidths, hasGlyphWidths) = fontGlyphWidths(fontObject->second.body, widthsBody);
+            }
+
+            decoders.insert_or_assign(fontName,
+                                      FontTextDecoder{.unicodeMap = map,
+                                                      .fallbackEncoding = fallbackEncoding,
+                                                      .glyphWidths = glyphWidths,
+                                                      .hasGlyphWidths = hasGlyphWidths});
+
+            if (summary.status != DocumentExtractionStatus::completed)
+              return decoders;
+          }
+        }
+      }
+
+      return decoders;
     }
 
     [[nodiscard]]
-    std::string decodePdfTextBytes(std::string bytes, const ToUnicodeMap* map)
+    std::string decodePdfTextBytes(std::string bytes, const FontTextDecoder* decoder)
     {
+      const auto* map = decoder == nullptr ? nullptr : decoder->unicodeMap;
+      const auto fallbackEncoding = decoder == nullptr ? PdfSingleByteEncoding::windows1252 : decoder->fallbackEncoding;
+
       if (map != nullptr && !map->entries.empty()) {
         std::string output;
         std::size_t offset = 0;
@@ -1212,7 +1488,7 @@ namespace uburu::document
           }
 
           if (!matched) {
-            output += singleBytePdfTextToUtf8(std::string_view{bytes.data() + offset, 1});
+            output += singleBytePdfTextToUtf8(std::string_view{bytes.data() + offset, 1}, fallbackEncoding);
             ++offset;
           }
         }
@@ -1223,7 +1499,30 @@ namespace uburu::document
       if (hasUtf16BigEndianBom(bytes))
         return utf16BigEndianToUtf8(bytes);
 
-      return singleBytePdfTextToUtf8(bytes);
+      return singleBytePdfTextToUtf8(bytes, fallbackEncoding);
+    }
+
+    [[nodiscard]]
+    std::optional<double> encodedTextAdvance(std::string_view bytes, const FontTextDecoder* decoder, double fontSize)
+    {
+      if (decoder == nullptr || !decoder->hasGlyphWidths || fontSize <= 0.0)
+        return std::nullopt;
+
+      double width = 0.0;
+
+      for (const auto byte : bytes)
+        width += decoder->glyphWidths[static_cast<unsigned char>(byte)];
+
+      return width * fontSize / pdfGlyphWidthScale;
+    }
+
+    void applyTextPositionAdjustment(PdfTextLayoutState& layout, std::vector<double>& numericOperands)
+    {
+      if (!layout.currentX || numericOperands.size() != 1 || layout.fontSize <= 0.0)
+        return;
+
+      *layout.currentX -= numericOperands.front() * layout.fontSize / pdfGlyphWidthScale;
+      numericOperands.clear();
     }
 
     void appendTextToken(std::string& pageText, std::string text)
@@ -1239,18 +1538,92 @@ namespace uburu::document
       pageText += text;
     }
 
+    void appendPositionedTextToken(std::string& pageText,
+                                   std::string text,
+                                   PdfTextLayoutState& layout,
+                                   std::optional<double> measuredAdvance)
+    {
+      const auto whitespaceOnly = std::ranges::all_of(text, isAsciiWhitespace);
+
+      if (whitespaceOnly) {
+        if (!pageText.empty() && pageText.back() != ' ' && pageText.back() != '\n')
+          pageText.push_back(' ');
+
+        layout.previousX = layout.currentX;
+        layout.previousY = layout.currentY;
+        layout.previousEndX.reset();
+        layout.previousFontSize = layout.fontSize;
+
+        return;
+      }
+
+      xml::trimTrailingAsciiWhitespace(text);
+
+      if (text.empty())
+        return;
+
+      if (!layout.currentX || !layout.currentY) {
+        appendTextToken(pageText, std::move(text));
+
+        return;
+      }
+
+      const auto effectiveFontSize = std::max(layout.fontSize, layout.previousFontSize);
+
+      if (layout.previousX && layout.previousY && effectiveFontSize > 0.0) {
+        const auto horizontalDelta = *layout.currentX - *layout.previousX;
+        const auto verticalDelta = std::abs(*layout.currentY - *layout.previousY);
+        if (verticalDelta > effectiveFontSize * lineChangeToleranceFactor) {
+          if (!pageText.empty() && pageText.back() != '\n')
+            pageText.push_back('\n');
+        } else if (layout.previousEndX) {
+          const auto measuredGap = *layout.currentX - *layout.previousEndX;
+
+          if (measuredGap > effectiveFontSize * measuredWordGapFactor && !pageText.empty() && pageText.back() != ' ' &&
+              pageText.back() != '\n') {
+            pageText.push_back(' ');
+          }
+        } else if (horizontalDelta > 0.0) {
+          const auto absoluteWordGap = effectiveFontSize * minimumWordGapFactor;
+          const auto relativeWordGap = layout.previousAdvance * relativeWordGapFactor;
+
+          if (horizontalDelta > std::max(absoluteWordGap, relativeWordGap) && !pageText.empty() &&
+              pageText.back() != ' ' && pageText.back() != '\n') {
+            pageText.push_back(' ');
+          }
+
+          if (horizontalDelta >= effectiveFontSize * minimumGlyphAdvanceFactor &&
+              horizontalDelta <= effectiveFontSize * maximumGlyphAdvanceFactor) {
+            layout.previousAdvance = horizontalDelta;
+          }
+        }
+      }
+
+      pageText += text;
+      layout.previousX = layout.currentX;
+      layout.previousY = layout.currentY;
+      layout.previousEndX = measuredAdvance ? std::optional{*layout.currentX + *measuredAdvance} : std::nullopt;
+      layout.previousFontSize = layout.fontSize;
+
+      if (layout.previousEndX)
+        layout.currentX = layout.previousEndX;
+    }
+
     [[nodiscard]]
-    std::string textFromContentStream(std::string_view streamText, const FontUnicodeMaps& fontMaps)
+    std::string textFromContentStream(std::string_view streamText, const FontTextDecoders& fontDecoders)
     {
       std::string pageText;
       std::string lastName;
-      const ToUnicodeMap* activeToUnicodeMap = nullptr;
+      const FontTextDecoder* activeDecoder = nullptr;
+      PdfTextLayoutState layout;
+      std::vector<double> numericOperands;
       bool insideTextObject = false;
       std::size_t offset = 0;
 
       while (offset < streamText.size()) {
         if (hasTokenAt(streamText, offset, "BT")) {
           insideTextObject = true;
+          numericOperands.clear();
           offset += 2;
 
           continue;
@@ -1260,9 +1633,6 @@ namespace uburu::document
           insideTextObject = false;
           offset += 2;
 
-          if (!pageText.empty() && pageText.back() != '\n')
-            pageText.push_back('\n');
-
           continue;
         }
 
@@ -1270,6 +1640,24 @@ namespace uburu::document
           ++offset;
 
           continue;
+        }
+
+        const auto character = streamText[offset];
+
+        if (character == '+' || character == '-' || character == '.' ||
+            std::isdigit(static_cast<unsigned char>(character))) {
+          auto numberOffset = offset;
+          const auto number = parseReal(streamText, numberOffset);
+
+          if (number) {
+            if (numericOperands.size() == textMatrixOperandCount)
+              numericOperands.erase(numericOperands.begin());
+
+            numericOperands.push_back(*number);
+            offset = numberOffset;
+
+            continue;
+          }
         }
 
         if (streamText[offset] == '/') {
@@ -1283,9 +1671,42 @@ namespace uburu::document
         if (offset >= streamText.size())
           break;
 
+        if (hasTokenAt(streamText, offset, "Tm")) {
+          if (numericOperands.size() == textMatrixOperandCount) {
+            layout.currentX = numericOperands[textMatrixOperandCount - 2];
+            layout.currentY = numericOperands[textMatrixOperandCount - 1];
+            layout.lineX = layout.currentX;
+            layout.lineY = layout.currentY;
+          }
+
+          numericOperands.clear();
+          offset += 2;
+
+          continue;
+        }
+
+        if (hasTokenAt(streamText, offset, "Td") || hasTokenAt(streamText, offset, "TD")) {
+          if (numericOperands.size() >= 2) {
+            layout.lineX = layout.lineX.value_or(0.0) + numericOperands[numericOperands.size() - 2];
+            layout.lineY = layout.lineY.value_or(0.0) + numericOperands.back();
+            layout.currentX = layout.lineX;
+            layout.currentY = layout.lineY;
+          }
+
+          numericOperands.clear();
+          offset += 2;
+
+          continue;
+        }
+
         if (hasTokenAt(streamText, offset, "Tf")) {
-          const auto font = fontMaps.find(lastName);
-          activeToUnicodeMap = font == fontMaps.end() ? nullptr : font->second;
+          const auto font = fontDecoders.find(lastName);
+          activeDecoder = font == fontDecoders.end() ? nullptr : &font->second;
+
+          if (!numericOperands.empty())
+            layout.fontSize = std::abs(numericOperands.back());
+
+          numericOperands.clear();
           offset += 2;
 
           continue;
@@ -1293,7 +1714,10 @@ namespace uburu::document
 
         if (streamText[offset] == '(') {
           if (auto value = literalString(streamText, offset)) {
-            appendTextToken(pageText, decodePdfTextBytes(std::move(*value), activeToUnicodeMap));
+            applyTextPositionAdjustment(layout, numericOperands);
+            const auto measuredAdvance = encodedTextAdvance(*value, activeDecoder, layout.fontSize);
+            appendPositionedTextToken(
+              pageText, decodePdfTextBytes(std::move(*value), activeDecoder), layout, measuredAdvance);
 
             continue;
           }
@@ -1304,7 +1728,10 @@ namespace uburu::document
 
         if (streamText[offset] == '<') {
           if (auto value = hexString(streamText, offset)) {
-            appendTextToken(pageText, decodePdfTextBytes(std::move(*value), activeToUnicodeMap));
+            applyTextPositionAdjustment(layout, numericOperands);
+            const auto measuredAdvance = encodedTextAdvance(*value, activeDecoder, layout.fontSize);
+            appendPositionedTextToken(
+              pageText, decodePdfTextBytes(std::move(*value), activeDecoder), layout, measuredAdvance);
 
             continue;
           }
@@ -1322,15 +1749,14 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    std::string pageTextFromObject(
-      const PdfObject& page,
-      const std::map<int, PdfObject>& objects,
-      ToUnicodeMapCache& toUnicodeMapCache,
-      PdfExtractionBudget& budget,
-      DocumentExtractionSummary& summary)
+    std::string pageTextFromObject(const PdfObject& page,
+                                   const std::map<int, PdfObject>& objects,
+                                   ToUnicodeMapCache& toUnicodeMapCache,
+                                   PdfExtractionBudget& budget,
+                                   DocumentExtractionSummary& summary)
     {
       std::string pageText;
-      const auto fontMaps = fontUnicodeMapsForPage(page, objects, toUnicodeMapCache, budget, summary);
+      const auto fontDecoders = fontTextDecodersForPage(page, objects, toUnicodeMapCache, budget, summary);
 
       if (summary.status != DocumentExtractionStatus::completed)
         return {};
@@ -1357,7 +1783,7 @@ namespace uburu::document
           return {};
         }
 
-        appendTextToken(pageText, textFromContentStream(*decoded, fontMaps));
+        appendTextToken(pageText, textFromContentStream(*decoded, fontDecoders));
       }
 
       xml::trimTrailingAsciiWhitespace(pageText);
@@ -1377,11 +1803,10 @@ namespace uburu::document
     return xml::lowerAscii(path.extension().string()) == ".pdf";
   }
 
-  DocumentExtractionSummary PdfDocumentExtractor::extract(
-    const std::filesystem::path& path,
-    const DocumentExtractionOptions& options,
-    const ExtractedTextSink& sink,
-    std::stop_token stopToken) const
+  DocumentExtractionSummary PdfDocumentExtractor::extract(const std::filesystem::path& path,
+                                                          const DocumentExtractionOptions& options,
+                                                          const ExtractedTextSink& sink,
+                                                          std::stop_token stopToken) const
   {
     DocumentExtractionSummary summary;
     const auto bytes = readPdfBytes(path, options, summary, stopToken);

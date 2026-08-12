@@ -35,6 +35,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Record a preliminary Windows document-corpus cycle over all 217 PDFs up to 256 MiB and fix the Unicode-path and embedded-NUL regressions it exposed.
   - [x] Add privacy-safe extraction-status counters and align PDF source limits between direct search, scanning, and indexing.
   - [x] Classify and reduce the PDF extraction failures exposed by the Windows document corpus before promoting the run to formal evidence.
+  - [x] Validate exact-phrase convergence across direct, indexed, and hybrid search on the 7.35 GB Windows PDF corpus after fixing PDF glyph spacing, ligatures, and indirect font resources.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
@@ -42,7 +43,8 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Make hybrid direct validation authoritative so stale indexed matches are not exposed as final results.
   - [x] Replace quadratic hybrid refinement with ordered lookup and stream authoritative direct results without retaining a second complete result collection.
   - [x] Add automated regression coverage for pre-cancellation, sink cancellation, partial failures, stale indexed entries, and hybrid cache classification.
-  - [ ] Exercise cancellation, partial failures, and hybrid convergence against the large real-world validation datasets.
+  - [x] Exercise declared PDF extraction failures and direct/indexed/hybrid convergence against the 7.35 GB Windows document corpus.
+  - [ ] Measure interactive cancellation latency against large real-world validation datasets on Windows and Linux.
 - [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
   - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.
   - [ ] Repeat the complete Git matrix in larger real repositories and record the evidence.
@@ -56,6 +58,7 @@ Future work below should improve this baseline without reopening completed miles
   - [ ] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.
 - [ ] Revisit end-to-end performance with real user datasets, including startup latency, direct search latency, indexing throughput, preview latency, memory growth, and UI responsiveness before choosing optimization strategies.
   - [x] Measure and tune direct-search worker scaling, queue occupancy, sparse-match workloads, cancellation behavior, and hybrid refinement on deterministic datasets.
+  - [x] Record Release-mode search throughput, index throughput/reuse, queue peaks, extraction outcomes, and indexing working memory for the 7.35 GB Windows PDF corpus.
   - [ ] Record end-to-end observations for startup, search, indexing, preview, memory, and UI responsiveness on real datasets.
 - [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
   - [x] Document clean-machine artifact, smoke-test, evidence, and release acceptance requirements.

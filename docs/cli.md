@@ -25,6 +25,7 @@ Supported options:
 - `--max-size-mib N`: sets the maximum file size in MiB.
 - `--memory-budget-mib N`: limits approximate retained search-result memory and `index-rebuild` working memory; `0` keeps the budget unlimited.
 - `--threads auto|N`: selects direct-search workers. `auto` avoids worker-queue overhead for small files and uses the bounded hardware-aware pool for larger files; an explicit value must be between 1 and 256.
+- `--summary-only`: suppresses individual result records while preserving the complete search and aggregate summary, allowing privacy-safe validation and performance collection without retaining paths or matching text.
 - `--regex`: treats the expression as a PCRE2 regex when the backend is available.
 - `--case-sensitive`: enables case-sensitive matching.
 - `--whole-word`: matches whole words.
@@ -64,6 +65,7 @@ Both commands support:
 
 - `--format human|jsonl`
 - `--database PATH`
+- `--memory-budget-mib N`
 - `--types txt,md,docx`
 - `--no-gitignore`
 - `--hidden`
@@ -77,5 +79,7 @@ Long-running `search` and `index-rebuild` commands handle `Ctrl+C` as cooperativ
 Search results are streamed synchronously to standard output. This is intentional backpressure: if the terminal, pipe, or parent process cannot keep up or closes the stream, the CLI stops requesting more results instead of accumulating an unbounded output queue in memory.
 
 Search summaries expose `resultLimitReached`, `memoryLimitReached`, and `resultMemoryBytes` in both human and JSON Lines output. Memory exhaustion is a successful bounded completion rather than cancellation or a parser failure: already emitted results remain valid, and the next result that would exceed the configured budget is not published.
+
+JSON Lines summaries also expose time to first result, total duration, processed files and bytes, throughput, and peak queue occupancy. These aggregate fields contain no search expression, path, or matching content and are the supported input for product-validation records.
 
 Richer diagnostics are planned for the same CLI layer without changing the core search engine.

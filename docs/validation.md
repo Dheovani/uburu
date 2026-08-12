@@ -107,6 +107,26 @@ uburu index-status <root> --format jsonl
 
 JSON Lines output should be captured when a desktop result is disputed because it separates engine/service behavior from QML rendering.
 
+### Privacy-safe automated evidence
+
+After choosing a dataset with a known matching expression, use the portable CMake validation runner to exercise direct, indexed, and hybrid search plus initial/incremental indexing. The runner invokes the CLI with `--summary-only`, keeps its disposable database under the ignored `build/product-validation-private` directory, removes it after the run, and writes only aggregate evidence:
+
+```powershell
+cmake `
+  -DUBURU_EXECUTABLE=build/windows-msvc-debug/apps/cli/Debug/uburu.exe `
+  -DUBURU_DATASET_ROOT=C:/private/dataset `
+  -DUBURU_EXPRESSION=known-private-expression `
+  -DUBURU_DATASET_ID=windows-large-mixed-01 `
+  -DUBURU_DATASET_PROFILE=large-mixed-tree `
+  -DUBURU_CONFIGURATION=windows-msvc-debug `
+  -DUBURU_OUTPUT=docs/releases/v1.0.0-rc1-windows-large-mixed.md `
+  -P scripts/run-product-validation.cmake
+```
+
+The same command works on Linux with the Linux `uburu` executable and shell-appropriate quoting. Optional inputs are `UBURU_TYPES`, `UBURU_MEMORY_BUDGET_MIB`, and `UBURU_THREADS`. Supported profile identifiers are `deterministic-smoke`, `code-repository`, `document-corpus`, `many-small-files`, `few-large-files`, and `large-mixed-tree`.
+
+The generated record compares final match counts, requires a fresh index, rejects cancellation, partial failure, result-limit exhaustion, memory-limit exhaustion, and indexing failures, and records aggregate timing, throughput, queue, memory, and reuse counters. It deliberately cannot validate visual responsiveness, preview behavior, cancellation latency, partial-failure presentation, branch switching, or clean-machine artifacts; those scenarios remain manual responsibilities.
+
 ## Git and incremental-index scenarios
 
 Use a disposable clone or a repository where branch and file changes are safe. Record the initial branch, HEAD, worktree count, and aggregate working-tree state without exposing private names.

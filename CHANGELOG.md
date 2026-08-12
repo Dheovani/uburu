@@ -6,9 +6,15 @@ The project follows semantic versioning. Versions before `1.0.0` are preview rel
 
 ## [Unreleased]
 
+### Added
+
+- Add privacy-safe product-validation evidence collection over CLI summary-only runs, comparing direct, indexed, and hybrid results while recording aggregate search, queue, memory, and indexing-reuse metrics without retaining private paths, expressions, or content.
+
 ### Fixed
 
 - Keep Linux coverage generation compatible with the negative branch-hit records occasionally emitted by GCC's `gcov`, without weakening line or branch thresholds or ignoring unrelated parser failures.
+
+### Changed
 
 - Parallelize direct file processing with bounded queues while preserving progressive first results, deterministic publication, cooperative cancellation, measured queue contention, and observable queue occupancy; automatic mode now avoids worker queues for small files and retains parallel throughput for larger sparse-match workloads.
 - Add a repeatable Release-mode benchmark gate with five repetitions, median-based guardrails, sparse-match worker-scaling coverage, bounded-queue limits, regex JIT checks, adaptive batching checks, and persistent-index reuse checks.

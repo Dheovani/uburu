@@ -169,6 +169,26 @@ namespace uburu::cli
         return true;
       }
 
+      if (argument == "--memory-budget-mib") {
+        if (index + 1 >= arguments.size()) {
+          error = "--memory-budget-mib requires a numeric value";
+
+          return false;
+        }
+
+        const auto memoryBudget = parseMib(arguments[++index]);
+
+        if (!memoryBudget) {
+          error = "--memory-budget-mib requires a numeric value";
+
+          return false;
+        }
+
+        options.query.options.resultMemoryBudgetBytes = *memoryBudget;
+
+        return true;
+      }
+
       return false;
     }
 
@@ -244,16 +264,6 @@ namespace uburu::cli
             return usageError("--max-size-mib requires a numeric value");
 
           options.query.options.maximumFileSize = *maximumFileSize;
-        } else if (argument == "--memory-budget-mib") {
-          if (index + 1 >= arguments.size())
-            return usageError("--memory-budget-mib requires a numeric value");
-
-          const auto memoryBudget = parseMib(arguments[++index]);
-
-          if (!memoryBudget)
-            return usageError("--memory-budget-mib requires a numeric value");
-
-          options.query.options.resultMemoryBudgetBytes = *memoryBudget;
         } else if (argument == "--threads") {
           if (index + 1 >= arguments.size())
             return usageError(threadCountUsageError());
@@ -264,6 +274,8 @@ namespace uburu::cli
             return usageError(threadCountUsageError());
 
           options.query.options.maximumThreadCount = *maximumThreadCount;
+        } else if (argument == "--summary-only") {
+          options.summaryOnly = true;
         } else if (isHelpArgument(argument)) {
           options.showHelp = true;
         } else {
@@ -381,6 +393,7 @@ namespace uburu::cli
     output << "  --memory-budget-mib N      Search-result or index working-memory budget; 0 means unlimited.\n";
     output << "  --threads auto|N           Direct-search workers; N must be from 1 to " << maximumSearchThreadCount
            << ".\n";
+    output << "  --summary-only             Suppress individual results and emit only aggregate search output.\n";
     output << "  --regex                    Treat expression as PCRE2 regex.\n";
     output << "  --case-sensitive           Enable case-sensitive matching.\n";
     output << "  --whole-word               Match only whole words.\n";

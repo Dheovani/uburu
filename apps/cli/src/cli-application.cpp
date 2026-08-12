@@ -120,6 +120,9 @@ namespace uburu::cli
       if (cancellation.stopRequested())
         return false;
 
+      if (options.summaryOnly)
+        return true;
+
       if (resultStream.write(std::move(result)))
         return true;
 

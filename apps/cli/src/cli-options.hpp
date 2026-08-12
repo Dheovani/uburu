@@ -48,6 +48,7 @@ namespace uburu::cli
     CliSearchStrategy searchStrategy{CliSearchStrategy::direct};
     SearchQuery query;
     std::optional<std::filesystem::path> databasePath;
+    bool summaryOnly{false};
     bool showHelp{false};
   };
 

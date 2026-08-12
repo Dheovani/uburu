@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -56,6 +57,7 @@ TEST_CASE("CLI parser applies search flags")
     "32",
     "--threads",
     "4",
+    "--summary-only",
     "--no-gitignore",
     "--no-subdirectories",
   }));
@@ -77,6 +79,7 @@ TEST_CASE("CLI parser applies search flags")
   CHECK(options.query.options.maximumFileSize == 4U * 1024U * 1024U);
   CHECK(options.query.options.resultMemoryBudgetBytes == 32U * 1024U * 1024U);
   CHECK(options.query.options.maximumThreadCount == 4);
+  CHECK(options.summaryOnly);
 }
 
 TEST_CASE("CLI parser accepts automatic direct search worker selection")
@@ -123,7 +126,8 @@ TEST_CASE("CLI parser creates index status request")
 
 TEST_CASE("CLI parser creates index rebuild request")
 {
-  const auto parsed = uburu::cli::parseCliOptions(args({"index-rebuild", "C:/repo", "--types", "txt,md"}));
+  const auto parsed = uburu::cli::parseCliOptions(
+    args({"index-rebuild", "C:/repo", "--types", "txt,md", "--memory-budget-mib", "64"}));
 
   REQUIRE(parsed.options.has_value());
 
@@ -134,6 +138,7 @@ TEST_CASE("CLI parser creates index rebuild request")
   REQUIRE(options.query.options.extensions.size() == 2);
   CHECK(options.query.options.extensions[0] == "txt");
   CHECK(options.query.options.extensions[1] == "md");
+  CHECK(options.query.options.resultMemoryBudgetBytes == 64U * 1024U * 1024U);
 }
 
 TEST_CASE("CLI parser handles empty arguments as help")
@@ -174,12 +179,20 @@ TEST_CASE("CLI search summary exposes result memory exhaustion")
   summary.matches = 3;
   summary.resultMemoryBytes = 4096;
   summary.memoryLimitReached = true;
+  summary.metrics.timeToFirstResult = std::chrono::nanoseconds{150};
+  summary.metrics.totalTime = std::chrono::nanoseconds{900};
+  summary.metrics.filesProcessed = 12;
+  summary.metrics.bytesProcessed = 40960;
 
   std::ostringstream output;
   uburu::cli::writeSearchSummary(output, summary, uburu::cli::CliOutputFormat::jsonLines);
 
   CHECK(output.str().find("\"memoryLimitReached\":true") != std::string::npos);
   CHECK(output.str().find("\"resultMemoryBytes\":4096") != std::string::npos);
+  CHECK(output.str().find("\"timeToFirstResultNanoseconds\":150") != std::string::npos);
+  CHECK(output.str().find("\"totalTimeNanoseconds\":900") != std::string::npos);
+  CHECK(output.str().find("\"filesProcessed\":12") != std::string::npos);
+  CHECK(output.str().find("\"bytesProcessed\":40960") != std::string::npos);
 }
 
 TEST_CASE("CLI index summary exposes working memory exhaustion")

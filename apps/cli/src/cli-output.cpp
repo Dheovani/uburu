@@ -149,6 +149,14 @@ namespace uburu::cli
       output << " resultLimitReached=" << (summary.limitReached ? "true" : "false");
       output << " memoryLimitReached=" << (summary.memoryLimitReached ? "true" : "false");
       output << " resultMemoryBytes=" << summary.resultMemoryBytes;
+      output << " timeToFirstResultNanoseconds=" << summary.metrics.timeToFirstResult.count();
+      output << " totalTimeNanoseconds=" << summary.metrics.totalTime.count();
+      output << " filesProcessed=" << summary.metrics.filesProcessed;
+      output << " bytesProcessed=" << summary.metrics.bytesProcessed;
+      output << " filesPerSecond=" << summary.metrics.filesPerSecond;
+      output << " bytesPerSecond=" << summary.metrics.bytesPerSecond;
+      output << " workerQueuePeakItems=" << summary.metrics.workerQueuePeakItems;
+      output << " fileResultQueuePeakItems=" << summary.metrics.fileResultQueuePeakItems;
       output << '\n';
     }
 
@@ -166,6 +174,14 @@ namespace uburu::cli
       output << ",\"resultLimitReached\":" << (summary.limitReached ? "true" : "false");
       output << ",\"memoryLimitReached\":" << (summary.memoryLimitReached ? "true" : "false");
       output << ",\"resultMemoryBytes\":" << summary.resultMemoryBytes;
+      output << ",\"timeToFirstResultNanoseconds\":" << summary.metrics.timeToFirstResult.count();
+      output << ",\"totalTimeNanoseconds\":" << summary.metrics.totalTime.count();
+      output << ",\"filesProcessed\":" << summary.metrics.filesProcessed;
+      output << ",\"bytesProcessed\":" << summary.metrics.bytesProcessed;
+      output << ",\"filesPerSecond\":" << summary.metrics.filesPerSecond;
+      output << ",\"bytesPerSecond\":" << summary.metrics.bytesPerSecond;
+      output << ",\"workerQueuePeakItems\":" << summary.metrics.workerQueuePeakItems;
+      output << ",\"fileResultQueuePeakItems\":" << summary.metrics.fileResultQueuePeakItems;
       output << "}\n";
     }
 

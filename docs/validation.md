@@ -125,6 +125,8 @@ cmake `
 
 The same command works on Linux with the Linux `uburu` executable and shell-appropriate quoting. Optional inputs are `UBURU_TYPES`, `UBURU_MEMORY_BUDGET_MIB`, and `UBURU_THREADS`. Supported profile identifiers are `deterministic-smoke`, `code-repository`, `document-corpus`, `many-small-files`, `few-large-files`, and `large-mixed-tree`.
 
+Formal evidence requires a clean Git worktree by default, ensuring that the recorded commit identifies the tested source exactly. During development, `-DUBURU_REQUIRE_CLEAN_WORKTREE=OFF` may be used for a preliminary diagnostic run, but its record must not be promoted to release evidence.
+
 The generated record compares final match counts, requires a fresh index, rejects cancellation, partial failure, result-limit exhaustion, memory-limit exhaustion, and indexing failures, and records aggregate timing, throughput, queue, memory, and reuse counters. It deliberately cannot validate visual responsiveness, preview behavior, cancellation latency, partial-failure presentation, branch switching, or clean-machine artifacts; those scenarios remain manual responsibilities.
 
 ## Git and incremental-index scenarios

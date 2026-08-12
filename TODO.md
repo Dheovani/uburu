@@ -30,6 +30,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Define the repeatable Windows/Linux validation matrix, dataset profiles, evidence format, and acceptance rules.
   - [x] Automate the Windows core, Werror, format, test, and stable benchmark gates used before manual validation.
   - [x] Automate privacy-safe aggregate evidence collection for direct, indexed, hybrid, and incremental-index validation runs.
+  - [x] Record a preliminary Windows cycle against the Uburu repository to validate the evidence workflow.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.

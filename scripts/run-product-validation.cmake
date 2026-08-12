@@ -44,6 +44,10 @@ if(NOT DEFINED UBURU_CONFIGURATION)
   set(UBURU_CONFIGURATION local)
 endif()
 
+if(NOT DEFINED UBURU_REQUIRE_CLEAN_WORKTREE)
+  set(UBURU_REQUIRE_CLEAN_WORKTREE ON)
+endif()
+
 get_filename_component(outputPath "${UBURU_OUTPUT}" ABSOLUTE)
 get_filename_component(outputDirectory "${outputPath}" DIRECTORY)
 file(MAKE_DIRECTORY "${outputDirectory}")
@@ -183,6 +187,28 @@ if(NOT gitResult EQUAL 0)
   set(gitCommit unknown)
 endif()
 
+execute_process(
+  COMMAND git status --porcelain
+  WORKING_DIRECTORY "${projectRoot}"
+  RESULT_VARIABLE gitStatusResult
+  OUTPUT_VARIABLE gitStatusOutput
+  ERROR_QUIET
+)
+
+if(NOT gitStatusResult EQUAL 0)
+  set(gitWorktreeState unknown)
+elseif(gitStatusOutput STREQUAL "")
+  set(gitWorktreeState clean)
+else()
+  set(gitWorktreeState modified)
+endif()
+
+if(UBURU_REQUIRE_CLEAN_WORKTREE AND gitWorktreeState STREQUAL clean)
+  set(evidenceClassification formal)
+else()
+  set(evidenceClassification preliminary)
+endif()
+
 file(SHA256 "${UBURU_EXECUTABLE}" executableSha256)
 cmake_host_system_information(RESULT logicalCores QUERY NUMBER_OF_LOGICAL_CORES)
 cmake_host_system_information(RESULT physicalMemoryMiB QUERY TOTAL_PHYSICAL_MEMORY)
@@ -230,6 +256,11 @@ endforeach()
 set(validationStatus Passed)
 set(validationNotes "Strategies converged and the rebuilt index is fresh.")
 
+if(UBURU_REQUIRE_CLEAN_WORKTREE AND NOT gitWorktreeState STREQUAL clean)
+  set(validationStatus Blocked)
+  set(validationNotes "The automated checks passed, but formal evidence requires a clean Git worktree.")
+endif()
+
 if(NOT direct_matches EQUAL indexed_matches OR NOT direct_matches EQUAL hybrid_matches)
   set(validationStatus Failed)
   set(validationNotes "Direct, indexed, and hybrid match counts did not converge.")
@@ -268,6 +299,8 @@ string(APPEND report
 string(APPEND report "## Run metadata\n\n")
 string(APPEND report "- Timestamp (UTC): `${validationTimestamp}`\n")
 string(APPEND report "- Git commit: `${gitCommit}`\n")
+string(APPEND report "- Git worktree: `${gitWorktreeState}`\n")
+string(APPEND report "- Evidence classification: `${evidenceClassification}`\n")
 string(APPEND report "- Build/artifact: `${UBURU_CONFIGURATION}`\n")
 string(APPEND report "- Executable SHA-256: `${executableSha256}`\n")
 string(APPEND report "- Platform: `${osName} ${osRelease}`\n")
@@ -336,6 +369,6 @@ file(REMOVE_RECURSE "${privateDirectory}")
 
 message(STATUS "Sanitized validation evidence written to ${outputPath}")
 
-if(validationStatus STREQUAL Failed)
-  message(FATAL_ERROR "Automated product validation failed; inspect the sanitized evidence record")
+if(NOT validationStatus STREQUAL Passed)
+  message(FATAL_ERROR "Automated product validation did not qualify as passed; inspect the sanitized evidence record")
 endif()

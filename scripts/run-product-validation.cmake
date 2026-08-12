@@ -48,6 +48,30 @@ if(NOT DEFINED UBURU_REQUIRE_CLEAN_WORKTREE)
   set(UBURU_REQUIRE_CLEAN_WORKTREE ON)
 endif()
 
+if(NOT DEFINED UBURU_REQUIRE_RELEASE_BUILD)
+  set(UBURU_REQUIRE_RELEASE_BUILD ON)
+endif()
+
+if(NOT DEFINED UBURU_INCLUDE_BINARY)
+  set(UBURU_INCLUDE_BINARY OFF)
+endif()
+
+if(NOT DEFINED UBURU_INCLUDE_SUBDIRECTORIES)
+  set(UBURU_INCLUDE_SUBDIRECTORIES ON)
+endif()
+
+if(NOT DEFINED UBURU_ALLOW_PARTIAL_FAILURE)
+  set(UBURU_ALLOW_PARTIAL_FAILURE OFF)
+endif()
+
+if(NOT DEFINED UBURU_MINIMUM_MATCHES)
+  set(UBURU_MINIMUM_MATCHES 1)
+endif()
+
+if(NOT DEFINED UBURU_MAX_SIZE_MIB)
+  set(UBURU_MAX_SIZE_MIB 16)
+endif()
+
 get_filename_component(outputPath "${UBURU_OUTPUT}" ABSOLUTE)
 get_filename_component(outputDirectory "${outputPath}" DIRECTORY)
 file(MAKE_DIRECTORY "${outputDirectory}")
@@ -103,12 +127,22 @@ function(runSearch strategy prefix)
     "${databaseArgument}"
     --memory-budget-mib
     "${UBURU_MEMORY_BUDGET_MIB}"
+    --max-size-mib
+    "${UBURU_MAX_SIZE_MIB}"
     --threads
     "${UBURU_THREADS}"
   )
 
   if(DEFINED UBURU_TYPES AND NOT UBURU_TYPES STREQUAL "")
     list(APPEND command --types "${UBURU_TYPES}")
+  endif()
+
+  if(UBURU_INCLUDE_BINARY)
+    list(APPEND command --binary)
+  endif()
+
+  if(NOT UBURU_INCLUDE_SUBDIRECTORIES)
+    list(APPEND command --no-subdirectories)
   endif()
 
   execute_process(
@@ -119,12 +153,6 @@ function(runSearch strategy prefix)
     ERROR_VARIABLE commandError
   )
 
-  if(NOT exitCode EQUAL 0)
-    validationFailure(
-      "${strategy} validation search failed with exit code ${exitCode}; private output was not retained"
-    )
-  endif()
-
   extractJsonRecord("${commandOutput}" summary summaryJson)
 
   foreach(field IN ITEMS matches filesScanned filesWithReadErrors cancelled partialFailure resultLimitReached
@@ -132,8 +160,19 @@ function(runSearch strategy prefix)
                          filesProcessed bytesProcessed filesPerSecond bytesPerSecond workerQueuePeakItems
                          fileResultQueuePeakItems)
     readJsonField("${summaryJson}" "${field}" fieldValue)
+    set(${prefix}_${field} "${fieldValue}")
     set(${prefix}_${field} "${fieldValue}" PARENT_SCOPE)
   endforeach()
+
+  if(NOT exitCode EQUAL 0)
+    if(UBURU_ALLOW_PARTIAL_FAILURE AND ${prefix}_partialFailure AND NOT ${prefix}_cancelled AND exitCode EQUAL 3)
+      return()
+    endif()
+
+    validationFailure(
+      "${strategy} validation search failed with exit code ${exitCode}; private output was not retained"
+    )
+  endif()
 endfunction()
 
 function(runIndexCommand commandName recordType prefix)
@@ -147,10 +186,20 @@ function(runIndexCommand commandName recordType prefix)
     "${databaseArgument}"
     --memory-budget-mib
     "${UBURU_MEMORY_BUDGET_MIB}"
+    --max-size-mib
+    "${UBURU_MAX_SIZE_MIB}"
   )
 
   if(DEFINED UBURU_TYPES AND NOT UBURU_TYPES STREQUAL "")
     list(APPEND command --types "${UBURU_TYPES}")
+  endif()
+
+  if(UBURU_INCLUDE_BINARY)
+    list(APPEND command --binary)
+  endif()
+
+  if(NOT UBURU_INCLUDE_SUBDIRECTORIES)
+    list(APPEND command --no-subdirectories)
   endif()
 
   execute_process(
@@ -161,12 +210,21 @@ function(runIndexCommand commandName recordType prefix)
     ERROR_VARIABLE commandError
   )
 
-  if(NOT exitCode EQUAL 0)
-    validationFailure("${commandName} failed with exit code ${exitCode}; private output was not retained")
-  endif()
-
   extractJsonRecord("${commandOutput}" "${recordType}" recordJson)
   set(${prefix}_json "${recordJson}" PARENT_SCOPE)
+
+  if(NOT exitCode EQUAL 0)
+    readJsonField("${recordJson}" failed failed)
+    readJsonField("${recordJson}" cancelled cancelled)
+    readJsonField("${recordJson}" memoryLimitReached memoryLimitReached)
+
+    if(UBURU_ALLOW_PARTIAL_FAILURE AND failed GREATER 0 AND NOT cancelled AND NOT memoryLimitReached AND
+       exitCode EQUAL 3)
+      return()
+    endif()
+
+    validationFailure("${commandName} failed with exit code ${exitCode}; private output was not retained")
+  endif()
 endfunction()
 
 function(indexField prefix field outputVariable)
@@ -203,7 +261,14 @@ else()
   set(gitWorktreeState modified)
 endif()
 
-if(UBURU_REQUIRE_CLEAN_WORKTREE AND gitWorktreeState STREQUAL clean)
+string(TOLOWER "${UBURU_CONFIGURATION}" normalizedConfiguration)
+if(normalizedConfiguration MATCHES "release")
+  set(releaseBuild ON)
+else()
+  set(releaseBuild OFF)
+endif()
+
+if(gitWorktreeState STREQUAL clean AND releaseBuild)
   set(evidenceClassification formal)
 else()
   set(evidenceClassification preliminary)
@@ -256,14 +321,28 @@ endforeach()
 set(validationStatus Passed)
 set(validationNotes "Strategies converged and the rebuilt index is fresh.")
 
+if(UBURU_ALLOW_PARTIAL_FAILURE AND (direct_partialFailure OR indexed_partialFailure OR hybrid_partialFailure))
+  set(validationNotes "Strategies converged, the rebuilt index is fresh, and declared partial failures were preserved.")
+endif()
+
 if(UBURU_REQUIRE_CLEAN_WORKTREE AND NOT gitWorktreeState STREQUAL clean)
   set(validationStatus Blocked)
   set(validationNotes "The automated checks passed, but formal evidence requires a clean Git worktree.")
 endif()
 
+if(UBURU_REQUIRE_RELEASE_BUILD AND NOT releaseBuild)
+  set(validationStatus Blocked)
+  set(validationNotes "The automated checks passed, but product evidence requires an optimized release build.")
+endif()
+
 if(NOT direct_matches EQUAL indexed_matches OR NOT direct_matches EQUAL hybrid_matches)
   set(validationStatus Failed)
   set(validationNotes "Direct, indexed, and hybrid match counts did not converge.")
+endif()
+
+if(direct_matches LESS UBURU_MINIMUM_MATCHES)
+  set(validationStatus Failed)
+  set(validationNotes "The known expression did not produce the configured minimum match count.")
 endif()
 
 if(NOT indexStatus_state STREQUAL fresh)
@@ -272,16 +351,26 @@ if(NOT indexStatus_state STREQUAL fresh)
 endif()
 
 foreach(prefix IN ITEMS direct indexed hybrid)
-  if(${prefix}_cancelled OR ${prefix}_partialFailure OR ${prefix}_resultLimitReached OR ${prefix}_memoryLimitReached)
+  if(${prefix}_cancelled OR ${prefix}_resultLimitReached OR ${prefix}_memoryLimitReached)
     set(validationStatus Failed)
-    set(validationNotes "At least one strategy reported cancellation, partial failure, or budget exhaustion.")
+    set(validationNotes "At least one strategy reported cancellation or budget exhaustion.")
+  endif()
+
+  if(${prefix}_partialFailure AND NOT UBURU_ALLOW_PARTIAL_FAILURE)
+    set(validationStatus Failed)
+    set(validationNotes "At least one strategy reported an undeclared partial failure.")
   endif()
 endforeach()
 
-if(initialIndex_failed GREATER 0 OR initialIndex_cancelled OR initialIndex_memoryLimitReached OR
-   incrementalIndex_failed GREATER 0 OR incrementalIndex_cancelled OR incrementalIndex_memoryLimitReached)
+if(initialIndex_cancelled OR initialIndex_memoryLimitReached OR incrementalIndex_cancelled OR
+   incrementalIndex_memoryLimitReached)
   set(validationStatus Failed)
-  set(validationNotes "Indexing reported failure, cancellation, or memory exhaustion.")
+  set(validationNotes "Indexing reported cancellation or memory exhaustion.")
+endif()
+
+if((initialIndex_failed GREATER 0 OR incrementalIndex_failed GREATER 0) AND NOT UBURU_ALLOW_PARTIAL_FAILURE)
+  set(validationStatus Failed)
+  set(validationNotes "Indexing reported undeclared partial failures.")
 endif()
 
 math(EXPR directFirstMilliseconds "${direct_timeToFirstResultNanoseconds} / 1000000")
@@ -302,6 +391,7 @@ string(APPEND report "- Git commit: `${gitCommit}`\n")
 string(APPEND report "- Git worktree: `${gitWorktreeState}`\n")
 string(APPEND report "- Evidence classification: `${evidenceClassification}`\n")
 string(APPEND report "- Build/artifact: `${UBURU_CONFIGURATION}`\n")
+string(APPEND report "- Optimized release build: `${releaseBuild}`\n")
 string(APPEND report "- Executable SHA-256: `${executableSha256}`\n")
 string(APPEND report "- Platform: `${osName} ${osRelease}`\n")
 string(APPEND report "- Processor: `${processorName}`\n")
@@ -309,6 +399,12 @@ string(APPEND report "- Logical cores: `${logicalCores}`\n")
 string(APPEND report "- Physical memory: `${physicalMemoryMiB} MiB`\n")
 string(APPEND report "- Dataset identifier: `${UBURU_DATASET_ID}`\n")
 string(APPEND report "- Dataset profile: `${UBURU_DATASET_PROFILE}`\n")
+string(APPEND report "- Extension filter: `${UBURU_TYPES}`\n")
+string(APPEND report "- Include binary files: `${UBURU_INCLUDE_BINARY}`\n")
+string(APPEND report "- Include subdirectories: `${UBURU_INCLUDE_SUBDIRECTORIES}`\n")
+string(APPEND report "- Allow declared partial failures: `${UBURU_ALLOW_PARTIAL_FAILURE}`\n")
+string(APPEND report "- Minimum expected matches: `${UBURU_MINIMUM_MATCHES}`\n")
+string(APPEND report "- Maximum file size: `${UBURU_MAX_SIZE_MIB} MiB`\n")
 string(APPEND report "- Configured memory budget: `${UBURU_MEMORY_BUDGET_MIB} MiB`\n")
 string(APPEND report "- Configured direct-search workers: `${UBURU_THREADS}`\n\n")
 string(APPEND report "## Search evidence\n\n")

@@ -510,6 +510,55 @@ TEST_CASE("sqlite storage publishes generations atomically")
 #endif
 }
 
+TEST_CASE("sqlite storage preserves decomposed Unicode paths as UTF-8")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-unicode-path-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  const auto relativePath = std::filesystem::path{
+    std::u8string{u8"Questo\u0303es/Princi\u0301pio de Todas as Coisas.pdf"}};
+
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({indexDocument("unicode-content", relativePath)}));
+
+  const auto document = storage.findDocument("worktree-id", relativePath);
+  const auto visibleDocuments = storage.visibleDocumentsForRoot(directory.path());
+
+  REQUIRE(document.has_value());
+  CHECK(document->relativePath == relativePath);
+  REQUIRE(visibleDocuments.size() == 1);
+  CHECK(visibleDocuments.front().relativePath == relativePath);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
+TEST_CASE("sqlite storage preserves indexed text after embedded null bytes")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-sqlite-storage-null-text-test");
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  auto document = indexDocument("null-text-content");
+  const std::string indexedText{"before\0searchable after", 23};
+
+  document.indexedText = indexedText;
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(directory.path()));
+  storage.upsertWorktree(worktreeInfo(directory.path()));
+  storage.publishGeneration(indexGeneration({document}));
+
+  const auto stored = storage.findDocument("worktree-id", document.relativePath);
+
+  REQUIRE(stored.has_value());
+  REQUIRE(stored->indexedText.has_value());
+  CHECK(*stored->indexedText == indexedText);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("sqlite storage lists only visible indexed documents for a worktree root")
 {
 #if defined(UBURU_HAS_SQLITE)

@@ -126,8 +126,16 @@ TEST_CASE("CLI parser creates index status request")
 
 TEST_CASE("CLI parser creates index rebuild request")
 {
-  const auto parsed = uburu::cli::parseCliOptions(
-    args({"index-rebuild", "C:/repo", "--types", "txt,md", "--memory-budget-mib", "64"}));
+  const auto parsed = uburu::cli::parseCliOptions(args({
+    "index-rebuild",
+    "C:/repo",
+    "--types",
+    "txt,md",
+    "--max-size-mib",
+    "256",
+    "--memory-budget-mib",
+    "64",
+  }));
 
   REQUIRE(parsed.options.has_value());
 
@@ -138,7 +146,20 @@ TEST_CASE("CLI parser creates index rebuild request")
   REQUIRE(options.query.options.extensions.size() == 2);
   CHECK(options.query.options.extensions[0] == "txt");
   CHECK(options.query.options.extensions[1] == "md");
+  CHECK(options.query.options.maximumFileSize == 256U * 1024U * 1024U);
   CHECK(options.query.options.resultMemoryBudgetBytes == 64U * 1024U * 1024U);
+}
+
+TEST_CASE("CLI parser rejects invalid index file size limits")
+{
+  const auto missing = uburu::cli::parseCliOptions(args({"index-rebuild", "C:/repo", "--max-size-mib"}));
+  const auto malformed =
+    uburu::cli::parseCliOptions(args({"index-rebuild", "C:/repo", "--max-size-mib", "large"}));
+
+  CHECK_FALSE(missing.options.has_value());
+  CHECK_FALSE(malformed.options.has_value());
+  CHECK(missing.error == "--max-size-mib requires a numeric value");
+  CHECK(malformed.error == missing.error);
 }
 
 TEST_CASE("CLI parser handles empty arguments as help")

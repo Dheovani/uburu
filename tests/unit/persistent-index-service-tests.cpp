@@ -590,6 +590,42 @@ TEST_CASE("persistent index service stores extracted pdf visible text")
 #endif
 }
 
+TEST_CASE("persistent index service searches decomposed Unicode file paths")
+{
+#if defined(UBURU_HAS_SQLITE)
+  TemporaryDirectory directory("uburu-persistent-index-unicode-path-test");
+  const auto root = directory.path() / "repo";
+  const auto relativePath = std::filesystem::path{
+    std::u8string{u8"Questo\u0303es/Princi\u0301pio de Todas as Coisas.pdf"}};
+
+  writeFile(root / relativePath, uburu::tests::fixtures::minimalPdfText("BT (Visible text) Tj ET"));
+
+  uburu::storage::SQLiteStorageService storage(directory.path() / "uburu.db");
+  storage.initialize();
+  storage.upsertRepository(repositoryInfo(root));
+  storage.upsertWorktree(worktreeInfo(root));
+
+  uburu::index::PersistentIndexService indexService(storage);
+  const std::vector files{
+    fileEntry(root, relativePath),
+  };
+
+  const auto summary = indexService.update(worktreeInfo(root), files);
+
+  uburu::SearchQuery query{.root = root, .scope = {}, .expression = "Princípio", .options = {}};
+  query.options.target = uburu::SearchTarget::fileName;
+
+  const auto results = indexService.search(query).results;
+
+  CHECK(summary.indexed == 1);
+  CHECK(summary.failed == 0);
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().path == relativePath);
+#else
+  SUCCEED("SQLite is not available in this build");
+#endif
+}
+
 TEST_CASE("persistent index service stores extracted subtitle cue text")
 {
 #if defined(UBURU_HAS_SQLITE)

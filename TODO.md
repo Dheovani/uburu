@@ -30,7 +30,10 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Define the repeatable Windows/Linux validation matrix, dataset profiles, evidence format, and acceptance rules.
   - [x] Automate the Windows core, Werror, format, test, and stable benchmark gates used before manual validation.
   - [x] Automate privacy-safe aggregate evidence collection for direct, indexed, hybrid, and incremental-index validation runs.
+  - [x] Make validation evidence require Release builds, record binary/subdirectory/file-size scope, enforce known matches, and distinguish declared partial failures from fatal failures.
   - [x] Record a preliminary Windows cycle against the Uburu repository to validate the evidence workflow.
+  - [x] Record a preliminary Windows document-corpus cycle over all 217 PDFs up to 256 MiB and fix the Unicode-path and embedded-NUL regressions it exposed.
+  - [ ] Classify and reduce the PDF extraction failures exposed by the Windows document corpus before promoting the run to formal evidence.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.

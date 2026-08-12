@@ -315,6 +315,16 @@ namespace uburu::cli
             return usageError("--types requires a comma-separated extension list");
 
           options.query.options.extensions = splitCommaSeparated(arguments[++index]);
+        } else if (argument == "--max-size-mib") {
+          if (index + 1 >= arguments.size())
+            return usageError("--max-size-mib requires a numeric value");
+
+          auto maximumFileSize = parseMib(arguments[++index]);
+
+          if (!maximumFileSize)
+            return usageError("--max-size-mib requires a numeric value");
+
+          options.query.options.maximumFileSize = *maximumFileSize;
         } else if (argument == "--no-gitignore") {
           options.query.options.respectGitignore = false;
         } else if (argument == "--hidden") {

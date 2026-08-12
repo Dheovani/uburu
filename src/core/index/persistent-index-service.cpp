@@ -10,6 +10,7 @@
 #include "core/document/rtf-document-extractor.hpp"
 #include "core/document/subtitle-document-extractor.hpp"
 #include "core/document/xlsx-document-extractor.hpp"
+#include "core/filesystem/path-normalization.hpp"
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
 #include "core/index/index-working-memory.hpp"
@@ -956,7 +957,7 @@ namespace uburu::index
       std::size_t fileMatches = 0;
 
       if (searchesFileName(query)) {
-        const auto pathText = document.relativePath.generic_string();
+        const auto pathText = filesystem::normalizedRelativePath(document.relativePath);
         const auto matches = indexedPathMatches(pathText, query, regex);
 
         if (!appendIndexedResults(

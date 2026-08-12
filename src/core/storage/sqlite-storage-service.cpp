@@ -125,7 +125,26 @@ namespace uburu::storage
       if (text == nullptr)
         return std::nullopt;
 
-      return std::string{text};
+      const auto size = static_cast<std::size_t>(sqlite3_column_bytes(statement, column));
+
+      return std::string{text, size};
+    }
+
+    [[nodiscard]]
+    std::string pathToUtf8(const std::filesystem::path& path)
+    {
+      const auto text = path.generic_u8string();
+
+      return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+
+    [[nodiscard]]
+    std::filesystem::path pathFromUtf8(sqlite3_stmt* statement, int column)
+    {
+      const auto* text = reinterpret_cast<const char8_t*>(sqlite3_column_text(statement, column));
+      const auto size = static_cast<std::size_t>(sqlite3_column_bytes(statement, column));
+
+      return std::filesystem::path{std::u8string{text, text + size}};
     }
 
     [[nodiscard]] GitFileStatus toGitFileStatus(int value)
@@ -159,7 +178,7 @@ namespace uburu::storage
       return IndexDocument{.formatVersion = static_cast<std::uint32_t>(sqlite3_column_int(row, 5)),
                            .repositoryId = reinterpret_cast<const char*>(sqlite3_column_text(row, 0)),
                            .worktreeId = reinterpret_cast<const char*>(sqlite3_column_text(row, 1)),
-                           .relativePath = reinterpret_cast<const char*>(sqlite3_column_text(row, 2)),
+                           .relativePath = pathFromUtf8(row, 2),
                            .contentHash = reinterpret_cast<const char*>(sqlite3_column_text(row, 3)),
                            .contentHashAlgorithm = toContentHashAlgorithm(sqlite3_column_int(row, 4)),
                            .gitBlobHash = optionalText(row, 6),
@@ -221,7 +240,7 @@ namespace uburu::storage
 
       void bindPath(int index, const std::filesystem::path& value)
       {
-        bindText(index, value.generic_string());
+        bindText(index, pathToUtf8(value));
       }
 
       void bindOptionalText(int index, const std::optional<std::string>& value)
@@ -973,7 +992,8 @@ namespace uburu::storage
 
       sqlite3* openedDatabase = nullptr;
       const auto flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
-      const auto result = sqlite3_open_v2(databasePath.string().c_str(), &openedDatabase, flags, nullptr);
+      const auto databasePathText = pathToUtf8(databasePath);
+      const auto result = sqlite3_open_v2(databasePathText.c_str(), &openedDatabase, flags, nullptr);
 
       if (result != sqliteOk) {
         const auto message = openedDatabase == nullptr
@@ -1339,7 +1359,7 @@ namespace uburu::storage
 
     while (statement.stepRow()) {
       entries.push_back(
-        SearchHistoryEntry{.root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
+        SearchHistoryEntry{.root = pathFromUtf8(statement.get(), 0),
                            .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
                            .searchedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 2))});
     }
@@ -1389,7 +1409,7 @@ namespace uburu::storage
     while (statement.stepRow()) {
       searches.push_back(
         SavedSearch{.name = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 0)),
-                    .root = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 1)),
+                    .root = pathFromUtf8(statement.get(), 1),
                     .expression = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 2)),
                     .savedAt = fromUnixMilliseconds(sqlite3_column_int64(statement.get(), 3))});
     }

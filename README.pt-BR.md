@@ -8,9 +8,9 @@
 
 Uburu é uma aplicação desktop de busca avançada em arquivos e repositórios de software. A base atual oferece busca literal direta e progressiva, uma UI Qt Quick não bloqueante e contratos para a futura indexação persistente e consciente de Git.
 
-O planejamento completo de evolução e os critérios para a versão 1.0 estão em [TODO.md](TODO.md). Regras de branch, commits e validação local ficam em [docs/development.md](docs/development.md).
+O planejamento completo de evolução e os critérios para a versão 1.0 estão em [TODO.md](TODO.md). Regras de branch, commits e validação local ficam em [docs/development/development.md](docs/development/development.md). O índice completo da documentação está em [docs/README.md](docs/README.md).
 
-Se você quer apenas usar a aplicação, comece pelo [guia do usuário](docs/user-guide.pt-BR.md).
+Se você quer apenas usar a aplicação, comece pelo [guia do usuário](docs/product/user-guide.pt-BR.md).
 
 ## Dependências
 
@@ -51,7 +51,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\invoke-cmake-preset.ps1 -Comm
 .\scripts\package-windows-msvc-desktop.ps1
 ```
 
-O fluxo de empacotamento de release está documentado em [docs/release.md](docs/release.md).
+O fluxo de empacotamento de release está documentado em [docs/distribution/release.md](docs/distribution/release.md).
 
 Para trabalhar apenas no core sem uma instalação do Qt:
 
@@ -109,7 +109,7 @@ Consulte também:
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [SECURITY.md](SECURITY.md)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- [docs/licenses.md](docs/licenses.md)
+- [docs/distribution/licenses.md](docs/distribution/licenses.md)
 
 ## Estado atual
 

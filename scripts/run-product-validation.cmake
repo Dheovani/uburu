@@ -492,7 +492,7 @@ string(APPEND report "- Status: **${validationStatus}**\n")
 string(APPEND report "- Observation: ${validationNotes}\n")
 string(APPEND report
   "- Manual correctness, cancellation, UI responsiveness, preview, and clean-machine checks remain required by "
-  "`docs/validation.md`.\n"
+  "`docs/development/validation.md`.\n"
 )
 
 file(WRITE "${outputPath}" "${report}")

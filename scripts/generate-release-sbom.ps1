@@ -48,7 +48,7 @@ $outputPath = Join-Path $root $OutputDirectory
 $sbomPath = Join-Path $outputPath $SbomFileName
 $licenseReportPath = Join-Path $outputPath $LicenseReportFileName
 $vcpkgManifestPath = Join-Path $root "vcpkg.json"
-$licenseNotesPath = Join-Path $root "docs/licenses.md"
+$licenseNotesPath = Join-Path $root "docs/distribution/licenses.md"
 $releaseManifestPath = Join-Path $packagePath "release-manifest.json"
 
 Assert-PathInsideRoot $packagePath
@@ -183,7 +183,7 @@ $dependencyLines = foreach ($dependency in $dependencies) {
 $licenseNotes = if (Test-Path -LiteralPath $licenseNotesPath) {
   Get-Content -LiteralPath $licenseNotesPath -Raw
 } else {
-  "docs/licenses.md was not found when this report was generated."
+  "docs/distribution/licenses.md was not found when this report was generated."
 }
 
 $licenseReport = @"

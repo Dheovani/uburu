@@ -49,7 +49,7 @@ The traditional installer is configured as a per-user install under:
 %LOCALAPPDATA%\Programs\Uburu
 ```
 
-That keeps the first installer usable without elevation and avoids writing user data next to the executable. Settings, cache, logs, and indexes must remain in the platform storage location documented in `docs/storage.md`.
+That keeps the first installer usable without elevation and avoids writing user data next to the executable. Settings, cache, logs, and indexes must remain in the platform storage location documented in [storage.md](../architecture/storage.md).
 
 To build the installer, install Inno Setup 6 and run:
 
@@ -88,9 +88,9 @@ The script is intentionally not run by default because signing material must not
 
 The top-level `CHANGELOG.md` summarizes notable project changes by version, starting with `0.1.0`. Release notes are versioned under `docs/releases/`. For a manual GitHub release, paste the matching note into the release description and attach the generated binaries/checksums as release assets.
 
-Validation records also live under `docs/releases/`. The `v0.1.0` preview uses `docs/releases/v0.1.0-validation.md` to separate what was actually tested from optional future work such as signing certificates, Flatpak packaging, or unsupported platforms.
+Validation records also live under `docs/releases/`. The `v0.1.0` preview uses [v0.1.0-validation.md](../releases/v0.1.0-validation.md) to separate what was actually tested from optional future work such as signing certificates, Flatpak packaging, or unsupported platforms.
 
-The repeatable correctness, Git/indexing, resource, and performance validation matrix for future release candidates is defined in `docs/validation.md`. Release-specific records should reference that matrix and retain only the observed evidence and release decision.
+The repeatable correctness, Git/indexing, resource, and performance validation matrix for future release candidates is defined in [validation.md](../development/validation.md). Release-specific records should reference that matrix and retain only the observed evidence and release decision.
 
 To prepare the Windows release assets and a machine-readable manifest in one step, run:
 
@@ -111,7 +111,7 @@ The SBOM is an initial SPDX 2.3 JSON report generated from the release bundle an
 
 ## Upgrade, uninstall, and compatibility policy
 
-Installers must write application binaries only under the selected installation directory. User state belongs under the platform application-data location documented in `docs/storage.md`, currently `%LOCALAPPDATA%/uburu/uburu.db` on Windows. This keeps install/uninstall separate from settings, history, saved searches, and index data.
+Installers must write application binaries only under the selected installation directory. User state belongs under the platform application-data location documented in [storage.md](../architecture/storage.md), currently `%LOCALAPPDATA%/uburu/uburu.db` on Windows. This keeps install/uninstall separate from settings, history, saved searches, and index data.
 
 The first Windows installer preserves user data during uninstall. A future installer may offer an explicit "remove local data" option, but it must never silently delete the user's index, settings, history, or saved searches. Installing a newer build over an older one should leave the database in place for the storage migration/recovery layer to validate.
 

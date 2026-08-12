@@ -81,7 +81,7 @@ Run these scenarios through the desktop application and repeat the central searc
 
 | Area | Scenario | Acceptance criteria |
 | --- | --- | --- |
-| Literal matching | Search known expressions at the start, middle, and end of lines, including repeated and overlapping candidates | Every occurrence follows `docs/search-semantics.md`; ordering is deterministic across repeated runs |
+| Literal matching | Search known expressions at the start, middle, and end of lines, including repeated and overlapping candidates | Every occurrence follows [search semantics](../product/search-semantics.md); ordering is deterministic across repeated runs |
 | Case and boundaries | Repeat with case-sensitive, case-insensitive, whole-word, identifier, punctuation, and Unicode cases | Results match the documented Unicode and boundary rules without platform differences |
 | Regex | Run valid selective and broad expressions, then invalid and pathological expressions | Valid results are correct; invalid patterns produce typed errors; resource limits and cancellation remain responsive |
 | File names and types | Search content and file names across supported, unsupported, binary, and filtered extensions | Every scanned file remains name-searchable; type filters do not leak unrelated extensions; unsupported content is reported accurately |
@@ -158,7 +158,7 @@ Correctness takes priority, but each medium or large dataset run must record eno
 - preview latency for plain text, large files, and rich documents;
 - UI responsiveness while batches and indexing progress are active.
 
-Use `docs/performance.md` for quantitative targets and benchmark methodology. A manual run outside a target is a finding to investigate, not permission to silently weaken the target.
+Use [performance.md](performance.md) for quantitative targets and benchmark methodology. A manual run outside a target is a finding to investigate, not permission to silently weaken the target.
 
 ## Acceptance rules
 

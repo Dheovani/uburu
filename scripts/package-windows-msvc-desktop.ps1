@@ -93,7 +93,7 @@ if (Test-Path -LiteralPath $checksumPath) {
 Copy-Item -LiteralPath (Join-Path $root "README.md") -Destination $packagePath -Force
 Copy-Item -LiteralPath (Join-Path $root "README.pt-BR.md") -Destination $packagePath -Force
 Copy-Item -LiteralPath (Join-Path $root "LICENSE") -Destination $packagePath -Force
-Copy-Item -LiteralPath (Join-Path $root "docs/licenses.md") -Destination $packagePath -Force
+Copy-Item -LiteralPath (Join-Path $root "docs/distribution/licenses.md") -Destination $packagePath -Force
 
 $manifest = [ordered]@{
   name = "Uburu"

@@ -26,7 +26,7 @@ Future work below should improve this baseline without reopening completed miles
 
 ## Before a stable 1.0 release
 
-- [ ] Execute the repeatable validation matrix in `docs/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
+- [ ] Execute the repeatable validation matrix in `docs/development/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
   - [x] Define the repeatable Windows/Linux validation matrix, dataset profiles, evidence format, and acceptance rules.
   - [x] Automate the Windows core, Werror, format, test, and stable benchmark gates used before manual validation.
   - [x] Automate privacy-safe aggregate evidence collection for direct, indexed, hybrid, and incremental-index validation runs.

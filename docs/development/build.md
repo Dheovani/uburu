@@ -47,7 +47,7 @@ To create the initial Release portable bundle, ZIP archive, manifest, and SHA-25
 .\scripts\package-windows-msvc-desktop.ps1
 ```
 
-The script writes to `dist/windows-msvc-release` by default. See [release packaging](release.md) for the manual validation checklist and remaining installer/signing work.
+The script writes to `dist/windows-msvc-release` by default. See [release packaging](../distribution/release.md) for the manual validation checklist and remaining installer/signing work.
 
 To build the first Windows installer, install Inno Setup 6 and run:
 

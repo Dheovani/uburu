@@ -17,7 +17,7 @@ IndexService -> GitService / StorageService / FileScanner
 
 Shared types live in `src/shared/types`. They model logical repository and worktree identity, relative path, and content identity separately. This prevents turning a path into a document identity.
 
-Important decisions that should remain stable across implementation details are recorded as ADRs in [adrs/README.md](adrs/README.md).
+Important decisions that should remain stable across implementation details are recorded as ADRs in [ADRs](../adrs/README.md).
 
 ## Search strategies
 

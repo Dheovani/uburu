@@ -73,11 +73,14 @@ Suggested structure:
   CMakeLists.txt
   README.md
   docs/
-    architecture.md
-    indexing.md
-    git-awareness.md
-    performance.md
-    search-semantics.md
+    README.md
+    architecture/
+    development/
+    distribution/
+    product/
+    security/
+    adrs/
+    releases/
   apps/
     desktop/
       CMakeLists.txt
@@ -605,18 +608,20 @@ Benchmarks should be easy to run and compare.
 
 Keep documentation in `docs/`.
 
-Expected files:
+Expected documentation areas:
 
 ```txt
-docs/architecture.md
-docs/indexing.md
-docs/git-awareness.md
-docs/search-semantics.md
-docs/performance.md
-docs/storage.md
-docs/ui.md
-docs/build.md
-docs/licenses.md
+docs/README.md
+docs/architecture/architecture.md
+docs/architecture/indexing.md
+docs/architecture/git-awareness.md
+docs/architecture/storage.md
+docs/development/build.md
+docs/development/performance.md
+docs/distribution/licenses.md
+docs/product/search-semantics.md
+docs/product/ui.md
+docs/security/privacy.md
 ```
 
 Whenever an important architectural decision is made, record it in documentation.

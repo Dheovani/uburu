@@ -34,7 +34,7 @@ To work without Qt, use the `core-windows-msvc-debug` preset.
 
 ## Commits
 
-Use the format documented in `docs/development.md`:
+Use the format documented in `docs/development/development.md`:
 
 ```txt
 type(scope): short imperative summary

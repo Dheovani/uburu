@@ -78,6 +78,9 @@ int main(int argc, char** argv)
   if (options.command == uburu::cli::CliCommand::indexRebuild)
     return toProcessExitCode(uburu::cli::runIndexRebuild(options));
 
+  if (options.command == uburu::cli::CliCommand::documentInspect)
+    return toProcessExitCode(uburu::cli::runDocumentInspection(options));
+
   std::cout << uburu::cli::cliHelpText();
 
   return toProcessExitCode(uburu::cli::CliExitCode::ok);

@@ -209,8 +209,12 @@ TEST_CASE("document extraction policy exposes stable status and availability nam
 {
   CHECK(uburu::document::documentExtractionStatusName(uburu::document::DocumentExtractionStatus::unsupportedFormat) ==
         "unsupportedFormat");
+  CHECK(uburu::document::documentExtractionStatusName(uburu::document::DocumentExtractionStatus::unsupportedFeature) ==
+        "unsupportedFeature");
   CHECK(uburu::document::documentExtractionStatusName(uburu::document::DocumentExtractionStatus::parserFailed) ==
         "parserFailed");
+  CHECK(uburu::document::documentExtractionIssueName(
+          uburu::document::DocumentExtractionIssue::compressedObjectStream) == "compressedObjectStream");
   CHECK(uburu::document::documentContentAvailabilityName(
           uburu::document::DocumentContentAvailability::nameOnlyUnsupported) == "nameOnlyUnsupported");
   CHECK(uburu::document::documentContentAvailabilityName(
@@ -221,6 +225,8 @@ TEST_CASE("document extraction policy separates name-only and failed content sta
 {
   const auto unsupported =
     uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::unsupportedFormat);
+  const auto unsupportedFeature =
+    uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::unsupportedFeature);
   const auto binary =
     uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::binarySkipped);
   const auto unsafe =
@@ -231,11 +237,13 @@ TEST_CASE("document extraction policy separates name-only and failed content sta
     uburu::document::documentContentAvailability(uburu::document::DocumentExtractionStatus::parserFailed);
 
   CHECK(unsupported == uburu::document::DocumentContentAvailability::nameOnlyUnsupported);
+  CHECK(unsupportedFeature == uburu::document::DocumentContentAvailability::nameOnlyUnsupported);
   CHECK(binary == uburu::document::DocumentContentAvailability::nameOnlyBinary);
   CHECK(unsafe == uburu::document::DocumentContentAvailability::nameOnlySafetyLimited);
   CHECK(protectedDocument == uburu::document::DocumentContentAvailability::nameOnlyProtected);
   CHECK(failed == uburu::document::DocumentContentAvailability::extractionFailed);
   CHECK(uburu::document::isNameOnlySearchable(unsupported));
+  CHECK(uburu::document::isNameOnlySearchable(unsupportedFeature));
   CHECK_FALSE(uburu::document::isNameOnlySearchable(failed));
 }
 
@@ -1315,7 +1323,7 @@ TEST_CASE("pdf document extractor skips oversized ToUnicode ranges")
 
 TEST_CASE("pdf document extractor rejects excessive page counts")
 {
-  constexpr std::size_t excessivePageCount = 301;
+  constexpr std::size_t excessivePageCount = 4097;
 
   uburu::tests::TemporaryDirectory directory("uburu-document-pdf-page-count-limit-test");
   const auto path = directory.path() / "document.pdf";
@@ -1347,6 +1355,7 @@ TEST_CASE("pdf document extractor rejects excessive page counts")
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(summary.issue == uburu::document::DocumentExtractionIssue::pageCountLimit);
 }
 
 TEST_CASE("pdf document extractor applies extracted byte limits before publishing")
@@ -1392,6 +1401,7 @@ TEST_CASE("pdf document extractor applies the configured source file size limit"
   });
 
   CHECK(limited.status == uburu::document::DocumentExtractionStatus::safetyLimitExceeded);
+  CHECK(limited.issue == uburu::document::DocumentExtractionIssue::sourceFileSizeLimit);
   CHECK(accepted.status == uburu::document::DocumentExtractionStatus::completed);
 }
 
@@ -1443,6 +1453,31 @@ TEST_CASE("pdf document extractor reports malformed files as parser failures")
     extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
 
   CHECK(summary.status == uburu::document::DocumentExtractionStatus::parserFailed);
+}
+
+TEST_CASE("pdf document extractor reports compressed object streams as unsupported features")
+{
+  uburu::tests::TemporaryDirectory directory("uburu-document-pdf-object-stream-test");
+  const auto path = directory.path() / "document.pdf";
+  uburu::document::PdfDocumentExtractor extractor;
+  uburu::document::DocumentExtractionOptions options;
+
+  uburu::tests::writeFile(
+    path,
+    "%PDF-1.5\n"
+    "1 0 obj\n"
+    "<< /Type /ObjStm /N 1 /First 4 >>\n"
+    "stream\n"
+    "2 0 << /Type /Page >>\n"
+    "endstream\n"
+    "endobj\n"
+    "%%EOF\n");
+
+  const auto summary =
+    extractor.extract(path, options, [](const uburu::document::ExtractedTextSegment&) { return true; });
+
+  CHECK(summary.status == uburu::document::DocumentExtractionStatus::unsupportedFeature);
+  CHECK(summary.issue == uburu::document::DocumentExtractionIssue::compressedObjectStream);
 }
 
 TEST_CASE("html document extractor supports common html extensions")

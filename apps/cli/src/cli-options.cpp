@@ -371,6 +371,9 @@ namespace uburu::cli
     if (command == "index-rebuild")
       return parseIndexCommandOptions(std::move(arguments), CliCommand::indexRebuild);
 
+    if (command == "document-inspect")
+      return parseIndexCommandOptions(std::move(arguments), CliCommand::documentInspect);
+
     if (command == "help") {
       CliOptions options;
       options.showHelp = true;
@@ -393,6 +396,7 @@ namespace uburu::cli
     output << "  uburu search <root> <expression> [options]\n\n";
     output << "  uburu index-status <root> [options]\n";
     output << "  uburu index-rebuild <root> [options]\n\n";
+    output << "  uburu document-inspect <root> [options]\n\n";
     output << "Options:\n";
     output << "  --format human|jsonl       Output format. Defaults to human.\n";
     output << "  --strategy direct|indexed|hybrid\n";

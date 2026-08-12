@@ -16,7 +16,8 @@ namespace uburu::cli
     help,
     search,
     indexStatus,
-    indexRebuild
+    indexRebuild,
+    documentInspect
   };
 
   enum class CliSearchStrategy

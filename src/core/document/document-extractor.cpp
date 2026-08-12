@@ -14,6 +14,8 @@ namespace uburu::document
       return "cancelled";
     case DocumentExtractionStatus::unsupportedFormat:
       return "unsupportedFormat";
+    case DocumentExtractionStatus::unsupportedFeature:
+      return "unsupportedFeature";
     case DocumentExtractionStatus::openFailed:
       return "openFailed";
     case DocumentExtractionStatus::readFailed:
@@ -33,12 +35,47 @@ namespace uburu::document
     return "unknown";
   }
 
+  std::string_view documentExtractionIssueName(DocumentExtractionIssue issue)
+  {
+    switch (issue) {
+    case DocumentExtractionIssue::none:
+      return "none";
+    case DocumentExtractionIssue::sourceFileSizeLimit:
+      return "sourceFileSizeLimit";
+    case DocumentExtractionIssue::extractedContentLimit:
+      return "extractedContentLimit";
+    case DocumentExtractionIssue::pageCountLimit:
+      return "pageCountLimit";
+    case DocumentExtractionIssue::streamCountLimit:
+      return "streamCountLimit";
+    case DocumentExtractionIssue::decodedStreamSizeLimit:
+      return "decodedStreamSizeLimit";
+    case DocumentExtractionIssue::decodedDocumentSizeLimit:
+      return "decodedDocumentSizeLimit";
+    case DocumentExtractionIssue::invalidCompressedStream:
+      return "invalidCompressedStream";
+    case DocumentExtractionIssue::invalidHeader:
+      return "invalidHeader";
+    case DocumentExtractionIssue::missingPages:
+      return "missingPages";
+    case DocumentExtractionIssue::compressedObjectStream:
+      return "compressedObjectStream";
+    case DocumentExtractionIssue::unsupportedStreamFilter:
+      return "unsupportedStreamFilter";
+    case DocumentExtractionIssue::encryptedDocument:
+      return "encryptedDocument";
+    }
+
+    return "unknown";
+  }
+
   DocumentContentAvailability documentContentAvailability(DocumentExtractionStatus status)
   {
     switch (status) {
     case DocumentExtractionStatus::completed:
       return DocumentContentAvailability::contentAvailable;
     case DocumentExtractionStatus::unsupportedFormat:
+    case DocumentExtractionStatus::unsupportedFeature:
       return DocumentContentAvailability::nameOnlyUnsupported;
     case DocumentExtractionStatus::binarySkipped:
       return DocumentContentAvailability::nameOnlyBinary;

@@ -74,7 +74,7 @@ Both commands support:
 
 ## Cancellation
 
-Long-running `search` and `index-rebuild` commands handle `Ctrl+C` as cooperative cancellation. The CLI forwards the cancellation request to the same `std::stop_token` path used by the core engine, so partial work can stop without corrupting index state. Cancelled commands exit with code `4`.
+Long-running `search`, `index-rebuild`, and `document-inspect` commands handle `Ctrl+C` as cooperative cancellation. The CLI forwards the cancellation request to the same `std::stop_token` path used by the core engine, so partial work can stop without corrupting index state. Cancelled commands exit with code `4`.
 
 Search results are streamed synchronously to standard output. This is intentional backpressure: if the terminal, pipe, or parent process cannot keep up or closes the stream, the CLI stops requesting more results instead of accumulating an unbounded output queue in memory.
 
@@ -83,3 +83,11 @@ Search summaries expose `resultLimitReached`, `memoryLimitReached`, and `resultM
 JSON Lines summaries also expose time to first result, total duration, processed files and bytes, throughput, and peak queue occupancy. These aggregate fields contain no search expression, path, or matching content and are the supported input for product-validation records.
 
 Richer diagnostics are planned for the same CLI layer without changing the core search engine.
+
+## Document extraction diagnostics
+
+```sh
+uburu document-inspect <root> [options]
+```
+
+`document-inspect` scans the selected scope and reports aggregate extractor statuses and specific safety or parser issues. It deliberately omits file paths and extracted text, making its output suitable for privacy-safe validation evidence. Use `--types`, `--max-size-mib`, `--no-subdirectories`, and the other common scope flags to reproduce the document scope used by search or indexing.

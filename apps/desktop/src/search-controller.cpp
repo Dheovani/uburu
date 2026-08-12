@@ -738,6 +738,7 @@ namespace uburu::app
         return PreviewLoadStatus::openFailed;
       case document::DocumentExtractionStatus::readFailed:
       case document::DocumentExtractionStatus::unsupportedFormat:
+      case document::DocumentExtractionStatus::unsupportedFeature:
       case document::DocumentExtractionStatus::parserFailed:
       case document::DocumentExtractionStatus::encryptedOrProtected:
         return PreviewLoadStatus::readFailed;

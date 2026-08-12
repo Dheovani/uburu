@@ -2,6 +2,7 @@
 
 #include "app/dto/search-dto.hpp"
 #include "cli-options.hpp"
+#include "document-inspection.hpp"
 #include "core/index/index-service.hpp"
 #include "core/search/search-engine.hpp"
 #include "shared/types/domain-types.hpp"
@@ -35,6 +36,14 @@ namespace uburu::cli
   void writeIndexUpdateSummary(
     std::ostream& output,
     const index::IndexUpdateSummary& summary,
+    CliOutputFormat format);
+
+  /**
+   * Writes privacy-safe aggregate document extraction diagnostics.
+   */
+  void writeDocumentInspectionSummary(
+    std::ostream& output,
+    const DocumentInspectionSummary& summary,
     CliOutputFormat format);
 
 } // namespace uburu::cli

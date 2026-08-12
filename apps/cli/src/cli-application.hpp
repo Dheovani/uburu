@@ -14,4 +14,7 @@ namespace uburu::cli
   [[nodiscard]]
   uburu::cli::CliExitCode runIndexRebuild(const uburu::cli::CliOptions& options);
 
+  [[nodiscard]]
+  uburu::cli::CliExitCode runDocumentInspection(const uburu::cli::CliOptions& options);
+
 }

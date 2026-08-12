@@ -4,6 +4,7 @@ add_library(uburu_cli_lib STATIC
   src/cli-runtime.cpp
   src/cli-file-helper.cpp
   src/cli-application.cpp
+  src/document-inspection.cpp
 )
 add_library(Uburu::Cli ALIAS uburu_cli_lib)
 

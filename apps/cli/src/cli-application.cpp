@@ -3,6 +3,7 @@
 #include "cli-file-helper.hpp"
 #include "cli-output.hpp"
 #include "cli-runtime.hpp"
+#include "document-inspection.hpp"
 
 #include "app/services/search-service.hpp"
 #include "core/filesystem/recursive-file-scanner.hpp"
@@ -228,6 +229,17 @@ namespace uburu::cli
       return uburu::cli::CliExitCode::searchFailed;
 
     return uburu::cli::CliExitCode::ok;
+  }
+
+  uburu::cli::CliExitCode runDocumentInspection(const uburu::cli::CliOptions& options)
+  {
+    uburu::cli::CliCancellation cancellation;
+    const auto root = uburu::cli::normalizedAbsolutePath(options.query.root);
+    const auto summary = inspectDocuments(root, options.query.options, cancellation.stopToken());
+
+    uburu::cli::writeDocumentInspectionSummary(std::cout, summary, options.outputFormat);
+
+    return summary.cancelled ? uburu::cli::CliExitCode::cancelled : uburu::cli::CliExitCode::ok;
   }
 
 }

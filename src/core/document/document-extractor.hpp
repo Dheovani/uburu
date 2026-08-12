@@ -19,6 +19,7 @@ namespace uburu::document
     completed,
     cancelled,
     unsupportedFormat,
+    unsupportedFeature,
     openFailed,
     readFailed,
     binarySkipped,
@@ -26,6 +27,23 @@ namespace uburu::document
     safetyLimitExceeded,
     parserFailed,
     encryptedOrProtected
+  };
+
+  enum class DocumentExtractionIssue
+  {
+    none,
+    sourceFileSizeLimit,
+    extractedContentLimit,
+    pageCountLimit,
+    streamCountLimit,
+    decodedStreamSizeLimit,
+    decodedDocumentSizeLimit,
+    invalidCompressedStream,
+    invalidHeader,
+    missingPages,
+    compressedObjectStream,
+    unsupportedStreamFilter,
+    encryptedDocument
   };
 
   enum class DocumentLocationKind
@@ -86,6 +104,7 @@ namespace uburu::document
   struct DocumentExtractionSummary
   {
     DocumentExtractionStatus status{DocumentExtractionStatus::completed};
+    DocumentExtractionIssue issue{DocumentExtractionIssue::none};
     TextEncoding encoding{TextEncoding::utf8};
     std::error_code error;
     std::size_t segmentsExtracted{0};
@@ -101,6 +120,12 @@ namespace uburu::document
    */
   [[nodiscard]]
   std::string_view documentExtractionStatusName(DocumentExtractionStatus status);
+
+  /**
+   * Returns a stable diagnostic name for the specific extraction issue, when known.
+   */
+  [[nodiscard]]
+  std::string_view documentExtractionIssueName(DocumentExtractionIssue issue);
 
   /**
    * Converts an extraction status into the corresponding search/indexing availability.

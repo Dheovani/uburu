@@ -1,15 +1,6 @@
 #include "core/index/persistent-index-service.hpp"
 
-#include "core/document/document-extractor.hpp"
-#include "core/document/docx-document-extractor.hpp"
-#include "core/document/html-document-extractor.hpp"
-#include "core/document/open-document-extractor.hpp"
-#include "core/document/pdf-document-extractor.hpp"
-#include "core/document/plain-text-extractor.hpp"
-#include "core/document/pptx-document-extractor.hpp"
-#include "core/document/rtf-document-extractor.hpp"
-#include "core/document/subtitle-document-extractor.hpp"
-#include "core/document/xlsx-document-extractor.hpp"
+#include "core/document/default-document-extractors.hpp"
 #include "core/filesystem/path-normalization.hpp"
 #include "core/index/content-hash.hpp"
 #include "core/index/index-overlay.hpp"
@@ -98,28 +89,6 @@ namespace uburu::index
       bool memoryLimitReached{false};
       bool failed{false};
     };
-
-    [[nodiscard]]
-    const document::DocumentExtractorRegistry& defaultDocumentExtractorRegistry()
-    {
-      static const auto registry = [] {
-        document::DocumentExtractorRegistry configuredRegistry;
-
-        configuredRegistry.add(std::make_shared<document::DocxDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::HtmlDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::OpenDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::PdfDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::PptxDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::RtfDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::SubtitleDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::XlsxDocumentExtractor>());
-        configuredRegistry.add(std::make_shared<document::PlainTextExtractor>());
-
-        return configuredRegistry;
-      }();
-
-      return registry;
-    }
 
     [[nodiscard]]
     std::string lowerAscii(std::string value)
@@ -387,7 +356,7 @@ namespace uburu::index
       std::string indexedText;
       bool firstSegment = true;
       bool memoryLimitReached = false;
-      const auto* extractor = defaultDocumentExtractorRegistry().findExtractor(file.absolutePath);
+      const auto* extractor = document::defaultDocumentExtractorRegistry().findExtractor(file.absolutePath);
       const auto extractorName =
         extractor == nullptr ? std::string{"unsupported-format"} : std::string{extractor->name()};
       const auto extractionStart = std::chrono::steady_clock::now();

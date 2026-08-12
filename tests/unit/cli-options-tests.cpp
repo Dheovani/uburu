@@ -163,6 +163,31 @@ TEST_CASE("CLI parser rejects invalid index file size limits")
   CHECK(malformed.error == missing.error);
 }
 
+TEST_CASE("CLI parser creates privacy-safe document inspection request")
+{
+  const auto parsed = uburu::cli::parseCliOptions(args({
+    "document-inspect",
+    "C:/documents",
+    "--types",
+    "pdf",
+    "--max-size-mib",
+    "256",
+    "--format",
+    "jsonl",
+  }));
+
+  REQUIRE(parsed.options.has_value());
+
+  const auto& options = *parsed.options;
+
+  CHECK(options.command == uburu::cli::CliCommand::documentInspect);
+  CHECK(options.query.root.generic_string() == "C:/documents");
+  CHECK(options.outputFormat == uburu::cli::CliOutputFormat::jsonLines);
+  REQUIRE(options.query.options.extensions.size() == 1);
+  CHECK(options.query.options.extensions.front() == "pdf");
+  CHECK(options.query.options.maximumFileSize == 256U * 1024U * 1024U);
+}
+
 TEST_CASE("CLI parser handles empty arguments as help")
 {
   const auto parsed = uburu::cli::parseCliOptions({});
@@ -246,4 +271,24 @@ TEST_CASE("CLI index summary exposes working memory exhaustion")
   CHECK(output.str().find("\"extractionSafetyLimited\":5") != std::string::npos);
   CHECK(output.str().find("\"extractionProtected\":2") != std::string::npos);
   CHECK(output.str().find("\"extractionParserFailures\":1") != std::string::npos);
+}
+
+TEST_CASE("CLI document inspection output exposes aggregate statuses and issues without paths")
+{
+  uburu::cli::DocumentInspectionSummary summary;
+  summary.filesScanned = 217;
+  summary.supportedFiles = 217;
+  summary.sourceBytes = 6U * 1024U * 1024U;
+  summary.statuses[uburu::document::DocumentExtractionStatus::completed] = 68;
+  summary.statuses[uburu::document::DocumentExtractionStatus::safetyLimitExceeded] = 114;
+  summary.issues[uburu::document::DocumentExtractionIssue::pageCountLimit] = 114;
+
+  std::ostringstream output;
+  uburu::cli::writeDocumentInspectionSummary(output, summary, uburu::cli::CliOutputFormat::jsonLines);
+
+  CHECK(output.str().find("\"filesScanned\":217") != std::string::npos);
+  CHECK(output.str().find("\"completed\":68") != std::string::npos);
+  CHECK(output.str().find("\"safetyLimitExceeded\":114") != std::string::npos);
+  CHECK(output.str().find("\"pageCountLimit\":114") != std::string::npos);
+  CHECK(output.str().find("path") == std::string::npos);
 }

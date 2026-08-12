@@ -29,13 +29,25 @@ namespace uburu::document
     constexpr std::string_view encryptedDocumentMarker = "/Encrypt";
     constexpr std::string_view pageTypeMarker = "/Type";
     constexpr std::string_view pageMarker = "/Page";
-    constexpr std::string_view pagesMarker = "/Pages";
     constexpr std::string_view contentsMarker = "/Contents";
     constexpr std::string_view fontMarker = "/Font";
     constexpr std::string_view toUnicodeMarker = "/ToUnicode";
     constexpr std::string_view streamMarker = "stream";
     constexpr std::string_view endStreamMarker = "endstream";
     constexpr std::string_view flateDecodeMarker = "/FlateDecode";
+    constexpr std::string_view objectStreamMarker = "/ObjStm";
+    constexpr std::array<std::string_view, 10> unsupportedStreamFilterMarkers{
+      "/ASCII85Decode",
+      "/A85",
+      "/ASCIIHexDecode",
+      "/AHx",
+      "/LZWDecode",
+      "/LZW",
+      "/RunLengthDecode",
+      "/RL",
+      "/CCITTFaxDecode",
+      "/Crypt",
+    };
     constexpr std::string_view beginBfCharMarker = "beginbfchar";
     constexpr std::string_view endBfCharMarker = "endbfchar";
     constexpr std::string_view beginBfRangeMarker = "beginbfrange";
@@ -48,7 +60,7 @@ namespace uburu::document
     constexpr std::size_t maximumToUnicodeEntries = 65536;
     constexpr std::size_t maximumToUnicodeRangeEntries = 4096;
     constexpr std::size_t maximumToUnicodeCodeBytes = 4;
-    constexpr std::size_t maximumPdfPagesPerDocument = 300;
+    constexpr std::size_t maximumPdfPagesPerDocument = 4096;
     constexpr std::size_t maximumPdfStreamsPerDocument = 4096;
     constexpr std::uintmax_t maximumPdfDecodedStreamBytes = 16ULL * 1024ULL * 1024ULL;
     constexpr std::uintmax_t maximumPdfDecodedBytesPerDocument = 64ULL * 1024ULL * 1024ULL;
@@ -406,6 +418,7 @@ namespace uburu::document
 
         if (bytes.size() + static_cast<std::size_t>(readBytes) > maximumBytes) {
           summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+          summary.issue = DocumentExtractionIssue::sourceFileSizeLimit;
 
           return std::nullopt;
         }
@@ -481,21 +494,6 @@ namespace uburu::document
     }
 
     [[nodiscard]]
-    bool containsName(std::string_view text, std::string_view name)
-    {
-      auto offset = text.find(name);
-
-      while (offset != std::string_view::npos) {
-        if (tokenBoundary(text, offset + name.size()))
-          return true;
-
-        offset = text.find(name, offset + name.size());
-      }
-
-      return false;
-    }
-
-    [[nodiscard]]
     bool isPageObject(std::string_view body)
     {
       const auto typeOffset = body.find(pageTypeMarker);
@@ -503,9 +501,10 @@ namespace uburu::document
       if (typeOffset == std::string_view::npos)
         return false;
 
-      const auto afterType = body.substr(typeOffset + pageTypeMarker.size());
+      auto valueOffset = typeOffset + pageTypeMarker.size();
+      const auto typeName = parseName(body, valueOffset);
 
-      return containsName(afterType, pageMarker) && !containsName(afterType, pagesMarker);
+      return typeName == pageMarker.substr(1);
     }
 
     [[nodiscard]]
@@ -688,13 +687,21 @@ namespace uburu::document
     {
       if (budget.streamsDecoded >= maximumPdfStreamsPerDocument) {
         summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+        summary.issue = DocumentExtractionIssue::streamCountLimit;
 
         return false;
       }
 
-      if (streamBytes > maximumPdfDecodedStreamBytes ||
-          budget.decodedBytes > maximumPdfDecodedBytesPerDocument - streamBytes) {
+      if (streamBytes > maximumPdfDecodedStreamBytes) {
         summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+        summary.issue = DocumentExtractionIssue::decodedStreamSizeLimit;
+
+        return false;
+      }
+
+      if (budget.decodedBytes > maximumPdfDecodedBytesPerDocument - streamBytes) {
+        summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+        summary.issue = DocumentExtractionIssue::decodedDocumentSizeLimit;
 
         return false;
       }
@@ -736,6 +743,7 @@ namespace uburu::document
 
         if (output.size() + producedBytes > maximumPdfDecodedStreamBytes) {
           summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+          summary.issue = DocumentExtractionIssue::decodedStreamSizeLimit;
           status = Z_DATA_ERROR;
 
           break;
@@ -749,8 +757,11 @@ namespace uburu::document
       if (summary.status == DocumentExtractionStatus::safetyLimitExceeded)
         return std::nullopt;
 
-      if (status != Z_STREAM_END)
+      if (status != Z_STREAM_END) {
+        summary.issue = DocumentExtractionIssue::invalidCompressedStream;
+
         return std::nullopt;
+      }
 
       if (!canConsumePdfStreamBytes(budget, output.size(), summary))
         return std::nullopt;
@@ -764,6 +775,17 @@ namespace uburu::document
       PdfExtractionBudget& budget,
       DocumentExtractionSummary& summary)
     {
+      const auto unsupportedFilter = std::ranges::find_if(unsupportedStreamFilterMarkers, [&](const auto marker) {
+        return stream.dictionary.find(marker) != std::string_view::npos;
+      });
+
+      if (unsupportedFilter != unsupportedStreamFilterMarkers.end()) {
+        summary.status = DocumentExtractionStatus::unsupportedFeature;
+        summary.issue = DocumentExtractionIssue::unsupportedStreamFilter;
+
+        return std::nullopt;
+      }
+
       if (stream.dictionary.find(flateDecodeMarker) != std::string_view::npos)
         return inflateStream(stream.bytes, budget, summary);
 
@@ -1369,12 +1391,14 @@ namespace uburu::document
 
     if (!hasPdfHeader(*bytes)) {
       summary.status = DocumentExtractionStatus::parserFailed;
+      summary.issue = DocumentExtractionIssue::invalidHeader;
 
       return summary;
     }
 
     if (bytes->find(encryptedDocumentMarker) != std::string::npos) {
       summary.status = DocumentExtractionStatus::encryptedOrProtected;
+      summary.issue = DocumentExtractionIssue::encryptedDocument;
 
       return summary;
     }
@@ -1391,13 +1415,20 @@ namespace uburu::document
     }
 
     if (pages.empty()) {
-      summary.status = DocumentExtractionStatus::parserFailed;
+      if (bytes->find(objectStreamMarker) != std::string::npos) {
+        summary.status = DocumentExtractionStatus::unsupportedFeature;
+        summary.issue = DocumentExtractionIssue::compressedObjectStream;
+      } else {
+        summary.status = DocumentExtractionStatus::parserFailed;
+        summary.issue = DocumentExtractionIssue::missingPages;
+      }
 
       return summary;
     }
 
     if (pages.size() > maximumPdfPagesPerDocument) {
       summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+      summary.issue = DocumentExtractionIssue::pageCountLimit;
 
       return summary;
     }
@@ -1424,6 +1455,7 @@ namespace uburu::document
       if (wouldExceedByteLimit(options, totalBytes) ||
           wouldExceedSegmentLimit(options, summary.segmentsExtracted + 1)) {
         summary.status = DocumentExtractionStatus::safetyLimitExceeded;
+        summary.issue = DocumentExtractionIssue::extractedContentLimit;
 
         return summary;
       }

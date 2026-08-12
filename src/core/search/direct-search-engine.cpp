@@ -2,14 +2,7 @@
 
 #include "core/concurrency/bounded-queue.hpp"
 #include "core/concurrency/worker-pool.hpp"
-#include "core/document/docx-document-extractor.hpp"
-#include "core/document/html-document-extractor.hpp"
-#include "core/document/open-document-extractor.hpp"
-#include "core/document/pdf-document-extractor.hpp"
-#include "core/document/pptx-document-extractor.hpp"
-#include "core/document/rtf-document-extractor.hpp"
-#include "core/document/subtitle-document-extractor.hpp"
-#include "core/document/xlsx-document-extractor.hpp"
+#include "core/document/default-document-extractors.hpp"
 #include "core/search/search-errors.hpp"
 #include "core/search/search-query-validation.hpp"
 #include "core/search/search-result-memory.hpp"
@@ -233,40 +226,7 @@ namespace uburu::search
     [[nodiscard]]
     const document::DocumentExtractor* structuredDocumentExtractor(const std::filesystem::path& path)
     {
-      static const document::DocxDocumentExtractor docxExtractor;
-      static const document::HtmlDocumentExtractor htmlExtractor;
-      static const document::OpenDocumentExtractor openDocumentExtractor;
-      static const document::PdfDocumentExtractor pdfExtractor;
-      static const document::PptxDocumentExtractor pptxExtractor;
-      static const document::RtfDocumentExtractor rtfExtractor;
-      static const document::SubtitleDocumentExtractor subtitleExtractor;
-      static const document::XlsxDocumentExtractor xlsxExtractor;
-
-      if (docxExtractor.supports(path))
-        return &docxExtractor;
-
-      if (htmlExtractor.supports(path))
-        return &htmlExtractor;
-
-      if (openDocumentExtractor.supports(path))
-        return &openDocumentExtractor;
-
-      if (pdfExtractor.supports(path))
-        return &pdfExtractor;
-
-      if (pptxExtractor.supports(path))
-        return &pptxExtractor;
-
-      if (rtfExtractor.supports(path))
-        return &rtfExtractor;
-
-      if (subtitleExtractor.supports(path))
-        return &subtitleExtractor;
-
-      if (xlsxExtractor.supports(path))
-        return &xlsxExtractor;
-
-      return nullptr;
+      return document::structuredDocumentExtractorRegistry().findExtractor(path);
     }
 
     std::vector<text::MatchPosition> findLiteralMatches(std::string_view text, const SearchQuery& query)
@@ -319,6 +279,7 @@ namespace uburu::search
         ++metrics.documentExtractionsCancelled;
         return;
       case document::DocumentExtractionStatus::unsupportedFormat:
+      case document::DocumentExtractionStatus::unsupportedFeature:
         ++metrics.documentExtractionsUnsupported;
         return;
       case document::DocumentExtractionStatus::openFailed:

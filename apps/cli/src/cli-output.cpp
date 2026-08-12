@@ -319,6 +319,55 @@ namespace uburu::cli
       output << "}\n";
     }
 
+    void writeHumanDocumentInspectionSummary(std::ostream& output, const DocumentInspectionSummary& summary)
+    {
+      output << "filesScanned=" << summary.filesScanned;
+      output << " supportedFiles=" << summary.supportedFiles;
+      output << " sourceBytes=" << summary.sourceBytes;
+      output << " cancelled=" << (summary.cancelled ? "true" : "false");
+
+      for (const auto& [status, count] : summary.statuses)
+        output << " status." << document::documentExtractionStatusName(status) << '=' << count;
+
+      for (const auto& [issue, count] : summary.issues)
+        output << " issue." << document::documentExtractionIssueName(issue) << '=' << count;
+
+      output << '\n';
+    }
+
+    void writeJsonDocumentInspectionSummary(std::ostream& output, const DocumentInspectionSummary& summary)
+    {
+      output << "{\"type\":\"documentInspection\"";
+      output << ",\"filesScanned\":" << summary.filesScanned;
+      output << ",\"supportedFiles\":" << summary.supportedFiles;
+      output << ",\"sourceBytes\":" << summary.sourceBytes;
+      output << ",\"cancelled\":" << (summary.cancelled ? "true" : "false");
+      output << ",\"statuses\":{";
+
+      bool first = true;
+
+      for (const auto& [status, count] : summary.statuses) {
+        if (!first)
+          output << ',';
+
+        output << '"' << document::documentExtractionStatusName(status) << "\":" << count;
+        first = false;
+      }
+
+      output << "},\"issues\":{";
+      first = true;
+
+      for (const auto& [issue, count] : summary.issues) {
+        if (!first)
+          output << ',';
+
+        output << '"' << document::documentExtractionIssueName(issue) << "\":" << count;
+        first = false;
+      }
+
+      output << "}}\n";
+    }
+
   } // namespace
 
   void writeSearchResult(std::ostream& output, const SearchResult& result, CliOutputFormat format)
@@ -363,6 +412,20 @@ namespace uburu::cli
     }
 
     writeHumanIndexUpdateSummary(output, summary);
+  }
+
+  void writeDocumentInspectionSummary(
+    std::ostream& output,
+    const DocumentInspectionSummary& summary,
+    CliOutputFormat format)
+  {
+    if (format == CliOutputFormat::jsonLines) {
+      writeJsonDocumentInspectionSummary(output, summary);
+
+      return;
+    }
+
+    writeHumanDocumentInspectionSummary(output, summary);
   }
 
 } // namespace uburu::cli

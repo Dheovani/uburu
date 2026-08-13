@@ -214,7 +214,8 @@ namespace uburu::app
       bool includeHidden,
       bool includeBinary,
       bool includeSubdirectories,
-      const QString& documentTypes);
+      const QString& documentTypes,
+      int maximumThreadCount = 0);
     Q_INVOKABLE void cancel();
 
     Q_INVOKABLE void startIndexing(

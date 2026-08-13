@@ -37,6 +37,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Classify and reduce the PDF extraction failures exposed by the Windows document corpus before promoting the run to formal evidence.
   - [x] Validate exact-phrase convergence across direct, indexed, and hybrid search on the 7.35 GB Windows PDF corpus after fixing PDF glyph spacing, ligatures, and indirect font resources.
   - [x] Record formal automated Windows evidence for the 7.35 GB document corpus with a clean worktree and a hashed Release executable.
+  - [x] Provide the final three-recording manual validation script in `docs/releases/v1.0.0-manual-validation-script.pt-BR.md`.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
@@ -96,7 +97,8 @@ Future work below should improve this baseline without reopening completed miles
 
 ## Product and UX evolution
 
-- [ ] Improve settings screens for advanced search behavior, default ignored directories, ignored extensions, thread count, memory limits, index location, and result limits.
+- [ ] Improve settings screens for advanced search behavior, default ignored directories, ignored extensions, memory limits, index location, and result limits.
+  - [x] Expose the persisted desktop direct-search thread limit, including hardware-aware automatic mode.
 - [ ] Improve visual explanation for include/exclude scope modifiers without making the main search header noisy.
 - [ ] Add richer diagnostics for skipped files, unsupported formats, extractor limits, index state, and performance bottlenecks.
 - [ ] Continue accessibility validation for keyboard-only use, screen readers, high contrast, focus order, and high-DPI/fractional scaling.

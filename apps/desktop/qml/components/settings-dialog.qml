@@ -12,9 +12,11 @@ Popup {
     property string activeSection: "general"
     property string themeMode: "system"
     property string languageMode: "system"
+    property int maximumThreadCount: 0
 
     signal themeModeSelected(string mode)
     signal languageModeSelected(string mode)
+    signal maximumThreadCountSelected(int count)
     signal copyDiagnosticsRequested()
     signal resetLayoutRequested()
 
@@ -52,15 +54,14 @@ Popup {
     contentItem: ColumnLayout {
         spacing: 0
 
-        RowLayout {
+        Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 58
-            Layout.leftMargin: 20
-            Layout.rightMargin: 14
-            spacing: 12
 
             ColumnLayout {
-                Layout.fillWidth: true
+                anchors.left: parent.left
+                anchors.leftMargin: 20
+                anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
 
                 Text {
@@ -78,6 +79,11 @@ Popup {
             }
 
             Button {
+                id: closeButton
+
+                anchors.right: parent.right
+                anchors.rightMargin: 14
+                anchors.verticalCenter: parent.verticalCenter
                 implicitWidth: 34
                 implicitHeight: 30
                 hoverEnabled: true
@@ -191,6 +197,45 @@ Popup {
                                     { label: qsTr("Claro"), value: "light" }
                                 ]
                                 onValueSelected: value => root.themeModeSelected(value)
+                            }
+                        }
+
+                        SettingsOptionGroup {
+                            title: qsTr("Threads de busca")
+                            description: qsTr("Use o modo automático ou limite o número de threads da busca direta.")
+
+                            RowLayout {
+                                spacing: 10
+
+                                SpinBox {
+                                    id: threadCountInput
+
+                                    from: 0
+                                    to: 256
+                                    value: root.maximumThreadCount
+                                    editable: true
+                                    implicitWidth: 150
+                                    Accessible.name: qsTr("Número máximo de threads de busca")
+                                    textFromValue: function(value, locale) {
+                                        return value === 0 ? qsTr("Automático") : value.toLocaleString(locale, "f", 0)
+                                    }
+                                    valueFromText: function(text, locale) {
+                                        if (text.trim().toLowerCase() === qsTr("Automático").toLowerCase())
+                                            return 0
+
+                                        const parsed = Number.fromLocaleString(locale, text)
+                                        return Number.isFinite(parsed) ? Math.round(parsed) : 0
+                                    }
+                                    onValueModified: root.maximumThreadCountSelected(value)
+                                }
+
+                                Text {
+                                    text: threadCountInput.value === 0
+                                          ? qsTr("O Uburu escolhe conforme a carga e o hardware.")
+                                          : qsTr("Limite aplicado às buscas diretas.")
+                                    color: Theme.textMuted
+                                    font.pixelSize: Theme.fontSizeTiny
+                                }
                             }
                         }
 

@@ -82,8 +82,9 @@ namespace
   public:
     [[nodiscard]]
     uburu::search::SearchSummary
-    search(const uburu::SearchQuery&, uburu::search::ResultSink, std::stop_token stopToken = {}) const override
+    search(const uburu::SearchQuery& query, uburu::search::ResultSink, std::stop_token stopToken = {}) const override
     {
+      observedMaximumThreadCount = query.options.maximumThreadCount;
       started = true;
 
       while (!stopToken.stop_requested())
@@ -109,6 +110,7 @@ namespace
 
     mutable std::atomic_bool started{false};
     mutable std::atomic_bool observedStop{false};
+    mutable std::atomic_size_t observedMaximumThreadCount{0};
   };
 
 } // namespace
@@ -266,6 +268,28 @@ TEST_CASE("desktop search flow selects a folder and finds a result")
   CHECK(controller.matchesFound() == 1);
 }
 
+TEST_CASE("desktop search flow finds an accented phrase inside PDF content")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-pdf-search-settings-test");
+  uburu::tests::TemporaryDirectory scopeDirectory("uburu-controller-pdf-search-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("pdf-search-test"));
+
+  const auto filePath = scopeDirectory.path() / "scientific-text.pdf";
+  const auto phrase = QString::fromUtf8("A apreensão de uma verdade científica passa por vários estágios de certeza");
+  uburu::tests::writeFile(
+    filePath,
+    uburu::tests::fixtures::minimalPdfText(
+      "BT <412061707265656E73E36F20646520756D612076657264616465206369656E74ED6669636120706173736120706F7220"
+      "76E172696F7320657374E167696F732064652063657274657A61> Tj ET"));
+
+  uburu::app::SearchController controller;
+  controller.selectDirectory(qtPath(scopeDirectory.path()));
+  controller.startSearch(phrase, false, false, false, true, false, true, true, QStringLiteral("pdf"));
+
+  REQUIRE(waitUntil([&] { return !controller.running() && controller.results()->rowCount() == 1; }));
+  CHECK(controller.matchesFound() == 1);
+}
+
 TEST_CASE("desktop search flow can cancel a running search")
 {
   uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-e2e-cancel-settings-test");
@@ -275,7 +299,18 @@ TEST_CASE("desktop search flow can cancel a running search")
   auto service = std::make_shared<BlockingSearchService>();
   uburu::app::SearchController controller(service);
   controller.selectDirectory(qtPath(scopeDirectory.path()));
-  controller.startSearch(QStringLiteral("needle"), false, false, false, true, false, false, true, QString{});
+  constexpr int maximumThreadCount = 12;
+  controller.startSearch(
+    QStringLiteral("needle"),
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    true,
+    QString{},
+    maximumThreadCount);
 
   REQUIRE(waitUntil([&] { return service->started.load() && controller.running(); }));
 
@@ -283,6 +318,7 @@ TEST_CASE("desktop search flow can cancel a running search")
 
   REQUIRE(waitUntil([&] { return !controller.running() && service->observedStop.load(); }));
   CHECK_FALSE(controller.cancelling());
+  CHECK(service->observedMaximumThreadCount == maximumThreadCount);
 }
 
 TEST_CASE("desktop result action opens a selected file URL")

@@ -482,8 +482,10 @@ ApplicationWindow {
 
         themeMode: Theme.mode
         languageMode: mainWindowSettings.languageMode
+        maximumThreadCount: mainWindowSettings.maximumThreadCount
         onThemeModeSelected: mode => Theme.mode = root.normalizeThemeMode(mode)
         onLanguageModeSelected: mode => mainWindowSettings.languageMode = root.normalizeLanguageMode(mode)
+        onMaximumThreadCountSelected: count => mainWindowSettings.maximumThreadCount = count
         onCopyDiagnosticsRequested: searchController.copyToClipboard(root.searchDiagnosticText())
         onResetLayoutRequested: root.resetLayoutPreferences()
     }
@@ -530,6 +532,7 @@ ApplicationWindow {
             favoriteDirectories: searchController.favoriteDirectories
             currentSearchSaved: root.isSearchSaved(queryText)
             currentDirectoryFavorite: searchController.currentDirectoryFavorite
+            maximumThreadCount: mainWindowSettings.maximumThreadCount
             onSelectDirectory: folderDialog.open()
             onAddIncludedDirectory: includedDirectoryDialog.open()
             onAddExcludedDirectory: excludedDirectoryDialog.open()
@@ -547,7 +550,8 @@ ApplicationWindow {
                 includeHidden,
                 includeBinary,
                 includeSubdirectories,
-                documentTypes
+                documentTypes,
+                maximumThreadCount
             ) => {
                 searchController.startSearch(
                     query,
@@ -558,7 +562,8 @@ ApplicationWindow {
                     includeHidden,
                     includeBinary,
                     includeSubdirectories,
-                    documentTypes
+                    documentTypes,
+                    maximumThreadCount
                 )
                 root.recordSearch(query)
                 root.recordDocumentTypes(documentTypes)
@@ -642,6 +647,7 @@ ApplicationWindow {
         property string recentDocumentTypes: "[]"
         property string savedSearches: "[]"
         property string languageMode: "system"
+        property int maximumThreadCount: 0
         property alias windowX: root.x
         property alias windowY: root.y
         property alias windowWidth: root.width

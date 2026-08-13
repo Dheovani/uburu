@@ -34,6 +34,7 @@ Panel {
     property var favoriteDirectories: []
     property bool currentSearchSaved: false
     property bool currentDirectoryFavorite: false
+    property int maximumThreadCount: 0
     property alias queryText: searchField.text
     property alias documentTypes: documentTypesField.text
     property alias regexEnabled: regex.checked
@@ -55,7 +56,8 @@ Panel {
                        bool includeHidden,
                        bool includeBinary,
                        bool includeSubdirectories,
-                       string documentTypes)
+                       string documentTypes,
+                       int maximumThreadCount)
     signal cancelSearch()
     signal selectSearch(string query)
     signal selectScopeDirectory(string path)
@@ -137,7 +139,8 @@ Panel {
             includeHidden.checked,
             includeBinary.checked,
             includeSubdirectories.checked,
-            documentTypesField.text
+            documentTypesField.text,
+            root.maximumThreadCount
         )
     }
 
@@ -228,7 +231,7 @@ Panel {
                     Layout.preferredHeight: 44
                     placeholderText: qsTr("Pesquisar em arquivos")
                     verticalAlignment: TextInput.AlignVCenter
-                    onAccepted: searchButton.clicked()
+                    onAccepted: root.runSearch()
                     onTextEdited: {
                         root.requestDebouncedSearch()
 
@@ -268,7 +271,7 @@ Panel {
                         padding: 8
                         modal: false
                         focus: false
-                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutsideParent
 
                         background: Rectangle {
                             radius: Theme.radius
@@ -435,7 +438,7 @@ Panel {
                         padding: 8
                         modal: false
                         focus: false
-                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutsideParent
 
                         background: Rectangle {
                             radius: Theme.radius

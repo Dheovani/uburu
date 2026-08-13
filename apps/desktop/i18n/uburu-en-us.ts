@@ -265,6 +265,12 @@
     <message><source>Sistema</source><translation>System</translation></message>
     <message><source>Escuro</source><translation>Dark</translation></message>
     <message><source>Claro</source><translation>Light</translation></message>
+    <message><source>Threads de busca</source><translation>Search threads</translation></message>
+    <message><source>Use o modo automático ou limite o número de threads da busca direta.</source><translation>Use automatic mode or limit the number of direct-search threads.</translation></message>
+    <message><source>Número máximo de threads de busca</source><translation>Maximum number of search threads</translation></message>
+    <message><source>Automático</source><translation>Automatic</translation></message>
+    <message><source>O Uburu escolhe conforme a carga e o hardware.</source><translation>Uburu chooses according to the workload and hardware.</translation></message>
+    <message><source>Limite aplicado às buscas diretas.</source><translation>Limit applied to direct searches.</translation></message>
     <message><source>Layout</source><translation>Layout</translation></message>
     <message><source>Restaura o tamanho padrão dos painéis de resultados e preview.</source><translation>Restores the default size of the results and preview panes.</translation></message>
     <message><source>Restaurar layout</source><translation>Reset layout</translation></message>

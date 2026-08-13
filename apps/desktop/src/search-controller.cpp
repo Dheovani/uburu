@@ -1495,15 +1495,17 @@ namespace uburu::app
     setPreviewLoading(false);
   }
 
-  void SearchController::startSearch(const QString& expression,
-                                     bool regex,
-                                     bool caseSensitive,
-                                     bool wholeWord,
-                                     bool respectGitignore,
-                                     bool includeHidden,
-                                     bool includeBinary,
-                                     bool includeSubdirectories,
-                                     const QString& documentTypes)
+  void SearchController::startSearch(
+    const QString& expression,
+    bool regex,
+    bool caseSensitive,
+    bool wholeWord,
+    bool respectGitignore,
+    bool includeHidden,
+    bool includeBinary,
+    bool includeSubdirectories,
+    const QString& documentTypes,
+    int maximumThreadCount)
   {
     if (runningValue || selectedDirectoryValues.empty() || expression.isEmpty())
       return;
@@ -1529,6 +1531,9 @@ namespace uburu::app
     query.options.includeSubdirectories = includeSubdirectories;
     query.options.target = SearchTarget::contentAndFileName;
     query.options.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
+    const auto normalizedMaximumThreadCount =
+      std::clamp(maximumThreadCount, 0, static_cast<int>(maximumSearchThreadCount));
+    query.options.maximumThreadCount = static_cast<std::size_t>(normalizedMaximumThreadCount);
     query.options.extensions = parseDocumentTypes(documentTypes);
 
     query.scope.roots.reserve(static_cast<std::size_t>(selectedDirectoryValues.size()));

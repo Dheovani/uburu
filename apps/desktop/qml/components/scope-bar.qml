@@ -198,7 +198,7 @@ Item {
                 padding: 8
                 modal: false
                 focus: false
-                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutsideParent
 
                 background: Rectangle {
                     radius: Theme.radius

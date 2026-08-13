@@ -108,7 +108,7 @@ The content preview area remains on a dark surface even in the light theme. This
 
 ## Settings menu
 
-Milestone 11 connects the compact top-left menu to a real settings dialog. The settings entry point follows a desktop-style menu bar instead of adding more controls to the search header. The dialog currently exposes general preferences, language preference, privacy/diagnostics actions, theme selection, and layout reset. Theme changes apply immediately through the `Theme` singleton. Language preference is persisted in QML `Settings` and read during application startup, so changing it requires restarting Uburu before the translator is loaded with the selected locale.
+Milestone 11 connects the compact top-left menu to a real settings dialog. The settings entry point follows a desktop-style menu bar instead of adding more controls to the search header. The dialog currently exposes general preferences, language preference, privacy/diagnostics actions, theme selection, the direct-search thread limit, and layout reset. The thread limit accepts `Automatic`, which preserves the bounded hardware-aware selection, or a value from 1 to 256; the selected value is persisted and applied to subsequent direct searches. Theme changes apply immediately through the `Theme` singleton. Language preference is persisted in QML `Settings` and read during application startup, so changing it requires restarting Uburu before the translator is loaded with the selected locale.
 
 ## Window state persistence
 

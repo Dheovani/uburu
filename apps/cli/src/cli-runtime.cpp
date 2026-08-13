@@ -41,8 +41,11 @@ namespace uburu::cli
     cancellationSignalRequested = 0;
   }
 
-  CliCancellation::CliCancellation()
+  CliCancellation::CliCancellation(std::optional<std::chrono::milliseconds> automaticCancellationDelay)
   {
+    if (automaticCancellationDelay)
+      automaticCancellationDeadline = std::chrono::steady_clock::now() + *automaticCancellationDelay;
+
     watcher = std::jthread([this](std::stop_token watcherStopToken) {
       watchCancellationSignal(watcherStopToken);
     });
@@ -66,7 +69,10 @@ namespace uburu::cli
   void CliCancellation::watchCancellationSignal(std::stop_token watcherStopToken)
   {
     while (!watcherStopToken.stop_requested()) {
-      if (cancellationSignalRequested != 0) {
+      const auto deadlineReached = automaticCancellationDeadline &&
+                                   std::chrono::steady_clock::now() >= *automaticCancellationDeadline;
+
+      if (cancellationSignalRequested != 0 || deadlineReached) {
         stopSource.request_stop();
 
         return;

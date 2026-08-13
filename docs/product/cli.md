@@ -76,6 +76,8 @@ Both commands support:
 
 Long-running `search`, `index-rebuild`, and `document-inspect` commands handle `Ctrl+C` as cooperative cancellation. The CLI forwards the cancellation request to the same `std::stop_token` path used by the core engine, so partial work can stop without corrupting index state. Cancelled commands exit with code `4`.
 
+For repeatable automation and release validation, these commands also accept `--cancel-after-ms N`. The deadline requests cancellation through the same cooperative token used by `Ctrl+C`; it does not terminate the process forcibly. Values range from 1 millisecond to 24 hours.
+
 Search results are streamed synchronously to standard output. This is intentional backpressure: if the terminal, pipe, or parent process cannot keep up or closes the stream, the CLI stops requesting more results instead of accumulating an unbounded output queue in memory.
 
 Search summaries expose `resultLimitReached`, `memoryLimitReached`, and `resultMemoryBytes` in both human and JSON Lines output. Memory exhaustion is a successful bounded completion rather than cancellation or a parser failure: already emitted results remain valid, and the next result that would exceed the configured budget is not published.

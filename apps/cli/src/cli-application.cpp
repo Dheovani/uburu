@@ -102,7 +102,7 @@ namespace uburu::cli
   [[nodiscard]]
   uburu::cli::CliExitCode runSearch(const uburu::cli::CliOptions& options)
   {
-    uburu::cli::CliCancellation cancellation;
+    uburu::cli::CliCancellation cancellation(options.automaticCancellationDelay);
     const auto engine = makeDirectSearchEngine();
     std::shared_ptr<uburu::storage::SQLiteStorageService> storage;
 
@@ -157,7 +157,7 @@ namespace uburu::cli
   [[nodiscard]]
   uburu::cli::CliExitCode runIndexRebuild(const uburu::cli::CliOptions& options)
   {
-    uburu::cli::CliCancellation cancellation;
+    uburu::cli::CliCancellation cancellation(options.automaticCancellationDelay);
     auto storage = makeStorageService(options.databasePath);
     auto indexService = makeIndexService(*storage);
     const auto worktree = uburu::cli::filesystemWorktree(options.query.root);
@@ -233,7 +233,7 @@ namespace uburu::cli
 
   uburu::cli::CliExitCode runDocumentInspection(const uburu::cli::CliOptions& options)
   {
-    uburu::cli::CliCancellation cancellation;
+    uburu::cli::CliCancellation cancellation(options.automaticCancellationDelay);
     const auto root = uburu::cli::normalizedAbsolutePath(options.query.root);
     const auto summary = inspectDocuments(root, options.query.options, cancellation.stopToken());
 

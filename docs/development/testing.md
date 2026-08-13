@@ -6,6 +6,8 @@ Uburu's test suite is organized around behavior boundaries rather than implement
 
 Unit tests live in `tests/unit`. They should be small, deterministic, and focused on one behavior: matching semantics, path normalization, `.gitignore` rules, document extraction outcomes, storage migrations, indexing reconciliation, CLI parsing, DTO conversion, and service event contracts. A unit test may create files when the behavior is filesystem-specific, but it should still keep the scenario minimal.
 
+CLI runtime tests also verify that an interruption signal reaches the cooperative `std::stop_token` path within a bounded observation window. This protects the signal-to-core handoff independently from slower product validation, while real-dataset validation remains responsible for measuring end-to-end cancellation latency during scanning, extraction, matching, and indexing.
+
 Integration tests live in `tests/integration`. They are reserved for behavior that only makes sense with real operating-system resources, SQLite databases, Git repositories, worktrees, or watcher reconciliation. They must use disposable directories and avoid assumptions about the developer's machine.
 
 Desktop tests cover the boundary between Qt-facing controllers/models and the application layer. They should prove observable state, cancellation, preview loading, result actions, selected scope handling, and model roles without moving search semantics into QML.

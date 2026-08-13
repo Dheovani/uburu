@@ -58,6 +58,8 @@ TEST_CASE("CLI parser applies search flags")
     "32",
     "--threads",
     "4",
+    "--cancel-after-ms",
+    "250",
     "--summary-only",
     "--no-gitignore",
     "--no-subdirectories",
@@ -80,7 +82,36 @@ TEST_CASE("CLI parser applies search flags")
   CHECK(options.query.options.maximumFileSize == 4U * 1024U * 1024U);
   CHECK(options.query.options.resultMemoryBudgetBytes == 32U * 1024U * 1024U);
   CHECK(options.query.options.maximumThreadCount == 4);
+  CHECK(options.automaticCancellationDelay == std::chrono::milliseconds{250});
   CHECK(options.summaryOnly);
+}
+
+TEST_CASE("CLI parser rejects invalid automatic cancellation delays")
+{
+  const auto missing = uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--cancel-after-ms"}));
+  const auto zero = uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--cancel-after-ms", "0"}));
+  const auto excessive =
+    uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--cancel-after-ms", "86400001"}));
+  const auto malformed =
+    uburu::cli::parseCliOptions(args({"search", "C:/repo", "needle", "--cancel-after-ms", "soon"}));
+  const std::string expectedError = "--cancel-after-ms requires an integer from 1 to 86400000";
+
+  CHECK_FALSE(missing.options.has_value());
+  CHECK_FALSE(zero.options.has_value());
+  CHECK_FALSE(excessive.options.has_value());
+  CHECK_FALSE(malformed.options.has_value());
+  CHECK(missing.error == expectedError);
+  CHECK(zero.error == expectedError);
+  CHECK(excessive.error == expectedError);
+  CHECK(malformed.error == expectedError);
+}
+
+TEST_CASE("CLI parser rejects automatic cancellation for index status")
+{
+  const auto parsed = uburu::cli::parseCliOptions(args({"index-status", "C:/repo", "--cancel-after-ms", "250"}));
+
+  CHECK_FALSE(parsed.options.has_value());
+  CHECK(parsed.error == "--cancel-after-ms is not supported by index-status");
 }
 
 TEST_CASE("CLI parser accepts automatic direct search worker selection")

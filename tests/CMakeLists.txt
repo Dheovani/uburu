@@ -41,8 +41,32 @@ target_link_libraries(uburu_core_tests PRIVATE Uburu::App Uburu::Core Uburu::Pro
 target_include_directories(uburu_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(TARGET uburu_cli_lib)
-  target_sources(uburu_core_tests PRIVATE unit/cli-options-tests.cpp)
+  target_sources(uburu_core_tests PRIVATE
+    unit/cli-options-tests.cpp
+    unit/cli-runtime-tests.cpp
+  )
   target_link_libraries(uburu_core_tests PRIVATE Uburu::Cli)
+endif()
+
+if(TARGET uburu)
+  add_test(
+    NAME "CLI cancellation validation runner smoke"
+    COMMAND ${CMAKE_COMMAND}
+      -DUBURU_EXECUTABLE=$<TARGET_FILE:uburu>
+      -DUBURU_DATASET_ROOT=${PROJECT_SOURCE_DIR}
+      -DUBURU_EXPRESSION=Uburu
+      -DUBURU_DATASET_ID=automated-cancellation-smoke
+      -DUBURU_DATASET_PROFILE=code-repository
+      -DUBURU_CONFIGURATION=test-debug
+      -DUBURU_OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/cancellation-validation-smoke.md
+      -DUBURU_TYPES=cpp
+      -DUBURU_CANCELLATION_DELAY_MILLISECONDS=1
+      -DUBURU_MAXIMUM_COMPLETION_MILLISECONDS=2000
+      -DUBURU_REQUIRE_CLEAN_WORKTREE=OFF
+      -DUBURU_REQUIRE_RELEASE_BUILD=OFF
+      -P ${PROJECT_SOURCE_DIR}/scripts/run-cancellation-validation.cmake
+  )
+  set_tests_properties("CLI cancellation validation runner smoke" PROPERTIES TIMEOUT 10)
 endif()
 
 if(WIN32)

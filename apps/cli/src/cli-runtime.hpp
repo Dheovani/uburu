@@ -4,8 +4,10 @@
 
 #include "shared/types/domain-types.hpp"
 
+#include <chrono>
 #include <cstddef>
 #include <iosfwd>
+#include <optional>
 #include <stop_token>
 #include <thread>
 
@@ -18,7 +20,7 @@ namespace uburu::cli
   class CliCancellation final
   {
   public:
-    CliCancellation();
+    explicit CliCancellation(std::optional<std::chrono::milliseconds> automaticCancellationDelay = {});
 
     [[nodiscard]]
     std::stop_token stopToken() const;
@@ -32,6 +34,7 @@ namespace uburu::cli
     void watchCancellationSignal(std::stop_token watcherStopToken);
 
     std::stop_source stopSource;
+    std::optional<std::chrono::steady_clock::time_point> automaticCancellationDeadline;
     std::jthread watcher;
   };
 

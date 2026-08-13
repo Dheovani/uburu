@@ -2,6 +2,7 @@
 
 #include "shared/types/domain-types.hpp"
 
+#include <chrono>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -49,6 +50,7 @@ namespace uburu::cli
     CliSearchStrategy searchStrategy{CliSearchStrategy::direct};
     SearchQuery query;
     std::optional<std::filesystem::path> databasePath;
+    std::optional<std::chrono::milliseconds> automaticCancellationDelay;
     bool summaryOnly{false};
     bool showHelp{false};
   };

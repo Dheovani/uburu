@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <charconv>
+#include <chrono>
+#include <cstdint>
 #include <limits>
 #include <sstream>
 #include <utility>
@@ -19,6 +21,7 @@ namespace uburu::cli
     constexpr std::size_t minimumSearchArgumentCount = 3;
     constexpr std::size_t minimumIndexArgumentCount = 2;
     constexpr std::uintmax_t bytesPerMib = 1024U * 1024U;
+    constexpr auto maximumAutomaticCancellationDelay = std::chrono::hours{24};
 
     [[nodiscard]]
     std::string toString(std::string_view value)
@@ -82,6 +85,31 @@ namespace uburu::cli
         return std::nullopt;
 
       return parsed;
+    }
+
+    [[nodiscard]]
+    std::optional<std::chrono::milliseconds> parseCancellationDelay(std::string_view value)
+    {
+      std::uint64_t parsed = 0;
+      const auto* first = value.data();
+      const auto* last = value.data() + value.size();
+      const auto [position, error] = std::from_chars(first, last, parsed);
+      const auto maximumMilliseconds = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(maximumAutomaticCancellationDelay).count());
+
+      if (error != std::errc{} || position != last || parsed == 0 || parsed > maximumMilliseconds)
+        return std::nullopt;
+
+      return std::chrono::milliseconds{static_cast<std::chrono::milliseconds::rep>(parsed)};
+    }
+
+    [[nodiscard]]
+    std::string cancellationDelayUsageError()
+    {
+      const auto maximumMilliseconds =
+        std::chrono::duration_cast<std::chrono::milliseconds>(maximumAutomaticCancellationDelay).count();
+
+      return "--cancel-after-ms requires an integer from 1 to " + std::to_string(maximumMilliseconds);
     }
 
     [[nodiscard]]
@@ -185,6 +213,28 @@ namespace uburu::cli
         }
 
         options.query.options.resultMemoryBudgetBytes = *memoryBudget;
+
+        return true;
+      }
+
+      if (argument == "--cancel-after-ms") {
+        const auto usageError = cancellationDelayUsageError();
+
+        if (index + 1 >= arguments.size()) {
+          error = usageError;
+
+          return false;
+        }
+
+        const auto delay = parseCancellationDelay(arguments[++index]);
+
+        if (!delay) {
+          error = usageError;
+
+          return false;
+        }
+
+        options.automaticCancellationDelay = *delay;
 
         return true;
       }
@@ -304,6 +354,9 @@ namespace uburu::cli
         std::string commonError;
 
         if (parseCommonOption(options, arguments, index, commonError)) {
+          if (command == CliCommand::indexStatus && options.automaticCancellationDelay)
+            return usageError("--cancel-after-ms is not supported by index-status");
+
           continue;
         }
 
@@ -405,6 +458,7 @@ namespace uburu::cli
     output << "  --types txt,cpp,md         Restrict file extensions.\n";
     output << "  --max-size-mib N           Maximum file size in MiB.\n";
     output << "  --memory-budget-mib N      Search-result or index working-memory budget; 0 means unlimited.\n";
+    output << "  --cancel-after-ms N        Cooperatively cancel a long-running command after N milliseconds.\n";
     output << "  --threads auto|N           Direct-search workers; N must be from 1 to " << maximumSearchThreadCount
            << ".\n";
     output << "  --summary-only             Suppress individual results and emit only aggregate search output.\n";

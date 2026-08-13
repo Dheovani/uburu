@@ -129,6 +129,26 @@ Formal evidence requires a clean Git worktree and an optimized Release build by 
 
 The generated record compares final match counts, requires a fresh index, rejects undeclared partial or indexing failures, cancellation, result-limit exhaustion, and memory-limit exhaustion, and records aggregate timing, throughput, queue, memory, reuse, and document-extraction status counters. Extraction counters distinguish completed, unsupported, safety-limited, protected, open/read failure, invalid-encoding, and parser-failure outcomes without retaining private paths. It deliberately cannot validate visual responsiveness, preview behavior, cancellation latency, partial-failure presentation, branch switching, or clean-machine artifacts; those scenarios remain manual responsibilities.
 
+### Repeatable cancellation evidence
+
+Use the cancellation runner to verify that a real direct-search workload observes cooperative cancellation within a bounded interval. It schedules cancellation through the same `std::stop_token` path used by `Ctrl+C`, requires stable exit code `4`, rejects a missing cancellation summary, and records only aggregate counters:
+
+```powershell
+cmake `
+  -DUBURU_EXECUTABLE=build/windows-msvc-release/apps/cli/Release/uburu.exe `
+  -DUBURU_DATASET_ROOT=C:/private/dataset `
+  -DUBURU_EXPRESSION=known-private-expression `
+  -DUBURU_DATASET_ID=windows-cancellation-01 `
+  -DUBURU_DATASET_PROFILE=document-corpus `
+  -DUBURU_CONFIGURATION=windows-msvc-release `
+  -DUBURU_OUTPUT=docs/releases/v1.0.0-rc1-windows-cancellation.md `
+  -DUBURU_CANCELLATION_DELAY_MILLISECONDS=250 `
+  -DUBURU_MAXIMUM_COMPLETION_MILLISECONDS=2000 `
+  -P scripts/run-cancellation-validation.cmake
+```
+
+Optional scope inputs match the product-validation runner: `UBURU_TYPES`, `UBURU_INCLUDE_BINARY`, `UBURU_INCLUDE_SUBDIRECTORIES`, `UBURU_MAX_SIZE_MIB`, `UBURU_MEMORY_BUDGET_MIB`, and `UBURU_THREADS`. This automated gate measures deterministic end-to-end cancellation in the CLI. A release cycle must still include physical `Ctrl+C` and desktop Cancel-button observations because operating-system console delivery and UI responsiveness are outside the scheduled-deadline test.
+
 ## Git and incremental-index scenarios
 
 Use a disposable clone or a repository where branch and file changes are safe. Record the initial branch, HEAD, worktree count, and aggregate working-tree state without exposing private names.

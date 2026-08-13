@@ -36,6 +36,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Add privacy-safe extraction-status counters and align PDF source limits between direct search, scanning, and indexing.
   - [x] Classify and reduce the PDF extraction failures exposed by the Windows document corpus before promoting the run to formal evidence.
   - [x] Validate exact-phrase convergence across direct, indexed, and hybrid search on the 7.35 GB Windows PDF corpus after fixing PDF glyph spacing, ligatures, and indirect font resources.
+  - [x] Record formal automated Windows evidence for the 7.35 GB document corpus with a clean worktree and a hashed Release executable.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
@@ -44,6 +45,9 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Replace quadratic hybrid refinement with ordered lookup and stream authoritative direct results without retaining a second complete result collection.
   - [x] Add automated regression coverage for pre-cancellation, sink cancellation, partial failures, stale indexed entries, and hybrid cache classification.
   - [x] Exercise declared PDF extraction failures and direct/indexed/hybrid convergence against the 7.35 GB Windows document corpus.
+  - [x] Enforce bounded `SIGINT`-to-`stop_token` propagation in the CLI test suite.
+  - [x] Add a privacy-safe, repeatable real-dataset gate for bounded end-to-end CLI cancellation.
+  - [x] Record preliminary Windows cancellation evidence over the 7.35 GB PDF corpus, completing 9 ms after a 250 ms deadline while preserving stable exit code `4`.
   - [ ] Measure interactive cancellation latency against large real-world validation datasets on Windows and Linux.
 - [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
   - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.

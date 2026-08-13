@@ -70,7 +70,8 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Record end-to-end observations for startup, search, indexing, preview, memory, and UI responsiveness on real datasets.
 - [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
   - [x] Document clean-machine artifact, smoke-test, evidence, and release acceptance requirements.
-  - [ ] Execute the final Windows installer and Linux AppImage smoke tests for the stable release candidate.
+  - [x] Execute and record the final Linux AppImage smoke test for the stable release candidate.
+  - [ ] Execute and record the final Windows installer smoke test for the stable release candidate.
 
 ## Search and indexing evolution
 

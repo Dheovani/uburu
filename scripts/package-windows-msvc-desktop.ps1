@@ -115,7 +115,17 @@ $manifest = [ordered]@{
 $manifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
 if (-not $SkipArchive) {
-  Compress-Archive -LiteralPath $packagePath -DestinationPath $archivePath -Force
+  Push-Location $outputRoot
+  try {
+    & cmake -E tar cf $archivePath --format=zip $PackageName
+
+    if ($LASTEXITCODE -ne 0) {
+      exit $LASTEXITCODE
+    }
+  } finally {
+    Pop-Location
+  }
+
   $hash = Get-FileHash -LiteralPath $archivePath -Algorithm SHA256
   "$($hash.Hash.ToLowerInvariant())  $(Split-Path -Leaf $archivePath)" |
     Set-Content -LiteralPath $checksumPath -Encoding ASCII

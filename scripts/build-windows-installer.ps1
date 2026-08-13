@@ -24,7 +24,7 @@ function Git-Value {
   } catch {
   }
 
-  return "0.1.0-dev"
+  return "1.0.0-dev"
 }
 
 function Find-InnoSetupCompiler {
@@ -66,12 +66,16 @@ $installerDefinitionPath = Join-Path $root $InstallerDefinition
 $installerOutputPath = Join-Path $root $InstallerOutputDirectory
 $innoSetupCompiler = Find-InnoSetupCompiler
 
+if (-not $AppVersion) {
+  $AppVersion = Git-Value -Arguments @("describe", "--tags", "--always")
+}
+
 if (-not $innoSetupCompiler) {
   throw "Inno Setup compiler not found. Install Inno Setup 6 and rerun this script, or add ISCC.exe to PATH."
 }
 
 if (-not $SkipPackage) {
-  & $packageScriptPath
+  & $packageScriptPath -AppVersion $AppVersion
 
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
@@ -84,10 +88,6 @@ if (-not (Test-Path -LiteralPath $packagePath)) {
 
 if (-not (Test-Path -LiteralPath $installerDefinitionPath)) {
   throw "Installer definition not found at $installerDefinitionPath."
-}
-
-if (-not $AppVersion) {
-  $AppVersion = Git-Value -Arguments @("describe", "--tags", "--always")
 }
 
 $safeAppVersion = $AppVersion -replace '[^0-9A-Za-z.\-_]', '-'

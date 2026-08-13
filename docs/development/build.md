@@ -60,7 +60,7 @@ If Inno Setup is not installed, the script fails before modifying release artifa
 To prepare the Windows release assets, checksums, and release asset manifest in one step:
 
 ```powershell
-.\scripts\prepare-windows-release.ps1 -AppVersion v0.1.0
+.\scripts\prepare-windows-release.ps1 -AppVersion v1.0.0
 ```
 
 This also writes an initial SPDX SBOM and third-party notices report under `dist/windows-msvc-release`.

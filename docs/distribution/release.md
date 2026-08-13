@@ -95,7 +95,7 @@ The repeatable correctness, Git/indexing, resource, and performance validation m
 To prepare the Windows release assets and a machine-readable manifest in one step, run:
 
 ```powershell
-.\scripts\prepare-windows-release.ps1 -AppVersion v0.1.0
+.\scripts\prepare-windows-release.ps1 -AppVersion v1.0.0
 ```
 
 The script builds or refreshes the portable bundle, builds the installer, copies the release notes to the distribution directory, regenerates checksums, and writes:

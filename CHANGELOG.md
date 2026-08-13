@@ -4,15 +4,22 @@ All notable changes to Uburu are documented in this file.
 
 The project follows semantic versioning. Versions before `1.0.0` are preview releases and may still change internal storage, index, CLI, and settings contracts when documented in the release notes.
 
-## [Unreleased]
+## [1.0.0] - 2026-08-13
+
+First stable Windows and Linux release of Uburu.
 
 ### Added
 
 - Add privacy-safe product-validation evidence collection over CLI summary-only runs, comparing direct, indexed, and hybrid results while recording aggregate search, queue, memory, and indexing-reuse metrics without retaining private paths, expressions, or content.
+- Add persisted, hardware-aware direct-search thread configuration to the desktop settings.
+- Add formal Windows and Linux validation records, real-world performance baselines, and repeatable Git/CLI validation over disposable clones and worktrees.
 
 ### Fixed
 
 - Keep Linux coverage generation compatible with the negative branch-hit records occasionally emitted by GCC's `gcov`, without weakening line or branch thresholds or ignoring unrelated parser failures.
+- Preserve structured-document section identity through search and preview so PDF results open on the page that produced the selected occurrence.
+- Prevent pending desktop debounce and watcher callbacks from replacing or discarding an explicitly requested search.
+- Correct PDF extraction regressions involving Unicode paths, embedded null bytes, glyph spacing, ligatures, and indirect font resources.
 
 ### Changed
 
@@ -21,8 +28,13 @@ The project follows semantic versioning. Versions before `1.0.0` are preview rel
 - Make direct validation authoritative and progressive for hybrid-search results, remove stale indexed matches, avoid retaining a second direct-result collection, preserve partial-failure completion events, short-circuit pre-cancelled runs, and replace quadratic refinement scans with deterministic ordered reconciliation.
 - Enforce an overflow-safe result-memory budget in direct, indexed, and hybrid search, resolve persisted global/per-repository limits in the desktop application, expose explicit exhaustion state through DTOs and CLI summaries, and avoid publishing the result that would exceed the budget.
 - Bound indexing working memory across scanned metadata, Git-overlay candidates, extracted text, hash state, and documents awaiting atomic publication; preserve the previous generation on exhaustion and expose distinct progress, desktop, and CLI status.
-- Continue validating large real-world repositories before the first stable release.
-- Continue validating resource budgets on real-world datasets, release signing, and optional future distribution targets.
+- Validate direct, indexed, and hybrid convergence, cancellation, indexing reuse, preview, installer/AppImage execution, and UI responsiveness against representative Windows and Linux datasets.
+
+### Known limitations
+
+- Windows artifacts remain unsigned until a real code-signing certificate is available.
+- Some protected, malformed, unsupported, or safety-limited documents remain searchable by file name but cannot always be searched by content.
+- macOS, Flatpak, legacy binary Office formats, email containers, OCR/image-content search, and automatic updates remain outside the supported 1.0 scope.
 
 ## [0.1.0] - 2026-07-13
 

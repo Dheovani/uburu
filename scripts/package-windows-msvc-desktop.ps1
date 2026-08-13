@@ -3,6 +3,7 @@ param(
   [string]$BuildDirectory = "build/windows-msvc-release",
   [string]$OutputDirectory = "dist/windows-msvc-release",
   [string]$PackageName = "uburu-windows-msvc-x64",
+  [string]$AppVersion,
   [switch]$SkipBuild,
   [switch]$SkipArchive
 )
@@ -52,6 +53,10 @@ function Git-Value {
   return "unknown"
 }
 
+if (-not $AppVersion) {
+  $AppVersion = Git-Value -Arguments @("describe", "--tags", "--always", "--dirty")
+}
+
 if (-not $SkipBuild) {
   Push-Location $root
   try {
@@ -98,7 +103,7 @@ Copy-Item -LiteralPath (Join-Path $root "docs/distribution/licenses.md") -Destin
 $manifest = [ordered]@{
   name = "Uburu"
   package = $PackageName
-  version = Git-Value -Arguments @("describe", "--tags", "--always", "--dirty")
+  version = $AppVersion
   commit = Git-Value -Arguments @("rev-parse", "HEAD")
   configuration = "Release"
   generatorPreset = $Preset

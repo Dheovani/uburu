@@ -4,7 +4,7 @@ param(
   [string]$SbomScript = "scripts/generate-release-sbom.ps1",
   [string]$OutputDirectory = "dist/windows-msvc-release",
   [string]$PackageName = "uburu-windows-msvc-x64",
-  [string]$ReleaseNotes = "docs/releases/v0.1.0.md",
+  [string]$ReleaseNotes = "docs/releases/v1.0.0.md",
   [string]$AppVersion,
   [switch]$SkipPackage
 )
@@ -25,7 +25,7 @@ function Git-Value {
   } catch {
   }
 
-  return "0.1.0-dev"
+  return "1.0.0-dev"
 }
 
 function Assert-PathInsideRoot {
@@ -106,7 +106,7 @@ Assert-PathInsideRoot $outputPath
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 
 if (-not $SkipPackage) {
-  & $packageScriptPath
+  & $packageScriptPath -AppVersion $safeAppVersion
 
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

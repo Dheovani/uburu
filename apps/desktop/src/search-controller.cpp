@@ -1550,10 +1550,20 @@ namespace uburu::app
     const auto token = stopSource.get_token();
     const auto startedAt = std::chrono::steady_clock::now();
     const auto firstResultNanoseconds = std::make_shared<std::atomic<std::int64_t>>(missingFirstResultTime);
+    const auto searchId = ++latestSearchId;
 
-    activeWatcher = new QFutureWatcher<search::SearchSummary>(this);
-    connect(activeWatcher, &QFutureWatcher<search::SearchSummary>::finished, this, [this] {
-      auto summary = activeWatcher->result();
+    auto* watcher = new QFutureWatcher<search::SearchSummary>(this);
+    activeWatcher = watcher;
+    connect(watcher, &QFutureWatcher<search::SearchSummary>::finished, this, [this, watcher, searchId] {
+      if (watcher != activeWatcher || searchId != latestSearchId) {
+        watcher->deleteLater();
+
+        return;
+      }
+
+      auto summary = watcher->result();
+      activeWatcher = nullptr;
+      watcher->deleteLater();
       updateSearchMetrics(summary);
 
       if (summary.cancelled)
@@ -1567,16 +1577,14 @@ namespace uburu::app
 
       setCancelling(false);
       setRunning(false);
-      activeWatcher->deleteLater();
-      activeWatcher = nullptr;
     });
-    activeWatcher->setFuture(
-      QtConcurrent::run([this, query = std::move(query), token, startedAt, firstResultNanoseconds]() mutable {
+    watcher->setFuture(
+      QtConcurrent::run([this, query = std::move(query), token, startedAt, firstResultNanoseconds, searchId]() mutable {
         try {
           query.options.resultMemoryBudgetBytes = configuredResultMemoryBudget(query);
           auto summary = searchService->search(
             query,
-            [this, startedAt, firstResultNanoseconds](SearchResult result) {
+            [this, startedAt, firstResultNanoseconds, searchId](SearchResult result) {
               auto expected = missingFirstResultTime;
               const auto elapsed = std::chrono::steady_clock::now() - startedAt;
               const auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count();
@@ -1584,7 +1592,10 @@ namespace uburu::app
 
               QMetaObject::invokeMethod(
                 this,
-                [this, result = std::move(result)]() mutable { resultsModel.append(std::move(result)); },
+                [this, result = std::move(result), searchId]() mutable {
+                  if (searchId == latestSearchId)
+                    resultsModel.append(std::move(result));
+                },
                 Qt::QueuedConnection);
               return true;
             },

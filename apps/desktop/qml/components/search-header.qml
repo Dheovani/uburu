@@ -130,6 +130,8 @@ Panel {
         if (!canSearch())
             return
 
+        autoSearchTimer.stop()
+        root.pendingAutoSearch = false
         root.startSearch(
             searchField.text,
             root.regexAvailable && regex.checked,

@@ -12,6 +12,7 @@
 #include <QVariantList>
 
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <stop_token>
 
@@ -275,6 +276,7 @@ namespace uburu::app
     bool cancellingValue{false};
     bool indexingRunningValue{false};
     int indexingProgressValue{0};
+    std::uint64_t latestSearchId{0};
     SearchResultModel resultsModel;
     std::shared_ptr<const SearchService> searchService;
     std::stop_source stopSource;

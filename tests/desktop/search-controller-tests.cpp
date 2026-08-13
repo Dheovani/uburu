@@ -290,6 +290,47 @@ TEST_CASE("desktop search flow finds an accented phrase inside PDF content")
   CHECK(controller.matchesFound() == 1);
 }
 
+TEST_CASE("desktop search flow can start a pending search from the completion notification")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-reentrant-search-settings-test");
+  uburu::tests::TemporaryDirectory scopeDirectory("uburu-controller-reentrant-search-test");
+  isolateSettings(settingsDirectory.path(), QStringLiteral("reentrant-search-test"));
+
+  uburu::tests::writeFile(scopeDirectory.path() / "first.txt", "first query\n");
+  uburu::tests::writeFile(scopeDirectory.path() / "second.txt", "second query\n");
+
+  uburu::app::SearchController controller;
+  controller.selectDirectory(qtPath(scopeDirectory.path()));
+  auto secondSearchStarted = false;
+
+  QObject::connect(&controller, &uburu::app::SearchController::runningChanged, [&] {
+    if (controller.running() || secondSearchStarted)
+      return;
+
+    secondSearchStarted = true;
+    controller.startSearch(
+      QStringLiteral("second"), false, false, false, true, false, false, true, QStringLiteral("txt"));
+  });
+
+  controller.startSearch(
+    QStringLiteral("first"), false, false, false, true, false, false, true, QStringLiteral("txt"));
+
+  const auto completed = waitUntil([&] {
+    return secondSearchStarted && !controller.running() && controller.results()->rowCount() > 0;
+  });
+  CAPTURE(secondSearchStarted, controller.running(), controller.results()->rowCount(), controller.status());
+  REQUIRE(completed);
+
+  for (auto row = 0; row < controller.results()->rowCount(); ++row) {
+    const auto index = controller.results()->index(row, 0);
+    REQUIRE(index.isValid());
+    CHECK(controller.results()
+            ->data(index, uburu::app::SearchResultModel::PathRole)
+            .toString()
+            .endsWith(QStringLiteral("second.txt")));
+  }
+}
+
 TEST_CASE("desktop search flow can cancel a running search")
 {
   uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-e2e-cancel-settings-test");

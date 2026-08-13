@@ -38,6 +38,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Validate exact-phrase convergence across direct, indexed, and hybrid search on the 7.35 GB Windows PDF corpus after fixing PDF glyph spacing, ligatures, and indirect font resources.
   - [x] Record formal automated Windows evidence for the 7.35 GB document corpus with a clean worktree and a hashed Release executable.
   - [x] Provide the final three-recording manual validation script in `docs/releases/v1.0.0-manual-validation-script.pt-BR.md`.
+  - [x] Fix the desktop debounce/watcher reentrancy exposed by the manual PDF-corpus validation so a pending automatic search cannot replace or discard the manual result.
   - [ ] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.

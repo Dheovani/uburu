@@ -54,6 +54,7 @@ namespace uburu::app
       PathRole = Qt::UserRole + 1,
       AbsolutePathRole,
       LocationRole,
+      DocumentSectionRole,
       PreviewRole,
       HighlightsRole,
       FileGroupHeaderRole,
@@ -203,7 +204,8 @@ namespace uburu::app
       const QString& path,
       const QString& location,
       const QString& fallbackPreview,
-      const QVariantList& highlights);
+      const QVariantList& highlights,
+      const QString& documentSection = {});
     Q_INVOKABLE void clearPreview();
 
     Q_INVOKABLE void startSearch(

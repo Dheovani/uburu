@@ -399,6 +399,32 @@ TEST_CASE("desktop preview uses visible text for html files")
   CHECK_FALSE(controller.previewText().contains(QStringLiteral("<script>")));
 }
 
+TEST_CASE("desktop PDF preview displays only the page that produced the selected result")
+{
+  uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-pdf-preview-settings-test");
+  uburu::tests::TemporaryDirectory previewDirectory("uburu-controller-pdf-preview-test");
+  const auto filePath = previewDirectory.path() / "preview.pdf";
+
+  isolateSettings(settingsDirectory.path(), QStringLiteral("pdf-preview-test"));
+  uburu::tests::writeFile(
+    filePath,
+    uburu::tests::fixtures::minimalTwoPagePdfText("BT (Garbled unrelated first page) Tj ET",
+                                                  "BT (Visible second page needle) Tj ET"));
+
+  uburu::app::SearchController controller;
+  controller.loadPreview(
+    qtPath(filePath),
+    QStringLiteral("1:21"),
+    QStringLiteral("Visible second page needle"),
+    {},
+    QStringLiteral("page 2"));
+
+  REQUIRE(waitUntil([&] { return !controller.previewLoading(); }));
+
+  CHECK(controller.previewText().contains(QStringLiteral("Visible second page needle")));
+  CHECK_FALSE(controller.previewText().contains(QStringLiteral("Garbled unrelated first page")));
+}
+
 TEST_CASE("desktop preview uses cue text for subtitle files")
 {
   uburu::tests::TemporaryDirectory settingsDirectory("uburu-controller-subtitle-preview-settings-test");
@@ -498,6 +524,7 @@ TEST_CASE("search result model exposes result roles")
   result.line = 12;
   result.column = 5;
   result.lineText = "needle";
+  result.documentSection = "page 2";
 
   model.append(std::move(result));
 
@@ -506,6 +533,7 @@ TEST_CASE("search result model exposes result roles")
   CHECK(model.rowCount() == 1);
   CHECK(model.data(index, uburu::app::SearchResultModel::PathRole).toString() == QStringLiteral("src/main.cpp"));
   CHECK(model.data(index, uburu::app::SearchResultModel::LocationRole).toString() == QStringLiteral("12:5"));
+  CHECK(model.data(index, uburu::app::SearchResultModel::DocumentSectionRole).toString() == QStringLiteral("page 2"));
   CHECK(model.data(index, uburu::app::SearchResultModel::PreviewRole).toString() == QStringLiteral("needle"));
   CHECK(model.data(index, uburu::app::SearchResultModel::FileGroupHeaderRole).toBool());
   CHECK(model.data(index, uburu::app::SearchResultModel::FileGroupLabelRole).toString() ==

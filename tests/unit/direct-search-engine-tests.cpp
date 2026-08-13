@@ -760,6 +760,34 @@ TEST_CASE("direct search uses visible text for pdf content")
   CHECK(summary.matches == 1);
 }
 
+TEST_CASE("direct search preserves the PDF page that produced a match")
+{
+  const uburu::tests::TemporaryDirectory directory("uburu-direct-search-pdf-page-location-test");
+  const auto path = directory.path() / "sample.pdf";
+  uburu::tests::writeFile(
+    path,
+    uburu::tests::fixtures::minimalTwoPagePdfText("BT (Unrelated first page) Tj ET",
+                                                  "BT (Visible second page needle) Tj ET"));
+
+  auto scanner = std::make_shared<SingleFileScanner>(path, "sample.pdf");
+  uburu::search::DirectSearchEngine engine(scanner);
+  uburu::SearchQuery query = makeQuery(directory.path(), "needle");
+  query.options.contextBeforeLines = 1;
+  std::vector<uburu::SearchResult> results;
+
+  const auto summary = engine.search(query, [&](uburu::SearchResult result) {
+    results.push_back(std::move(result));
+
+    return true;
+  });
+
+  REQUIRE(results.size() == 1);
+  CHECK(results.front().lineText == "Visible second page needle");
+  CHECK(results.front().documentSection == "page 2");
+  CHECK(results.front().contextBefore.empty());
+  CHECK(summary.matches == 1);
+}
+
 TEST_CASE("direct search classifies protected PDF extraction failures")
 {
   const uburu::tests::TemporaryDirectory directory("uburu-direct-search-protected-pdf-metrics-test");

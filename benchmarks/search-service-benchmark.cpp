@@ -37,6 +37,7 @@ namespace
                                .highlights = {},
                                .contextBefore = {},
                                .contextAfter = {},
+                               .documentSection = {},
                                .searchRoot = "repository"};
   }
 

@@ -505,6 +505,7 @@ namespace uburu::index
                           .highlights = makeHighlights(lineText, matches),
                           .contextBefore = {contextBefore.begin(), contextBefore.end()},
                           .contextAfter = {},
+                          .documentSection = {},
                           .searchRoot = query.root};
     }
 

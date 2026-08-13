@@ -186,6 +186,7 @@ namespace uburu
     std::vector<MatchSpan> highlights;
     std::vector<std::string> contextBefore;
     std::vector<std::string> contextAfter;
+    std::string documentSection;
     std::filesystem::path searchRoot;
   };
 

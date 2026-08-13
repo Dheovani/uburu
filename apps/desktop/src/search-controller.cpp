@@ -822,6 +822,7 @@ namespace uburu::app
       const QString& location,
       const QString& fallbackPreview,
       const std::vector<MatchSpan>& highlights,
+      const QString& documentSection,
       std::stop_token stopToken)
     {
       const auto nativePreviewPath = nativePath(path);
@@ -842,6 +843,8 @@ namespace uburu::app
       QStringList htmlLines;
       std::size_t previewBytes = 0;
       const std::vector<MatchSpan> emptyHighlights;
+      const auto fallbackText = fallbackPreview.toUtf8().toStdString();
+      bool selectedSegment = false;
 
       options.textOptions.includeBinary = false;
       options.textOptions.maximumFileSize = std::numeric_limits<std::uintmax_t>::max();
@@ -853,16 +856,31 @@ namespace uburu::app
           if (stopToken.stop_requested())
             return false;
 
-          return appendExtractedPreviewSegment(segment,
-                                               targetLine,
-                                               firstLine,
-                                               lastLine,
-                                               highlights,
-                                               emptyHighlights,
-                                               result,
-                                               lines,
-                                               htmlLines,
-                                               previewBytes);
+          if (selectedSegment)
+            return true;
+
+          const auto sectionMatches = !documentSection.isEmpty() &&
+                                      QString::fromStdString(segment.location.label) == documentSection;
+          const auto fallbackMatches = documentSection.isEmpty() && !fallbackText.empty() &&
+                                       segment.text.find(fallbackText) != std::string::npos;
+          const auto firstSegmentFallback = documentSection.isEmpty() && fallbackText.empty();
+
+          if (!sectionMatches && !fallbackMatches && !firstSegmentFallback)
+            return true;
+
+          selectedSegment = true;
+          appendExtractedPreviewSegment(segment,
+                                        targetLine,
+                                        firstLine,
+                                        lastLine,
+                                        highlights,
+                                        emptyHighlights,
+                                        result,
+                                        lines,
+                                        htmlLines,
+                                        previewBytes);
+
+          return true;
         },
         stopToken);
 
@@ -886,13 +904,16 @@ namespace uburu::app
       return result;
     }
 
-    PreviewLoadResult loadPreviewText(const QString& path,
-                                      const QString& location,
-                                      const QString& fallbackPreview,
-                                      std::vector<MatchSpan> highlights,
-                                      std::stop_token stopToken)
+    PreviewLoadResult loadPreviewText(
+      const QString& path,
+      const QString& location,
+      const QString& fallbackPreview,
+      std::vector<MatchSpan> highlights,
+      const QString& documentSection,
+      std::stop_token stopToken)
     {
-      if (auto structuredPreview = loadStructuredPreviewText(path, location, fallbackPreview, highlights, stopToken))
+      if (auto structuredPreview =
+            loadStructuredPreviewText(path, location, fallbackPreview, highlights, documentSection, stopToken))
         return *structuredPreview;
 
       PreviewLoadResult result{.filePath = path, .location = location, .fallbackPreview = fallbackPreview};
@@ -1001,6 +1022,9 @@ namespace uburu::app
     if (role == LocationRole)
       return QStringLiteral("%1:%2").arg(result.line).arg(result.column);
 
+    if (role == DocumentSectionRole)
+      return QString::fromStdString(result.documentSection);
+
     if (role == PreviewRole)
       return QString::fromStdString(result.lineText);
 
@@ -1021,6 +1045,7 @@ namespace uburu::app
     return {{PathRole, "filePath"},
             {AbsolutePathRole, "absolutePath"},
             {LocationRole, "location"},
+            {DocumentSectionRole, "documentSection"},
             {PreviewRole, "preview"},
             {HighlightsRole, "highlights"},
             {FileGroupHeaderRole, "fileGroupHeader"},
@@ -1430,10 +1455,12 @@ namespace uburu::app
     setStatus(tr("Copiado para a área de transferência"));
   }
 
-  void SearchController::loadPreview(const QString& path,
-                                     const QString& location,
-                                     const QString& fallbackPreview,
-                                     const QVariantList& highlights)
+  void SearchController::loadPreview(
+    const QString& path,
+    const QString& location,
+    const QString& fallbackPreview,
+    const QVariantList& highlights,
+    const QString& documentSection)
   {
     if (path.isEmpty()) {
       clearPreview();
@@ -1473,9 +1500,14 @@ namespace uburu::app
       setPreviewLoading(false);
     });
     watcher->setFuture(
-      QtConcurrent::run([path, location, fallbackPreview, previewHighlights = std::move(previewHighlights), token] {
-        return loadPreviewText(path, location, fallbackPreview, previewHighlights, token);
-      }));
+      QtConcurrent::run([
+        path,
+        location,
+        fallbackPreview,
+        previewHighlights = std::move(previewHighlights),
+        documentSection,
+        token
+      ] { return loadPreviewText(path, location, fallbackPreview, previewHighlights, documentSection, token); }));
   }
 
   void SearchController::clearPreview()

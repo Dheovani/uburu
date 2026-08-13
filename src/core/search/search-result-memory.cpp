@@ -41,6 +41,7 @@ namespace uburu::search
     memoryBytes += pathMemoryBytes(result.path);
     memoryBytes += pathMemoryBytes(result.searchRoot);
     memoryBytes += stringMemoryBytes(result.lineText);
+    memoryBytes += stringMemoryBytes(result.documentSection);
     memoryBytes += static_cast<std::uint64_t>(result.highlights.capacity() * sizeof(MatchSpan));
     memoryBytes += stringVectorMemoryBytes(result.contextBefore);
     memoryBytes += stringVectorMemoryBytes(result.contextAfter);

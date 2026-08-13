@@ -117,6 +117,7 @@ namespace uburu::app
     dto.highlights = std::move(highlights);
     dto.contextBefore = result.contextBefore;
     dto.contextAfter = result.contextAfter;
+    dto.documentSection = result.documentSection;
     dto.searchRoot = result.searchRoot;
 
     return dto;

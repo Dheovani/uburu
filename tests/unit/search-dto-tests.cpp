@@ -21,6 +21,7 @@ TEST_CASE("search result dto keeps presentation fields without exposing core res
   result.highlights = {uburu::MatchSpan{.column = 3, .byteOffset = 2, .byteLength = 5}};
   result.contextBefore = {"before"};
   result.contextAfter = {"after"};
+  result.documentSection = "page 2";
   result.searchRoot = "repo";
 
   const auto dto = uburu::app::toSearchResultDto(result);
@@ -37,6 +38,7 @@ TEST_CASE("search result dto keeps presentation fields without exposing core res
   CHECK(dto.highlights.front().byteLength == 5);
   CHECK(dto.contextBefore == std::vector<std::string>{"before"});
   CHECK(dto.contextAfter == std::vector<std::string>{"after"});
+  CHECK(dto.documentSection == "page 2");
   CHECK(dto.searchRoot == std::filesystem::path("repo"));
 }
 

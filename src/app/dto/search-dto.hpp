@@ -72,6 +72,7 @@ namespace uburu::app
     std::vector<SearchMatchDto> highlights;
     std::vector<std::string> contextBefore;
     std::vector<std::string> contextAfter;
+    std::string documentSection;
     std::filesystem::path searchRoot;
   };
 

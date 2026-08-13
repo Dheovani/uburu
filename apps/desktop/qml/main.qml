@@ -609,8 +609,9 @@ ApplicationWindow {
                     absolutePath,
                     location,
                     preview,
-                    highlights
-                ) => searchController.loadPreview(absolutePath, location, preview, highlights)
+                    highlights,
+                    documentSection
+                ) => searchController.loadPreview(absolutePath, location, preview, highlights, documentSection)
                 onOpenFileRequested: filePath => searchController.openFile(filePath)
                 onOpenWithRequested: filePath => searchController.openWith(filePath)
                 onOpenFolderRequested: filePath => searchController.openContainingFolder(filePath)

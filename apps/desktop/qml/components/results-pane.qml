@@ -11,7 +11,14 @@ Panel {
     property int resultCount: resultList.count
     property bool autoSelectFirstResult: true
 
-    signal resultSelected(string filePath, string absolutePath, string location, string preview, var highlights)
+    signal resultSelected(
+        string filePath,
+        string absolutePath,
+        string location,
+        string preview,
+        var highlights,
+        string documentSection
+    )
     signal resultsCleared()
     signal openFileRequested(string filePath)
     signal openWithRequested(string filePath)
@@ -34,7 +41,14 @@ Panel {
         if (!result)
             return
 
-        root.resultSelected(result.filePath, result.absolutePath, result.location, result.preview, result.highlights)
+        root.resultSelected(
+            result.filePath,
+            result.absolutePath,
+            result.location,
+            result.preview,
+            result.highlights,
+            result.documentSection
+        )
     }
 
     function selectResultAt(index) {
@@ -249,7 +263,7 @@ Panel {
                 onClicked: {
                     resultList.currentIndex = index
                     resultList.forceActiveFocus()
-                    root.resultSelected(filePath, absolutePath, location, preview, highlights)
+                    root.resultSelected(filePath, absolutePath, location, preview, highlights, documentSection)
                 }
 
                 onDoubleClicked: {
@@ -263,7 +277,7 @@ Panel {
                     onTapped: {
                         resultList.currentIndex = index
                         resultList.forceActiveFocus()
-                        root.resultSelected(filePath, absolutePath, location, preview, highlights)
+                        root.resultSelected(filePath, absolutePath, location, preview, highlights, documentSection)
                         resultContextMenu.filePath = filePath
                         resultContextMenu.absolutePath = absolutePath
                         resultContextMenu.location = location

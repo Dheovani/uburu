@@ -158,6 +158,7 @@ namespace
                                .highlights = {},
                                .contextBefore = {},
                                .contextAfter = {},
+                               .documentSection = {},
                                .searchRoot = "repo"};
   }
 

@@ -419,17 +419,19 @@ namespace uburu::search
       return publishReadyPending(pending, sink);
     }
 
-    PublishDecision publishMatches(const FileEntry& entry,
-                                   SearchResultKind kind,
-                                   std::size_t lineNumber,
-                                   std::string_view lineText,
-                                   const std::vector<text::MatchPosition>& matches,
-                                   const SearchQuery& query,
-                                   SearchSummary& summary,
-                                   std::size_t& fileMatches,
-                                   const std::deque<std::string>& contextBefore,
-                                   std::vector<PendingResult>& pending,
-                                   const ResultSink& sink)
+    PublishDecision publishMatches(
+      const FileEntry& entry,
+      SearchResultKind kind,
+      std::size_t lineNumber,
+      std::string_view lineText,
+      std::string_view documentSection,
+      const std::vector<text::MatchPosition>& matches,
+      const SearchQuery& query,
+      SearchSummary& summary,
+      std::size_t& fileMatches,
+      const std::deque<std::string>& contextBefore,
+      std::vector<PendingResult>& pending,
+      const ResultSink& sink)
     {
       for (const auto& match : matches) {
         if (!matchFitsLine(lineText, match))
@@ -459,6 +461,7 @@ namespace uburu::search
                             .highlights = makeHighlights(lineText, matches),
                             .contextBefore = copyContext(contextBefore),
                             .contextAfter = {},
+                            .documentSection = std::string{documentSection},
                             .searchRoot = entry.searchRoot};
 
         if (query.options.contextAfterLines == 0) {
@@ -507,6 +510,7 @@ namespace uburu::search
           SearchResultKind::fileName,
           0,
           pathText,
+          {},
           *pathMatches,
           query,
           summary,
@@ -536,7 +540,7 @@ namespace uburu::search
 
       bool stopCurrentFile = false;
       bool stopSearch = false;
-      auto processLine = [&](std::string_view lineText, std::size_t lineNumber) {
+      auto processLine = [&](std::string_view lineText, std::size_t lineNumber, std::string_view documentSection) {
         if (!addContextAfter(pendingResults, lineText, sink)) {
           stopSearch = true;
 
@@ -566,6 +570,7 @@ namespace uburu::search
           SearchResultKind::content,
           lineNumber,
           lineText,
+          documentSection,
           *matches,
           query,
           summary,
@@ -603,6 +608,13 @@ namespace uburu::search
           entry.absolutePath,
           extractionOptions,
           [&](const document::ExtractedTextSegment& segment) {
+            if (!flushPending(pendingResults, sink)) {
+              stopSearch = true;
+
+              return false;
+            }
+
+            previousContext.clear();
             std::size_t lineNumber = 1;
             std::size_t lineStart = 0;
 
@@ -612,7 +624,7 @@ namespace uburu::search
                 lineEnd == std::string::npos ? segment.text.size() - lineStart : lineEnd - lineStart;
               const auto lineText = std::string_view{segment.text}.substr(lineStart, lineSize);
 
-              if (!processLine(lineText, lineNumber)) {
+              if (!processLine(lineText, lineNumber, segment.location.label)) {
                 if (!stopSearch && !stopCurrentFile)
                   stopSearch = true;
 
@@ -654,7 +666,7 @@ namespace uburu::search
         entry.absolutePath,
         query.options,
         [&](const text::TextLine& line) {
-          if (!processLine(line.text, line.lineNumber)) {
+          if (!processLine(line.text, line.lineNumber, {})) {
             if (stopSearch || stopCurrentFile)
               return false;
 

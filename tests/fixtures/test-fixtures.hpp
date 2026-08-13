@@ -266,6 +266,46 @@ namespace uburu::tests::fixtures
            "%%EOF\n";
   }
 
+  /**
+   * Builds a minimal uncompressed PDF with two independently addressable pages.
+   */
+  [[nodiscard]]
+  inline std::string minimalTwoPagePdfText(std::string_view firstContentStream, std::string_view secondContentStream)
+  {
+    return "%PDF-1.4\n"
+           "1 0 obj\n"
+           "<< /Type /Catalog /Pages 2 0 R >>\n"
+           "endobj\n"
+           "2 0 obj\n"
+           "<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>\n"
+           "endobj\n"
+           "3 0 obj\n"
+           "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+           "endobj\n"
+           "4 0 obj\n"
+           "<< /Length " +
+           std::to_string(firstContentStream.size()) +
+           " >>\n"
+           "stream\n" +
+           std::string{firstContentStream} +
+           "\nendstream\n"
+           "endobj\n"
+           "5 0 obj\n"
+           "<< /Type /Page /Parent 2 0 R /Contents 6 0 R >>\n"
+           "endobj\n"
+           "6 0 obj\n"
+           "<< /Length " +
+           std::to_string(secondContentStream.size()) +
+           " >>\n"
+           "stream\n" +
+           std::string{secondContentStream} +
+           "\nendstream\n"
+           "endobj\n"
+           "trailer\n"
+           "<< /Root 1 0 R >>\n"
+           "%%EOF\n";
+  }
+
   [[nodiscard]]
   inline std::vector<unsigned char> utf8BomMixedLineEndingBytes()
   {

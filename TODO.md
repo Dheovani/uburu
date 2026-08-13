@@ -1,6 +1,6 @@
 # TODO — Uburu
 
-This document now tracks only future work. Completed work for the first preview release is summarized in `CHANGELOG.md`, `docs/releases/v0.1.0.md`, and the project documentation.
+This document now tracks only future work. Completed work for the stable 1.0 release is summarized in `CHANGELOG.md`, `docs/releases/v1.0.0.md`, and the project documentation.
 
 ## Backlog conventions
 
@@ -15,7 +15,7 @@ This document now tracks only future work. Completed work for the first preview 
 
 ## Current release baseline
 
-Uburu `0.1.0` is the first Windows and Linux preview. It includes the Qt/QML desktop app, CLI, direct search, persistent indexing foundations, Git-aware architecture, SQLite storage, document extractors, tests, benchmarks, documentation, Windows installer packaging, Linux AppImage packaging, checksums, SBOM, and release notes.
+Uburu `1.0.0` is the first stable Windows and Linux release. It includes the Qt/QML desktop app, CLI, direct, indexed, and hybrid search, Git-aware incremental indexing, SQLite storage, bounded document extractors, tests, benchmarks, documentation, Windows installer packaging, Linux AppImage packaging, checksums, SBOM, and release notes.
 
 Future work below should improve this baseline without reopening completed milestones as checklist noise.
 
@@ -23,55 +23,6 @@ Future work below should improve this baseline without reopening completed miles
 
 - [ ] Sign Windows release artifacts if a real code-signing certificate becomes available.
 - [ ] Review third-party licenses again before any commercial or broader public distribution.
-
-## Before a stable 1.0 release
-
-- [x] Execute the repeatable validation matrix in `docs/development/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
-  - [x] Define the repeatable Windows/Linux validation matrix, dataset profiles, evidence format, and acceptance rules.
-  - [x] Automate the Windows core, Werror, format, test, and stable benchmark gates used before manual validation.
-  - [x] Automate privacy-safe aggregate evidence collection for direct, indexed, hybrid, and incremental-index validation runs.
-  - [x] Make validation evidence require Release builds, record binary/subdirectory/file-size scope, enforce known matches, and distinguish declared partial failures from fatal failures.
-  - [x] Record a preliminary Windows cycle against the Uburu repository to validate the evidence workflow.
-  - [x] Record a preliminary Windows document-corpus cycle over all 217 PDFs up to 256 MiB and fix the Unicode-path and embedded-NUL regressions it exposed.
-  - [x] Add privacy-safe extraction-status counters and align PDF source limits between direct search, scanning, and indexing.
-  - [x] Classify and reduce the PDF extraction failures exposed by the Windows document corpus before promoting the run to formal evidence.
-  - [x] Validate exact-phrase convergence across direct, indexed, and hybrid search on the 7.35 GB Windows PDF corpus after fixing PDF glyph spacing, ligatures, and indirect font resources.
-  - [x] Record formal automated Windows evidence for the 7.35 GB document corpus with a clean worktree and a hashed Release executable.
-  - [x] Provide the final three-recording manual validation script in `docs/releases/v1.0.0-manual-validation-script.pt-BR.md`.
-  - [x] Fix the desktop debounce/watcher reentrancy exposed by the manual PDF-corpus validation so a pending automatic search cannot replace or discard the manual result.
-  - [x] Preserve structured-document section identity so PDF preview opens only the page that produced the selected result.
-  - [x] Record a complete Windows validation cycle against representative real-world datasets.
-  - [x] Record a complete Linux validation cycle against representative real-world datasets.
-- [x] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
-  - [x] Implement bounded parallel direct search with cooperative cancellation, backpressure, deterministic publication, and configurable worker count.
-  - [x] Make hybrid direct validation authoritative so stale indexed matches are not exposed as final results.
-  - [x] Replace quadratic hybrid refinement with ordered lookup and stream authoritative direct results without retaining a second complete result collection.
-  - [x] Add automated regression coverage for pre-cancellation, sink cancellation, partial failures, stale indexed entries, and hybrid cache classification.
-  - [x] Exercise declared PDF extraction failures and direct/indexed/hybrid convergence against the 7.35 GB Windows document corpus.
-  - [x] Enforce bounded `SIGINT`-to-`stop_token` propagation in the CLI test suite.
-  - [x] Add a privacy-safe, repeatable real-dataset gate for bounded end-to-end CLI cancellation.
-  - [x] Record preliminary Windows cancellation evidence over the 7.35 GB PDF corpus, completing 9 ms after a 250 ms deadline while preserving stable exit code `4`.
-  - [x] Measure interactive cancellation latency against large real-world validation datasets on Linux.
-  - [x] Measure interactive cancellation latency against large real-world validation datasets on Windows.
-- [x] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
-  - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.
-  - [x] Repeat the complete Git matrix in a disposable clone of the real Uburu repository and record the evidence.
-- [x] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
-  - [x] Enforce bounded direct-search queues, configurable worker count, result-count limits, bounded previews, extractor limits, and index disk budget.
-  - [x] Connect the persisted global/per-repository memory budget to direct, indexed, and hybrid result production.
-  - [x] Audit and expose consistent budget-exhaustion status through the core summary, CLI, and desktop UI.
-  - [x] Apply the configured memory budget to indexing working sets and report indexing-memory exhaustion separately from skipped files and extractor safety limits.
-- [x] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
-  - [x] Add versioned deterministic baselines and median-based regression gates for direct search, queues, indexing, hashing, extraction, batching, and hybrid refinement.
-  - [x] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.
-- [x] Revisit end-to-end performance with real user datasets, including startup latency, direct search latency, indexing throughput, preview latency, memory growth, and UI responsiveness before choosing optimization strategies.
-  - [x] Measure and tune direct-search worker scaling, queue occupancy, sparse-match workloads, cancellation behavior, and hybrid refinement on deterministic datasets.
-  - [x] Record Release-mode search throughput, index throughput/reuse, queue peaks, extraction outcomes, and indexing working memory for the 7.35 GB Windows PDF corpus.
-  - [x] Record end-to-end observations for startup, search, indexing, preview, memory, and UI responsiveness on real datasets.
-- [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
-  - [x] Document clean-machine artifact, smoke-test, evidence, and release acceptance requirements.
-  - [x] Execute and record the final Linux AppImage smoke test for the stable release candidate.
-  - [ ] Execute and record the final Windows installer smoke test for the stable release candidate.
 
 ## Search and indexing evolution
 

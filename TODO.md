@@ -26,7 +26,7 @@ Future work below should improve this baseline without reopening completed miles
 
 ## Before a stable 1.0 release
 
-- [ ] Execute the repeatable validation matrix in `docs/development/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
+- [x] Execute the repeatable validation matrix in `docs/development/validation.md` against larger real-world repositories and user datasets, recording evidence for Windows and Linux.
   - [x] Define the repeatable Windows/Linux validation matrix, dataset profiles, evidence format, and acceptance rules.
   - [x] Automate the Windows core, Werror, format, test, and stable benchmark gates used before manual validation.
   - [x] Automate privacy-safe aggregate evidence collection for direct, indexed, hybrid, and incremental-index validation runs.
@@ -41,7 +41,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Fix the desktop debounce/watcher reentrancy exposed by the manual PDF-corpus validation so a pending automatic search cannot replace or discard the manual result.
   - [x] Preserve structured-document section identity so PDF preview opens only the page that produced the selected result.
   - [x] Record a complete Windows validation cycle against representative real-world datasets.
-  - [ ] Record a complete Linux validation cycle against representative real-world datasets.
+  - [x] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
   - [x] Implement bounded parallel direct search with cooperative cancellation, backpressure, deterministic publication, and configurable worker count.
   - [x] Make hybrid direct validation authoritative so stale indexed matches are not exposed as final results.
@@ -51,7 +51,8 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Enforce bounded `SIGINT`-to-`stop_token` propagation in the CLI test suite.
   - [x] Add a privacy-safe, repeatable real-dataset gate for bounded end-to-end CLI cancellation.
   - [x] Record preliminary Windows cancellation evidence over the 7.35 GB PDF corpus, completing 9 ms after a 250 ms deadline while preserving stable exit code `4`.
-  - [ ] Measure interactive cancellation latency against large real-world validation datasets on Windows and Linux.
+  - [x] Measure interactive cancellation latency against large real-world validation datasets on Linux.
+  - [ ] Measure interactive cancellation latency against large real-world validation datasets on Windows.
 - [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
   - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.
   - [ ] Repeat the complete Git matrix in larger real repositories and record the evidence.

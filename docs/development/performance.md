@@ -82,6 +82,8 @@ Targets are product-level expectations, not hard promises for every machine. CI 
 
 Regression alerts should start conservative: fail on missing counters, missing scenarios, order-of-magnitude latency regressions, disabled PCRE2 JIT in regex scenarios that expect it, indexing reuse dropping to zero in reuse scenarios, and batching scenarios producing excessive batch counts or no simulated delivery work. As benchmark history grows, baselines should move from broad guardrails to per-hardware thresholds using repeated median values.
 
+The first privacy-safe cross-platform measurements from representative real-world datasets are published in `benchmarks/baselines/v1.0.0-real-world.md`. They provide investigation thresholds for the private PDF corpus and code-repository profiles while deterministic benchmark JSON remains the enforceable CI baseline.
+
 ## Large file reading
 
 The text reader processes content in chunks and keeps only the current line, pending decoding bytes, and configured context. This avoids allocation proportional to the whole file size for UTF-8, Latin-1, and UTF-16.

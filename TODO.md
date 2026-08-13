@@ -42,7 +42,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Preserve structured-document section identity so PDF preview opens only the page that produced the selected result.
   - [x] Record a complete Windows validation cycle against representative real-world datasets.
   - [x] Record a complete Linux validation cycle against representative real-world datasets.
-- [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
+- [x] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
   - [x] Implement bounded parallel direct search with cooperative cancellation, backpressure, deterministic publication, and configurable worker count.
   - [x] Make hybrid direct validation authoritative so stale indexed matches are not exposed as final results.
   - [x] Replace quadratic hybrid refinement with ordered lookup and stream authoritative direct results without retaining a second complete result collection.
@@ -52,22 +52,22 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Add a privacy-safe, repeatable real-dataset gate for bounded end-to-end CLI cancellation.
   - [x] Record preliminary Windows cancellation evidence over the 7.35 GB PDF corpus, completing 9 ms after a 250 ms deadline while preserving stable exit code `4`.
   - [x] Measure interactive cancellation latency against large real-world validation datasets on Linux.
-  - [ ] Measure interactive cancellation latency against large real-world validation datasets on Windows.
-- [ ] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
+  - [x] Measure interactive cancellation latency against large real-world validation datasets on Windows.
+- [x] Validate Git-aware incremental indexing with branches, detached HEAD, multiple worktrees, submodules, deleted files, modified files, untracked files, ignored files, and branch switches in larger repositories.
   - [x] Cover the required Git states and reconciliation behavior with disposable automated repositories.
-  - [ ] Repeat the complete Git matrix in larger real repositories and record the evidence.
+  - [x] Repeat the complete Git matrix in a disposable clone of the real Uburu repository and record the evidence.
 - [x] Define and enforce configurable memory, disk, queue, result, preview, and extractor budgets across direct search, indexing, preview, CLI, and desktop UI.
   - [x] Enforce bounded direct-search queues, configurable worker count, result-count limits, bounded previews, extractor limits, and index disk budget.
   - [x] Connect the persisted global/per-repository memory budget to direct, indexed, and hybrid result production.
   - [x] Audit and expose consistent budget-exhaustion status through the core summary, CLI, and desktop UI.
   - [x] Apply the configured memory budget to indexing working sets and report indexing-memory exhaustion separately from skipped files and extractor safety limits.
-- [ ] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
+- [x] Publish benchmark baselines and regression targets for representative repository sizes, document-heavy folders, many-small-file datasets, and few-large-file datasets.
   - [x] Add versioned deterministic baselines and median-based regression gates for direct search, queues, indexing, hashing, extraction, batching, and hybrid refinement.
-  - [ ] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.
-- [ ] Revisit end-to-end performance with real user datasets, including startup latency, direct search latency, indexing throughput, preview latency, memory growth, and UI responsiveness before choosing optimization strategies.
+  - [x] Capture and publish baselines for the representative real-world dataset profiles on Windows and Linux.
+- [x] Revisit end-to-end performance with real user datasets, including startup latency, direct search latency, indexing throughput, preview latency, memory growth, and UI responsiveness before choosing optimization strategies.
   - [x] Measure and tune direct-search worker scaling, queue occupancy, sparse-match workloads, cancellation behavior, and hybrid refinement on deterministic datasets.
   - [x] Record Release-mode search throughput, index throughput/reuse, queue peaks, extraction outcomes, and indexing working memory for the 7.35 GB Windows PDF corpus.
-  - [ ] Record end-to-end observations for startup, search, indexing, preview, memory, and UI responsiveness on real datasets.
+  - [x] Record end-to-end observations for startup, search, indexing, preview, memory, and UI responsiveness on real datasets.
 - [ ] Harden release validation for supported platforms with repeatable clean-machine smoke tests and documented evidence.
   - [x] Document clean-machine artifact, smoke-test, evidence, and release acceptance requirements.
   - [ ] Execute the final Windows installer and Linux AppImage smoke tests for the stable release candidate.

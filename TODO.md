@@ -40,7 +40,7 @@ Future work below should improve this baseline without reopening completed miles
   - [x] Provide the final three-recording manual validation script in `docs/releases/v1.0.0-manual-validation-script.pt-BR.md`.
   - [x] Fix the desktop debounce/watcher reentrancy exposed by the manual PDF-corpus validation so a pending automatic search cannot replace or discard the manual result.
   - [x] Preserve structured-document section identity so PDF preview opens only the page that produced the selected result.
-  - [ ] Record a complete Windows validation cycle against representative real-world datasets.
+  - [x] Record a complete Windows validation cycle against representative real-world datasets.
   - [ ] Record a complete Linux validation cycle against representative real-world datasets.
 - [ ] Strengthen direct, indexed, and hybrid search so cancellation, partial failures, stale index entries, and refinement behavior remain reliable under long-running workloads.
   - [x] Implement bounded parallel direct search with cooperative cancellation, backpressure, deterministic publication, and configurable worker count.
